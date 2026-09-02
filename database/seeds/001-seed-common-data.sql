@@ -1,10 +1,11 @@
 /* TAPortal - Common seed data
+   SQL Server 2014+ compatible; dbo only.
    Idempotent, no passwords/secrets.
 */
 USE [TAPortal];
 GO
 
-MERGE auth.DataScopes AS T
+MERGE dbo.DataScopes AS T
 USING (VALUES
  ('SELF',N'Bản thân','SELF'),
  ('ASSIGNED',N'Được phân công','ASSIGNED'),
@@ -13,27 +14,29 @@ USING (VALUES
  ('COMPANY',N'Theo công ty','COMPANY'),
  ('CUSTOM',N'Tùy chỉnh','CUSTOM')
 ) AS S(Code,Name,ScopeType)
-ON T.Code = S.Code
+ON T.Code=S.Code
+WHEN MATCHED THEN UPDATE SET Name=S.Name, ScopeType=S.ScopeType, IsActive=1
 WHEN NOT MATCHED THEN INSERT(Code,Name,ScopeType,IsSystem,IsActive) VALUES(S.Code,S.Name,S.ScopeType,1,1);
 GO
 
-MERGE core.Modules AS T
+MERGE dbo.Modules AS T
 USING (VALUES
  ('AUTH',N'Người dùng & phân quyền',10),
  ('ORG',N'Cơ cấu tổ chức',20),
  ('SYSTEM',N'Hệ thống',90),
  ('AUDIT',N'Nhật ký hệ thống',100)
 ) AS S(Code,Name,SortOrder)
-ON T.Code = S.Code AND T.IsDeleted = 0
+ON T.Code=S.Code AND T.IsDeleted=0
+WHEN MATCHED THEN UPDATE SET Name=S.Name,SortOrder=S.SortOrder,IsActive=1
 WHEN NOT MATCHED THEN INSERT(Code,Name,SortOrder,IsActive) VALUES(S.Code,S.Name,S.SortOrder,1);
 GO
 
-DECLARE @AuthModule uniqueidentifier=(SELECT TOP 1 Id FROM core.Modules WHERE Code='AUTH' AND IsDeleted=0);
-DECLARE @OrgModule uniqueidentifier=(SELECT TOP 1 Id FROM core.Modules WHERE Code='ORG' AND IsDeleted=0);
-DECLARE @SystemModule uniqueidentifier=(SELECT TOP 1 Id FROM core.Modules WHERE Code='SYSTEM' AND IsDeleted=0);
-DECLARE @AuditModule uniqueidentifier=(SELECT TOP 1 Id FROM core.Modules WHERE Code='AUDIT' AND IsDeleted=0);
+DECLARE @AuthModule uniqueidentifier=(SELECT TOP 1 Id FROM dbo.Modules WHERE Code='AUTH' AND IsDeleted=0);
+DECLARE @OrgModule uniqueidentifier=(SELECT TOP 1 Id FROM dbo.Modules WHERE Code='ORG' AND IsDeleted=0);
+DECLARE @SystemModule uniqueidentifier=(SELECT TOP 1 Id FROM dbo.Modules WHERE Code='SYSTEM' AND IsDeleted=0);
+DECLARE @AuditModule uniqueidentifier=(SELECT TOP 1 Id FROM dbo.Modules WHERE Code='AUDIT' AND IsDeleted=0);
 
-MERGE core.Functions AS T
+MERGE dbo.Functions AS T
 USING (VALUES
  (@AuthModule,'USERS',N'Người dùng','/system/users',10),
  (@AuthModule,'ROLES',N'Vai trò','/system/roles',20),
@@ -46,6 +49,7 @@ USING (VALUES
  (@AuditModule,'AUDIT_LOGS',N'Nhật ký thao tác','/system/audit-logs',10)
 ) AS S(ModuleId,Code,Name,Route,SortOrder)
 ON T.ModuleId=S.ModuleId AND T.Code=S.Code AND T.IsDeleted=0
+WHEN MATCHED THEN UPDATE SET Name=S.Name,Route=S.Route,SortOrder=S.SortOrder,IsActive=1
 WHEN NOT MATCHED THEN INSERT(ModuleId,Code,Name,Route,SortOrder,IsActive) VALUES(S.ModuleId,S.Code,S.Name,S.Route,S.SortOrder,1);
 GO
 
@@ -70,23 +74,27 @@ GO
  ('AUDIT.AUDIT_LOGS.VIEW',N'Xem nhật ký','AUDIT','AUDIT_LOGS','VIEW')
  ) V(Code,Name,ModuleCode,FunctionCode,ActionCode)
 )
-MERGE auth.Permissions AS T
+MERGE dbo.Permissions AS T
 USING PermissionSeed AS S
 ON T.Code=S.Code AND T.IsDeleted=0
+WHEN MATCHED THEN UPDATE SET Name=S.Name,ModuleCode=S.ModuleCode,FunctionCode=S.FunctionCode,ActionCode=S.ActionCode,IsActive=1
 WHEN NOT MATCHED THEN
  INSERT(Code,Name,ModuleCode,FunctionCode,ActionCode,IsSystem,IsActive)
  VALUES(S.Code,S.Name,S.ModuleCode,S.FunctionCode,S.ActionCode,1,1);
 GO
 
-IF NOT EXISTS (SELECT 1 FROM auth.Roles WHERE Code='SYS_ADMIN' AND IsDeleted=0)
- INSERT auth.Roles(Code,Name,Description,IsSystem,IsActive)
+IF NOT EXISTS (SELECT 1 FROM dbo.Roles WHERE Code='SYS_ADMIN' AND IsDeleted=0)
+ INSERT dbo.Roles(Code,Name,Description,IsSystem,IsActive)
  VALUES('SYS_ADMIN',N'Quản trị hệ thống',N'Vai trò quản trị toàn bộ common functions',1,1);
 GO
 
-DECLARE @AdminRole uniqueidentifier=(SELECT TOP 1 Id FROM auth.Roles WHERE Code='SYS_ADMIN' AND IsDeleted=0);
-INSERT auth.RolePermissions(RoleId,PermissionId)
+DECLARE @AdminRole uniqueidentifier=(SELECT TOP 1 Id FROM dbo.Roles WHERE Code='SYS_ADMIN' AND IsDeleted=0);
+INSERT dbo.RolePermissions(RoleId,PermissionId)
 SELECT @AdminRole,p.Id
-FROM auth.Permissions p
+FROM dbo.Permissions p
 WHERE p.IsDeleted=0
-  AND NOT EXISTS (SELECT 1 FROM auth.RolePermissions rp WHERE rp.RoleId=@AdminRole AND rp.PermissionId=p.Id);
+  AND NOT EXISTS (SELECT 1 FROM dbo.RolePermissions rp WHERE rp.RoleId=@AdminRole AND rp.PermissionId=p.Id);
+GO
+
+PRINT '001-seed-common-data.sql: OK';
 GO

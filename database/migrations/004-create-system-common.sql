@@ -1,6 +1,5 @@
 /* TAPortal - Common database bootstrap 004
-   SQL Server 2014+ compatible
-   IMPORTANT: use [dbo] only to avoid custom-schema permission/reserved-name issues.
+   SQL Server 2014+ compatible; dbo only.
 */
 USE [TAPortal];
 GO
@@ -88,23 +87,9 @@ BEGIN
         MenuId uniqueidentifier NOT NULL,
         PermissionId uniqueidentifier NOT NULL,
         CONSTRAINT PK_MenuPermissions PRIMARY KEY(MenuId, PermissionId),
-        CONSTRAINT FK_MenuPermissions_Menu FOREIGN KEY (MenuId) REFERENCES dbo.Menus(Id)
+        CONSTRAINT FK_MenuPermissions_Menu FOREIGN KEY (MenuId) REFERENCES dbo.Menus(Id),
+        CONSTRAINT FK_MenuPermissions_Permission FOREIGN KEY (PermissionId) REFERENCES dbo.Permissions(Id)
     );
-END
-GO
-
-/* Permission FK is added only when a permissions table actually exists. */
-IF OBJECT_ID(N'dbo.Permissions', N'U') IS NOT NULL
-AND NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = N'FK_MenuPermissions_Permission')
-BEGIN
-    ALTER TABLE dbo.MenuPermissions ADD CONSTRAINT FK_MenuPermissions_Permission
-        FOREIGN KEY (PermissionId) REFERENCES dbo.Permissions(Id);
-END
-ELSE IF OBJECT_ID(N'auth.Permissions', N'U') IS NOT NULL
-AND NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = N'FK_MenuPermissions_Permission')
-BEGIN
-    ALTER TABLE dbo.MenuPermissions ADD CONSTRAINT FK_MenuPermissions_Permission
-        FOREIGN KEY (PermissionId) REFERENCES auth.Permissions(Id);
 END
 GO
 
