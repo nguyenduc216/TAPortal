@@ -1,13 +1,13 @@
 /* TAPortal - Common database bootstrap 004
-   Database-driven modules/functions/menus/settings/sequences
-   Application schema: [core] (do not use SQL Server reserved/system schema [sys]).
+   SQL Server 2014+ compatible
+   IMPORTANT: use [dbo] only to avoid custom-schema permission/reserved-name issues.
 */
 USE [TAPortal];
 GO
 
-IF OBJECT_ID(N'core.Modules', N'U') IS NULL
+IF OBJECT_ID(N'dbo.Modules', N'U') IS NULL
 BEGIN
-    CREATE TABLE core.Modules (
+    CREATE TABLE dbo.Modules (
         Id uniqueidentifier NOT NULL CONSTRAINT PK_Modules PRIMARY KEY DEFAULT NEWSEQUENTIALID(),
         Code varchar(100) NOT NULL,
         Name nvarchar(200) NOT NULL,
@@ -23,13 +23,13 @@ BEGIN
         DeletedBy uniqueidentifier NULL,
         RowVersion rowversion NOT NULL
     );
-    CREATE UNIQUE INDEX UX_Modules_Code ON core.Modules(Code) WHERE IsDeleted = 0;
+    CREATE UNIQUE INDEX UX_Modules_Code ON dbo.Modules(Code) WHERE IsDeleted = 0;
 END
 GO
 
-IF OBJECT_ID(N'core.Functions', N'U') IS NULL
+IF OBJECT_ID(N'dbo.Functions', N'U') IS NULL
 BEGIN
-    CREATE TABLE core.Functions (
+    CREATE TABLE dbo.Functions (
         Id uniqueidentifier NOT NULL CONSTRAINT PK_Functions PRIMARY KEY DEFAULT NEWSEQUENTIALID(),
         ModuleId uniqueidentifier NOT NULL,
         Code varchar(100) NOT NULL,
@@ -46,15 +46,15 @@ BEGIN
         DeletedAt datetime2(3) NULL,
         DeletedBy uniqueidentifier NULL,
         RowVersion rowversion NOT NULL,
-        CONSTRAINT FK_Functions_Module FOREIGN KEY (ModuleId) REFERENCES core.Modules(Id) ON DELETE NO ACTION
+        CONSTRAINT FK_Functions_Module FOREIGN KEY (ModuleId) REFERENCES dbo.Modules(Id)
     );
-    CREATE UNIQUE INDEX UX_Functions_Module_Code ON core.Functions(ModuleId, Code) WHERE IsDeleted = 0;
+    CREATE UNIQUE INDEX UX_Functions_Module_Code ON dbo.Functions(ModuleId, Code) WHERE IsDeleted = 0;
 END
 GO
 
-IF OBJECT_ID(N'core.Menus', N'U') IS NULL
+IF OBJECT_ID(N'dbo.Menus', N'U') IS NULL
 BEGIN
-    CREATE TABLE core.Menus (
+    CREATE TABLE dbo.Menus (
         Id uniqueidentifier NOT NULL CONSTRAINT PK_Menus PRIMARY KEY DEFAULT NEWSEQUENTIALID(),
         ParentId uniqueidentifier NULL,
         ModuleId uniqueidentifier NULL,
@@ -74,29 +74,43 @@ BEGIN
         DeletedAt datetime2(3) NULL,
         DeletedBy uniqueidentifier NULL,
         RowVersion rowversion NOT NULL,
-        CONSTRAINT FK_Menus_Parent FOREIGN KEY (ParentId) REFERENCES core.Menus(Id) ON DELETE NO ACTION,
-        CONSTRAINT FK_Menus_Module FOREIGN KEY (ModuleId) REFERENCES core.Modules(Id) ON DELETE NO ACTION,
-        CONSTRAINT FK_Menus_Function FOREIGN KEY (FunctionId) REFERENCES core.Functions(Id) ON DELETE NO ACTION
+        CONSTRAINT FK_Menus_Parent FOREIGN KEY (ParentId) REFERENCES dbo.Menus(Id),
+        CONSTRAINT FK_Menus_Module FOREIGN KEY (ModuleId) REFERENCES dbo.Modules(Id),
+        CONSTRAINT FK_Menus_Function FOREIGN KEY (FunctionId) REFERENCES dbo.Functions(Id)
     );
-    CREATE UNIQUE INDEX UX_Menus_Code ON core.Menus(Code) WHERE IsDeleted = 0;
+    CREATE UNIQUE INDEX UX_Menus_Code ON dbo.Menus(Code) WHERE IsDeleted = 0;
 END
 GO
 
-IF OBJECT_ID(N'core.MenuPermissions', N'U') IS NULL
+IF OBJECT_ID(N'dbo.MenuPermissions', N'U') IS NULL
 BEGIN
-    CREATE TABLE core.MenuPermissions (
+    CREATE TABLE dbo.MenuPermissions (
         MenuId uniqueidentifier NOT NULL,
         PermissionId uniqueidentifier NOT NULL,
         CONSTRAINT PK_MenuPermissions PRIMARY KEY(MenuId, PermissionId),
-        CONSTRAINT FK_MenuPermissions_Menu FOREIGN KEY (MenuId) REFERENCES core.Menus(Id) ON DELETE NO ACTION,
-        CONSTRAINT FK_MenuPermissions_Permission FOREIGN KEY (PermissionId) REFERENCES auth.Permissions(Id) ON DELETE NO ACTION
+        CONSTRAINT FK_MenuPermissions_Menu FOREIGN KEY (MenuId) REFERENCES dbo.Menus(Id)
     );
 END
 GO
 
-IF OBJECT_ID(N'core.Settings', N'U') IS NULL
+/* Permission FK is added only when a permissions table actually exists. */
+IF OBJECT_ID(N'dbo.Permissions', N'U') IS NOT NULL
+AND NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = N'FK_MenuPermissions_Permission')
 BEGIN
-    CREATE TABLE core.Settings (
+    ALTER TABLE dbo.MenuPermissions ADD CONSTRAINT FK_MenuPermissions_Permission
+        FOREIGN KEY (PermissionId) REFERENCES dbo.Permissions(Id);
+END
+ELSE IF OBJECT_ID(N'auth.Permissions', N'U') IS NOT NULL
+AND NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = N'FK_MenuPermissions_Permission')
+BEGIN
+    ALTER TABLE dbo.MenuPermissions ADD CONSTRAINT FK_MenuPermissions_Permission
+        FOREIGN KEY (PermissionId) REFERENCES auth.Permissions(Id);
+END
+GO
+
+IF OBJECT_ID(N'dbo.Settings', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.Settings (
         Id uniqueidentifier NOT NULL CONSTRAINT PK_Settings PRIMARY KEY DEFAULT NEWSEQUENTIALID(),
         ScopeType varchar(30) NOT NULL CONSTRAINT DF_Settings_ScopeType DEFAULT 'SYSTEM',
         ScopeId uniqueidentifier NULL,
@@ -113,13 +127,13 @@ BEGIN
         RowVersion rowversion NOT NULL,
         CONSTRAINT CK_Settings_ScopeType CHECK (ScopeType IN ('SYSTEM','COMPANY','BRANCH','TEAM','USER'))
     );
-    CREATE UNIQUE INDEX UX_Settings_Scope_Key ON core.Settings(ScopeType, ScopeId, [Key]);
+    CREATE UNIQUE INDEX UX_Settings_Scope_Key ON dbo.Settings(ScopeType, ScopeId, [Key]);
 END
 GO
 
-IF OBJECT_ID(N'core.NumberSequences', N'U') IS NULL
+IF OBJECT_ID(N'dbo.NumberSequences', N'U') IS NULL
 BEGIN
-    CREATE TABLE core.NumberSequences (
+    CREATE TABLE dbo.NumberSequences (
         Id uniqueidentifier NOT NULL CONSTRAINT PK_NumberSequences PRIMARY KEY DEFAULT NEWSEQUENTIALID(),
         Code varchar(100) NOT NULL,
         ScopeType varchar(30) NOT NULL CONSTRAINT DF_NumberSequences_ScopeType DEFAULT 'SYSTEM',
@@ -138,6 +152,9 @@ BEGIN
         CONSTRAINT CK_NumberSequences_Reset CHECK (ResetPolicy IN ('NEVER','DAILY','MONTHLY','YEARLY')),
         CONSTRAINT CK_NumberSequences_Padding CHECK (Padding BETWEEN 1 AND 20)
     );
-    CREATE UNIQUE INDEX UX_NumberSequences_Scope_Code ON core.NumberSequences(ScopeType, ScopeId, Code);
+    CREATE UNIQUE INDEX UX_NumberSequences_Scope_Code ON dbo.NumberSequences(ScopeType, ScopeId, Code);
 END
+GO
+
+PRINT '004-create-system-common.sql: OK';
 GO
