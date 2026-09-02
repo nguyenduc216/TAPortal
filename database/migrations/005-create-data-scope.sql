@@ -1,12 +1,13 @@
 /* TAPortal - Common database bootstrap 005
-   Data scopes for row-level application authorization
+   SQL Server 2014+ compatible
+   IMPORTANT: use [dbo] only to avoid custom-schema permission issues.
 */
 USE [TAPortal];
 GO
 
-IF OBJECT_ID(N'auth.DataScopes', N'U') IS NULL
+IF OBJECT_ID(N'dbo.DataScopes', N'U') IS NULL
 BEGIN
-    CREATE TABLE auth.DataScopes (
+    CREATE TABLE dbo.DataScopes (
         Id uniqueidentifier NOT NULL CONSTRAINT PK_DataScopes PRIMARY KEY DEFAULT NEWSEQUENTIALID(),
         Code varchar(50) NOT NULL,
         Name nvarchar(200) NOT NULL,
@@ -17,13 +18,13 @@ BEGIN
         CreatedAt datetime2(3) NOT NULL CONSTRAINT DF_DataScopes_CreatedAt DEFAULT SYSUTCDATETIME(),
         CONSTRAINT CK_DataScopes_Type CHECK (ScopeType IN ('SELF','ASSIGNED','TEAM','BRANCH','COMPANY','CUSTOM'))
     );
-    CREATE UNIQUE INDEX UX_DataScopes_Code ON auth.DataScopes(Code);
+    CREATE UNIQUE INDEX UX_DataScopes_Code ON dbo.DataScopes(Code);
 END
 GO
 
-IF OBJECT_ID(N'auth.RoleDataScopes', N'U') IS NULL
+IF OBJECT_ID(N'dbo.RoleDataScopes', N'U') IS NULL
 BEGIN
-    CREATE TABLE auth.RoleDataScopes (
+    CREATE TABLE dbo.RoleDataScopes (
         RoleId uniqueidentifier NOT NULL,
         DataScopeId uniqueidentifier NOT NULL,
         FunctionCode varchar(100) NOT NULL CONSTRAINT DF_RoleDataScopes_FunctionCode DEFAULT '',
@@ -31,15 +32,29 @@ BEGIN
         CreatedAt datetime2(3) NOT NULL CONSTRAINT DF_RoleDataScopes_CreatedAt DEFAULT SYSUTCDATETIME(),
         CreatedBy uniqueidentifier NULL,
         CONSTRAINT PK_RoleDataScopes PRIMARY KEY(RoleId, DataScopeId, FunctionCode),
-        CONSTRAINT FK_RoleDataScopes_Role FOREIGN KEY (RoleId) REFERENCES auth.Roles(Id) ON DELETE NO ACTION,
-        CONSTRAINT FK_RoleDataScopes_DataScope FOREIGN KEY (DataScopeId) REFERENCES auth.DataScopes(Id) ON DELETE NO ACTION
+        CONSTRAINT FK_RoleDataScopes_DataScope FOREIGN KEY (DataScopeId) REFERENCES dbo.DataScopes(Id)
     );
 END
 GO
 
-IF OBJECT_ID(N'auth.UserDataScopes', N'U') IS NULL
+/* Add role FK only if the role table exists. Supports either dbo.Roles or legacy auth.Roles. */
+IF OBJECT_ID(N'dbo.Roles', N'U') IS NOT NULL
+AND NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = N'FK_RoleDataScopes_Role')
 BEGIN
-    CREATE TABLE auth.UserDataScopes (
+    ALTER TABLE dbo.RoleDataScopes ADD CONSTRAINT FK_RoleDataScopes_Role
+        FOREIGN KEY (RoleId) REFERENCES dbo.Roles(Id);
+END
+ELSE IF OBJECT_ID(N'auth.Roles', N'U') IS NOT NULL
+AND NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = N'FK_RoleDataScopes_Role')
+BEGIN
+    ALTER TABLE dbo.RoleDataScopes ADD CONSTRAINT FK_RoleDataScopes_Role
+        FOREIGN KEY (RoleId) REFERENCES auth.Roles(Id);
+END
+GO
+
+IF OBJECT_ID(N'dbo.UserDataScopes', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.UserDataScopes (
         UserId uniqueidentifier NOT NULL,
         DataScopeId uniqueidentifier NOT NULL,
         FunctionCode varchar(100) NOT NULL CONSTRAINT DF_UserDataScopes_FunctionCode DEFAULT '',
@@ -49,8 +64,25 @@ BEGIN
         CreatedBy uniqueidentifier NULL,
         CONSTRAINT PK_UserDataScopes PRIMARY KEY(UserId, DataScopeId, FunctionCode),
         CONSTRAINT CK_UserDataScopes_Effect CHECK (Effect IN ('ALLOW','DENY')),
-        CONSTRAINT FK_UserDataScopes_User FOREIGN KEY (UserId) REFERENCES auth.Users(Id) ON DELETE NO ACTION,
-        CONSTRAINT FK_UserDataScopes_DataScope FOREIGN KEY (DataScopeId) REFERENCES auth.DataScopes(Id) ON DELETE NO ACTION
+        CONSTRAINT FK_UserDataScopes_DataScope FOREIGN KEY (DataScopeId) REFERENCES dbo.DataScopes(Id)
     );
 END
+GO
+
+/* Add user FK only if the users table exists. Supports either dbo.Users or legacy auth.Users. */
+IF OBJECT_ID(N'dbo.Users', N'U') IS NOT NULL
+AND NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = N'FK_UserDataScopes_User')
+BEGIN
+    ALTER TABLE dbo.UserDataScopes ADD CONSTRAINT FK_UserDataScopes_User
+        FOREIGN KEY (UserId) REFERENCES dbo.Users(Id);
+END
+ELSE IF OBJECT_ID(N'auth.Users', N'U') IS NOT NULL
+AND NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = N'FK_UserDataScopes_User')
+BEGIN
+    ALTER TABLE dbo.UserDataScopes ADD CONSTRAINT FK_UserDataScopes_User
+        FOREIGN KEY (UserId) REFERENCES auth.Users(Id);
+END
+GO
+
+PRINT '005-create-data-scope.sql: OK';
 GO
