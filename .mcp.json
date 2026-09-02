@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "taportal-db": {
+      "type": "http",
+      "url": "https://mcp.tuvangiaiphapta.vn/mcp"
+    }
+  }
+}
