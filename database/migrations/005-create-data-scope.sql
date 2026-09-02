@@ -26,7 +26,7 @@ BEGIN
     CREATE TABLE auth.RoleDataScopes (
         RoleId uniqueidentifier NOT NULL,
         DataScopeId uniqueidentifier NOT NULL,
-        FunctionCode varchar(100) NULL,
+        FunctionCode varchar(100) NOT NULL CONSTRAINT DF_RoleDataScopes_FunctionCode DEFAULT '',
         ScopeReferenceId uniqueidentifier NULL,
         CreatedAt datetime2(3) NOT NULL CONSTRAINT DF_RoleDataScopes_CreatedAt DEFAULT SYSUTCDATETIME(),
         CreatedBy uniqueidentifier NULL,
@@ -42,7 +42,7 @@ BEGIN
     CREATE TABLE auth.UserDataScopes (
         UserId uniqueidentifier NOT NULL,
         DataScopeId uniqueidentifier NOT NULL,
-        FunctionCode varchar(100) NULL,
+        FunctionCode varchar(100) NOT NULL CONSTRAINT DF_UserDataScopes_FunctionCode DEFAULT '',
         ScopeReferenceId uniqueidentifier NULL,
         Effect varchar(10) NOT NULL CONSTRAINT DF_UserDataScopes_Effect DEFAULT 'ALLOW',
         CreatedAt datetime2(3) NOT NULL CONSTRAINT DF_UserDataScopes_CreatedAt DEFAULT SYSUTCDATETIME(),
