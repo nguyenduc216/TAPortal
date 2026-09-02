@@ -7,9 +7,11 @@ Database name: `TAPortal`.
 
 - `auth`: users, roles, permissions, direct user permissions, data scopes.
 - `org`: companies, branches, teams and user assignments.
-- `sys`: database-driven modules/functions/menus/settings/number sequences.
+- `core`: application modules/functions/menus/settings/number sequences.
 - `audit`: audit logs, login history and system logs.
 - `crm`: reserved for CRM/customer functions; customer tables are intentionally not part of common bootstrap.
+
+> Important: do not use schema `sys` for application objects. `sys` is SQL Server's system schema and is reserved for system catalog objects.
 
 Common rules: `uniqueidentifier` + `NEWSEQUENTIALID()`, UTC with `SYSUTCDATETIME()`, soft-delete/audit columns on master tables, FK `NO ACTION`, role/user permission model, data scopes `SELF/ASSIGNED/TEAM/BRANCH/COMPANY/CUSTOM`.
 
@@ -28,6 +30,10 @@ Run as a SQL administrator in SSMS, against database `TAPortal`:
 9. `scripts/002-verify-common-database.sql`
 
 All migrations/seeds are designed to be safe to re-run for initial/bootstrap deployment. Do not put production secrets in Git.
+
+## Recovery after old 004 sys-schema error
+
+If an older `004-create-system-common.sql` failed with `The specified schema name "sys" either does not exist or you do not have permission to use it`, no application tables were created in `sys`. Pull the latest source, re-run `001-create-common-schemas.sql` to create `core`, then re-run `004-create-system-common.sql` and continue with 005, 006, seed and verify.
 
 ## MCP configuration
 
