@@ -17,7 +17,7 @@ ON T.Code = S.Code
 WHEN NOT MATCHED THEN INSERT(Code,Name,ScopeType,IsSystem,IsActive) VALUES(S.Code,S.Name,S.ScopeType,1,1);
 GO
 
-MERGE sys.Modules AS T
+MERGE core.Modules AS T
 USING (VALUES
  ('AUTH',N'Người dùng & phân quyền',10),
  ('ORG',N'Cơ cấu tổ chức',20),
@@ -28,12 +28,12 @@ ON T.Code = S.Code AND T.IsDeleted = 0
 WHEN NOT MATCHED THEN INSERT(Code,Name,SortOrder,IsActive) VALUES(S.Code,S.Name,S.SortOrder,1);
 GO
 
-DECLARE @AuthModule uniqueidentifier=(SELECT TOP 1 Id FROM sys.Modules WHERE Code='AUTH' AND IsDeleted=0);
-DECLARE @OrgModule uniqueidentifier=(SELECT TOP 1 Id FROM sys.Modules WHERE Code='ORG' AND IsDeleted=0);
-DECLARE @SystemModule uniqueidentifier=(SELECT TOP 1 Id FROM sys.Modules WHERE Code='SYSTEM' AND IsDeleted=0);
-DECLARE @AuditModule uniqueidentifier=(SELECT TOP 1 Id FROM sys.Modules WHERE Code='AUDIT' AND IsDeleted=0);
+DECLARE @AuthModule uniqueidentifier=(SELECT TOP 1 Id FROM core.Modules WHERE Code='AUTH' AND IsDeleted=0);
+DECLARE @OrgModule uniqueidentifier=(SELECT TOP 1 Id FROM core.Modules WHERE Code='ORG' AND IsDeleted=0);
+DECLARE @SystemModule uniqueidentifier=(SELECT TOP 1 Id FROM core.Modules WHERE Code='SYSTEM' AND IsDeleted=0);
+DECLARE @AuditModule uniqueidentifier=(SELECT TOP 1 Id FROM core.Modules WHERE Code='AUDIT' AND IsDeleted=0);
 
-MERGE sys.Functions AS T
+MERGE core.Functions AS T
 USING (VALUES
  (@AuthModule,'USERS',N'Người dùng','/system/users',10),
  (@AuthModule,'ROLES',N'Vai trò','/system/roles',20),
