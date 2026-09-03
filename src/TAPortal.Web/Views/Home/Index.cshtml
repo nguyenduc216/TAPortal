@@ -1,0 +1,9 @@
+@model DashboardVm
+@{ ViewData["Title"] = "Tổng quan"; }
+<div class="page-header d-print-none"><div class="row align-items-center"><div class="col"><div class="page-pretitle">T.A Portal</div><h2 class="page-title">Tổng quan hệ thống</h2></div></div></div>
+<div class="row row-deck row-cards mt-1">
+@foreach (var item in new[]{("Khách hàng",Model.CustomerCount,"ti-building-store"),("Người dùng",Model.UserCount,"ti-users"),("Đang hoạt động",Model.ActiveUserCount,"ti-user-check"),("Vai trò",Model.RoleCount,"ti-shield-lock")}) {
+<div class="col-sm-6 col-lg-3"><div class="card"><div class="card-body"><div class="d-flex align-items-center"><div class="ta-stat-icon me-3"><i class="ti @item.Item3"></i></div><div><div class="text-secondary">@item.Item1</div><div class="h1 mb-0">@item.Item2</div></div></div></div></div></div>}
+<div class="col-lg-7"><div class="card"><div class="card-header"><h3 class="card-title">Hoạt động gần đây</h3></div><div class="card-body"><div class="empty"><div class="empty-img"><i class="ti ti-history fs-1"></i></div><p class="empty-title">Nhật ký hoạt động</p><p class="empty-subtitle text-secondary">Module audit sẽ hiển thị các thao tác gần nhất tại đây.</p></div></div></div></div>
+<div class="col-lg-5"><div class="card"><div class="card-header"><h3 class="card-title">Trạng thái hệ thống</h3></div><div class="list-group list-group-flush"><div class="list-group-item d-flex justify-content-between"><span>Ứng dụng</span><span class="badge badge-ta-active">Hoạt động</span></div><div class="list-group-item d-flex justify-content-between"><span>Cơ sở dữ liệu</span><span class="badge badge-ta-active">Kết nối</span></div><div class="list-group-item d-flex justify-content-between"><span>Phân quyền</span><span class="badge badge-ta-active">RBAC</span></div></div></div></div>
+</div>
