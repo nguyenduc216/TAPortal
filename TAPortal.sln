@@ -4,6 +4,8 @@ VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TAPortal.DbMcp", "src\TAPortal.DbMcp\TAPortal.DbMcp.csproj", "{2B41B50F-4FBF-4BD8-9001-10F7A97E8301}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TAPortal.Web", "src\TAPortal.Web\TAPortal.Web.csproj", "{86EF41A7-9348-4CC0-AEB0-02A41DBFF8D5}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -14,5 +16,9 @@ Global
 		{2B41B50F-4FBF-4BD8-9001-10F7A97E8301}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2B41B50F-4FBF-4BD8-9001-10F7A97E8301}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{2B41B50F-4FBF-4BD8-9001-10F7A97E8301}.Release|Any CPU.Build.0 = Release|Any CPU
+		{86EF41A7-9348-4CC0-AEB0-02A41DBFF8D5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{86EF41A7-9348-4CC0-AEB0-02A41DBFF8D5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{86EF41A7-9348-4CC0-AEB0-02A41DBFF8D5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{86EF41A7-9348-4CC0-AEB0-02A41DBFF8D5}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
