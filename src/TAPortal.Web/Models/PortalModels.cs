@@ -45,3 +45,4 @@ public sealed record PortalRole(Guid Id, string Code, string Name, string? Descr
 public sealed record PortalMenu(Guid Id, Guid? ParentId, string Code, string Name, string? Icon, string? Route, int SortOrder, bool IsVisible, bool IsActive);
 public sealed record CustomerRow(Guid Id, string Code, string Name, string? TaxCode, string? Email, string? Phone, string Status);
 public sealed record DashboardVm(int CustomerCount, int UserCount, int ActiveUserCount, int RoleCount);
+public sealed record ErrorVm(string? RequestId);

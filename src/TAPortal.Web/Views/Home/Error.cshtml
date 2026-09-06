@@ -1,0 +1,16 @@
+@model ErrorVm
+@{
+    ViewData["Title"] = "Lỗi hệ thống";
+}
+
+<div class="empty">
+    <div class="empty-img"><i class="ti ti-alert-triangle fs-1 text-danger"></i></div>
+    <p class="empty-title">Không thể xử lý yêu cầu</p>
+    <p class="empty-subtitle text-secondary">
+        Hệ thống đã ghi nhận lỗi. Vui lòng thử lại sau hoặc liên hệ quản trị viên.
+    </p>
+    @if (!string.IsNullOrWhiteSpace(Model.RequestId))
+    {
+        <p class="text-secondary small mb-0">Mã yêu cầu: <code>@Model.RequestId</code></p>
+    }
+</div>

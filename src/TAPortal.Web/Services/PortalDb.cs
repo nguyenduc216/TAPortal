@@ -8,9 +8,11 @@ public sealed record AuthUserSnapshot(Guid Id, string Username, string DisplayNa
 public sealed class PortalDb
 {
     private readonly string _connectionString;
+    private readonly ILogger<PortalDb> _logger;
 
-    public PortalDb(IConfiguration configuration)
+    public PortalDb(IConfiguration configuration, ILogger<PortalDb> logger)
     {
+        _logger = logger;
         _connectionString = configuration["Database:ConnectionString"] ?? string.Empty;
         if (string.IsNullOrWhiteSpace(_connectionString))
         {
@@ -97,7 +99,14 @@ WHERE up.UserId=@id AND up.Effect='DENY' AND p.IsDeleted=0;
         await using var cn = Open(); await cn.OpenAsync();
         await using var cmd = new SqlCommand("UPDATE dbo.Users SET LastLoginAt=SYSUTCDATETIME() WHERE Id=@id", cn);
         cmd.Parameters.AddWithValue("@id", userId);
-        await cmd.ExecuteNonQueryAsync();
+        try
+        {
+            await cmd.ExecuteNonQueryAsync();
+        }
+        catch (SqlException ex) when (ex.Number == 229)
+        {
+            _logger.LogWarning(ex, "Unable to update LastLoginAt for user {UserId} because the database principal lacks UPDATE permission.", userId);
+        }
     }
 
     public async Task<bool> UsernameExistsAsync(string username)

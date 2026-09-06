@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -11,6 +12,13 @@ namespace TAPortal.Web.Controllers;
 public sealed class HomeController(PortalDb db) : Controller
 {
     public async Task<IActionResult> Index() => View(await db.GetDashboardAsync());
+
+    [AllowAnonymous]
+    public IActionResult Error()
+    {
+        Response.StatusCode = StatusCodes.Status500InternalServerError;
+        return View(new ErrorVm(Activity.Current?.Id ?? HttpContext.TraceIdentifier));
+    }
 }
 
 [Authorize(Policy = PermissionPolicies.Prefix + "AUTH.USERS.VIEW")]
