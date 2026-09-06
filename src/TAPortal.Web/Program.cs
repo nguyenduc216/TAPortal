@@ -41,8 +41,9 @@ app.MapControllerRoute(name: "default", pattern: "{controller=Home}/{action=Inde
 
 // Bootstrap the first administrator only when the account does not already exist.
 // Password is hashed with PBKDF2 before storage; plaintext is never stored in SQL.
-using (var scope = app.Services.CreateScope())
+if (builder.Configuration.GetValue("Bootstrap:EnsureAdmin", true))
 {
+    using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<PortalDb>();
     var passwords = scope.ServiceProvider.GetRequiredService<PasswordService>();
     await db.EnsureAdminAsync(passwords.Hash("Admin@123"));
