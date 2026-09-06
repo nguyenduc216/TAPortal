@@ -11,8 +11,11 @@ public sealed class PortalDb
 
     public PortalDb(IConfiguration configuration)
     {
-        _connectionString = configuration["Database:ConnectionString"]
-            ?? throw new InvalidOperationException("Missing Database:ConnectionString. Configure it through appsettings or Database__ConnectionString.");
+        _connectionString = configuration["Database:ConnectionString"] ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(_connectionString))
+        {
+            throw new InvalidOperationException("Missing Database:ConnectionString. Configure it through appsettings or Database__ConnectionString.");
+        }
     }
 
     private SqlConnection Open() => new(_connectionString);

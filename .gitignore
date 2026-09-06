@@ -1,9 +1,17 @@
 # .NET
 bin/
 obj/
+**/bin/
+**/obj/
 .vs/
 *.user
 *.suo
+
+# Publish output
+publish/
+src/publish/
+**/publish/
+**/publish-*/
 
 # Secrets / local config
 appsettings.Development.json
