@@ -1,0 +1,9 @@
+{
+  "name": "taportal-database",
+  "version": "0.1.0",
+  "description": "TAPortal database assistant: safe read-only schema inspection and SQL analysis through the TAPortal MCP server.",
+  "skills": [
+    "../.skills/taportal-database/SKILL.md"
+  ],
+  "mcpServers": "../.mcp.json"
+}
