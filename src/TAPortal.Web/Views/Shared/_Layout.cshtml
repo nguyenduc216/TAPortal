@@ -16,7 +16,8 @@
             <div class="container-fluid">
                 <h1 class="navbar-brand navbar-brand-autodark">
                     <a asp-controller="Home" asp-action="Index" class="ta-brand text-decoration-none">
-                        <span class="ta-logo-mark">T<span>A</span><i></i></span>
+                        <img src="~/images/ta-logo.png" class="ta-sidebar-logo" alt="T.A" onerror="this.classList.add('d-none');document.getElementById('sideLogoFallback').classList.remove('d-none');" />
+                        <span id="sideLogoFallback" class="ta-logo-mark d-none">T<span>A</span><i></i></span>
                         <span class="ms-2">T.A Portal</span>
                     </a>
                 </h1>

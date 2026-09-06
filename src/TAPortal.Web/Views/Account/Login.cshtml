@@ -2,29 +2,81 @@
 @{ ViewData["Title"] = "Đăng nhập"; }
 <div class="ta-auth">
     <section class="ta-auth-brand">
-        <div class="text-center position-relative" style="z-index:1">
-            <div class="display-2 fw-bold mb-3"><span class="ta-logo-mark" style="font-size:5rem">T<span>A</span><i></i></span></div>
-            <h1 class="h2 text-white">T.A Portal</h1>
+        <div class="ta-auth-brand-inner text-center position-relative">
+            <img src="~/images/ta-logo.png" class="ta-auth-logo" alt="T.A - Tư vấn giải pháp" onerror="this.classList.add('d-none');document.getElementById('logoFallback').classList.remove('d-none');" />
+            <div id="logoFallback" class="d-none display-2 fw-bold mb-3"><span class="ta-logo-mark" style="font-size:5rem">T<span>A</span><i></i></span></div>
+            <h1 class="h2 text-white mt-3">T.A Portal</h1>
             <p class="fs-3 opacity-75">Tư vấn giải pháp · Quản trị doanh nghiệp</p>
-            <div class="d-flex gap-4 justify-content-center mt-5 small"><span><i class="ti ti-shield-check me-1"></i>Tin cậy</span><span><i class="ti ti-chart-bar me-1"></i>Hiệu quả</span><span><i class="ti ti-users-group me-1"></i>Đồng hành</span></div>
+            <div class="d-flex gap-4 justify-content-center mt-5 small ta-auth-benefits">
+                <span><i class="ti ti-shield-check me-1"></i>Tin cậy</span>
+                <span><i class="ti ti-chart-bar me-1"></i>Hiệu quả</span>
+                <span><i class="ti ti-users-group me-1"></i>Đồng hành</span>
+            </div>
         </div>
     </section>
     <section class="ta-auth-form">
-        <div class="card">
-            <div class="card-body p-4">
-                <h2 class="mb-1">Chào mừng trở lại!</h2>
-                <p class="text-secondary mb-4">Đăng nhập để tiếp tục sử dụng T.A Portal.</p>
-                <form asp-action="Login" method="post" autocomplete="on">
+        <div class="card ta-login-card @(ViewData.ModelState.ErrorCount > 0 ? "ta-shake" : "")">
+            <div class="card-body p-4 p-md-5">
+                <div class="ta-login-heading mb-4">
+                    <h2 class="mb-1">Chào mừng trở lại!</h2>
+                    <p class="text-secondary mb-0">Đăng nhập để tiếp tục sử dụng T.A Portal.</p>
+                </div>
+
+                @if (ViewData.ModelState.ErrorCount > 0)
+                {
+                    <div class="ta-validation-alert" role="alert">
+                        <div class="ta-validation-icon"><i class="ti ti-alert-circle"></i></div>
+                        <div>
+                            <div class="fw-semibold">Đăng nhập chưa thành công</div>
+                            <div asp-validation-summary="ModelOnly" class="ta-validation-summary"></div>
+                        </div>
+                    </div>
+                }
+
+                <form asp-action="Login" method="post" autocomplete="on" class="ta-login-form">
                     <input type="hidden" name="returnUrl" value="@ViewBag.ReturnUrl" />
-                    <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
-                    <div class="mb-3"><label class="form-label">Tài khoản</label><input asp-for="Username" class="form-control" placeholder="Nhập tên đăng nhập" autofocus /><span asp-validation-for="Username" class="text-danger"></span></div>
-                    <div class="mb-3"><label class="form-label">Mật khẩu</label><div class="input-group input-group-flat"><input asp-for="Password" id="password" class="form-control" placeholder="Nhập mật khẩu" /><button class="input-group-text" type="button" onclick="togglePassword('password',this)"><i class="ti ti-eye"></i></button></div><span asp-validation-for="Password" class="text-danger"></span></div>
-                    <div class="mb-4"><label class="form-check"><input asp-for="RememberMe" class="form-check-input" /><span class="form-check-label">Ghi nhớ đăng nhập</span></label></div>
-                    <button class="btn btn-ta-gold w-100" type="submit"><i class="ti ti-lock me-2"></i>Đăng nhập</button>
+
+                    <div class="mb-3 ta-field">
+                        <label class="form-label">Tài khoản</label>
+                        <div class="input-icon">
+                            <span class="input-icon-addon"><i class="ti ti-user"></i></span>
+                            <input asp-for="Username" class="form-control" placeholder="Nhập tên đăng nhập" autofocus />
+                        </div>
+                        <span asp-validation-for="Username" class="ta-field-error"></span>
+                    </div>
+
+                    <div class="mb-3 ta-field">
+                        <label class="form-label">Mật khẩu</label>
+                        <div class="input-group input-group-flat">
+                            <span class="input-group-text"><i class="ti ti-lock"></i></span>
+                            <input asp-for="Password" id="password" class="form-control" placeholder="Nhập mật khẩu" />
+                            <button class="input-group-text ta-password-toggle" type="button" onclick="togglePassword('password',this)" aria-label="Hiện hoặc ẩn mật khẩu"><i class="ti ti-eye"></i></button>
+                        </div>
+                        <span asp-validation-for="Password" class="ta-field-error"></span>
+                    </div>
+
+                    <div class="d-flex align-items-center justify-content-between mb-4">
+                        <label class="form-check mb-0"><input asp-for="RememberMe" class="form-check-input" /><span class="form-check-label">Ghi nhớ đăng nhập</span></label>
+                    </div>
+
+                    <button class="btn btn-ta-gold w-100 ta-login-button" type="submit">
+                        <span class="ta-btn-label"><i class="ti ti-login-2 me-2"></i>Đăng nhập</span>
+                        <span class="spinner-border spinner-border-sm ta-btn-spinner" role="status" aria-hidden="true"></span>
+                    </button>
                 </form>
-                <div class="text-center text-secondary mt-4 small">Tài khoản khởi tạo: <strong>admin</strong>. Đổi mật khẩu ngay sau lần đăng nhập đầu tiên.</div>
+
+                <div class="ta-bootstrap-note mt-4">
+                    <i class="ti ti-info-circle me-1"></i>
+                    Tài khoản khởi tạo: <strong>admin</strong>. Hãy đổi mật khẩu ngay sau lần đăng nhập đầu tiên.
+                </div>
             </div>
         </div>
     </section>
 </div>
-@section Scripts {<script>function togglePassword(id,b){const e=document.getElementById(id);e.type=e.type==='password'?'text':'password';b.querySelector('i').className=e.type==='password'?'ti ti-eye':'ti ti-eye-off';}</script>}
+@section Scripts {
+<script>
+function togglePassword(id,b){const e=document.getElementById(id);e.type=e.type==='password'?'text':'password';b.querySelector('i').className=e.type==='password'?'ti ti-eye':'ti ti-eye-off';}
+document.querySelector('.ta-login-form')?.addEventListener('submit', function(){ const btn=this.querySelector('.ta-login-button'); if(!btn) return; btn.classList.add('is-loading'); btn.disabled=true; });
+document.querySelectorAll('.ta-field input').forEach(input=>{ input.addEventListener('focus',()=>input.closest('.ta-field')?.classList.add('is-focused')); input.addEventListener('blur',()=>input.closest('.ta-field')?.classList.remove('is-focused')); });
+</script>
+}
