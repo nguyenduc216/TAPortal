@@ -32,6 +32,9 @@ WHEN MATCHED THEN UPDATE SET Name=S.Name,ModuleCode=S.ModuleCode,FunctionCode=S.
 WHEN NOT MATCHED THEN INSERT(Code,Name,ModuleCode,FunctionCode,ActionCode,IsSystem,IsActive) VALUES(S.Code,S.Name,S.ModuleCode,S.FunctionCode,S.ActionCode,1,1);
 GO
 
+-- Variables are scoped to a single batch in SQL Server.
+-- Re-declare @CrmModule here because the previous GO ended its scope.
+DECLARE @CrmModule uniqueidentifier=(SELECT TOP 1 Id FROM dbo.Modules WHERE Code='CRM' AND IsDeleted=0);
 DECLARE @AuthModule uniqueidentifier=(SELECT TOP 1 Id FROM dbo.Modules WHERE Code='AUTH' AND IsDeleted=0);
 DECLARE @SystemModule uniqueidentifier=(SELECT TOP 1 Id FROM dbo.Modules WHERE Code='SYSTEM' AND IsDeleted=0);
 DECLARE @AuditModule uniqueidentifier=(SELECT TOP 1 Id FROM dbo.Modules WHERE Code='AUDIT' AND IsDeleted=0);
