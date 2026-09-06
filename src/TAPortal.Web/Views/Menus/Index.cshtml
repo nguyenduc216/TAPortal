@@ -1,0 +1,4 @@
+@model IReadOnlyList<PortalMenu>
+@{ ViewData["Title"]="Quản lý menu"; }
+<div class="page-header"><div class="row align-items-center"><div class="col"><h2 class="page-title">Quản lý Menu hệ thống</h2><div class="text-secondary">Menu được lưu trong database và gắn với permission.</div></div></div></div>
+<div class="card mt-3"><div class="table-responsive"><table class="table table-vcenter card-table"><thead><tr><th>Mã menu</th><th>Tên menu</th><th>Route</th><th>Icon</th><th>Thứ tự</th><th>Hiển thị</th><th>Trạng thái</th></tr></thead><tbody>@foreach(var x in Model){<tr><td><code>@x.Code</code></td><td class="fw-medium">@x.Name</td><td>@x.Route</td><td>@x.Icon</td><td>@x.SortOrder</td><td>@(x.IsVisible?"Có":"Không")</td><td><span class="badge @(x.IsActive?"badge-ta-active":"bg-secondary-lt")">@(x.IsActive?"Hoạt động":"Ngừng")</span></td></tr>}</tbody></table></div></div>

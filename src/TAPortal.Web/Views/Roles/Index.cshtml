@@ -1,0 +1,4 @@
+@model IReadOnlyList<PortalRole>
+@{ ViewData["Title"]="Vai trò & phân quyền"; }
+<div class="page-header"><div class="row"><div class="col"><h2 class="page-title">Vai trò &amp; phân quyền</h2><div class="text-secondary">Cấu trúc RBAC: User → Role → Permission.</div></div></div></div>
+<div class="card mt-3"><div class="table-responsive"><table class="table table-vcenter card-table"><thead><tr><th>Mã vai trò</th><th>Tên vai trò</th><th>Mô tả</th><th>Loại</th><th>Trạng thái</th></tr></thead><tbody>@foreach(var x in Model){<tr><td><code>@x.Code</code></td><td class="fw-medium">@x.Name</td><td>@x.Description</td><td>@(x.IsSystem?"Hệ thống":"Tùy chỉnh")</td><td><span class="badge @(x.IsActive?"badge-ta-active":"bg-secondary-lt")">@(x.IsActive?"Hoạt động":"Ngừng")</span></td></tr>}</tbody></table></div></div>
