@@ -1,4 +1,32 @@
 @model IReadOnlyList<PortalMenu>
 @{ ViewData["Title"]="Quản lý menu"; }
-<div class="page-header"><div class="row align-items-center"><div class="col"><h2 class="page-title">Quản lý Menu hệ thống</h2><div class="text-secondary">Menu được lưu trong database và gắn với permission.</div></div></div></div>
-<div class="card ta-table-card mt-3"><div class="table-responsive"><table class="table table-vcenter card-table"><thead><tr><th>Mã menu</th><th>Tên menu</th><th>Route</th><th>Icon</th><th>Thứ tự</th><th>Hiển thị</th><th>Trạng thái</th></tr></thead><tbody>@foreach(var x in Model){<tr><td><code>@x.Code</code></td><td class="fw-medium">@x.Name</td><td>@x.Route</td><td>@x.Icon</td><td>@x.SortOrder</td><td>@(x.IsVisible?"Có":"Không")</td><td><span class="badge @(x.IsActive?"badge-ta-active":"bg-secondary-lt")">@(x.IsActive?"Hoạt động":"Ngừng")</span></td></tr>}</tbody></table></div>@if(Model.Count == 0){<div class="ta-table-empty"><i class="ti ti-list-details" aria-hidden="true"></i>Chưa có menu.</div>}</div>
+<div class="page-header ta-compact-header">
+    <div class="row align-items-center g-2">
+        <div class="col"><h2 class="page-title">Quản lý menu</h2><div class="text-secondary">Cấu trúc điều hướng, route, icon và trạng thái hiển thị.</div></div>
+        <div class="col-auto"><span class="badge bg-blue-lt"><i class="ti ti-list-tree me-1"></i>@Model.Count mục</span></div>
+    </div>
+</div>
+<div class="card ta-table-card mt-2">
+    <div class="card-header ta-toolbar">
+        <div class="input-icon ta-search-compact"><span class="input-icon-addon"><i class="ti ti-search"></i></span><input class="form-control" placeholder="Tìm menu..." oninput="taFilterRows(this.value,'menuTable')" /></div>
+    </div>
+    <div class="table-responsive">
+        <table id="menuTable" class="table table-vcenter card-table">
+            <thead><tr><th>Menu</th><th>Mã</th><th>Route</th><th class="text-center">Thứ tự</th><th class="text-center">Hiển thị</th><th>Trạng thái</th></tr></thead>
+            <tbody>
+            @foreach(var x in Model){
+                <tr data-ta-row>
+                    <td><div class="d-flex align-items-center gap-2"><span class="ta-menu-icon"><i class="ti @(string.IsNullOrWhiteSpace(x.Icon)?"ti-point":x.Icon)"></i></span><div><div class="fw-semibold">@x.Name</div>@if(x.ParentId.HasValue){<div class="text-secondary ta-xs">Menu con</div>}</div></div></td>
+                    <td><code class="ta-code">@x.Code</code></td>
+                    <td><span class="text-secondary">@(string.IsNullOrWhiteSpace(x.Route)?"—":x.Route)</span></td>
+                    <td class="text-center">@x.SortOrder</td>
+                    <td class="text-center"><i class="ti @(x.IsVisible?"ti-eye text-success":"ti-eye-off text-secondary")"></i></td>
+                    <td><span class="badge @(x.IsActive?"badge-ta-active":"bg-secondary-lt")">@(x.IsActive?"Hoạt động":"Ngừng")</span></td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+    @if(Model.Count == 0){<div class="ta-table-empty"><i class="ti ti-list-details"></i>Chưa có menu.</div>}
+    <div class="ta-table-empty d-none" data-ta-no-results><i class="ti ti-search-off"></i>Không tìm thấy menu phù hợp.</div>
+</div>
