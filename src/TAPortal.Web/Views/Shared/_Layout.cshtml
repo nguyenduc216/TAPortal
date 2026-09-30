@@ -14,6 +14,7 @@
     <link rel="stylesheet" href="~/css/ta-portal.css" asp-append-version="true" />
 </head>
 <body class="layout-fluid">
+<div class="ta-global-progress" data-ta-progress role="progressbar" aria-label="Đang tải trang" aria-hidden="true"><span></span></div>
 @if (User.Identity?.IsAuthenticated == true)
 {
     <div class="page">
@@ -52,22 +53,22 @@
                                 </div>
                             </a>
                             <div class="dropdown-menu dropdown-menu-end dropdown-menu-arrow">
-                                <a asp-controller="Account" asp-action="Profile" class="dropdown-item">Hồ sơ cá nhân</a>
-                                <a asp-controller="Account" asp-action="ChangePassword" class="dropdown-item">Đổi mật khẩu</a>
+                                <a asp-controller="Account" asp-action="Profile" class="dropdown-item"><i class="ti ti-user-circle"></i><span>Hồ sơ cá nhân</span></a>
+                                <a asp-controller="Account" asp-action="ChangePassword" class="dropdown-item"><i class="ti ti-key"></i><span>Đổi mật khẩu</span></a>
                                 <div class="dropdown-divider"></div>
-                                <form asp-controller="Account" asp-action="Logout" method="post"><button class="dropdown-item text-danger" type="submit">Đăng xuất</button></form>
+                                <form asp-controller="Account" asp-action="Logout" method="post"><button class="dropdown-item text-danger" type="submit" data-ta-loading data-ta-loading-text="Đang đăng xuất..."><i class="ti ti-logout"></i><span>Đăng xuất</span></button></form>
                             </div>
                         </div>
                     </div>
                 </div>
             </header>
-            <div class="page-body">
+            <main class="page-body ta-page-content ta-page-enter">
                 <div class="container-xl">
-                    @if (TempData["Success"] is string success) { <div class="alert alert-success">@success</div> }
-                    @if (TempData["Error"] is string error) { <div class="alert alert-danger">@error</div> }
+                    @if (TempData["Success"] is string success) { <div class="alert alert-success ta-alert" role="status"><i class="ti ti-circle-check" aria-hidden="true"></i><span>@success</span></div> }
+                    @if (TempData["Error"] is string error) { <div class="alert alert-danger ta-alert" role="alert"><i class="ti ti-alert-circle" aria-hidden="true"></i><span>@error</span></div> }
                     @RenderBody()
                 </div>
-            </div>
+            </main>
         </div>
     </div>
 }
@@ -76,6 +77,7 @@ else
     @RenderBody()
 }
 <script src="https://cdn.jsdelivr.net/npm/@@tabler/core@1.0.0-beta21/dist/js/tabler.min.js"></script>
+<script src="~/js/ta-portal.js" asp-append-version="true"></script>
 @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

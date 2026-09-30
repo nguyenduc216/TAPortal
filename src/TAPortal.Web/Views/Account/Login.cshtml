@@ -50,7 +50,7 @@
                         <div class="input-group input-group-flat">
                             <span class="input-group-text"><i class="ti ti-lock"></i></span>
                             <input asp-for="Password" id="password" class="form-control" placeholder="Nhập mật khẩu" />
-                            <button class="input-group-text ta-password-toggle" type="button" onclick="togglePassword('password',this)" aria-label="Hiện hoặc ẩn mật khẩu"><i class="ti ti-eye"></i></button>
+                            <button class="input-group-text ta-password-toggle" type="button" onclick="taTogglePassword('password',this)" aria-label="Hiện mật khẩu"><i class="ti ti-eye" aria-hidden="true"></i></button>
                         </div>
                         <span asp-validation-for="Password" class="ta-field-error"></span>
                     </div>
@@ -59,9 +59,8 @@
                         <label class="form-check mb-0"><input asp-for="RememberMe" class="form-check-input" /><span class="form-check-label">Ghi nhớ đăng nhập</span></label>
                     </div>
 
-                    <button class="btn btn-ta-gold w-100 ta-login-button" type="submit">
-                        <span class="ta-btn-label"><i class="ti ti-login-2 me-2"></i>Đăng nhập</span>
-                        <span class="spinner-border spinner-border-sm ta-btn-spinner" role="status" aria-hidden="true"></span>
+                    <button class="btn btn-ta-gold w-100 ta-login-button" type="submit" data-ta-loading data-ta-loading-text="Đang đăng nhập...">
+                        <i class="ti ti-login-2" aria-hidden="true"></i><span>Đăng nhập</span>
                     </button>
                 </form>
 
@@ -73,10 +72,3 @@
         </div>
     </section>
 </div>
-@section Scripts {
-<script>
-function togglePassword(id,b){const e=document.getElementById(id);e.type=e.type==='password'?'text':'password';b.querySelector('i').className=e.type==='password'?'ti ti-eye':'ti ti-eye-off';}
-document.querySelector('.ta-login-form')?.addEventListener('submit', function(){ const btn=this.querySelector('.ta-login-button'); if(!btn) return; btn.classList.add('is-loading'); btn.disabled=true; });
-document.querySelectorAll('.ta-field input').forEach(input=>{ input.addEventListener('focus',()=>input.closest('.ta-field')?.classList.add('is-focused')); input.addEventListener('blur',()=>input.closest('.ta-field')?.classList.remove('is-focused')); });
-</script>
-}
