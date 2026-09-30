@@ -71,3 +71,6 @@ body{font-size:var(--ta-font-sm)}
 .dropdown-menu{font-size:.78rem}.dropdown-item{padding:.42rem .7rem}
 .alert{padding:.65rem .8rem;font-size:.78rem}
 @media(max-width:991.98px){.page-wrapper{margin-left:0}.ta-sidebar{width:100%!important}.ta-sidebar-scroll{max-height:calc(100vh - 64px)}}
+
+/* 16. Compact toolbars */
+.ta-compact-header{margin-bottom:.45rem}.ta-toolbar{min-height:48px;display:flex;align-items:center;justify-content:space-between;padding:.55rem .75rem}.ta-search-compact{width:min(280px,100%)}.ta-menu-icon{width:28px;height:28px;border-radius:7px;display:grid;place-items:center;background:#eef4fa;color:var(--ta-navy);font-size:.95rem;flex:0 0 28px}.ta-xs{font-size:.67rem}.ta-code{font-size:.7rem;background:#f1f4f8;border-radius:5px;padding:.15rem .32rem;color:#405066}
