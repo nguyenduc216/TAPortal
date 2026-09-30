@@ -73,7 +73,9 @@ Run these only after the existing 001-007 migrations and baseline seeds have com
 6. `013-invoice-core.sql`
 7. `014-feature-navigation-permissions.sql`
 8. `015-payment-audit-hardening.sql`
+9. `016-sepay-bankhub-environments.sql`
+10. `017-payment-allocation-procedures.sql`
 
-Do not skip the order. Migration 009 backfills current Companies/Customers and current users into the T.A platform Partner. Migration 014 activates only feature menus whose read-only portal pages are included in the same release. Migration 015 preserves the many-IPN-to-one-bank-transaction audit trail and exposes `vw_PaymentRequestBalances`, where payment status is derived from active allocations rather than trusting a mutable paid amount.
+Do not skip the order. Migration 009 backfills current Companies/Customers and current users into the T.A platform Partner. Migration 014 activates only feature menus whose read-only portal pages are included in the same release. Migration 015 preserves the many-IPN-to-one-bank-transaction audit trail and exposes `vw_PaymentRequestBalances`, where payment status is derived from active allocations rather than trusting a mutable paid amount. Migration 016 separates SePay SANDBOX/PRODUCTION connections, webhook configuration and sanitized provider API logs. Migration 017 adds atomic allocation/reversal procedures and prevents allocating more than the normalized bank transaction amount.
 
 Before production execution, take a database backup and run the scripts against a staging copy first. Provider secrets must not be stored directly in `PartnerProviderConnections.ConfigJson`; use `SecretReference`.
