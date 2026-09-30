@@ -59,3 +59,21 @@ MCP /mcp
 ```
 
 `/health` only verifies that the MCP web process is reachable. To verify SQL connectivity, invoke MCP tool `DbPing`, then `DbListSchemas` or `DbListTables`.
+
+
+## T.A Portal operational expansion (008-015)
+
+Run these only after the existing 001-007 migrations and baseline seeds have completed successfully:
+
+1. `008-navigation-hierarchy.sql`
+2. `009-partner-tenant-foundation.sql`
+3. `010-provider-billing-foundation.sql`
+4. `011-banking-core.sql`
+5. `012-payment-reconciliation.sql`
+6. `013-invoice-core.sql`
+7. `014-feature-navigation-permissions.sql`
+8. `015-payment-audit-hardening.sql`
+
+Do not skip the order. Migration 009 backfills current Companies/Customers and current users into the T.A platform Partner. Migration 014 activates only feature menus whose read-only portal pages are included in the same release. Migration 015 preserves the many-IPN-to-one-bank-transaction audit trail and exposes `vw_PaymentRequestBalances`, where payment status is derived from active allocations rather than trusting a mutable paid amount.
+
+Before production execution, take a database backup and run the scripts against a staging copy first. Provider secrets must not be stored directly in `PartnerProviderConnections.ConfigJson`; use `SecretReference`.
