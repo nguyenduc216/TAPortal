@@ -58,10 +58,13 @@ WHEN MATCHED THEN UPDATE SET Name=S.Name,Icon=S.Icon,SortOrder=S.SortOrder,Route
 WHEN NOT MATCHED THEN INSERT(Code,Name,Icon,SortOrder,IsVisible,IsActive) VALUES(S.Code,S.Name,S.Icon,S.SortOrder,0,1);
 GO
 
-CREATE INDEX IX_Menus_Parent_Visible_Sort
-ON dbo.Menus(ParentId,IsVisible,IsActive,SortOrder)
-INCLUDE(Code,Name,Icon,Route)
-WHERE IsDeleted=0;
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id=OBJECT_ID(N'dbo.Menus') AND name=N'IX_Menus_Parent_Visible_Sort')
+BEGIN
+    CREATE INDEX IX_Menus_Parent_Visible_Sort
+    ON dbo.Menus(ParentId,IsVisible,IsActive,SortOrder)
+    INCLUDE(Code,Name,Icon,Route)
+    WHERE IsDeleted=0;
+END
 GO
 
 PRINT '008-navigation-hierarchy.sql: OK';
