@@ -79,6 +79,11 @@ Run these only after the existing 001-007 migrations and baseline seeds have com
 12. `019-banking-payment-hardening.sql`
 13. `020-credit-wallet-procedures.sql`
 14. `021-tenant-outbox-hardening.sql`
+15. `022-subscription-billing-lifecycle.sql`
+16. `023-customer-invoice-profile.sql`
+17. `024-provider-processing-retry.sql`
+18. `025-operational-reporting-views.sql`
+19. `026-payment-code-matching-controls.sql`
 
 Do not skip the order. Migration 009 backfills current Companies/Customers and current users into the T.A platform Partner. Migration 014 activates only feature menus whose read-only portal pages are included in the same release. Migration 015 preserves the many-IPN-to-one-bank-transaction audit trail and exposes `vw_PaymentRequestBalances`, where payment status is derived from active allocations rather than trusting a mutable paid amount. Migration 016 separates SePay SANDBOX/PRODUCTION connections, webhook configuration and sanitized provider API logs. Migration 017 adds atomic allocation/reversal procedures and prevents allocating more than the normalized bank transaction amount.
 
@@ -90,3 +95,11 @@ Database schema, constraints, indexes, idempotency, wallet/ledger semantics, ban
 
 ### Security rules
 Never persist provider client secrets, access tokens or link tokens in plaintext. ProviderTokenSessions stores only SecretReference plus lifecycle metadata. API logs must be sanitized before persistence. CreditLedger is immutable; corrections use compensating entries. Payment allocations are reversed, never deleted. PaymentCode must never be reused for a Partner after a request is paid/expired/cancelled.
+
+
+### 022-026 completion layer
+- 022 adds subscription entitlements, top-ups and partner service overrides.
+- 023 adds reusable customer invoice profiles plus immutable invoice-request snapshots/events.
+- 024 adds retry leases and dead-letter persistence for webhook/outbox/provider processing.
+- 025 adds operational views for banking, unresolved transactions, invoice operations and provider health.
+- 026 makes payment-code normalization explicit, prevents reuse per Partner and adds aliases/matching-rule configuration. Amount-only matching remains assistive and must not auto-allocate by itself.
