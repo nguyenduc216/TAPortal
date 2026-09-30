@@ -26,3 +26,48 @@ body{background:var(--ta-bg);color:#172033}.page-body{padding-bottom:2rem}.page-
 @media(max-width:991.98px){.page-header .row{gap:.8rem}.page-header .col-auto{width:100%;margin-left:0!important}.page-header .col-auto .btn{width:100%}}@media(max-width:900px){.ta-auth{grid-template-columns:1fr}.ta-auth-brand{display:none}}@media(max-width:575.98px){.page-body{padding-top:1rem}.card-body{padding:1rem}.modal-footer{flex-wrap:nowrap}.modal-footer .btn{flex:1;margin:0!important}.ta-table-card .card-header .input-icon{width:100%}}
 /* 14. Reduced motion */
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}.ta-sidebar .nav-link:hover,.btn:hover:not(:disabled),.btn:active:not(:disabled),.ta-card-clickable:hover{transform:none}}
+
+
+/* 15. Compact application density */
+:root{--ta-sidebar-width:244px;--ta-control-h:34px;--ta-font-sm:.8125rem;--ta-font-xs:.75rem;--ta-radius-sm:8px}
+body{font-size:var(--ta-font-sm)}
+.page-wrapper{margin-left:var(--ta-sidebar-width)}
+.ta-sidebar{width:var(--ta-sidebar-width)!important}
+.ta-sidebar-inner{padding:0 .55rem}
+.ta-sidebar-brand{min-height:64px;padding:.65rem .7rem;margin:0}
+.ta-sidebar-brand .ta-brand{gap:.55rem;font-size:1.05rem;font-weight:700}
+.ta-sidebar-logo{height:27px;max-width:52px}
+.ta-sidebar-scroll{overflow-y:auto;overflow-x:hidden;padding:.45rem 0 1rem}
+.ta-nav-list{gap:.08rem}
+.ta-sidebar .ta-nav-link{min-height:34px;padding:.38rem .62rem;margin:.05rem 0;border-radius:7px;font-size:.82rem;gap:.35rem}
+.ta-sidebar .ta-nav-link .nav-link-icon{width:1.35rem;min-width:1.35rem;margin-right:.15rem;font-size:1.05rem}
+.ta-sidebar .ta-nav-link.active{background:rgba(255,255,255,.12);box-shadow:inset 2px 0 0 var(--ta-gold)}
+.ta-nav-section{margin:.38rem 0 .12rem}
+.ta-nav-section-toggle{width:100%;border:0;background:transparent;color:rgba(255,255,255,.5);display:flex;align-items:center;justify-content:space-between;padding:.28rem .62rem;font-size:.66rem;font-weight:700;letter-spacing:.065em;text-transform:uppercase;cursor:pointer}
+.ta-nav-section-label{display:flex;align-items:center;gap:.45rem}
+.ta-nav-section-label>i{font-size:.88rem}
+.ta-nav-chevron{font-size:.8rem;transition:transform var(--ta-transition)}
+.ta-nav-section.is-collapsed .ta-nav-chevron{transform:rotate(-90deg)}
+.ta-nav-section.is-collapsed .ta-nav-children{display:none}
+.ta-nav-children{list-style:none;margin:0;padding:0}
+.ta-nav-children .ta-nav-link{padding-left:.78rem}
+.ta-topbar{min-height:58px}
+.ta-user-trigger{font-size:.8rem}.ta-user-name{font-size:.82rem;font-weight:600}.ta-user-meta .small{font-size:.68rem;margin-top:.12rem}
+.page-body{padding-top:1.25rem}
+.page-header{margin-bottom:.7rem}.page-title{font-size:1.35rem;line-height:1.25}.page-header .text-secondary{font-size:.8rem;margin-top:.18rem}
+.btn{min-height:var(--ta-control-h);padding:.38rem .72rem;font-size:.78rem;border-radius:var(--ta-radius-sm)}
+.btn-sm{min-height:30px;padding:.28rem .55rem;font-size:.74rem}.ta-btn-icon{width:30px;height:30px;min-height:30px}
+.form-control,.form-select,.input-group-text{min-height:var(--ta-control-h);padding:.38rem .65rem;font-size:.8rem}
+.form-label{font-size:.75rem;font-weight:600;margin-bottom:.3rem}
+.card,.ta-card{border-radius:10px;box-shadow:0 3px 12px rgba(15,23,42,.045)}
+.card-header{min-height:44px;padding:.65rem .9rem}.card-body{padding:.9rem}.card-title{font-size:.9rem}
+.ta-stat-card .card-body{padding:.85rem}.ta-stat-icon{width:38px;height:38px;flex-basis:38px;border-radius:9px;font-size:1.15rem}.ta-stat-label{font-size:.75rem}.ta-stat-value{font-size:1.35rem}
+.ta-table-card .table>:not(caption)>*>*{padding:.58rem .75rem}
+.ta-table-card .table thead th{font-size:.68rem;letter-spacing:.035em}
+.ta-table-card .table tbody td{font-size:.78rem;vertical-align:middle}
+.ta-table-empty{padding:1.8rem 1rem;font-size:.8rem}.ta-table-empty i{font-size:1.55rem}
+.badge{font-size:.68rem;padding:.25rem .42rem}
+.modal-header,.modal-footer{padding:.75rem 1rem}.modal-body{padding:1rem}.modal-title{font-size:1rem}
+.dropdown-menu{font-size:.78rem}.dropdown-item{padding:.42rem .7rem}
+.alert{padding:.65rem .8rem;font-size:.78rem}
+@media(max-width:991.98px){.page-wrapper{margin-left:0}.ta-sidebar{width:100%!important}.ta-sidebar-scroll{max-height:calc(100vh - 64px)}}
