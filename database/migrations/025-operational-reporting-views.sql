@@ -3,12 +3,12 @@ USE [TAPortal];
 GO
 CREATE OR ALTER VIEW dbo.vw_PartnerBankingDashboard AS
 SELECT p.Id PartnerId,p.Code PartnerCode,p.Name PartnerName,
- COUNT(DISTINCT a.Id) BankAccountCount,
- COUNT(DISTINCT CASE WHEN a.BankApiConnected=1 THEN a.Id END) ConnectedBankAccountCount,
- COUNT(DISTINCT CASE WHEN q.Status IN('PENDING','PARTIALLY_PAID','NEEDS_REVIEW') THEN q.Id END) OpenPaymentRequestCount,
- CAST(ISNULL(SUM(CASE WHEN q.Status IN('PENDING','PARTIALLY_PAID','NEEDS_REVIEW') THEN CASE WHEN q.AmountDue>q.AmountPaid THEN q.AmountDue-q.AmountPaid ELSE 0 END ELSE 0 END),0) AS decimal(18,2)) OutstandingAmount
-FROM dbo.Partners p LEFT JOIN dbo.PartnerBankAccounts a ON a.PartnerId=p.Id LEFT JOIN dbo.PaymentRequests q ON q.PartnerId=p.Id
-WHERE p.IsDeleted=0 GROUP BY p.Id,p.Code,p.Name;
+ ISNULL(a.BankAccountCount,0) BankAccountCount,ISNULL(a.ConnectedBankAccountCount,0) ConnectedBankAccountCount,
+ ISNULL(q.OpenPaymentRequestCount,0) OpenPaymentRequestCount,ISNULL(q.OutstandingAmount,0) OutstandingAmount
+FROM dbo.Partners p
+OUTER APPLY(SELECT COUNT(*) BankAccountCount,SUM(CASE WHEN x.BankApiConnected=1 THEN 1 ELSE 0 END) ConnectedBankAccountCount FROM dbo.PartnerBankAccounts x WHERE x.PartnerId=p.Id) a
+OUTER APPLY(SELECT COUNT(*) OpenPaymentRequestCount,CAST(ISNULL(SUM(CASE WHEN x.AmountDue>x.AmountPaid THEN x.AmountDue-x.AmountPaid ELSE 0 END),0) AS decimal(18,2)) OutstandingAmount FROM dbo.PaymentRequests x WHERE x.PartnerId=p.Id AND x.Status IN('PENDING','PARTIALLY_PAID','NEEDS_REVIEW')) q
+WHERE p.IsDeleted=0;
 GO
 CREATE OR ALTER VIEW dbo.vw_UnresolvedBankTransactions AS
 SELECT t.Id,t.PartnerId,t.TransactionDate,t.Amount,t.PaymentCode,t.Content,t.ExternalTransactionId,s.AllocatedAmount,s.UnallocatedAmount,s.AllocationStatus,
