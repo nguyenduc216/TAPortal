@@ -9,16 +9,10 @@ DECLARE @AuthModule uniqueidentifier=(SELECT TOP 1 Id FROM dbo.Modules WHERE Cod
 DECLARE @SystemModule uniqueidentifier=(SELECT TOP 1 Id FROM dbo.Modules WHERE Code='SYSTEM' AND IsDeleted=0);
 DECLARE @AuditModule uniqueidentifier=(SELECT TOP 1 Id FROM dbo.Modules WHERE Code='AUDIT' AND IsDeleted=0);
 
-MERGE dbo.Menus AS T
-USING (VALUES
- ('CRM_GROUP',N'Khách hàng & đối tác','ti ti-building-community',20,@CrmModule),
- ('AUTH_GROUP',N'Người dùng & phân quyền','ti ti-shield-lock',70,@AuthModule),
- ('SYSTEM_GROUP',N'Quản trị hệ thống','ti ti-settings',90,@SystemModule)
-) AS S(Code,Name,Icon,SortOrder,ModuleId)
-ON T.Code=S.Code AND T.IsDeleted=0
-WHEN MATCHED THEN UPDATE SET Name=S.Name,Icon=S.Icon,Route=NULL,SortOrder=S.SortOrder,ModuleId=S.ModuleId,FunctionId=NULL,ParentId=NULL,IsVisible=1,IsActive=1,UpdatedAt=SYSUTCDATETIME()
-WHEN NOT MATCHED THEN INSERT(ParentId,ModuleId,FunctionId,Code,Name,Icon,Route,SortOrder,IsVisible,IsActive)
-VALUES(NULL,S.ModuleId,NULL,S.Code,S.Name,S.Icon,NULL,S.SortOrder,1,1);
+DECLARE @SeedGroup TABLE(Code varchar(50),Name nvarchar(200),Icon varchar(100),SortOrder int,ModuleId uniqueidentifier);
+INSERT @SeedGroup VALUES('CRM_GROUP',N'Khách hàng & đối tác','ti ti-building-community',20,@CrmModule),('AUTH_GROUP',N'Người dùng & phân quyền','ti ti-shield-lock',70,@AuthModule),('SYSTEM_GROUP',N'Quản trị hệ thống','ti ti-settings',90,@SystemModule);
+UPDATE t SET Name=s.Name,Icon=s.Icon,Route=NULL,SortOrder=s.SortOrder,ModuleId=s.ModuleId,FunctionId=NULL,ParentId=NULL,IsVisible=1,IsActive=1,UpdatedAt=SYSUTCDATETIME() FROM dbo.Menus t JOIN @SeedGroup s ON t.Code=s.Code WHERE t.IsDeleted=0;
+INSERT dbo.Menus(ParentId,ModuleId,FunctionId,Code,Name,Icon,Route,SortOrder,IsVisible,IsActive) SELECT NULL,s.ModuleId,NULL,s.Code,s.Name,s.Icon,NULL,s.SortOrder,1,1 FROM @SeedGroup s WHERE NOT EXISTS(SELECT 1 FROM dbo.Menus t WHERE t.Code=s.Code AND t.IsDeleted=0);
 GO
 
 DECLARE @CrmGroup uniqueidentifier=(SELECT TOP 1 Id FROM dbo.Menus WHERE Code='CRM_GROUP' AND IsDeleted=0);
@@ -46,16 +40,10 @@ GO
 
 /* Roadmap groups are seeded hidden so Menu Administration can activate them
    only after the corresponding controllers/features are deployed. */
-MERGE dbo.Menus AS T
-USING (VALUES
- ('BANKING_GROUP',N'Ngân hàng & thanh toán','ti ti-building-bank',30),
- ('INVOICE_GROUP',N'Hóa đơn','ti ti-receipt-2',40),
- ('BILLING_GROUP',N'Gói dịch vụ','ti ti-package',50),
- ('INTEGRATION_GROUP',N'Tích hợp','ti ti-plug-connected',60)
-) AS S(Code,Name,Icon,SortOrder)
-ON T.Code=S.Code AND T.IsDeleted=0
-WHEN MATCHED THEN UPDATE SET Name=S.Name,Icon=S.Icon,SortOrder=S.SortOrder,Route=NULL,ParentId=NULL,IsVisible=0,IsActive=1,UpdatedAt=SYSUTCDATETIME()
-WHEN NOT MATCHED THEN INSERT(Code,Name,Icon,SortOrder,IsVisible,IsActive) VALUES(S.Code,S.Name,S.Icon,S.SortOrder,0,1);
+DECLARE @Roadmap TABLE(Code varchar(50),Name nvarchar(200),Icon varchar(100),SortOrder int);
+INSERT @Roadmap VALUES('BANKING_GROUP',N'Ngân hàng & thanh toán','ti ti-building-bank',30),('INVOICE_GROUP',N'Hóa đơn','ti ti-receipt-2',40),('BILLING_GROUP',N'Gói dịch vụ','ti ti-package',50),('INTEGRATION_GROUP',N'Tích hợp','ti ti-plug-connected',60);
+UPDATE t SET Name=s.Name,Icon=s.Icon,SortOrder=s.SortOrder,Route=NULL,ParentId=NULL,IsVisible=0,IsActive=1,UpdatedAt=SYSUTCDATETIME() FROM dbo.Menus t JOIN @Roadmap s ON t.Code=s.Code WHERE t.IsDeleted=0;
+INSERT dbo.Menus(Code,Name,Icon,SortOrder,IsVisible,IsActive) SELECT s.Code,s.Name,s.Icon,s.SortOrder,0,1 FROM @Roadmap s WHERE NOT EXISTS(SELECT 1 FROM dbo.Menus t WHERE t.Code=s.Code AND t.IsDeleted=0);
 GO
 
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id=OBJECT_ID(N'dbo.Menus') AND name=N'IX_Menus_Parent_Visible_Sort')
