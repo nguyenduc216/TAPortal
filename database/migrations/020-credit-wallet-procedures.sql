@@ -4,7 +4,9 @@ GO
 IF NOT EXISTS(SELECT 1 FROM sys.indexes WHERE object_id=OBJECT_ID('dbo.CreditLedger') AND name='IX_CreditLedger_PartnerTypeCreated')
  CREATE INDEX IX_CreditLedger_PartnerTypeCreated ON dbo.CreditLedger(PartnerId,CreditType,CreatedAt DESC) INCLUDE(EntryType,Quantity,BalanceAfter,SourceType,SourceId);
 GO
-CREATE OR ALTER PROCEDURE dbo.sp_GrantCredit
+IF OBJECT_ID(N'dbo.sp_GrantCredit',N'P') IS NULL EXEC('CREATE PROCEDURE dbo.sp_GrantCredit AS BEGIN SET NOCOUNT ON; END');
+GO
+ALTER PROCEDURE dbo.sp_GrantCredit
  @PartnerId uniqueidentifier,@CreditType varchar(20),@Quantity decimal(18,2),@SourceType varchar(50)=NULL,@SourceId nvarchar(200)=NULL,@IdempotencyKey nvarchar(200)=NULL,@Description nvarchar(500)=NULL
 AS
 BEGIN
@@ -21,7 +23,9 @@ BEGIN
  COMMIT;
 END
 GO
-CREATE OR ALTER PROCEDURE dbo.sp_ReserveCredit
+IF OBJECT_ID(N'dbo.sp_ReserveCredit',N'P') IS NULL EXEC('CREATE PROCEDURE dbo.sp_ReserveCredit AS BEGIN SET NOCOUNT ON; END');
+GO
+ALTER PROCEDURE dbo.sp_ReserveCredit
  @PartnerId uniqueidentifier,@CreditType varchar(20),@Quantity decimal(18,2),@PurposeType varchar(50),@PurposeId nvarchar(200),@ExpiresAt datetime2(3)=NULL
 AS
 BEGIN
@@ -38,7 +42,9 @@ BEGIN
  COMMIT;
 END
 GO
-CREATE OR ALTER PROCEDURE dbo.sp_ConsumeReservedCredit
+IF OBJECT_ID(N'dbo.sp_ConsumeReservedCredit',N'P') IS NULL EXEC('CREATE PROCEDURE dbo.sp_ConsumeReservedCredit AS BEGIN SET NOCOUNT ON; END');
+GO
+ALTER PROCEDURE dbo.sp_ConsumeReservedCredit
  @ReservationId uniqueidentifier,@IdempotencyKey nvarchar(200)
 AS
 BEGIN
@@ -55,7 +61,9 @@ BEGIN
  COMMIT;
 END
 GO
-CREATE OR ALTER PROCEDURE dbo.sp_ReleaseCreditReservation @ReservationId uniqueidentifier
+IF OBJECT_ID(N'dbo.sp_ReleaseCreditReservation',N'P') IS NULL EXEC('CREATE PROCEDURE dbo.sp_ReleaseCreditReservation AS BEGIN SET NOCOUNT ON; END');
+GO
+ALTER PROCEDURE dbo.sp_ReleaseCreditReservation @ReservationId uniqueidentifier
 AS
 BEGIN
  SET NOCOUNT ON;SET XACT_ABORT ON;BEGIN TRAN;
