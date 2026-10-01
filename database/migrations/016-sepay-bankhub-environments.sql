@@ -79,15 +79,10 @@ GO
 
 DECLARE @SePay uniqueidentifier=(SELECT TOP 1 Id FROM dbo.Providers WHERE Code='SEPAY_BANKHUB');
 IF @SePay IS NOT NULL BEGIN
- MERGE dbo.BankProviderCatalog T
- USING(VALUES
-  (@SePay,'MB',N'MBBank',1),(@SePay,'ACB',N'ACB',1),(@SePay,'BIDV',N'BIDV',1),
-  (@SePay,'VIETINBANK',N'VietinBank',1),(@SePay,'OCB',N'OCB',1),(@SePay,'KIENLONGBANK',N'KienLongBank',1),
-  (@SePay,'VPBANK',N'VPBank',1),(@SePay,'SACOMBANK',N'Sacombank',1)
- ) S(ProviderId,BankCode,BankName,SandboxSupported)
- ON T.ProviderId=S.ProviderId AND T.BankCode=S.BankCode
- WHEN MATCHED THEN UPDATE SET BankName=S.BankName,SandboxSupported=S.SandboxSupported,IsActive=1,UpdatedAt=SYSUTCDATETIME()
- WHEN NOT MATCHED THEN INSERT(ProviderId,BankCode,BankName,SandboxSupported) VALUES(S.ProviderId,S.BankCode,S.BankName,S.SandboxSupported);
+ DECLARE @B TABLE(BankCode varchar(30),BankName nvarchar(200),SandboxSupported bit);
+ INSERT @B VALUES('MB',N'MBBank',1),('ACB',N'ACB',1),('BIDV',N'BIDV',1),('VIETINBANK',N'VietinBank',1),('OCB',N'OCB',1),('KIENLONGBANK',N'KienLongBank',1),('VPBANK',N'VPBank',1),('SACOMBANK',N'Sacombank',1);
+ UPDATE t SET BankName=s.BankName,SandboxSupported=s.SandboxSupported,IsActive=1,UpdatedAt=SYSUTCDATETIME() FROM dbo.BankProviderCatalog t JOIN @B s ON s.BankCode=t.BankCode WHERE t.ProviderId=@SePay;
+ INSERT dbo.BankProviderCatalog(ProviderId,BankCode,BankName,SandboxSupported) SELECT @SePay,s.BankCode,s.BankName,s.SandboxSupported FROM @B s WHERE NOT EXISTS(SELECT 1 FROM dbo.BankProviderCatalog t WHERE t.ProviderId=@SePay AND t.BankCode=s.BankCode);
 END
 GO
 
