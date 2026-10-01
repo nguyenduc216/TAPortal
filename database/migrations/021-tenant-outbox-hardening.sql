@@ -4,18 +4,22 @@ GO
 IF NOT EXISTS(SELECT 1 FROM sys.indexes WHERE object_id=OBJECT_ID('dbo.Companies') AND name='IX_Companies_Partner') CREATE INDEX IX_Companies_Partner ON dbo.Companies(PartnerId) WHERE PartnerId IS NOT NULL AND IsDeleted=0;
 IF NOT EXISTS(SELECT 1 FROM sys.indexes WHERE object_id=OBJECT_ID('dbo.Customers') AND name='IX_Customers_Partner') CREATE INDEX IX_Customers_Partner ON dbo.Customers(PartnerId,Name) WHERE PartnerId IS NOT NULL AND IsDeleted=0;
 GO
-IF EXISTS(SELECT 1 FROM sys.check_constraints WHERE parent_object_id=OBJECT_ID('dbo.Settings') AND name='CK_Settings_ScopeType') ALTER TABLE dbo.Settings DROP CONSTRAINT CK_Settings_ScopeType;
-ALTER TABLE dbo.Settings ADD CONSTRAINT CK_Settings_ScopeType CHECK(ScopeType IN('SYSTEM','PARTNER','COMPANY','BRANCH','TEAM','USER'));
+DECLARE @sql nvarchar(max), @constraint sysname;
+SELECT TOP 1 @constraint=cc.name FROM sys.check_constraints cc WHERE cc.parent_object_id=OBJECT_ID(N'dbo.Settings') AND cc.definition LIKE '%ScopeType%';
+IF @constraint IS NOT NULL BEGIN SET @sql=N'ALTER TABLE dbo.Settings DROP CONSTRAINT '+QUOTENAME(@constraint); EXEC sp_executesql @sql; END;
+ALTER TABLE dbo.Settings WITH CHECK ADD CONSTRAINT CK_Settings_ScopeType CHECK(ScopeType IN('SYSTEM','PARTNER','COMPANY','BRANCH','TEAM','USER'));
 GO
-IF EXISTS(SELECT 1 FROM sys.check_constraints WHERE parent_object_id=OBJECT_ID('dbo.NumberSequences') AND name='CK_NumberSequences_ScopeType') ALTER TABLE dbo.NumberSequences DROP CONSTRAINT CK_NumberSequences_ScopeType;
-ALTER TABLE dbo.NumberSequences ADD CONSTRAINT CK_NumberSequences_ScopeType CHECK(ScopeType IN('SYSTEM','PARTNER','COMPANY','BRANCH','TEAM'));
+DECLARE @sql nvarchar(max), @constraint sysname;
+SELECT TOP 1 @constraint=cc.name FROM sys.check_constraints cc WHERE cc.parent_object_id=OBJECT_ID(N'dbo.NumberSequences') AND cc.definition LIKE '%Scope%';
+IF @constraint IS NOT NULL BEGIN SET @sql=N'ALTER TABLE dbo.NumberSequences DROP CONSTRAINT '+QUOTENAME(@constraint); EXEC sp_executesql @sql; END;
+ALTER TABLE dbo.NumberSequences WITH CHECK ADD CONSTRAINT CK_NumberSequences_Scope CHECK(Scope IN('SYSTEM','PARTNER','COMPANY','BRANCH','TEAM'));
 GO
-IF EXISTS(SELECT 1 FROM sys.check_constraints WHERE parent_object_id=OBJECT_ID('dbo.DataScopes') AND name='CK_DataScopes_ScopeType') BEGIN
- ALTER TABLE dbo.DataScopes DROP CONSTRAINT CK_DataScopes_ScopeType;
- ALTER TABLE dbo.DataScopes ADD CONSTRAINT CK_DataScopes_ScopeType CHECK(ScopeType IN('CUSTOM','PARTNER','COMPANY','BRANCH','TEAM','ASSIGNED','SELF'));
-END
+DECLARE @sql nvarchar(max), @constraint sysname;
+SELECT TOP 1 @constraint=cc.name FROM sys.check_constraints cc WHERE cc.parent_object_id=OBJECT_ID(N'dbo.DataScopes') AND cc.definition LIKE '%ScopeType%';
+IF @constraint IS NOT NULL BEGIN SET @sql=N'ALTER TABLE dbo.DataScopes DROP CONSTRAINT '+QUOTENAME(@constraint); EXEC sp_executesql @sql; END;
+ALTER TABLE dbo.DataScopes WITH CHECK ADD CONSTRAINT CK_DataScopes_ScopeType CHECK(ScopeType IN('CUSTOM','PARTNER','COMPANY','BRANCH','TEAM','ASSIGNED','SELF'));
 GO
-IF NOT EXISTS(SELECT 1 FROM dbo.DataScopes WHERE Code='PARTNER' AND IsDeleted=0) INSERT dbo.DataScopes(Code,Name,ScopeType,Description,IsActive) VALUES('PARTNER',N'Đối tác hiện tại','PARTNER',N'Dữ liệu thuộc Partner/Tenant hiện tại',1);
+IF NOT EXISTS(SELECT 1 FROM dbo.DataScopes WHERE Code='PARTNER') INSERT dbo.DataScopes(Code,Name,ScopeType,Description,IsActive) VALUES('PARTNER',N'Đối tác hiện tại','PARTNER',N'Dữ liệu thuộc Partner/Tenant hiện tại',1);
 GO
 IF OBJECT_ID(N'dbo.OutboxMessages',N'U') IS NULL BEGIN
  CREATE TABLE dbo.OutboxMessages(
