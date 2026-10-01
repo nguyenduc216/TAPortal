@@ -20,7 +20,12 @@ GO
 IF NOT EXISTS(SELECT 1 FROM dbo.Partners WHERE Code='TA') INSERT dbo.Partners(Code,PartnerType,Name,LegalName,Status,IsPlatformOwner) VALUES('TA','ENTERPRISE',N'T.A',N'T.A', 'ACTIVE',1);
 DECLARE @TA uniqueidentifier=(SELECT TOP 1 Id FROM dbo.Partners WHERE Code='TA' AND IsDeleted=0);
 UPDATE dbo.Companies SET PartnerId=@TA WHERE PartnerId IS NULL; UPDATE dbo.Customers SET PartnerId=@TA WHERE PartnerId IS NULL;
-INSERT dbo.PartnerUsers(PartnerId,UserId,PartnerRole,IsPrimary) SELECT @TA,u.Id,'ADMIN',1 FROM dbo.Users u WHERE u.IsDeleted=0 AND NOT EXISTS(SELECT 1 FROM dbo.PartnerUsers pu WHERE pu.PartnerId=@TA AND pu.UserId=u.Id);
+INSERT dbo.PartnerUsers(PartnerId,UserId,PartnerRole,IsPrimary)
+SELECT @TA,u.Id,
+ CASE WHEN EXISTS(SELECT 1 FROM dbo.UserRoles ur JOIN dbo.Roles r ON r.Id=ur.RoleId WHERE ur.UserId=u.Id AND r.Code='SYS_ADMIN') THEN 'ADMIN' ELSE 'STAFF' END,
+ CASE WHEN EXISTS(SELECT 1 FROM dbo.UserRoles ur JOIN dbo.Roles r ON r.Id=ur.RoleId WHERE ur.UserId=u.Id AND r.Code='SYS_ADMIN') THEN 1 ELSE 0 END
+FROM dbo.Users u
+WHERE u.IsDeleted=0 AND NOT EXISTS(SELECT 1 FROM dbo.PartnerUsers pu WHERE pu.PartnerId=@TA AND pu.UserId=u.Id);
 GO
 PRINT '009-partner-tenant-foundation.sql: OK';
 GO
