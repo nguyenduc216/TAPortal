@@ -7,6 +7,8 @@ IF COL_LENGTH('dbo.PaymentRequests','MatchPolicy') IS NULL ALTER TABLE dbo.Payme
 GO
 UPDATE dbo.PaymentRequests SET PaymentCodeNormalized=UPPER(REPLACE(REPLACE(REPLACE(LTRIM(RTRIM(PaymentCode)),' ',''),'-',''),'_','')) WHERE PaymentCodeNormalized IS NULL;
 GO
+IF EXISTS(SELECT 1 FROM dbo.PaymentRequests GROUP BY PartnerId,PaymentCodeNormalized HAVING COUNT(*)>1)
+ THROW 51260,'Normalized payment-code collision detected. Resolve duplicate legacy codes before migration continues.',1;
 ALTER TABLE dbo.PaymentRequests ALTER COLUMN PaymentCodeNormalized varchar(100) NOT NULL;
 GO
 IF NOT EXISTS(SELECT 1 FROM sys.check_constraints WHERE name='CK_PR_MatchPolicy') ALTER TABLE dbo.PaymentRequests ADD CONSTRAINT CK_PR_MatchPolicy CHECK(MatchPolicy IN('STRICT','ASSISTED','MANUAL'));
