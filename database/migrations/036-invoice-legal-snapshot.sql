@@ -1,5 +1,6 @@
 /* RC2 036 - Immutable legal invoice snapshot and totals. */
-USE [TAPortal]; GO
+USE [TAPortal];
+GO
 IF COL_LENGTH('dbo.InvoiceRequests','SellerLegalName') IS NULL ALTER TABLE dbo.InvoiceRequests ADD SellerLegalName nvarchar(300) NULL;
 IF COL_LENGTH('dbo.InvoiceRequests','SellerTaxCode') IS NULL ALTER TABLE dbo.InvoiceRequests ADD SellerTaxCode varchar(50) NULL;
 IF COL_LENGTH('dbo.InvoiceRequests','SellerAddress') IS NULL ALTER TABLE dbo.InvoiceRequests ADD SellerAddress nvarchar(1000) NULL;
@@ -26,4 +27,5 @@ IF OBJECT_ID(N'dbo.InvoiceCreditConsumptions',N'U') IS NULL BEGIN
  CREATE UNIQUE INDEX UX_ICC_Idem ON dbo.InvoiceCreditConsumptions(PartnerId,IdempotencyKey);
 END
 GO
-PRINT '036-invoice-legal-snapshot.sql: OK'; GO
+PRINT '036-invoice-legal-snapshot.sql: OK';
+GO
