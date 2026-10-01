@@ -20,7 +20,9 @@ IF OBJECT_ID(N'dbo.PartnerServiceOverrides',N'U') IS NULL BEGIN
  CREATE INDEX IX_PSO_Effective ON dbo.PartnerServiceOverrides(PartnerId,ServiceId,EffectiveFrom DESC);
 END
 GO
-CREATE OR ALTER VIEW dbo.vw_PartnerServiceEntitlements AS
+IF OBJECT_ID(N'dbo.vw_PartnerServiceEntitlements',N'V') IS NULL EXEC('CREATE VIEW dbo.vw_PartnerServiceEntitlements AS SELECT 1 AS Placeholder');
+GO
+ALTER VIEW dbo.vw_PartnerServiceEntitlements AS
 SELECT s.PartnerId,sv.Code ServiceCode,sv.Name ServiceName,SUM(CASE WHEN e.Status='ACTIVE' THEN ISNULL(e.GrantedQuantity,0) ELSE 0 END) GrantedQuantity,SUM(CASE WHEN e.Status='ACTIVE' THEN e.UsedQuantity ELSE 0 END) UsedQuantity
 FROM dbo.PartnerSubscriptions s JOIN dbo.SubscriptionEntitlements e ON e.PartnerSubscriptionId=s.Id JOIN dbo.Services sv ON sv.Id=e.ServiceId WHERE s.Status='ACTIVE' GROUP BY s.PartnerId,sv.Code,sv.Name;
 GO
