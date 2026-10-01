@@ -29,7 +29,15 @@ IF EXISTS(SELECT 1 FROM dbo.CreditUsageRules WHERE CreditDefinitionId IS NULL) T
 IF EXISTS(SELECT 1 FROM dbo.CreditTopups WHERE CreditDefinitionId IS NULL) THROW 52004,'Topup credit definition backfill incomplete.',1;
 IF EXISTS(SELECT 1 FROM dbo.CreditLedger WHERE CreditDefinitionId IS NULL) THROW 52005,'Ledger credit definition backfill incomplete.',1;
 GO
+/* UX_Wallet_Definition was created in 035 on the nullable column. SQL Server 2014
+   requires the dependent index to be removed before changing nullability. */
+IF EXISTS(SELECT 1 FROM sys.indexes WHERE object_id=OBJECT_ID('dbo.PartnerCreditWallets') AND name='UX_Wallet_Definition')
+ DROP INDEX UX_Wallet_Definition ON dbo.PartnerCreditWallets;
+GO
 ALTER TABLE dbo.PartnerCreditWallets ALTER COLUMN CreditDefinitionId uniqueidentifier NOT NULL;
+IF NOT EXISTS(SELECT 1 FROM sys.indexes WHERE object_id=OBJECT_ID('dbo.PartnerCreditWallets') AND name='UX_Wallet_Definition')
+ CREATE UNIQUE INDEX UX_Wallet_Definition ON dbo.PartnerCreditWallets(PartnerId,CreditDefinitionId);
+GO
 ALTER TABLE dbo.CreditReservations ALTER COLUMN CreditDefinitionId uniqueidentifier NOT NULL;
 ALTER TABLE dbo.CreditUsageRules ALTER COLUMN CreditDefinitionId uniqueidentifier NOT NULL;
 ALTER TABLE dbo.CreditTopups ALTER COLUMN CreditDefinitionId uniqueidentifier NOT NULL;
