@@ -8,6 +8,7 @@ IF NOT EXISTS(SELECT 1 FROM sys.indexes WHERE object_id=OBJECT_ID('dbo.PaymentTr
 IF NOT EXISTS(SELECT 1 FROM sys.indexes WHERE object_id=OBJECT_ID('dbo.InvoiceRequests') AND name='UX_IReq_PartnerId_Id') CREATE UNIQUE INDEX UX_IReq_PartnerId_Id ON dbo.InvoiceRequests(PartnerId,Id);
 GO
 IF COL_LENGTH('dbo.PaymentAllocations','PartnerId') IS NULL ALTER TABLE dbo.PaymentAllocations ADD PartnerId uniqueidentifier NULL;
+GO
 UPDATE a SET PartnerId=r.PartnerId FROM dbo.PaymentAllocations a JOIN dbo.PaymentRequests r ON r.Id=a.PaymentRequestId WHERE a.PartnerId IS NULL;
 IF EXISTS(SELECT 1 FROM dbo.PaymentAllocations WHERE PartnerId IS NULL) THROW 51380,'PaymentAllocation tenant backfill failed.',1;
 ALTER TABLE dbo.PaymentAllocations ALTER COLUMN PartnerId uniqueidentifier NOT NULL;
