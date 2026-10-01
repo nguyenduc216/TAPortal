@@ -11,7 +11,7 @@ AS
 BEGIN
  SET NOCOUNT ON; SET XACT_ABORT ON; SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;
  BEGIN TRAN;
- DECLARE @due decimal(18,2),@txAmount decimal(18,2),@direction varchar(10),@partnerP uniqueidentifier,@partnerT uniqueidentifier,@alreadyTx decimal(18,2),@amount decimal(18,2);
+ DECLARE @due decimal(18,2),@txAmount decimal(18,2),@direction varchar(10),@partnerP uniqueidentifier,@partnerT uniqueidentifier,@alreadyTx decimal(18,2),@alreadyRequest decimal(18,2),@requestRemaining decimal(18,2),@txRemaining decimal(18,2),@amount decimal(18,2);
  SELECT @due=AmountDue,@partnerP=PartnerId FROM dbo.PaymentRequests WITH(UPDLOCK,HOLDLOCK) WHERE Id=@PaymentRequestId AND Status NOT IN('CANCELLED','EXPIRED');
  IF @due IS NULL THROW 51001,'Payment request not found or not allocatable.',1;
  SELECT @txAmount=Amount,@direction=Direction,@partnerT=PartnerId FROM dbo.BankTransactions WITH(UPDLOCK,HOLDLOCK) WHERE Id=@BankTransactionId;
@@ -19,7 +19,10 @@ BEGIN
  IF @direction<>'CREDIT' THROW 51003,'Only CREDIT transactions can be allocated to receivables.',1;
  IF @partnerP<>@partnerT THROW 51004,'Cross-partner allocation is forbidden.',1;
  SELECT @alreadyTx=ISNULL(SUM(AllocatedAmount),0) FROM dbo.PaymentAllocations WITH(UPDLOCK,HOLDLOCK) WHERE BankTransactionId=@BankTransactionId AND Status='ACTIVE';
- SET @amount=COALESCE(@AllocatedAmount,@txAmount-@alreadyTx);
+ SELECT @alreadyRequest=ISNULL(SUM(AllocatedAmount),0) FROM dbo.PaymentAllocations WITH(UPDLOCK,HOLDLOCK) WHERE PaymentRequestId=@PaymentRequestId AND Status='ACTIVE';
+ SET @requestRemaining=CASE WHEN @due>@alreadyRequest THEN @due-@alreadyRequest ELSE 0 END;
+ SET @txRemaining=@txAmount-@alreadyTx;
+ SET @amount=COALESCE(@AllocatedAmount,CASE WHEN @txRemaining<@requestRemaining THEN @txRemaining ELSE @requestRemaining END);
  IF @amount<=0 THROW 51005,'Allocation amount must be positive.',1;
  IF @alreadyTx+@amount>@txAmount THROW 51006,'Allocations exceed bank transaction amount.',1;
  IF EXISTS(SELECT 1 FROM dbo.PaymentAllocations WHERE PaymentRequestId=@PaymentRequestId AND BankTransactionId=@BankTransactionId AND Status='ACTIVE') THROW 51007,'This transaction is already actively allocated to this payment request.',1;
