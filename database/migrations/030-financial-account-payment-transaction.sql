@@ -1,5 +1,6 @@
 /* RC2 030 - Generic payment rail core while preserving bank-specific evidence. */
-USE [TAPortal]; GO
+USE [TAPortal];
+GO
 IF OBJECT_ID(N'dbo.FinancialAccounts',N'U') IS NULL BEGIN
  CREATE TABLE dbo.FinancialAccounts(Id uniqueidentifier NOT NULL DEFAULT NEWSEQUENTIALID() CONSTRAINT PK_FinancialAccounts PRIMARY KEY,PartnerId uniqueidentifier NOT NULL,CompanyId uniqueidentifier NULL,ProviderId uniqueidentifier NOT NULL,RailType varchar(20) NOT NULL,ExternalAccountId nvarchar(200) NULL,DisplayName nvarchar(250) NULL,AccountIdentifier nvarchar(200) NULL,CurrencyCode char(3) NOT NULL DEFAULT 'VND',Status varchar(20) NOT NULL DEFAULT 'ACTIVE',CreatedAt datetime2(3) NOT NULL DEFAULT SYSUTCDATETIME(),UpdatedAt datetime2(3) NULL,CONSTRAINT FK_FA_Partner FOREIGN KEY(PartnerId) REFERENCES dbo.Partners(Id),CONSTRAINT FK_FA_Company FOREIGN KEY(CompanyId) REFERENCES dbo.Companies(Id),CONSTRAINT FK_FA_Provider FOREIGN KEY(ProviderId) REFERENCES dbo.Providers(Id),CONSTRAINT CK_FA_Rail CHECK(RailType IN('BANK','EWALLET','GATEWAY','OTHER')),CONSTRAINT CK_FA_Status CHECK(Status IN('PENDING','ACTIVE','SUSPENDED','DISCONNECTED','CLOSED')));
  CREATE INDEX IX_FA_Partner ON dbo.FinancialAccounts(PartnerId,RailType,Status);
@@ -13,4 +14,5 @@ IF COL_LENGTH('dbo.BankTransactions','PaymentTransactionId') IS NULL ALTER TABLE
 GO
 IF NOT EXISTS(SELECT 1 FROM sys.foreign_keys WHERE name='FK_BT_PaymentTransaction') ALTER TABLE dbo.BankTransactions ADD CONSTRAINT FK_BT_PaymentTransaction FOREIGN KEY(PaymentTransactionId) REFERENCES dbo.PaymentTransactions(Id);
 GO
-PRINT '030-financial-account-payment-transaction.sql: OK'; GO
+PRINT '030-financial-account-payment-transaction.sql: OK';
+GO
