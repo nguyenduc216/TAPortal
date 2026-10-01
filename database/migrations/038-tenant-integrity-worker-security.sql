@@ -1,5 +1,6 @@
 /* RC2 038 - Composite tenant integrity + worker inbox/lease/security metadata. */
-USE [TAPortal]; GO
+USE [TAPortal];
+GO
 IF NOT EXISTS(SELECT 1 FROM sys.indexes WHERE object_id=OBJECT_ID('dbo.Companies') AND name='UX_Companies_PartnerId_Id') CREATE UNIQUE INDEX UX_Companies_PartnerId_Id ON dbo.Companies(PartnerId,Id) WHERE PartnerId IS NOT NULL;
 IF NOT EXISTS(SELECT 1 FROM sys.indexes WHERE object_id=OBJECT_ID('dbo.Customers') AND name='UX_Customers_PartnerId_Id') CREATE UNIQUE INDEX UX_Customers_PartnerId_Id ON dbo.Customers(PartnerId,Id) WHERE PartnerId IS NOT NULL;
 IF NOT EXISTS(SELECT 1 FROM sys.indexes WHERE object_id=OBJECT_ID('dbo.PaymentRequests') AND name='UX_PReq_PartnerId_Id') CREATE UNIQUE INDEX UX_PReq_PartnerId_Id ON dbo.PaymentRequests(PartnerId,Id);
@@ -23,4 +24,5 @@ END
 GO
 IF COL_LENGTH('dbo.BankLinkSessions','HostedLinkUrl') IS NOT NULL UPDATE dbo.BankLinkSessions SET HostedLinkUrl=NULL WHERE HostedLinkUrl IS NOT NULL;
 GO
-PRINT '038-tenant-integrity-worker-security.sql: OK'; GO
+PRINT '038-tenant-integrity-worker-security.sql: OK';
+GO
