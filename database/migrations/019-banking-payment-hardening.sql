@@ -45,7 +45,7 @@ IF OBJECT_ID(N'dbo.BankReconciliationRuns',N'U') IS NULL BEGIN
   WindowFrom datetime2(3) NOT NULL,WindowTo datetime2(3) NOT NULL,Status varchar(20) NOT NULL DEFAULT 'PENDING',
   ProviderTransactions int NOT NULL DEFAULT 0,InsertedTransactions int NOT NULL DEFAULT 0,ExistingTransactions int NOT NULL DEFAULT 0,
   FailedTransactions int NOT NULL DEFAULT 0,StartedAt datetime2(3) NULL,CompletedAt datetime2(3) NULL,
-  Cursor nvarchar(500) NULL,ErrorMessage nvarchar(2000) NULL,CreatedAt datetime2(3) NOT NULL DEFAULT SYSUTCDATETIME(),
+  [Cursor] nvarchar(500) NULL,ErrorMessage nvarchar(2000) NULL,CreatedAt datetime2(3) NOT NULL DEFAULT SYSUTCDATETIME(),
   CONSTRAINT FK_BRR_Connection FOREIGN KEY(PartnerProviderConnectionId) REFERENCES dbo.PartnerProviderConnections(Id),
   CONSTRAINT FK_BRR_Account FOREIGN KEY(BankAccountId) REFERENCES dbo.PartnerBankAccounts(Id),
   CONSTRAINT CK_BRR_Status CHECK(Status IN('PENDING','RUNNING','COMPLETED','PARTIAL','FAILED'))
@@ -67,7 +67,9 @@ IF OBJECT_ID(N'dbo.BankTransactionReviewQueue',N'U') IS NULL BEGIN
  CREATE UNIQUE INDEX UX_BTRQ_OpenReason ON dbo.BankTransactionReviewQueue(BankTransactionId,ReasonCode) WHERE Status='OPEN';
 END
 GO
-CREATE OR ALTER VIEW dbo.vw_BankTransactionAllocationSummary AS
+IF OBJECT_ID(N'dbo.vw_BankTransactionAllocationSummary',N'V') IS NULL EXEC('CREATE VIEW dbo.vw_BankTransactionAllocationSummary AS SELECT 1 AS Placeholder');
+GO
+ALTER VIEW dbo.vw_BankTransactionAllocationSummary AS
 SELECT t.Id,t.PartnerId,t.BankAccountId,t.ExternalTransactionId,t.TransactionDate,t.Direction,t.Amount,t.PaymentCode,t.Content,
  CAST(ISNULL(SUM(CASE WHEN a.Status='ACTIVE' THEN a.AllocatedAmount ELSE 0 END),0) AS decimal(18,2)) AllocatedAmount,
  CAST(t.Amount-ISNULL(SUM(CASE WHEN a.Status='ACTIVE' THEN a.AllocatedAmount ELSE 0 END),0) AS decimal(18,2)) UnallocatedAmount,
