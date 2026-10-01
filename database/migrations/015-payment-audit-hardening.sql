@@ -6,7 +6,9 @@ IF OBJECT_ID(N'dbo.BankWebhookTransactionLinks',N'U') IS NULL BEGIN
  CREATE INDEX IX_BWTL_Transaction ON dbo.BankWebhookTransactionLinks(BankTransactionId,LinkedAt DESC);
 END
 GO
-CREATE OR ALTER VIEW dbo.vw_PaymentRequestBalances AS
+IF OBJECT_ID(N'dbo.vw_PaymentRequestBalances',N'V') IS NULL EXEC('CREATE VIEW dbo.vw_PaymentRequestBalances AS SELECT 1 AS Placeholder');
+GO
+ALTER VIEW dbo.vw_PaymentRequestBalances AS
 SELECT p.Id,p.PartnerId,p.CustomerId,p.Code,p.PaymentCode,p.Description,p.AmountDue,
  CAST(ISNULL(SUM(CASE WHEN a.Status='ACTIVE' THEN a.AllocatedAmount ELSE 0 END),0) AS decimal(18,2)) AS AmountPaid,
  CAST(CASE WHEN p.AmountDue-ISNULL(SUM(CASE WHEN a.Status='ACTIVE' THEN a.AllocatedAmount ELSE 0 END),0)>0 THEN p.AmountDue-ISNULL(SUM(CASE WHEN a.Status='ACTIVE' THEN a.AllocatedAmount ELSE 0 END),0) ELSE 0 END AS decimal(18,2)) AS AmountRemaining,
