@@ -35,7 +35,7 @@ BEGIN
  IF @wallet IS NULL THROW 51423,'Credit wallet not found.',1;
  IF EXISTS(SELECT 1 FROM dbo.CreditLedger WHERE PartnerId=@partner AND IdempotencyKey=@idem) THROW 51424,'Duplicate credit grant idempotency key.',1;
  SET @bal=@bal+@qty;
- UPDATE dbo.PartnerCreditWallets SET CurrentBalance=@bal,UpdatedAt=SYSUTCDATETIME() WHERE Id=@wallet;
+ UPDATE dbo.PartnerCreditWallets SET CurrentBalance=@bal WHERE Id=@wallet;
  INSERT dbo.CreditLedger(PartnerId,CreditType,CreditDefinitionId,EntryType,Quantity,BalanceAfter,SourceType,SourceId,IdempotencyKey,Description) VALUES(@partner,@ctype,@def,'GRANT',@qty,@bal,'SUBSCRIPTION_GRANT',CONVERT(nvarchar(200),@GrantId),@idem,N'Subscription period credit grant');
  SET @ledger=SCOPE_IDENTITY();
  UPDATE dbo.SubscriptionCreditGrants SET Status='GRANTED',CreditLedgerId=@ledger,GrantedAt=SYSUTCDATETIME() WHERE Id=@GrantId;
