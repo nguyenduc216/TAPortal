@@ -26,7 +26,18 @@ GO
 IF COL_LENGTH('dbo.CustomerCashLedger','IdempotencyKey') IS NULL ALTER TABLE dbo.CustomerCashLedger ADD IdempotencyKey nvarchar(200) NULL;
 IF COL_LENGTH('dbo.CustomerCashLedger','PartnerId') IS NULL ALTER TABLE dbo.CustomerCashLedger ADD PartnerId uniqueidentifier NULL;
 GO
-UPDATE l SET PartnerId=a.PartnerId FROM dbo.CustomerCashLedger l JOIN dbo.CustomerCashAccounts a ON a.Id=l.CustomerCashAccountId WHERE l.PartnerId IS NULL;
+BEGIN TRY
+ BEGIN TRAN;
+ DISABLE TRIGGER dbo.tr_CustomerCashLedger_NoUpdateDelete ON dbo.CustomerCashLedger;
+ UPDATE l SET PartnerId=a.PartnerId FROM dbo.CustomerCashLedger l JOIN dbo.CustomerCashAccounts a ON a.Id=l.CustomerCashAccountId WHERE l.PartnerId IS NULL;
+ ENABLE TRIGGER dbo.tr_CustomerCashLedger_NoUpdateDelete ON dbo.CustomerCashLedger;
+ COMMIT;
+END TRY
+BEGIN CATCH
+ IF XACT_STATE()<>0 ROLLBACK;
+ ENABLE TRIGGER dbo.tr_CustomerCashLedger_NoUpdateDelete ON dbo.CustomerCashLedger;
+ THROW;
+END CATCH
 ALTER TABLE dbo.CustomerCashLedger ALTER COLUMN PartnerId uniqueidentifier NOT NULL;
 IF NOT EXISTS(SELECT 1 FROM sys.indexes WHERE object_id=OBJECT_ID('dbo.CustomerCashLedger') AND name='UX_CCL_PartnerIdem') CREATE UNIQUE INDEX UX_CCL_PartnerIdem ON dbo.CustomerCashLedger(PartnerId,IdempotencyKey) WHERE IdempotencyKey IS NOT NULL;
 GO
