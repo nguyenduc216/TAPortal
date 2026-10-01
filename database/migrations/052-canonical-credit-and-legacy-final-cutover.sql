@@ -12,14 +12,18 @@ UPDATE t SET CreditDefinitionId=d.Id FROM dbo.CreditTopups t JOIN dbo.CreditDefi
 GO
 BEGIN TRY
  BEGIN TRAN;
- DISABLE TRIGGER dbo.tr_CreditLedger_NoUpdateDelete ON dbo.CreditLedger;
- UPDATE l SET CreditDefinitionId=d.Id FROM dbo.CreditLedger l JOIN dbo.CreditDefinitions d ON d.Code=CASE l.CreditType WHEN 'BANKING' THEN 'BANK_TRANSACTION_UNIT' WHEN 'EINVOICE' THEN 'INVOICE_ISSUE_UNIT' END WHERE l.CreditDefinitionId IS NULL;
- ENABLE TRIGGER dbo.tr_CreditLedger_NoUpdateDelete ON dbo.CreditLedger;
+ IF EXISTS(SELECT 1 FROM dbo.CreditLedger WHERE CreditDefinitionId IS NULL)
+ BEGIN
+  DISABLE TRIGGER dbo.tr_CreditLedger_NoUpdateDelete ON dbo.CreditLedger;
+  UPDATE l SET CreditDefinitionId=d.Id FROM dbo.CreditLedger l JOIN dbo.CreditDefinitions d ON d.Code=CASE l.CreditType WHEN 'BANKING' THEN 'BANK_TRANSACTION_UNIT' WHEN 'EINVOICE' THEN 'INVOICE_ISSUE_UNIT' END WHERE l.CreditDefinitionId IS NULL;
+  ENABLE TRIGGER dbo.tr_CreditLedger_NoUpdateDelete ON dbo.CreditLedger;
+ END;
  COMMIT;
 END TRY
 BEGIN CATCH
  IF XACT_STATE()<>0 ROLLBACK;
- ENABLE TRIGGER dbo.tr_CreditLedger_NoUpdateDelete ON dbo.CreditLedger;
+ IF EXISTS(SELECT 1 FROM sys.triggers WHERE object_id=OBJECT_ID('dbo.tr_CreditLedger_NoUpdateDelete') AND is_disabled=1)
+  ENABLE TRIGGER dbo.tr_CreditLedger_NoUpdateDelete ON dbo.CreditLedger;
  THROW;
 END CATCH
 GO
