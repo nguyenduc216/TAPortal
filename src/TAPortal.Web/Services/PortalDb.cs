@@ -190,6 +190,39 @@ VALUES(@id,@username,@nu,@email,@ne,@phone,@name,@hash,'ACTIVE',1,@createdBy);
         return list;
     }
 
+    public async Task<List<PortalMenu>> GetNavigationMenusAsync(IEnumerable<string> permissions, bool isSystemAdmin)
+    {
+        var permissionList = permissions.Where(x => !string.IsNullOrWhiteSpace(x)).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+        var list = new List<PortalMenu>();
+        await using var cn = Open(); await cn.OpenAsync();
+
+        var sql = """
+SELECT DISTINCT m.Id,m.ParentId,m.Code,m.Name,m.Icon,m.Route,m.SortOrder,m.IsVisible,m.IsActive
+FROM dbo.Menus m
+WHERE m.IsDeleted=0 AND m.IsVisible=1 AND m.IsActive=1
+  AND (
+      @isAdmin=1
+      OR NOT EXISTS (SELECT 1 FROM dbo.MenuPermissions mp0 WHERE mp0.MenuId=m.Id)
+      OR EXISTS (
+          SELECT 1
+          FROM dbo.MenuPermissions mp
+          JOIN dbo.Permissions p ON p.Id=mp.PermissionId
+          WHERE mp.MenuId=m.Id AND p.IsDeleted=0 AND p.IsActive=1 AND p.Code IN ({PERMISSION_PARAMS})
+      )
+  )
+ORDER BY m.SortOrder,m.Name;
+""";
+        var paramNames = permissionList.Select((_, i) => $"@p{i}").ToArray();
+        sql = sql.Replace("{PERMISSION_PARAMS}", paramNames.Length == 0 ? "NULL" : string.Join(",", paramNames));
+        await using var cmd = new SqlCommand(sql, cn);
+        cmd.Parameters.AddWithValue("@isAdmin", isSystemAdmin ? 1 : 0);
+        for (var i = 0; i < permissionList.Length; i++) cmd.Parameters.AddWithValue(paramNames[i], permissionList[i]);
+        await using var rd = await cmd.ExecuteReaderAsync();
+        while (await rd.ReadAsync())
+            list.Add(new(rd.GetGuid(0),rd.IsDBNull(1)?null:rd.GetGuid(1),rd.GetString(2),rd.GetString(3),rd.IsDBNull(4)?null:rd.GetString(4),rd.IsDBNull(5)?null:rd.GetString(5),rd.GetInt32(6),rd.GetBoolean(7),rd.GetBoolean(8)));
+        return list;
+    }
+
     public async Task<List<CustomerRow>> GetCustomersAsync()
     {
         var list = new List<CustomerRow>();

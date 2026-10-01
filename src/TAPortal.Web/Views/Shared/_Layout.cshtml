@@ -1,3 +1,13 @@
+@using System.Security.Claims
+@using TAPortal.Web.Services
+@inject PortalDb PortalDb
+@{
+    var isAuthenticated = User.Identity?.IsAuthenticated == true;
+    var permissionClaims = isAuthenticated ? User.Claims.Where(x => x.Type == "permission").Select(x => x.Value) : Enumerable.Empty<string>();
+    var isSystemAdmin = isAuthenticated && User.IsInRole("SYS_ADMIN");
+    var navigationMenus = isAuthenticated ? await PortalDb.GetNavigationMenusAsync(permissionClaims, isSystemAdmin) : new List<TAPortal.Web.Models.PortalMenu>();
+    var rootMenus = navigationMenus.Where(x => x.ParentId == null).OrderBy(x => x.SortOrder).ThenBy(x => x.Name).ToList();
+}
 <!doctype html>
 <html lang="vi">
 <head>
@@ -5,9 +15,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>@ViewData["Title"] - T.A Portal</title>
     <link rel="icon" type="image/png" sizes="32x32" href="~/images/favicon-32x32.png" asp-append-version="true" />
-    <link rel="icon" type="image/png" sizes="192x192" href="~/images/favicon-192x192.png" asp-append-version="true" />
     <link rel="shortcut icon" href="~/favicon.ico" asp-append-version="true" />
-    <link rel="apple-touch-icon" sizes="180x180" href="~/images/apple-touch-icon.png" asp-append-version="true" />
     <meta name="theme-color" content="#07345c" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@@tabler/core@1.0.0-beta21/dist/css/tabler.min.css" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@@tabler/icons-webfont@3.19.0/tabler-icons.min.css" />
@@ -15,27 +23,55 @@
 </head>
 <body class="layout-fluid">
 <div class="ta-global-progress" data-ta-progress role="progressbar" aria-label="Đang tải trang" aria-hidden="true"><span></span></div>
-@if (User.Identity?.IsAuthenticated == true)
+@if (isAuthenticated)
 {
     <div class="page">
         <aside class="navbar navbar-vertical navbar-expand-lg ta-sidebar" data-bs-theme="dark">
-            <div class="container-fluid">
-                <h1 class="navbar-brand navbar-brand-autodark">
+            <div class="container-fluid ta-sidebar-inner">
+                <h1 class="navbar-brand navbar-brand-autodark ta-sidebar-brand">
                     <a asp-controller="Home" asp-action="Index" class="ta-brand text-decoration-none">
-                        <img src="~/images/ta-logo.png" class="ta-sidebar-logo" alt="T.A" onerror="this.classList.add('d-none');document.getElementById('sideLogoFallback').classList.remove('d-none');" />
-                        <span id="sideLogoFallback" class="ta-logo-mark d-none">T<span>A</span><i></i></span>
-                        <span class="ms-2">T.A Portal</span>
+                        <img src="~/images/ta-logo.png" class="ta-sidebar-logo" alt="T.A" />
+                        <span>T.A Portal</span>
                     </a>
                 </h1>
-                <div class="collapse navbar-collapse show">
-                    <ul class="navbar-nav pt-lg-3">
-                        <li class="nav-item"><a class="nav-link" asp-controller="Home" asp-action="Index"><span class="nav-link-icon"><i class="ti ti-layout-dashboard"></i></span><span class="nav-link-title">Tổng quan</span></a></li>
-                        <li class="nav-item"><a class="nav-link" asp-controller="Customers" asp-action="Index"><span class="nav-link-icon"><i class="ti ti-building-store"></i></span><span class="nav-link-title">Khách hàng</span></a></li>
-                        <li class="nav-item"><a class="nav-link" asp-controller="Users" asp-action="Index"><span class="nav-link-icon"><i class="ti ti-users"></i></span><span class="nav-link-title">Người dùng</span></a></li>
-                        <li class="nav-item"><a class="nav-link" asp-controller="Roles" asp-action="Index"><span class="nav-link-icon"><i class="ti ti-shield-lock"></i></span><span class="nav-link-title">Vai trò &amp; phân quyền</span></a></li>
-                        <li class="nav-item"><a class="nav-link" asp-controller="Menus" asp-action="Index"><span class="nav-link-icon"><i class="ti ti-list-details"></i></span><span class="nav-link-title">Quản lý menu</span></a></li>
-                        <li class="nav-item"><a class="nav-link" href="#"><span class="nav-link-icon"><i class="ti ti-settings"></i></span><span class="nav-link-title">Cấu hình hệ thống</span></a></li>
-                        <li class="nav-item"><a class="nav-link" href="#"><span class="nav-link-icon"><i class="ti ti-history"></i></span><span class="nav-link-title">Nhật ký hoạt động</span></a></li>
+                <div class="collapse navbar-collapse show ta-sidebar-scroll">
+                    <ul class="navbar-nav ta-nav-list">
+                        @foreach (var root in rootMenus)
+                        {
+                            var children = navigationMenus.Where(x => x.ParentId == root.Id).OrderBy(x => x.SortOrder).ThenBy(x => x.Name).ToList();
+                            if (children.Count == 0)
+                            {
+                                <li class="nav-item">
+                                    <a class="nav-link ta-nav-link" href="@(string.IsNullOrWhiteSpace(root.Route) ? "#" : root.Route)" data-ta-route="@root.Route">
+                                        <span class="nav-link-icon"><i class="ti @(string.IsNullOrWhiteSpace(root.Icon) ? "ti-circle" : root.Icon)"></i></span>
+                                        <span class="nav-link-title">@root.Name</span>
+                                    </a>
+                                </li>
+                            }
+                            else
+                            {
+                                <li class="ta-nav-section" data-ta-nav-section>
+                                    <button class="ta-nav-section-toggle" type="button" data-ta-nav-toggle aria-expanded="true">
+                                        <span class="ta-nav-section-label">
+                                            <i class="ti @(string.IsNullOrWhiteSpace(root.Icon) ? "ti-folders" : root.Icon)"></i>
+                                            <span>@root.Name</span>
+                                        </span>
+                                        <i class="ti ti-chevron-down ta-nav-chevron"></i>
+                                    </button>
+                                    <ul class="ta-nav-children">
+                                        @foreach (var child in children)
+                                        {
+                                            <li class="nav-item">
+                                                <a class="nav-link ta-nav-link" href="@(string.IsNullOrWhiteSpace(child.Route) ? "#" : child.Route)" data-ta-route="@child.Route">
+                                                    <span class="nav-link-icon"><i class="ti @(string.IsNullOrWhiteSpace(child.Icon) ? "ti-point" : child.Icon)"></i></span>
+                                                    <span class="nav-link-title">@child.Name</span>
+                                                </a>
+                                            </li>
+                                        }
+                                    </ul>
+                                </li>
+                            }
+                        }
                     </ul>
                 </div>
             </div>
@@ -45,12 +81,9 @@
                 <div class="container-xl">
                     <div class="navbar-nav flex-row order-md-last ms-auto">
                         <div class="nav-item dropdown">
-                            <a href="#" class="nav-link d-flex lh-1 text-reset p-0" data-bs-toggle="dropdown">
+                            <a href="#" class="nav-link d-flex lh-1 text-reset p-0 ta-user-trigger" data-bs-toggle="dropdown">
                                 <span class="avatar avatar-sm ta-avatar">TA</span>
-                                <div class="d-none d-xl-block ps-2">
-                                    <div>@(User.FindFirst("display_name")?.Value ?? User.Identity?.Name)</div>
-                                    <div class="mt-1 small text-secondary">@string.Join(", ", User.Claims.Where(x => x.Type == System.Security.Claims.ClaimTypes.Role).Select(x => x.Value))</div>
-                                </div>
+                                <div class="d-none d-xl-block ps-2 ta-user-meta"><div class="ta-user-name">@(User.FindFirst("display_name")?.Value ?? User.Identity?.Name)</div><div class="small text-secondary">@string.Join(", ", User.Claims.Where(x => x.Type == ClaimTypes.Role).Select(x => x.Value))</div></div>
                             </a>
                             <div class="dropdown-menu dropdown-menu-end dropdown-menu-arrow">
                                 <a asp-controller="Account" asp-action="Profile" class="dropdown-item"><i class="ti ti-user-circle"></i><span>Hồ sơ cá nhân</span></a>
@@ -64,8 +97,8 @@
             </header>
             <main class="page-body ta-page-content ta-page-enter">
                 <div class="container-xl">
-                    @if (TempData["Success"] is string success) { <div class="alert alert-success ta-alert" role="status"><i class="ti ti-circle-check" aria-hidden="true"></i><span>@success</span></div> }
-                    @if (TempData["Error"] is string error) { <div class="alert alert-danger ta-alert" role="alert"><i class="ti ti-alert-circle" aria-hidden="true"></i><span>@error</span></div> }
+                    @if (TempData["Success"] is string success) { <div class="alert alert-success ta-alert" role="status"><i class="ti ti-circle-check"></i><span>@success</span></div> }
+                    @if (TempData["Error"] is string error) { <div class="alert alert-danger ta-alert" role="alert"><i class="ti ti-alert-circle"></i><span>@error</span></div> }
                     @RenderBody()
                 </div>
             </main>

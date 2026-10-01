@@ -22,6 +22,7 @@ builder.Services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProv
 builder.Services.AddScoped<IAuthorizationHandler, PermissionHandler>();
 builder.Services.AddSingleton<PasswordService>();
 builder.Services.AddScoped<PortalDb>();
+builder.Services.AddScoped<OperationalDb>();
 
 var app = builder.Build();
 

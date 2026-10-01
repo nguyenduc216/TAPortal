@@ -95,6 +95,19 @@
         const path = new URL(link.href, window.location.href).pathname.toLowerCase().replace(/\/$/, '') || '/';
         if (path === currentPath) link.classList.add('active');
     });
+    document.querySelectorAll('[data-ta-nav-toggle]').forEach((toggle) => {
+        toggle.addEventListener('click', () => {
+            const section = toggle.closest('[data-ta-nav-section]');
+            if (!section) return;
+            const collapsed = section.classList.toggle('is-collapsed');
+            toggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+        });
+    });
+
+    document.querySelectorAll('[data-ta-nav-section]').forEach((section) => {
+        if (section.querySelector('.ta-nav-link.active')) section.classList.remove('is-collapsed');
+    });
+
     window.addEventListener('pageshow', () => {
         document.querySelectorAll('form[data-ta-submitting="true"]').forEach((form) => delete form.dataset.taSubmitting);
         document.querySelectorAll('.ta-action-loading').forEach((button) => {
