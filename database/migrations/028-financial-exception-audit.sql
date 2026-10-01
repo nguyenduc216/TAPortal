@@ -11,16 +11,12 @@ IF OBJECT_ID(N'dbo.DataRetentionPolicies',N'U') IS NULL BEGIN
  CREATE UNIQUE INDEX UX_DRP_DataType ON dbo.DataRetentionPolicies(DataType);
 END
 GO
-MERGE dbo.DataRetentionPolicies T USING(VALUES
- ('BANK_TRANSACTION',NULL,1,0,N'Financial source record; no automatic delete in V1'),
- ('PAYMENT_ALLOCATION',NULL,1,0,N'Financial allocation history; reverse instead of delete'),
- ('CREDIT_LEDGER',NULL,1,0,N'Immutable ledger; compensating entries only'),
- ('INVOICE',NULL,1,0,N'Invoice/legal record; lifecycle operations only'),
- ('WEBHOOK_EVENT',365,1,0,N'Archive policy may be implemented after V1'),
- ('PROVIDER_API_LOG',180,1,0,N'Sanitized integration log; archive before any purge')
-) S(DataType,RetentionDays,ArchiveBeforeDelete,AllowDelete,Notes) ON T.DataType=S.DataType
-WHEN MATCHED THEN UPDATE SET RetentionDays=S.RetentionDays,ArchiveBeforeDelete=S.ArchiveBeforeDelete,AllowDelete=S.AllowDelete,Notes=S.Notes,UpdatedAt=SYSUTCDATETIME()
-WHEN NOT MATCHED THEN INSERT(DataType,RetentionDays,ArchiveBeforeDelete,AllowDelete,Notes) VALUES(S.DataType,S.RetentionDays,S.ArchiveBeforeDelete,S.AllowDelete,S.Notes);
+UPDATE dbo.DataRetentionPolicies SET RetentionDays=NULL,ArchiveBeforeDelete=1,AllowDelete=0,Notes=N'Financial source record; no automatic delete in V1',UpdatedAt=SYSUTCDATETIME() WHERE DataType='BANK_TRANSACTION'; IF @@ROWCOUNT=0 INSERT dbo.DataRetentionPolicies(DataType,RetentionDays,ArchiveBeforeDelete,AllowDelete,Notes) VALUES('BANK_TRANSACTION',NULL,1,0,N'Financial source record; no automatic delete in V1');
+UPDATE dbo.DataRetentionPolicies SET RetentionDays=NULL,ArchiveBeforeDelete=1,AllowDelete=0,Notes=N'Financial allocation history; reverse instead of delete',UpdatedAt=SYSUTCDATETIME() WHERE DataType='PAYMENT_ALLOCATION'; IF @@ROWCOUNT=0 INSERT dbo.DataRetentionPolicies(DataType,RetentionDays,ArchiveBeforeDelete,AllowDelete,Notes) VALUES('PAYMENT_ALLOCATION',NULL,1,0,N'Financial allocation history; reverse instead of delete');
+UPDATE dbo.DataRetentionPolicies SET RetentionDays=NULL,ArchiveBeforeDelete=1,AllowDelete=0,Notes=N'Immutable ledger; compensating entries only',UpdatedAt=SYSUTCDATETIME() WHERE DataType='CREDIT_LEDGER'; IF @@ROWCOUNT=0 INSERT dbo.DataRetentionPolicies(DataType,RetentionDays,ArchiveBeforeDelete,AllowDelete,Notes) VALUES('CREDIT_LEDGER',NULL,1,0,N'Immutable ledger; compensating entries only');
+UPDATE dbo.DataRetentionPolicies SET RetentionDays=NULL,ArchiveBeforeDelete=1,AllowDelete=0,Notes=N'Invoice/legal record; lifecycle operations only',UpdatedAt=SYSUTCDATETIME() WHERE DataType='INVOICE'; IF @@ROWCOUNT=0 INSERT dbo.DataRetentionPolicies(DataType,RetentionDays,ArchiveBeforeDelete,AllowDelete,Notes) VALUES('INVOICE',NULL,1,0,N'Invoice/legal record; lifecycle operations only');
+UPDATE dbo.DataRetentionPolicies SET RetentionDays=365,ArchiveBeforeDelete=1,AllowDelete=0,Notes=N'Archive policy may be implemented after V1',UpdatedAt=SYSUTCDATETIME() WHERE DataType='WEBHOOK_EVENT'; IF @@ROWCOUNT=0 INSERT dbo.DataRetentionPolicies(DataType,RetentionDays,ArchiveBeforeDelete,AllowDelete,Notes) VALUES('WEBHOOK_EVENT',365,1,0,N'Archive policy may be implemented after V1');
+UPDATE dbo.DataRetentionPolicies SET RetentionDays=180,ArchiveBeforeDelete=1,AllowDelete=0,Notes=N'Sanitized integration log; archive before any purge',UpdatedAt=SYSUTCDATETIME() WHERE DataType='PROVIDER_API_LOG'; IF @@ROWCOUNT=0 INSERT dbo.DataRetentionPolicies(DataType,RetentionDays,ArchiveBeforeDelete,AllowDelete,Notes) VALUES('PROVIDER_API_LOG',180,1,0,N'Sanitized integration log; archive before any purge');
 GO
 IF OBJECT_ID(N'dbo.SchemaVersions',N'U') IS NULL BEGIN
  CREATE TABLE dbo.SchemaVersions(Version varchar(30) NOT NULL CONSTRAINT PK_SchemaVersions PRIMARY KEY,Status varchar(20) NOT NULL,Description nvarchar(500) NULL,AppliedAt datetime2(3) NULL,AppliedBy nvarchar(200) NULL,SourceCommit varchar(64) NULL,CreatedAt datetime2(3) NOT NULL DEFAULT SYSUTCDATETIME(),CONSTRAINT CK_SV_Status CHECK(Status IN('CANDIDATE','APPROVED','APPLIED','SUPERSEDED')));
