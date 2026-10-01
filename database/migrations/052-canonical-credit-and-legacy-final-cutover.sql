@@ -103,5 +103,40 @@ BEGIN
  IF EXISTS(SELECT 1 FROM inserted i LEFT JOIN deleted d ON d.PartnerId=i.PartnerId AND d.UserId=i.UserId WHERE (d.UserId IS NULL AND i.PartnerRole IS NOT NULL) OR (d.UserId IS NOT NULL AND ISNULL(i.PartnerRole,'')<>ISNULL(d.PartnerRole,''))) THROW 52021,'Legacy PartnerRole is read-only; use PartnerUserRoles.',1;
 END
 GO
+
+ALTER PROCEDURE dbo.sp_ConsumeReservedCredit @ReservationId uniqueidentifier,@IdempotencyKey nvarchar(200)
+AS
+BEGIN
+ SET NOCOUNT ON; SET XACT_ABORT ON;
+ BEGIN TRY
+  BEGIN TRAN;
+  DECLARE @partner uniqueidentifier,@def uniqueidentifier,@type varchar(20),@qty decimal(18,2),@purposeType varchar(50),@purposeId nvarchar(200),@balance decimal(18,2);
+  SELECT @partner=PartnerId,@def=CreditDefinitionId,@type=CreditType,@qty=Quantity,@purposeType=PurposeType,@purposeId=PurposeId FROM dbo.CreditReservations WITH(UPDLOCK,HOLDLOCK) WHERE Id=@ReservationId AND Status='ACTIVE';
+  IF @partner IS NULL BEGIN IF EXISTS(SELECT 1 FROM dbo.CreditLedger WHERE IdempotencyKey=@IdempotencyKey) BEGIN COMMIT; RETURN; END; THROW 52016,'Active reservation not found.',1; END;
+  UPDATE dbo.PartnerCreditWallets SET CurrentBalance=CurrentBalance-@qty,ReservedBalance=ReservedBalance-@qty WHERE PartnerId=@partner AND CreditDefinitionId=@def AND CurrentBalance>=@qty AND ReservedBalance>=@qty;
+  IF @@ROWCOUNT=0 THROW 52017,'Canonical wallet balance invariant failed.',1;
+  SELECT @balance=CurrentBalance FROM dbo.PartnerCreditWallets WHERE PartnerId=@partner AND CreditDefinitionId=@def;
+  INSERT dbo.CreditLedger(PartnerId,CreditType,CreditDefinitionId,EntryType,Quantity,BalanceAfter,SourceType,SourceId,IdempotencyKey,Description) VALUES(@partner,@type,@def,'CONSUME',-@qty,@balance,@purposeType,@purposeId,@IdempotencyKey,N'Consume reserved credit');
+  UPDATE dbo.CreditReservations SET Status='CONSUMED',ConsumedAt=SYSUTCDATETIME() WHERE Id=@ReservationId;
+  COMMIT;
+ END TRY BEGIN CATCH IF XACT_STATE()<>0 ROLLBACK; THROW; END CATCH
+END
+GO
+ALTER PROCEDURE dbo.sp_ReleaseCreditReservation @ReservationId uniqueidentifier
+AS
+BEGIN
+ SET NOCOUNT ON; SET XACT_ABORT ON;
+ BEGIN TRY
+  BEGIN TRAN;
+  DECLARE @partner uniqueidentifier,@def uniqueidentifier,@qty decimal(18,2);
+  SELECT @partner=PartnerId,@def=CreditDefinitionId,@qty=Quantity FROM dbo.CreditReservations WITH(UPDLOCK,HOLDLOCK) WHERE Id=@ReservationId AND Status='ACTIVE';
+  IF @partner IS NULL BEGIN COMMIT; RETURN; END;
+  UPDATE dbo.PartnerCreditWallets SET ReservedBalance=CASE WHEN ReservedBalance>=@qty THEN ReservedBalance-@qty ELSE 0 END WHERE PartnerId=@partner AND CreditDefinitionId=@def;
+  IF @@ROWCOUNT=0 THROW 52018,'Canonical credit wallet not found for reservation.',1;
+  UPDATE dbo.CreditReservations SET Status='RELEASED',ReleasedAt=SYSUTCDATETIME() WHERE Id=@ReservationId;
+  COMMIT;
+ END TRY BEGIN CATCH IF XACT_STATE()<>0 ROLLBACK; THROW; END CATCH
+END
+GO
 PRINT '052-canonical-credit-and-legacy-final-cutover.sql: OK';
 GO
