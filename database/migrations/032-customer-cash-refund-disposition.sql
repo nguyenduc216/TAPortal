@@ -1,5 +1,6 @@
 /* RC2 032 - Unapplied customer cash, refund lifecycle and explicit dispositions. */
-USE [TAPortal]; GO
+USE [TAPortal];
+GO
 IF OBJECT_ID(N'dbo.CustomerCashAccounts',N'U') IS NULL BEGIN
  CREATE TABLE dbo.CustomerCashAccounts(Id uniqueidentifier NOT NULL DEFAULT NEWSEQUENTIALID() CONSTRAINT PK_CustomerCashAccounts PRIMARY KEY,PartnerId uniqueidentifier NOT NULL,CompanyId uniqueidentifier NULL,CustomerId uniqueidentifier NOT NULL,CurrencyCode char(3) NOT NULL DEFAULT 'VND',Balance decimal(18,2) NOT NULL DEFAULT 0,CreatedAt datetime2(3) NOT NULL DEFAULT SYSUTCDATETIME(),RowVersion rowversion NOT NULL,CONSTRAINT FK_CCA_Partner FOREIGN KEY(PartnerId) REFERENCES dbo.Partners(Id),CONSTRAINT FK_CCA_Company FOREIGN KEY(CompanyId) REFERENCES dbo.Companies(Id),CONSTRAINT FK_CCA_Customer FOREIGN KEY(CustomerId) REFERENCES dbo.Customers(Id));
  CREATE UNIQUE INDEX UX_CCA_OwnerCurrency ON dbo.CustomerCashAccounts(PartnerId,CompanyId,CustomerId,CurrencyCode);
@@ -13,4 +14,5 @@ IF OBJECT_ID(N'dbo.RefundRequests',N'U') IS NULL BEGIN
 END
 IF OBJECT_ID(N'dbo.RefundOperations',N'U') IS NULL CREATE TABLE dbo.RefundOperations(Id uniqueidentifier NOT NULL DEFAULT NEWSEQUENTIALID() CONSTRAINT PK_RefundOperations PRIMARY KEY,RefundRequestId uniqueidentifier NOT NULL,ProviderId uniqueidentifier NULL,IdempotencyKey nvarchar(200) NOT NULL,Status varchar(20) NOT NULL DEFAULT 'PENDING',ExternalOperationId nvarchar(200) NULL,AttemptCount int NOT NULL DEFAULT 0,LastError nvarchar(2000) NULL,CreatedAt datetime2(3) NOT NULL DEFAULT SYSUTCDATETIME(),CompletedAt datetime2(3) NULL,CONSTRAINT FK_RO_Request FOREIGN KEY(RefundRequestId) REFERENCES dbo.RefundRequests(Id),CONSTRAINT FK_RO_Provider FOREIGN KEY(ProviderId) REFERENCES dbo.Providers(Id),CONSTRAINT UQ_RO_Idem UNIQUE(RefundRequestId,IdempotencyKey));
 GO
-PRINT '032-customer-cash-refund-disposition.sql: OK'; GO
+PRINT '032-customer-cash-refund-disposition.sql: OK';
+GO
