@@ -10,9 +10,9 @@ IF @constraint IS NOT NULL BEGIN SET @sql=N'ALTER TABLE dbo.Settings DROP CONSTR
 ALTER TABLE dbo.Settings WITH CHECK ADD CONSTRAINT CK_Settings_ScopeType CHECK(ScopeType IN('SYSTEM','PARTNER','COMPANY','BRANCH','TEAM','USER'));
 GO
 DECLARE @sql nvarchar(max), @constraint sysname;
-SELECT TOP 1 @constraint=cc.name FROM sys.check_constraints cc WHERE cc.parent_object_id=OBJECT_ID(N'dbo.NumberSequences') AND cc.definition LIKE '%Scope%';
+SELECT TOP 1 @constraint=cc.name FROM sys.check_constraints cc WHERE cc.parent_object_id=OBJECT_ID(N'dbo.NumberSequences') AND cc.definition LIKE '%ScopeType%';
 IF @constraint IS NOT NULL BEGIN SET @sql=N'ALTER TABLE dbo.NumberSequences DROP CONSTRAINT '+QUOTENAME(@constraint); EXEC sp_executesql @sql; END;
-ALTER TABLE dbo.NumberSequences WITH CHECK ADD CONSTRAINT CK_NumberSequences_Scope CHECK(Scope IN('SYSTEM','PARTNER','COMPANY','BRANCH','TEAM'));
+ALTER TABLE dbo.NumberSequences WITH CHECK ADD CONSTRAINT CK_NumberSequences_ScopeType CHECK(ScopeType IN('SYSTEM','PARTNER','COMPANY','BRANCH','TEAM'));
 GO
 DECLARE @sql nvarchar(max), @constraint sysname;
 SELECT TOP 1 @constraint=cc.name FROM sys.check_constraints cc WHERE cc.parent_object_id=OBJECT_ID(N'dbo.DataScopes') AND cc.definition LIKE '%ScopeType%';
