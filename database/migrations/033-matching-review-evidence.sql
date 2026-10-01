@@ -1,5 +1,6 @@
 /* RC2 033 - Explainable matching and review decision history. */
-USE [TAPortal]; GO
+USE [TAPortal];
+GO
 IF OBJECT_ID(N'dbo.MatchingAttempts',N'U') IS NULL BEGIN
  CREATE TABLE dbo.MatchingAttempts(Id uniqueidentifier NOT NULL DEFAULT NEWSEQUENTIALID() CONSTRAINT PK_MatchingAttempts PRIMARY KEY,PartnerId uniqueidentifier NOT NULL,PaymentTransactionId uniqueidentifier NOT NULL,RuleSetHash varchar(128) NULL,Status varchar(20) NOT NULL,StartedAt datetime2(3) NOT NULL DEFAULT SYSUTCDATETIME(),CompletedAt datetime2(3) NULL,SelectedPaymentRequestId uniqueidentifier NULL,SelectedCustomerId uniqueidentifier NULL,CONSTRAINT FK_MA_Partner FOREIGN KEY(PartnerId) REFERENCES dbo.Partners(Id),CONSTRAINT FK_MA_Transaction FOREIGN KEY(PaymentTransactionId) REFERENCES dbo.PaymentTransactions(Id),CONSTRAINT FK_MA_Request FOREIGN KEY(SelectedPaymentRequestId) REFERENCES dbo.PaymentRequests(Id),CONSTRAINT FK_MA_Customer FOREIGN KEY(SelectedCustomerId) REFERENCES dbo.Customers(Id),CONSTRAINT CK_MA_Status CHECK(Status IN('RUNNING','UNMATCHED','SUGGESTED','MATCHED','REVIEW','FAILED')));
  CREATE INDEX IX_MA_Transaction ON dbo.MatchingAttempts(PaymentTransactionId,StartedAt DESC);
@@ -13,4 +14,5 @@ GO
 IF EXISTS(SELECT 1 FROM sys.check_constraints WHERE parent_object_id=OBJECT_ID('dbo.PaymentMatchingRules') AND name='CK_PMR_AmountNoAuto') ALTER TABLE dbo.PaymentMatchingRules DROP CONSTRAINT CK_PMR_AmountNoAuto;
 ALTER TABLE dbo.PaymentMatchingRules ADD CONSTRAINT CK_PMR_AmountNoAuto CHECK(RuleType<>'AMOUNT_ASSIST' OR AutoAllocate=0);
 GO
-PRINT '033-matching-review-evidence.sql: OK'; GO
+PRINT '033-matching-review-evidence.sql: OK';
+GO
