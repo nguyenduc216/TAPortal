@@ -1,5 +1,6 @@
 /* RC2 035 - Service-based credit definitions; wallet is sole consumable quota source. */
-USE [TAPortal]; GO
+USE [TAPortal];
+GO
 IF OBJECT_ID(N'dbo.CreditDefinitions',N'U') IS NULL BEGIN
  CREATE TABLE dbo.CreditDefinitions(Id uniqueidentifier NOT NULL DEFAULT NEWSEQUENTIALID() CONSTRAINT PK_CreditDefinitions PRIMARY KEY,ServiceId uniqueidentifier NOT NULL,Code varchar(50) NOT NULL,Name nvarchar(200) NOT NULL,Unit varchar(30) NOT NULL,PrecisionScale tinyint NOT NULL DEFAULT 0,ExpiryPolicy varchar(20) NOT NULL DEFAULT 'PER_GRANT',IsActive bit NOT NULL DEFAULT 1,CreatedAt datetime2(3) NOT NULL DEFAULT SYSUTCDATETIME(),CONSTRAINT FK_CD_Service FOREIGN KEY(ServiceId) REFERENCES dbo.Services(Id),CONSTRAINT CK_CD_Scale CHECK(PrecisionScale BETWEEN 0 AND 4),CONSTRAINT CK_CD_Expiry CHECK(ExpiryPolicy IN('NONE','PER_GRANT','PER_SUBSCRIPTION')));
  CREATE UNIQUE INDEX UX_CD_Code ON dbo.CreditDefinitions(Code);
@@ -28,4 +29,5 @@ IF OBJECT_ID(N'dbo.SubscriptionCreditGrants',N'U') IS NULL BEGIN
  CREATE UNIQUE INDEX UX_SCG_Idem ON dbo.SubscriptionCreditGrants(PartnerId,IdempotencyKey);
 END
 GO
-PRINT '035-credit-definition-subscription-grants.sql: OK'; GO
+PRINT '035-credit-definition-subscription-grants.sql: OK';
+GO
