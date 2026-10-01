@@ -91,7 +91,9 @@ IF OBJECT_ID(N'dbo.CreditReservations',N'U') IS NULL BEGIN
  CREATE UNIQUE INDEX UX_CR_ActivePurpose ON dbo.CreditReservations(PartnerId,CreditType,PurposeType,PurposeId) WHERE Status='ACTIVE';
 END
 GO
-CREATE OR ALTER VIEW dbo.vw_PartnerCreditBalances AS
+IF OBJECT_ID(N'dbo.vw_PartnerCreditBalances',N'V') IS NULL EXEC('CREATE VIEW dbo.vw_PartnerCreditBalances AS SELECT 1 AS Placeholder');
+GO
+ALTER VIEW dbo.vw_PartnerCreditBalances AS
 SELECT w.Id,w.PartnerId,w.CreditType,w.CurrentBalance,w.ReservedBalance,
  CAST(w.CurrentBalance-w.ReservedBalance AS decimal(18,2)) AvailableBalance
 FROM dbo.PartnerCreditWallets w;
