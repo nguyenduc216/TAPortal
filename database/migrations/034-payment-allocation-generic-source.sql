@@ -1,5 +1,6 @@
 /* RC2 034 - Backfill generic payment transactions and make allocation source rail-neutral. */
-USE [TAPortal]; GO
+USE [TAPortal];
+GO
 INSERT dbo.PaymentTransactions(Id,PartnerId,CompanyId,ProviderId,FinancialAccountId,RailType,ExternalTransactionId,TransactionAt,Direction,Amount,CurrencyCode,ReferenceNumber,Content,PaymentCode,CounterpartyReference,Source,CreatedAt)
 SELECT NEWID(),b.PartnerId,a.CompanyId,b.ProviderId,NULL,'BANK',b.ExternalTransactionId,b.TransactionDate,b.Direction,b.Amount,'VND',b.ReferenceNumber,b.Content,b.PaymentCode,
  COALESCE(b.CounterpartyAccount,b.CounterpartyName),b.Source,b.CreatedAt
@@ -17,4 +18,5 @@ ALTER TABLE dbo.PaymentAllocations ALTER COLUMN PaymentTransactionId uniqueident
 GO
 IF NOT EXISTS(SELECT 1 FROM sys.indexes WHERE object_id=OBJECT_ID('dbo.PaymentAllocations') AND name='IX_PA_PaymentTransaction') CREATE INDEX IX_PA_PaymentTransaction ON dbo.PaymentAllocations(PaymentTransactionId,Status) INCLUDE(PaymentRequestId,AllocatedAmount);
 GO
-PRINT '034-payment-allocation-generic-source.sql: OK'; GO
+PRINT '034-payment-allocation-generic-source.sql: OK';
+GO
