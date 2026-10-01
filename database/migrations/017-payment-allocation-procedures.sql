@@ -1,7 +1,9 @@
 /* TAPortal 017 - Atomic payment allocation and reconciliation procedures. */
 USE [TAPortal];
 GO
-CREATE OR ALTER PROCEDURE dbo.sp_AllocateBankTransaction
+IF OBJECT_ID(N'dbo.sp_AllocateBankTransaction',N'P') IS NULL EXEC('CREATE PROCEDURE dbo.sp_AllocateBankTransaction AS BEGIN SET NOCOUNT ON; END');
+GO
+ALTER PROCEDURE dbo.sp_AllocateBankTransaction
  @PaymentRequestId uniqueidentifier,
  @BankTransactionId uniqueidentifier,
  @AllocatedAmount decimal(18,2)=NULL
@@ -28,7 +30,9 @@ BEGIN
  SELECT * FROM dbo.vw_PaymentRequestBalances WHERE Id=@PaymentRequestId;
 END
 GO
-CREATE OR ALTER PROCEDURE dbo.sp_ReversePaymentAllocation
+IF OBJECT_ID(N'dbo.sp_ReversePaymentAllocation',N'P') IS NULL EXEC('CREATE PROCEDURE dbo.sp_ReversePaymentAllocation AS BEGIN SET NOCOUNT ON; END');
+GO
+ALTER PROCEDURE dbo.sp_ReversePaymentAllocation
  @PaymentAllocationId uniqueidentifier,@Reason nvarchar(500)
 AS
 BEGIN
