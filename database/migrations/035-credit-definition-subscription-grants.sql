@@ -15,7 +15,21 @@ IF COL_LENGTH('dbo.CreditUsageRules','CreditDefinitionId') IS NULL ALTER TABLE d
 IF COL_LENGTH('dbo.CreditTopups','CreditDefinitionId') IS NULL ALTER TABLE dbo.CreditTopups ADD CreditDefinitionId uniqueidentifier NULL;
 GO
 UPDATE w SET CreditDefinitionId=d.Id FROM dbo.PartnerCreditWallets w JOIN dbo.CreditDefinitions d ON d.Code=CASE w.CreditType WHEN 'BANKING' THEN 'BANK_TRANSACTION_UNIT' WHEN 'EINVOICE' THEN 'INVOICE_ISSUE_UNIT' END WHERE w.CreditDefinitionId IS NULL;
-UPDATE l SET CreditDefinitionId=d.Id FROM dbo.CreditLedger l JOIN dbo.CreditDefinitions d ON d.Code=CASE l.CreditType WHEN 'BANKING' THEN 'BANK_TRANSACTION_UNIT' WHEN 'EINVOICE' THEN 'INVOICE_ISSUE_UNIT' END WHERE l.CreditDefinitionId IS NULL;
+IF EXISTS(SELECT 1 FROM dbo.CreditLedger WHERE CreditDefinitionId IS NULL)
+BEGIN
+ BEGIN TRY
+  BEGIN TRAN;
+  DISABLE TRIGGER dbo.tr_CreditLedger_NoUpdateDelete ON dbo.CreditLedger;
+  UPDATE l SET CreditDefinitionId=d.Id FROM dbo.CreditLedger l JOIN dbo.CreditDefinitions d ON d.Code=CASE l.CreditType WHEN 'BANKING' THEN 'BANK_TRANSACTION_UNIT' WHEN 'EINVOICE' THEN 'INVOICE_ISSUE_UNIT' END WHERE l.CreditDefinitionId IS NULL;
+  ENABLE TRIGGER dbo.tr_CreditLedger_NoUpdateDelete ON dbo.CreditLedger;
+  COMMIT;
+ END TRY
+ BEGIN CATCH
+  IF XACT_STATE()<>0 ROLLBACK;
+  ENABLE TRIGGER dbo.tr_CreditLedger_NoUpdateDelete ON dbo.CreditLedger;
+  THROW;
+ END CATCH
+END;
 UPDATE r SET CreditDefinitionId=d.Id FROM dbo.CreditReservations r JOIN dbo.CreditDefinitions d ON d.Code=CASE r.CreditType WHEN 'BANKING' THEN 'BANK_TRANSACTION_UNIT' WHEN 'EINVOICE' THEN 'INVOICE_ISSUE_UNIT' END WHERE r.CreditDefinitionId IS NULL;
 UPDATE r SET CreditDefinitionId=d.Id FROM dbo.CreditUsageRules r JOIN dbo.CreditDefinitions d ON d.Code=CASE r.CreditType WHEN 'BANKING' THEN 'BANK_TRANSACTION_UNIT' WHEN 'EINVOICE' THEN 'INVOICE_ISSUE_UNIT' END WHERE r.CreditDefinitionId IS NULL;
 UPDATE t SET CreditDefinitionId=d.Id FROM dbo.CreditTopups t JOIN dbo.CreditDefinitions d ON d.Code=CASE t.CreditType WHEN 'BANKING' THEN 'BANK_TRANSACTION_UNIT' WHEN 'EINVOICE' THEN 'INVOICE_ISSUE_UNIT' END WHERE t.CreditDefinitionId IS NULL;
