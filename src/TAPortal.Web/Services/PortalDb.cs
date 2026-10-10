@@ -336,6 +336,136 @@ ORDER BY m.SortOrder,m.Name,m.Id;
         return list;
     }
 
+    // FEATURE_ID: TAPORTAL-HR-MASTER-DATA
+    // CHANGE_ID: TAPORTAL-20261010-HR-MASTER-DATA-001
+    // PortalDb remains the single SQL owner for the Department master lifecycle.
+    public async Task<IReadOnlyList<DepartmentRow>> GetDepartmentsAsync()
+    {
+        var list = new List<DepartmentRow>();
+        await using var cn = Open();
+        await cn.OpenAsync();
+        const string sql = """
+SELECT Id,Code,Name,Description,SortOrder,IsActive,CreatedAt,UpdatedAt,RowVersion
+FROM dbo.Departments
+WHERE IsDeleted=0
+ORDER BY SortOrder,Name,Code;
+""";
+        await using var cmd = new SqlCommand(sql, cn);
+        await using var rd = await cmd.ExecuteReaderAsync();
+        while (await rd.ReadAsync())
+        {
+            list.Add(new(
+                rd.GetGuid(0), rd.GetString(1), rd.GetString(2), rd.IsDBNull(3) ? null : rd.GetString(3),
+                rd.GetInt32(4), rd.GetBoolean(5), rd.GetDateTime(6), rd.IsDBNull(7) ? null : rd.GetDateTime(7),
+                Convert.ToBase64String((byte[])rd[8])));
+        }
+        return list;
+    }
+
+    public async Task<bool> DepartmentCodeExistsAsync(string code, Guid? excludingId = null)
+    {
+        await using var cn = Open(); await cn.OpenAsync();
+        const string sql = "SELECT COUNT(1) FROM dbo.Departments WHERE Code=@code AND IsDeleted=0 AND (@excludingId IS NULL OR Id<>@excludingId);";
+        await using var cmd = new SqlCommand(sql, cn);
+        cmd.Parameters.Add("@code", System.Data.SqlDbType.VarChar, DepartmentRules.CodeMaxLength).Value = DepartmentRules.NormalizeCode(code);
+        cmd.Parameters.Add("@excludingId", System.Data.SqlDbType.UniqueIdentifier).Value = (object?)excludingId ?? DBNull.Value;
+        return Convert.ToInt32(await cmd.ExecuteScalarAsync()) > 0;
+    }
+
+    public async Task<DepartmentWriteResult> CreateDepartmentAsync(DepartmentCreateVm vm, Guid? userId)
+    {
+        await using var cn = Open(); await cn.OpenAsync();
+        const string sql = """
+INSERT dbo.Departments(Id,Code,Name,Description,SortOrder,IsActive,IsDeleted,CreatedBy)
+VALUES(NEWID(),@code,@name,@description,@sortOrder,@isActive,0,@userId);
+""";
+        await using var cmd = DepartmentCommand(sql, cn, vm, userId);
+        try { await cmd.ExecuteNonQueryAsync(); return DepartmentWriteResult.Success; }
+        catch (SqlException ex) when (ex.Number is 2601 or 2627) { return DepartmentWriteResult.DuplicateCode; }
+    }
+
+    public async Task<DepartmentWriteResult> UpdateDepartmentAsync(DepartmentUpdateVm vm, byte[] rowVersion, Guid? userId)
+    {
+        await using var cn = Open(); await cn.OpenAsync();
+        const string sql = """
+UPDATE dbo.Departments
+SET Code=@code,Name=@name,Description=@description,SortOrder=@sortOrder,IsActive=@isActive,
+    UpdatedAt=SYSUTCDATETIME(),UpdatedBy=@userId
+WHERE Id=@id AND RowVersion=@rowVersion AND IsDeleted=0;
+""";
+        await using var cmd = DepartmentCommand(sql, cn, vm, userId);
+        cmd.Parameters.Add("@id", System.Data.SqlDbType.UniqueIdentifier).Value = vm.Id;
+        cmd.Parameters.Add("@rowVersion", System.Data.SqlDbType.Timestamp, 8).Value = rowVersion;
+        try { return await cmd.ExecuteNonQueryAsync() == 1 ? DepartmentWriteResult.Success : DepartmentWriteResult.ConcurrencyConflict; }
+        catch (SqlException ex) when (ex.Number is 2601 or 2627) { return DepartmentWriteResult.DuplicateCode; }
+    }
+
+    public async Task<DepartmentWriteResult> SetDepartmentActiveAsync(Guid id, bool isActive, byte[] rowVersion, Guid? userId)
+    {
+        await using var cn = Open(); await cn.OpenAsync();
+        const string sql = """
+UPDATE dbo.Departments SET IsActive=@isActive,UpdatedAt=SYSUTCDATETIME(),UpdatedBy=@userId
+WHERE Id=@id AND RowVersion=@rowVersion AND IsDeleted=0;
+""";
+        await using var cmd = new SqlCommand(sql, cn);
+        cmd.Parameters.Add("@id", System.Data.SqlDbType.UniqueIdentifier).Value = id;
+        cmd.Parameters.Add("@isActive", System.Data.SqlDbType.Bit).Value = isActive;
+        cmd.Parameters.Add("@rowVersion", System.Data.SqlDbType.Timestamp, 8).Value = rowVersion;
+        cmd.Parameters.Add("@userId", System.Data.SqlDbType.UniqueIdentifier).Value = (object?)userId ?? DBNull.Value;
+        return await cmd.ExecuteNonQueryAsync() == 1 ? DepartmentWriteResult.Success : DepartmentWriteResult.ConcurrencyConflict;
+    }
+
+    public async Task<DepartmentWriteResult> SoftDeleteDepartmentAsync(Guid id, byte[] rowVersion, Guid? userId)
+    {
+        await using var cn = Open(); await cn.OpenAsync();
+        await using var tx = (SqlTransaction)await cn.BeginTransactionAsync();
+        const string dependencySql = """
+DECLARE @HasDependency bit=0;
+IF OBJECT_ID(N'dbo.Teams',N'U') IS NOT NULL AND COL_LENGTH(N'dbo.Teams',N'DepartmentId') IS NOT NULL
+    EXEC sys.sp_executesql N'IF EXISTS(SELECT 1 FROM dbo.Teams WHERE DepartmentId=@id) SET @found=1;',N'@id uniqueidentifier,@found bit OUTPUT',@id,@HasDependency OUTPUT;
+IF @HasDependency=0 AND OBJECT_ID(N'dbo.EmployeeAssignments',N'U') IS NOT NULL AND COL_LENGTH(N'dbo.EmployeeAssignments',N'DepartmentId') IS NOT NULL
+    EXEC sys.sp_executesql N'IF EXISTS(SELECT 1 FROM dbo.EmployeeAssignments WHERE DepartmentId=@id) SET @found=1;',N'@id uniqueidentifier,@found bit OUTPUT',@id,@HasDependency OUTPUT;
+SELECT @HasDependency;
+""";
+        await using (var dependency = new SqlCommand(dependencySql, cn, tx))
+        {
+            dependency.Parameters.Add("@id", System.Data.SqlDbType.UniqueIdentifier).Value = id;
+            if (Convert.ToBoolean(await dependency.ExecuteScalarAsync()))
+            {
+                await tx.RollbackAsync();
+                return DepartmentWriteResult.HasDependencies;
+            }
+        }
+        const string deleteSql = """
+UPDATE dbo.Departments
+SET IsDeleted=1,IsActive=0,DeletedAt=SYSUTCDATETIME(),DeletedBy=@userId,UpdatedAt=SYSUTCDATETIME(),UpdatedBy=@userId
+WHERE Id=@id AND RowVersion=@rowVersion AND IsDeleted=0;
+""";
+        await using var cmd = new SqlCommand(deleteSql, cn, tx);
+        cmd.Parameters.Add("@id", System.Data.SqlDbType.UniqueIdentifier).Value = id;
+        cmd.Parameters.Add("@rowVersion", System.Data.SqlDbType.Timestamp, 8).Value = rowVersion;
+        cmd.Parameters.Add("@userId", System.Data.SqlDbType.UniqueIdentifier).Value = (object?)userId ?? DBNull.Value;
+        if (await cmd.ExecuteNonQueryAsync() != 1)
+        {
+            await tx.RollbackAsync();
+            return DepartmentWriteResult.ConcurrencyConflict;
+        }
+        await tx.CommitAsync();
+        return DepartmentWriteResult.Success;
+    }
+
+    private static SqlCommand DepartmentCommand(string sql, SqlConnection cn, DepartmentCreateVm vm, Guid? userId)
+    {
+        var cmd = new SqlCommand(sql, cn);
+        cmd.Parameters.Add("@code", System.Data.SqlDbType.VarChar, DepartmentRules.CodeMaxLength).Value = DepartmentRules.NormalizeCode(vm.Code);
+        cmd.Parameters.Add("@name", System.Data.SqlDbType.NVarChar, DepartmentRules.NameMaxLength).Value = vm.Name.Trim();
+        cmd.Parameters.Add("@description", System.Data.SqlDbType.NVarChar, 1000).Value = string.IsNullOrWhiteSpace(vm.Description) ? DBNull.Value : vm.Description.Trim();
+        cmd.Parameters.Add("@sortOrder", System.Data.SqlDbType.Int).Value = vm.SortOrder;
+        cmd.Parameters.Add("@isActive", System.Data.SqlDbType.Bit).Value = vm.IsActive;
+        cmd.Parameters.Add("@userId", System.Data.SqlDbType.UniqueIdentifier).Value = (object?)userId ?? DBNull.Value;
+        return cmd;
+    }
+
     public async Task<DashboardVm> GetDashboardAsync()
     {
         await using var cn = Open(); await cn.OpenAsync();

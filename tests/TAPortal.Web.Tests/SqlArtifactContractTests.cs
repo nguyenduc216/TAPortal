@@ -31,6 +31,42 @@ public sealed class SqlArtifactContractTests
         Assert.DoesNotContain("DELETE FROM dbo.", sql, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Fact]
+    public void DepartmentMigration_ProtectsUniquenessConcurrencyAndSoftDeleteDependencies()
+    {
+        var sql = ReadRepositoryFile("database", "migrations", "055-hr-department-master.sql");
+        Assert.Contains("IF DB_NAME()<>N'TAPortalSys'", sql, StringComparison.Ordinal);
+        Assert.Contains("CREATE UNIQUE INDEX UX_Departments_Code_NotDeleted", sql, StringComparison.Ordinal);
+        Assert.Contains("CK_Departments_Code_Canonical", sql, StringComparison.Ordinal);
+        Assert.Contains("RowVersion rowversion NOT NULL", sql, StringComparison.Ordinal);
+        Assert.Contains("HR.DEPARTMENT.DELETE", sql, StringComparison.Ordinal);
+        Assert.Contains("SYS_ADMIN", sql, StringComparison.Ordinal);
+        Assert.DoesNotContain("DROP TABLE", sql, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("TRUNCATE", sql, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void DepartmentVerify_IsReadOnlyAndFailsOnInvariantErrors()
+    {
+        var sql = ReadRepositoryFile("database", "scripts", "verify", "055-verify-hr-department.sql");
+        Assert.Contains("OVERALL STATUS:", sql, StringComparison.Ordinal);
+        Assert.Contains("RAISERROR", sql, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("INSERT dbo.", sql, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("UPDATE dbo.", sql, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("DELETE FROM dbo.", sql, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void DepartmentWrites_UseRowVersionAndDependencyAwareSoftDelete()
+    {
+        var source = ReadRepositoryFile("src", "TAPortal.Web", "Services", "PortalDb.cs");
+        Assert.Contains("WHERE Id=@id AND RowVersion=@rowVersion AND IsDeleted=0", source, StringComparison.Ordinal);
+        Assert.Contains("COL_LENGTH(N'dbo.Teams',N'DepartmentId')", source, StringComparison.Ordinal);
+        Assert.Contains("COL_LENGTH(N'dbo.EmployeeAssignments',N'DepartmentId')", source, StringComparison.Ordinal);
+        Assert.Contains("SET IsDeleted=1,IsActive=0,DeletedAt=SYSUTCDATETIME()", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("DELETE FROM dbo.Departments", source, StringComparison.OrdinalIgnoreCase);
+    }
+
     private static string ReadRepositoryFile(params string[] parts)
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

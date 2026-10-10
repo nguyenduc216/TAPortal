@@ -1,0 +1,41 @@
+@model DepartmentPageVm
+@{ ViewData["Title"] = "Phòng ban"; }
+<div class="ta-page-header">
+    <div class="ta-page-heading"><div class="ta-page-pretitle"><i class="ti ti-users-group me-1"></i>Nhân sự / Phòng ban</div><h1 class="ta-page-title">Phòng ban</h1><p class="ta-page-subtitle">Quản lý cơ cấu phòng ban trong doanh nghiệp.</p></div>
+    @if (Model.CanCreate) { <div class="ta-page-actions"><button class="btn btn-ta-gold" type="button" data-bs-toggle="modal" data-bs-target="#departmentCreate"><i class="ti ti-plus"></i>Thêm phòng ban</button></div> }
+</div>
+<div class="card ta-table-card">
+    <div class="card-header ta-toolbar"><div class="input-icon ta-search-compact"><span class="input-icon-addon"><i class="ti ti-search"></i></span><input class="form-control" type="search" aria-label="Tìm phòng ban" placeholder="Tìm theo mã hoặc tên phòng ban..." oninput="taFilterRows(this.value,'departmentsTable')" /></div><span class="badge bg-blue-lt"><i class="ti ti-building me-1"></i>@Model.Departments.Count phòng ban</span></div>
+    <div class="table-responsive"><table class="table table-vcenter card-table ta-department-table" id="departmentsTable"><thead><tr><th>Mã</th><th>Tên phòng ban</th><th>Mô tả</th><th class="text-center">Thứ tự</th><th>Trạng thái</th><th>Cập nhật</th>@if(Model.CanUpdate||Model.CanDelete){<th class="text-end">Thao tác</th>}</tr></thead><tbody>
+    @foreach (var department in Model.Departments)
+    {
+        var modalKey = department.Id.ToString("N");
+        <tr data-ta-row><td><code class="ta-code">@department.Code</code></td><td><div class="d-flex align-items-center gap-2"><span class="ta-menu-icon"><i class="ti ti-building"></i></span><strong>@department.Name</strong></div></td><td class="text-secondary ta-department-description">@(department.Description??"—")</td><td class="text-center">@department.SortOrder</td><td><span class="badge @(department.IsActive?"badge-ta-active":"bg-secondary-lt")"><i class="ti @(department.IsActive?"ti-circle-check":"ti-circle-pause") me-1"></i>@(department.IsActive?"Hoạt động":"Ngừng hoạt động")</span></td><td><span class="text-secondary">@department.LastChangedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</span></td>
+        @if(Model.CanUpdate||Model.CanDelete){<td class="text-end"><div class="btn-list flex-nowrap justify-content-end">
+            @if(Model.CanUpdate){<button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="modal" data-bs-target="#edit-@modalKey" title="Sửa @department.Code"><i class="ti ti-edit"></i><span class="d-none d-xl-inline">Sửa</span></button><form asp-action="ToggleStatus" method="post" class="d-inline"><input type="hidden" name="Id" value="@department.Id"/><input type="hidden" name="RowVersion" value="@department.RowVersion"/><input type="hidden" name="IsActive" value="@(!department.IsActive)"/><button class="btn btn-sm btn-outline-secondary" type="submit" data-ta-loading title="@(department.IsActive?"Ngừng hoạt động":"Kích hoạt")"><i class="ti @(department.IsActive?"ti-player-pause":"ti-player-play")"></i></button></form>}
+            @if(Model.CanDelete){<button class="btn btn-sm btn-outline-danger ta-btn-icon" type="button" data-bs-toggle="modal" data-bs-target="#delete-@modalKey" title="Xóa @department.Code"><i class="ti ti-trash"></i></button>}
+        </div></td>}
+        </tr>
+    }
+    </tbody></table></div>
+    @if(Model.Departments.Count==0){<div class="ta-table-empty"><i class="ti ti-building-community"></i>Chưa có phòng ban.</div>}
+    <div class="ta-table-empty d-none" data-ta-no-results><i class="ti ti-search-off"></i>Không tìm thấy phòng ban phù hợp.</div>
+</div>
+
+@if (Model.CanCreate)
+{
+<div class="modal modal-blur fade" id="departmentCreate" tabindex="-1" aria-labelledby="departmentCreateTitle" aria-hidden="true"><div class="modal-dialog"><div class="modal-content"><form asp-action="Create" method="post"><div class="modal-header"><h2 class="modal-title" id="departmentCreateTitle"><i class="ti ti-building-plus"></i>Thêm phòng ban</h2><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Đóng"></button></div><div class="modal-body"><partial name="_DepartmentFields" model='new DepartmentCreateVm { IsActive=true }' /></div><div class="modal-footer"><button class="btn me-auto" type="button" data-bs-dismiss="modal">Hủy</button><button class="btn btn-primary" type="submit" data-ta-loading data-ta-loading-text="Đang lưu..."><i class="ti ti-device-floppy"></i>Lưu phòng ban</button></div></form></div></div></div>
+}
+
+@foreach (var department in Model.Departments)
+{
+    var modalKey = department.Id.ToString("N");
+    @if(Model.CanUpdate)
+    {
+    <div class="modal modal-blur fade" id="edit-@modalKey" tabindex="-1" aria-labelledby="edit-title-@modalKey" aria-hidden="true"><div class="modal-dialog"><div class="modal-content"><form asp-action="Update" method="post"><input type="hidden" name="Id" value="@department.Id"/><input type="hidden" name="RowVersion" value="@department.RowVersion"/><div class="modal-header"><h2 class="modal-title" id="edit-title-@modalKey"><i class="ti ti-building-pencil"></i>Sửa phòng ban @department.Code</h2><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Đóng"></button></div><div class="modal-body"><partial name="_DepartmentFields" model='new DepartmentCreateVm { Code=department.Code,Name=department.Name,Description=department.Description,SortOrder=department.SortOrder,IsActive=department.IsActive }' /></div><div class="modal-footer"><button class="btn me-auto" type="button" data-bs-dismiss="modal">Hủy</button><button class="btn btn-primary" type="submit" data-ta-loading data-ta-loading-text="Đang cập nhật..."><i class="ti ti-device-floppy"></i>Cập nhật</button></div></form></div></div></div>
+    }
+    @if(Model.CanDelete)
+    {
+    <div class="modal modal-blur fade" id="delete-@modalKey" tabindex="-1" aria-labelledby="delete-title-@modalKey" aria-hidden="true"><div class="modal-dialog modal-sm"><div class="modal-content"><form asp-action="Delete" method="post"><input type="hidden" name="Id" value="@department.Id"/><input type="hidden" name="RowVersion" value="@department.RowVersion"/><div class="modal-body text-center py-4"><span class="ta-confirm-icon"><i class="ti ti-trash"></i></span><h2 class="h3 mt-3" id="delete-title-@modalKey">Xóa phòng ban?</h2><p>Bạn có chắc muốn xóa phòng ban <strong>@department.Code – @department.Name</strong>?</p><p class="text-secondary small mb-0">Thao tác này chỉ xóa mềm và không thể thực hiện nếu phòng ban đang được sử dụng.</p></div><div class="modal-footer"><button class="btn" type="button" data-bs-dismiss="modal">Hủy</button><button class="btn btn-danger" type="submit" data-ta-loading data-ta-loading-text="Đang xóa..."><i class="ti ti-trash"></i>Xóa mềm</button></div></form></div></div></div>
+    }
+}

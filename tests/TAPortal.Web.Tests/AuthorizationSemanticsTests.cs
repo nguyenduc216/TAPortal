@@ -40,4 +40,11 @@ public sealed class AuthorizationSemanticsTests
         Assert.True(AuthorizationSemantics.HasAnyMappedPermission(effective, new[] { "CRM.CUSTOMERS.VIEW" }, true, true));
         Assert.False(AuthorizationSemantics.HasAnyMappedPermission(effective, new[] { "AUTH.USERS.VIEW" }, true, true));
     }
+
+    [Fact]
+    public void DepartmentAction_RequiresMappedDepartmentPermission()
+    {
+        var unrelated = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "HR.DEPARTMENT.VIEW" };
+        Assert.False(AuthorizationSemantics.HasAnyMappedPermission(unrelated, new[] { "HR.DEPARTMENT.DELETE" }, true, false));
+    }
 }
