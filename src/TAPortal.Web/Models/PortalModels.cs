@@ -43,6 +43,7 @@ public sealed class UserCreateVm
 public sealed record PortalUser(Guid Id, string Username, string DisplayName, string? Email, string? Phone, string Status, bool IsActive);
 public sealed record PortalRole(Guid Id, string Code, string Name, string? Description, bool IsSystem, bool IsActive);
 public sealed record PortalMenu(Guid Id, Guid? ParentId, string Code, string Name, string? Icon, string? Route, int SortOrder, bool IsVisible, bool IsActive);
+public sealed record PortalMenuNode(PortalMenu Menu, IReadOnlyList<PortalMenuNode> Children);
 public sealed record CustomerRow(Guid Id, string Code, string Name, string? TaxCode, string? Email, string? Phone, string Status);
 public sealed record DashboardVm(int CustomerCount, int UserCount, int ActiveUserCount, int RoleCount);
 public sealed record ErrorVm(string? RequestId);

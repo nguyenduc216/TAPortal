@@ -21,14 +21,14 @@ public sealed class HomeController(PortalDb db) : Controller
     }
 }
 
-[Authorize(Policy = PermissionPolicies.Prefix + "AUTH.USERS.VIEW")]
+[Authorize(Policy = PermissionPolicies.FunctionActionPrefix + "Users.Index")]
 public sealed class UsersController(PortalDb db, PasswordService passwords) : Controller
 {
     public async Task<IActionResult> Index() => View(await db.GetUsersAsync());
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    [Authorize(Policy = PermissionPolicies.Prefix + "AUTH.USERS.CREATE")]
+    [Authorize(Policy = PermissionPolicies.FunctionActionPrefix + "Users.Create")]
     public async Task<IActionResult> Create(UserCreateVm vm)
     {
         var policy = PasswordPolicy.Validate(vm.Password);
@@ -46,19 +46,19 @@ public sealed class UsersController(PortalDb db, PasswordService passwords) : Co
     }
 }
 
-[Authorize(Policy = PermissionPolicies.Prefix + "AUTH.ROLES.VIEW")]
+[Authorize(Policy = PermissionPolicies.FunctionActionPrefix + "Roles.Index")]
 public sealed class RolesController(PortalDb db) : Controller
 {
     public async Task<IActionResult> Index() => View(await db.GetRolesAsync());
 }
 
-[Authorize]
+[Authorize(Policy = PermissionPolicies.FunctionActionPrefix + "Customers.Index")]
 public sealed class CustomersController(PortalDb db) : Controller
 {
     public async Task<IActionResult> Index() => View(await db.GetCustomersAsync());
 }
 
-[Authorize(Policy = PermissionPolicies.Prefix + "SYSTEM.MENUS.MANAGE")]
+[Authorize(Policy = PermissionPolicies.FunctionActionPrefix + "Menus.Index")]
 public sealed class MenusController(PortalDb db) : Controller
 {
     public async Task<IActionResult> Index() => View(await db.GetMenusAsync());

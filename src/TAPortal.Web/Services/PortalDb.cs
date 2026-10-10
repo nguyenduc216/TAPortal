@@ -22,6 +22,94 @@ public sealed class PortalDb
 
     private SqlConnection Open() => new(_connectionString);
 
+    public async Task<bool> HasPermissionAsync(Guid userId, string permissionCode)
+    {
+        // FEATURE_ID: TAPORTAL-CORE-AUTH-MENU
+        // CHANGE_ID: TAPORTAL-20261010-CORE-AUTH-MENU-001
+        // User DENY overrides user/role ALLOW; inactive principals and permissions fail closed.
+        await using var cn = Open();
+        await cn.OpenAsync();
+        const string sql = """
+SELECT CASE WHEN EXISTS (
+    SELECT 1
+    FROM dbo.Users u
+    JOIN dbo.Permissions p ON p.Code=@permission AND p.IsDeleted=0 AND p.IsActive=1
+    WHERE u.Id=@userId AND u.IsDeleted=0 AND u.IsActive=1 AND u.Status='ACTIVE'
+      AND NOT EXISTS (SELECT 1 FROM dbo.UserPermissions x WHERE x.UserId=u.Id AND x.PermissionId=p.Id AND x.Effect='DENY')
+      AND (
+          EXISTS (SELECT 1 FROM dbo.UserPermissions x WHERE x.UserId=u.Id AND x.PermissionId=p.Id AND x.Effect='ALLOW')
+          OR EXISTS (
+              SELECT 1 FROM dbo.UserRoles ur
+              JOIN dbo.Roles r ON r.Id=ur.RoleId AND r.IsDeleted=0 AND r.IsActive=1
+              JOIN dbo.RolePermissions rp ON rp.RoleId=r.Id AND rp.PermissionId=p.Id
+              WHERE ur.UserId=u.Id
+          )
+      )
+) THEN CAST(1 AS bit) ELSE CAST(0 AS bit) END;
+""";
+        await using var cmd = new SqlCommand(sql, cn);
+        cmd.Parameters.AddWithValue("@userId", userId);
+        cmd.Parameters.AddWithValue("@permission", permissionCode.Trim());
+        return (bool)(await cmd.ExecuteScalarAsync() ?? false);
+    }
+
+    public async Task<IReadOnlySet<string>> GetEffectivePermissionsAsync(Guid userId)
+    {
+        // FEATURE_ID: TAPORTAL-CORE-AUTH-MENU
+        // CHANGE_ID: TAPORTAL-20261010-CORE-AUTH-MENU-001
+        // Single effective-permission projection for navigation and FunctionAction mappings.
+        var permissions = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        await using var cn = Open();
+        await cn.OpenAsync();
+        const string sql = """
+SELECT p.Code
+FROM dbo.Users u
+CROSS JOIN dbo.Permissions p
+WHERE u.Id=@userId AND u.IsDeleted=0 AND u.IsActive=1 AND u.Status='ACTIVE'
+  AND p.IsDeleted=0 AND p.IsActive=1
+  AND NOT EXISTS (SELECT 1 FROM dbo.UserPermissions x WHERE x.UserId=u.Id AND x.PermissionId=p.Id AND x.Effect='DENY')
+  AND (
+      EXISTS (SELECT 1 FROM dbo.UserPermissions x WHERE x.UserId=u.Id AND x.PermissionId=p.Id AND x.Effect='ALLOW')
+      OR EXISTS (
+          SELECT 1 FROM dbo.UserRoles ur
+          JOIN dbo.Roles r ON r.Id=ur.RoleId AND r.IsDeleted=0 AND r.IsActive=1
+          JOIN dbo.RolePermissions rp ON rp.RoleId=r.Id AND rp.PermissionId=p.Id
+          WHERE ur.UserId=u.Id
+      )
+  );
+""";
+        await using var cmd = new SqlCommand(sql, cn);
+        cmd.Parameters.AddWithValue("@userId", userId);
+        await using var rd = await cmd.ExecuteReaderAsync();
+        while (await rd.ReadAsync()) permissions.Add(rd.GetString(0));
+        return permissions;
+    }
+
+    public async Task<bool> HasFunctionActionAsync(Guid userId, string actionKey)
+    {
+        // FEATURE_ID: TAPORTAL-CORE-AUTH-MENU
+        // CHANGE_ID: TAPORTAL-20261010-CORE-AUTH-MENU-001
+        // Unknown/unmapped actions fail closed; any mapped effective permission authorizes a known action.
+        var effectivePermissions = await GetEffectivePermissionsAsync(userId);
+        if (effectivePermissions.Count == 0 || string.IsNullOrWhiteSpace(actionKey)) return false;
+
+        await using var cn = Open();
+        await cn.OpenAsync();
+        const string sql = """
+SELECT DISTINCT p.Code
+FROM dbo.FunctionActions fa
+JOIN dbo.FunctionActionPermissions fap ON fap.FunctionActionId=fa.Id
+JOIN dbo.Permissions p ON p.Id=fap.PermissionId AND p.IsDeleted=0 AND p.IsActive=1
+WHERE fa.IsDeleted=0 AND fa.IsActive=1 AND (fa.UiKey=@actionKey OR fa.EndpointKey=@actionKey);
+""";
+        await using var cmd = new SqlCommand(sql, cn);
+        cmd.Parameters.AddWithValue("@actionKey", actionKey.Trim());
+        await using var rd = await cmd.ExecuteReaderAsync();
+        while (await rd.ReadAsync())
+            if (effectivePermissions.Contains(rd.GetString(0))) return true;
+        return false;
+    }
+
     public async Task<AuthUserSnapshot?> GetAuthUserAsync(string username)
     {
         await using var cn = Open();
@@ -59,38 +147,7 @@ WHERE ur.UserId=@id AND r.IsDeleted=0 AND r.IsActive=1;
             while (await rr.ReadAsync()) roles.Add(rr.GetString(0));
         }
 
-        var permissions = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        const string permSql = """
-SELECT DISTINCT p.Code
-FROM dbo.UserRoles ur
-JOIN dbo.RolePermissions rp ON rp.RoleId=ur.RoleId
-JOIN dbo.Permissions p ON p.Id=rp.PermissionId
-WHERE ur.UserId=@id AND p.IsDeleted=0 AND p.IsActive=1
-UNION
-SELECT p.Code
-FROM dbo.UserPermissions up
-JOIN dbo.Permissions p ON p.Id=up.PermissionId
-WHERE up.UserId=@id AND up.Effect='ALLOW' AND p.IsDeleted=0 AND p.IsActive=1;
-""";
-        await using (var permCmd = new SqlCommand(permSql, cn))
-        {
-            permCmd.Parameters.AddWithValue("@id", id);
-            await using var pr = await permCmd.ExecuteReaderAsync();
-            while (await pr.ReadAsync()) permissions.Add(pr.GetString(0));
-        }
-
-        const string denySql = """
-SELECT p.Code FROM dbo.UserPermissions up
-JOIN dbo.Permissions p ON p.Id=up.PermissionId
-WHERE up.UserId=@id AND up.Effect='DENY' AND p.IsDeleted=0;
-""";
-        await using (var denyCmd = new SqlCommand(denySql, cn))
-        {
-            denyCmd.Parameters.AddWithValue("@id", id);
-            await using var dr = await denyCmd.ExecuteReaderAsync();
-            while (await dr.ReadAsync()) permissions.Remove(dr.GetString(0));
-        }
-
+        var permissions = await GetEffectivePermissionsAsync(id);
         return user with { Roles = roles, Permissions = permissions.ToList() };
     }
 
@@ -190,9 +247,12 @@ VALUES(@id,@username,@nu,@email,@ne,@phone,@name,@hash,'ACTIVE',1,@createdBy);
         return list;
     }
 
-    public async Task<List<PortalMenu>> GetNavigationMenusAsync(IEnumerable<string> permissions, bool isSystemAdmin)
+    public async Task<IReadOnlyList<PortalMenuNode>> GetNavigationMenuTreeAsync(Guid userId)
     {
-        var permissionList = permissions.Where(x => !string.IsNullOrWhiteSpace(x)).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+        // FEATURE_ID: TAPORTAL-CORE-AUTH-MENU
+        // CHANGE_ID: TAPORTAL-20261010-CORE-AUTH-MENU-001
+        // Unprotected menus are visible; protected menus require any configured effective permission.
+        var permissionList = (await GetEffectivePermissionsAsync(userId)).ToArray();
         var list = new List<PortalMenu>();
         await using var cn = Open(); await cn.OpenAsync();
 
@@ -201,8 +261,7 @@ SELECT DISTINCT m.Id,m.ParentId,m.Code,m.Name,m.Icon,m.Route,m.SortOrder,m.IsVis
 FROM dbo.Menus m
 WHERE m.IsDeleted=0 AND m.IsVisible=1 AND m.IsActive=1
   AND (
-      @isAdmin=1
-      OR NOT EXISTS (SELECT 1 FROM dbo.MenuPermissions mp0 WHERE mp0.MenuId=m.Id)
+      NOT EXISTS (SELECT 1 FROM dbo.MenuPermissions mp0 WHERE mp0.MenuId=m.Id)
       OR EXISTS (
           SELECT 1
           FROM dbo.MenuPermissions mp
@@ -215,12 +274,35 @@ ORDER BY m.SortOrder,m.Name;
         var paramNames = permissionList.Select((_, i) => $"@p{i}").ToArray();
         sql = sql.Replace("{PERMISSION_PARAMS}", paramNames.Length == 0 ? "NULL" : string.Join(",", paramNames));
         await using var cmd = new SqlCommand(sql, cn);
-        cmd.Parameters.AddWithValue("@isAdmin", isSystemAdmin ? 1 : 0);
         for (var i = 0; i < permissionList.Length; i++) cmd.Parameters.AddWithValue(paramNames[i], permissionList[i]);
         await using var rd = await cmd.ExecuteReaderAsync();
         while (await rd.ReadAsync())
             list.Add(new(rd.GetGuid(0),rd.IsDBNull(1)?null:rd.GetGuid(1),rd.GetString(2),rd.GetString(3),rd.IsDBNull(4)?null:rd.GetString(4),rd.IsDBNull(5)?null:rd.GetString(5),rd.GetInt32(6),rd.GetBoolean(7),rd.GetBoolean(8)));
-        return list;
+        return BuildMenuTree(list);
+    }
+
+    internal static IReadOnlyList<PortalMenuNode> BuildMenuTree(IEnumerable<PortalMenu> menus)
+    {
+        var ordered = menus.OrderBy(x => x.SortOrder).ThenBy(x => x.Name).ThenBy(x => x.Id).ToList();
+        var byParent = ordered.ToLookup(x => x.ParentId);
+        var knownIds = ordered.Select(x => x.Id).ToHashSet();
+        var visiting = new HashSet<Guid>();
+
+        PortalMenuNode? Build(PortalMenu menu)
+        {
+            if (!visiting.Add(menu.Id)) return null;
+            var children = byParent[menu.Id].Select(Build).Where(x => x is not null).Cast<PortalMenuNode>().ToList();
+            visiting.Remove(menu.Id);
+            if (string.IsNullOrWhiteSpace(menu.Route) && children.Count == 0) return null;
+            return new PortalMenuNode(menu, children);
+        }
+
+        return ordered
+            .Where(x => x.ParentId is null || !knownIds.Contains(x.ParentId.Value))
+            .Select(Build)
+            .Where(x => x is not null)
+            .Cast<PortalMenuNode>()
+            .ToList();
     }
 
     public async Task<List<CustomerRow>> GetCustomersAsync()

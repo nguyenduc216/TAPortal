@@ -3,10 +3,13 @@
 @inject PortalDb PortalDb
 @{
     var isAuthenticated = User.Identity?.IsAuthenticated == true;
-    var permissionClaims = isAuthenticated ? User.Claims.Where(x => x.Type == "permission").Select(x => x.Value) : Enumerable.Empty<string>();
-    var isSystemAdmin = isAuthenticated && User.IsInRole("SYS_ADMIN");
-    var navigationMenus = isAuthenticated ? await PortalDb.GetNavigationMenusAsync(permissionClaims, isSystemAdmin) : new List<TAPortal.Web.Models.PortalMenu>();
-    var rootMenus = navigationMenus.Where(x => x.ParentId == null).OrderBy(x => x.SortOrder).ThenBy(x => x.Name).ToList();
+    var hasUserId = Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var userId);
+    // FEATURE_ID: TAPORTAL-CORE-AUTH-MENU
+    // CHANGE_ID: TAPORTAL-20261010-CORE-AUTH-MENU-001
+    // Navigation uses current database permissions; no role-name or cookie-permission bypass is allowed.
+    var rootMenus = isAuthenticated && hasUserId
+        ? await PortalDb.GetNavigationMenuTreeAsync(userId)
+        : Array.Empty<TAPortal.Web.Models.PortalMenuNode>();
 }
 <!doctype html>
 <html lang="vi">
@@ -38,13 +41,14 @@
                     <ul class="navbar-nav ta-nav-list">
                         @foreach (var root in rootMenus)
                         {
-                            var children = navigationMenus.Where(x => x.ParentId == root.Id).OrderBy(x => x.SortOrder).ThenBy(x => x.Name).ToList();
+                            var menu = root.Menu;
+                            var children = root.Children;
                             if (children.Count == 0)
                             {
                                 <li class="nav-item">
-                                    <a class="nav-link ta-nav-link" href="@(string.IsNullOrWhiteSpace(root.Route) ? "#" : root.Route)" data-ta-route="@root.Route">
-                                        <span class="nav-link-icon"><i class="ti @(string.IsNullOrWhiteSpace(root.Icon) ? "ti-circle" : root.Icon)"></i></span>
-                                        <span class="nav-link-title">@root.Name</span>
+                                    <a class="nav-link ta-nav-link" href="@(string.IsNullOrWhiteSpace(menu.Route) ? "#" : menu.Route)" data-ta-route="@menu.Route">
+                                        <span class="nav-link-icon"><i class="ti @(string.IsNullOrWhiteSpace(menu.Icon) ? "ti-circle" : menu.Icon)"></i></span>
+                                        <span class="nav-link-title">@menu.Name</span>
                                     </a>
                                 </li>
                             }
@@ -53,18 +57,19 @@
                                 <li class="ta-nav-section" data-ta-nav-section>
                                     <button class="ta-nav-section-toggle" type="button" data-ta-nav-toggle aria-expanded="true">
                                         <span class="ta-nav-section-label">
-                                            <i class="ti @(string.IsNullOrWhiteSpace(root.Icon) ? "ti-folders" : root.Icon)"></i>
-                                            <span>@root.Name</span>
+                                            <i class="ti @(string.IsNullOrWhiteSpace(menu.Icon) ? "ti-folders" : menu.Icon)"></i>
+                                            <span>@menu.Name</span>
                                         </span>
                                         <i class="ti ti-chevron-down ta-nav-chevron"></i>
                                     </button>
                                     <ul class="ta-nav-children">
                                         @foreach (var child in children)
                                         {
+                                            var childMenu = child.Menu;
                                             <li class="nav-item">
-                                                <a class="nav-link ta-nav-link" href="@(string.IsNullOrWhiteSpace(child.Route) ? "#" : child.Route)" data-ta-route="@child.Route">
-                                                    <span class="nav-link-icon"><i class="ti @(string.IsNullOrWhiteSpace(child.Icon) ? "ti-point" : child.Icon)"></i></span>
-                                                    <span class="nav-link-title">@child.Name</span>
+                                                <a class="nav-link ta-nav-link" href="@(string.IsNullOrWhiteSpace(childMenu.Route) ? "#" : childMenu.Route)" data-ta-route="@childMenu.Route">
+                                                    <span class="nav-link-icon"><i class="ti @(string.IsNullOrWhiteSpace(childMenu.Icon) ? "ti-point" : childMenu.Icon)"></i></span>
+                                                    <span class="nav-link-title">@childMenu.Name</span>
                                                 </a>
                                             </li>
                                         }

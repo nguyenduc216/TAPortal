@@ -20,6 +20,7 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
 builder.Services.AddAuthorization();
 builder.Services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProvider>();
 builder.Services.AddScoped<IAuthorizationHandler, PermissionHandler>();
+builder.Services.AddScoped<IAuthorizationHandler, FunctionActionHandler>();
 builder.Services.AddSingleton<PasswordService>();
 builder.Services.AddScoped<PortalDb>();
 builder.Services.AddScoped<OperationalDb>();
