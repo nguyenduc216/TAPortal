@@ -1,0 +1,32 @@
+@model PortalMenuNode
+@{
+    var depth = ViewData["Depth"] is int value ? value : 0;
+    var currentPath = Context.Request.Path.Value?.TrimEnd('/').ToLowerInvariant();
+    currentPath = string.IsNullOrEmpty(currentPath) ? "/" : currentPath;
+    bool IsRouteActive(string? route) {
+        if (string.IsNullOrWhiteSpace(route) || route == "#") return false;
+        var path = route.Split('?', '#')[0].TrimEnd('/').ToLowerInvariant();
+        return (string.IsNullOrEmpty(path) ? "/" : path) == currentPath;
+    }
+    bool HasActive(PortalMenuNode node) => IsRouteActive(node.Menu.Route) || node.Children.Any(HasActive);
+    var active = IsRouteActive(Model.Menu.Route);
+    var branchActive = active || Model.Children.Any(HasActive);
+    var hasChildren = Model.Children.Count > 0;
+    var submenuId = $"ta-menu-{Model.Menu.Id:N}";
+    var icon = string.IsNullOrWhiteSpace(Model.Menu.Icon) ? (hasChildren ? "ti-folders" : "ti-point") : Model.Menu.Icon;
+    var route = string.IsNullOrWhiteSpace(Model.Menu.Route) ? "#" : Model.Menu.Route;
+}
+<li class="nav-item ta-nav-node @(hasChildren ? "ta-nav-branch" : "") @(branchActive ? "is-active-branch is-open" : "")" data-ta-nav-node data-depth="@depth">
+    <div class="ta-nav-row">
+        <a class="nav-link ta-nav-link @(active ? "active" : "")" href="@route" title="@Model.Menu.Name" aria-current="@(active ? "page" : null)" style="--ta-menu-depth:@depth">
+            <span class="nav-link-icon"><i class="ti @icon" aria-hidden="true"></i></span><span class="nav-link-title ta-sidebar-label">@Model.Menu.Name</span>
+        </a>
+        @if (hasChildren) { <button class="ta-submenu-toggle ta-sidebar-label" type="button" data-ta-submenu-toggle aria-expanded="@(branchActive ? "true" : "false")" aria-controls="@submenuId" aria-label="Mở hoặc đóng @Model.Menu.Name"><i class="ti ti-chevron-down"></i></button> }
+    </div>
+    @if (hasChildren)
+    {
+        <ul class="ta-nav-children" id="@submenuId">
+            @foreach (var child in Model.Children) { <partial name="_SidebarMenuNode" model="child" view-data='new ViewDataDictionary(ViewData) { ["Depth"] = depth + 1 }' /> }
+        </ul>
+    }
+</li>

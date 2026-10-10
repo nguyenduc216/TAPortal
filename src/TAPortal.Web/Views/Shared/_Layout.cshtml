@@ -1,25 +1,12 @@
 @using System.Security.Claims
-@using TAPortal.Web.Services
-@inject PortalDb PortalDb
-@{
-    var isAuthenticated = User.Identity?.IsAuthenticated == true;
-    var hasUserId = Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var userId);
-    // FEATURE_ID: TAPORTAL-CORE-AUTH-MENU
-    // CHANGE_ID: TAPORTAL-20261010-CORE-AUTH-MENU-001
-    // Navigation uses current database permissions; no role-name or cookie-permission bypass is allowed.
-    var rootMenus = isAuthenticated && hasUserId
-        ? await PortalDb.GetNavigationMenuTreeAsync(userId)
-        : Array.Empty<TAPortal.Web.Models.PortalMenuNode>();
-}
+@{ var isAuthenticated = User.Identity?.IsAuthenticated == true; }
 <!doctype html>
 <html lang="vi">
 <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>@ViewData["Title"] - T.A Portal</title>
     <link rel="icon" type="image/png" sizes="32x32" href="~/images/favicon-32x32.png" asp-append-version="true" />
-    <link rel="shortcut icon" href="~/favicon.ico" asp-append-version="true" />
-    <meta name="theme-color" content="#07345c" />
+    <link rel="shortcut icon" href="~/favicon.ico" asp-append-version="true" /><meta name="theme-color" content="#092f52" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@@tabler/core@1.0.0-beta21/dist/css/tabler.min.css" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@@tabler/icons-webfont@3.19.0/tabler-icons.min.css" />
     <link rel="stylesheet" href="~/css/ta-portal.css" asp-append-version="true" />
@@ -28,92 +15,20 @@
 <div class="ta-global-progress" data-ta-progress role="progressbar" aria-label="Đang tải trang" aria-hidden="true"><span></span></div>
 @if (isAuthenticated)
 {
-    <div class="page">
-        <aside class="navbar navbar-vertical navbar-expand-lg ta-sidebar" data-bs-theme="dark">
-            <div class="container-fluid ta-sidebar-inner">
-                <h1 class="navbar-brand navbar-brand-autodark ta-sidebar-brand">
-                    <a asp-controller="Home" asp-action="Index" class="ta-brand text-decoration-none">
-                        <img src="~/images/ta-logo.png" class="ta-sidebar-logo" alt="T.A" />
-                        <span>T.A Portal</span>
-                    </a>
-                </h1>
-                <div class="collapse navbar-collapse show ta-sidebar-scroll">
-                    <ul class="navbar-nav ta-nav-list">
-                        @foreach (var root in rootMenus)
-                        {
-                            var menu = root.Menu;
-                            var children = root.Children;
-                            if (children.Count == 0)
-                            {
-                                <li class="nav-item">
-                                    <a class="nav-link ta-nav-link" href="@(string.IsNullOrWhiteSpace(menu.Route) ? "#" : menu.Route)" data-ta-route="@menu.Route">
-                                        <span class="nav-link-icon"><i class="ti @(string.IsNullOrWhiteSpace(menu.Icon) ? "ti-circle" : menu.Icon)"></i></span>
-                                        <span class="nav-link-title">@menu.Name</span>
-                                    </a>
-                                </li>
-                            }
-                            else
-                            {
-                                <li class="ta-nav-section" data-ta-nav-section>
-                                    <button class="ta-nav-section-toggle" type="button" data-ta-nav-toggle aria-expanded="true">
-                                        <span class="ta-nav-section-label">
-                                            <i class="ti @(string.IsNullOrWhiteSpace(menu.Icon) ? "ti-folders" : menu.Icon)"></i>
-                                            <span>@menu.Name</span>
-                                        </span>
-                                        <i class="ti ti-chevron-down ta-nav-chevron"></i>
-                                    </button>
-                                    <ul class="ta-nav-children">
-                                        @foreach (var child in children)
-                                        {
-                                            var childMenu = child.Menu;
-                                            <li class="nav-item">
-                                                <a class="nav-link ta-nav-link" href="@(string.IsNullOrWhiteSpace(childMenu.Route) ? "#" : childMenu.Route)" data-ta-route="@childMenu.Route">
-                                                    <span class="nav-link-icon"><i class="ti @(string.IsNullOrWhiteSpace(childMenu.Icon) ? "ti-point" : childMenu.Icon)"></i></span>
-                                                    <span class="nav-link-title">@childMenu.Name</span>
-                                                </a>
-                                            </li>
-                                        }
-                                    </ul>
-                                </li>
-                            }
-                        }
-                    </ul>
-                </div>
-            </div>
-        </aside>
-        <div class="page-wrapper">
-            <header class="navbar navbar-expand-md d-print-none ta-topbar">
-                <div class="container-xl">
-                    <div class="navbar-nav flex-row order-md-last ms-auto">
-                        <div class="nav-item dropdown">
-                            <a href="#" class="nav-link d-flex lh-1 text-reset p-0 ta-user-trigger" data-bs-toggle="dropdown">
-                                <span class="avatar avatar-sm ta-avatar">TA</span>
-                                <div class="d-none d-xl-block ps-2 ta-user-meta"><div class="ta-user-name">@(User.FindFirst("display_name")?.Value ?? User.Identity?.Name)</div><div class="small text-secondary">@string.Join(", ", User.Claims.Where(x => x.Type == ClaimTypes.Role).Select(x => x.Value))</div></div>
-                            </a>
-                            <div class="dropdown-menu dropdown-menu-end dropdown-menu-arrow">
-                                <a asp-controller="Account" asp-action="Profile" class="dropdown-item"><i class="ti ti-user-circle"></i><span>Hồ sơ cá nhân</span></a>
-                                <a asp-controller="Account" asp-action="ChangePassword" class="dropdown-item"><i class="ti ti-key"></i><span>Đổi mật khẩu</span></a>
-                                <div class="dropdown-divider"></div>
-                                <form asp-controller="Account" asp-action="Logout" method="post"><button class="dropdown-item text-danger" type="submit" data-ta-loading data-ta-loading-text="Đang đăng xuất..."><i class="ti ti-logout"></i><span>Đăng xuất</span></button></form>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </header>
-            <main class="page-body ta-page-content ta-page-enter">
-                <div class="container-xl">
-                    @if (TempData["Success"] is string success) { <div class="alert alert-success ta-alert" role="status"><i class="ti ti-circle-check"></i><span>@success</span></div> }
-                    @if (TempData["Error"] is string error) { <div class="alert alert-danger ta-alert" role="alert"><i class="ti ti-alert-circle"></i><span>@error</span></div> }
-                    @RenderBody()
-                </div>
-            </main>
+    <div class="page ta-app-shell">
+        <partial name="_Sidebar" />
+        <div class="page-wrapper ta-shell-main">
+            <partial name="_Topbar" />
+            <main class="page-body ta-page-content ta-page-enter" id="main-content"><div class="container-xl">
+                @if (TempData["Success"] is string success) { <div class="alert alert-success ta-alert" role="status"><i class="ti ti-circle-check"></i><span>@success</span></div> }
+                @if (TempData["Error"] is string error) { <div class="alert alert-danger ta-alert" role="alert"><i class="ti ti-alert-circle"></i><span>@error</span></div> }
+                @RenderBody()
+            </div></main>
         </div>
+        <button class="ta-mobile-backdrop" type="button" data-ta-sidebar-close aria-label="Đóng điều hướng"></button>
     </div>
 }
-else
-{
-    @RenderBody()
-}
+else { @RenderBody() }
 <script src="https://cdn.jsdelivr.net/npm/@@tabler/core@1.0.0-beta21/dist/js/tabler.min.js"></script>
 <script src="~/js/ta-portal.js" asp-append-version="true"></script>
 @await RenderSectionAsync("Scripts", required: false)

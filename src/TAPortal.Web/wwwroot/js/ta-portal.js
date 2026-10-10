@@ -90,23 +90,36 @@
         input.addEventListener('focus', () => input.closest('.ta-field')?.classList.add('is-focused'));
         input.addEventListener('blur', () => input.closest('.ta-field')?.classList.remove('is-focused'));
     });
-    const currentPath = window.location.pathname.toLowerCase().replace(/\/$/, '') || '/';
-    document.querySelectorAll('.ta-sidebar .nav-link[href]').forEach((link) => {
-        const path = new URL(link.href, window.location.href).pathname.toLowerCase().replace(/\/$/, '') || '/';
-        if (path === currentPath) link.classList.add('active');
+    // FEATURE_ID: TAPORTAL-UI-PORTAL-SHELL
+    // CHANGE_ID: TAPORTAL-20261010-UI-PORTAL-SHELL-001
+    // Server markup owns route activation; JS owns persisted shell presentation only.
+    const shell = document.querySelector('.ta-app-shell');
+    const collapseKey = 'ta.portal.sidebar.collapsed';
+    const setSidebarCollapsed = (collapsed) => {
+        if (!shell) return;
+        shell.classList.toggle('is-sidebar-collapsed', collapsed);
+        const button = document.querySelector('[data-ta-sidebar-toggle]');
+        button?.setAttribute('aria-pressed', collapsed ? 'true' : 'false');
+        button?.setAttribute('aria-label', collapsed ? 'Mở rộng thanh điều hướng' : 'Thu gọn thanh điều hướng');
+        const icon = button?.querySelector('i');
+        if (icon) icon.className = collapsed ? 'ti ti-layout-sidebar-left-expand' : 'ti ti-layout-sidebar-left-collapse';
+    };
+    try { setSidebarCollapsed(localStorage.getItem(collapseKey) === 'true'); } catch { setSidebarCollapsed(false); }
+    document.querySelector('[data-ta-sidebar-toggle]')?.addEventListener('click', () => {
+        const collapsed = !shell?.classList.contains('is-sidebar-collapsed');
+        setSidebarCollapsed(collapsed);
+        try { localStorage.setItem(collapseKey, String(collapsed)); } catch { /* Storage may be unavailable. */ }
     });
-    document.querySelectorAll('[data-ta-nav-toggle]').forEach((toggle) => {
-        toggle.addEventListener('click', () => {
-            const section = toggle.closest('[data-ta-nav-section]');
-            if (!section) return;
-            const collapsed = section.classList.toggle('is-collapsed');
-            toggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
-        });
-    });
-
-    document.querySelectorAll('[data-ta-nav-section]').forEach((section) => {
-        if (section.querySelector('.ta-nav-link.active')) section.classList.remove('is-collapsed');
-    });
+    document.querySelectorAll('[data-ta-submenu-toggle]').forEach((toggle) => toggle.addEventListener('click', () => {
+        const node = toggle.closest('[data-ta-nav-node]');
+        if (!node) return;
+        const open = node.classList.toggle('is-open');
+        toggle.setAttribute('aria-expanded', String(open));
+    }));
+    const setMobileSidebar = (open) => shell?.classList.toggle('is-mobile-nav-open', open);
+    document.querySelector('[data-ta-sidebar-open]')?.addEventListener('click', () => setMobileSidebar(true));
+    document.querySelectorAll('[data-ta-sidebar-close]').forEach((button) => button.addEventListener('click', () => setMobileSidebar(false)));
+    document.addEventListener('keydown', (event) => { if (event.key === 'Escape') setMobileSidebar(false); });
 
     window.addEventListener('pageshow', () => {
         document.querySelectorAll('form[data-ta-submitting="true"]').forEach((form) => delete form.dataset.taSubmitting);

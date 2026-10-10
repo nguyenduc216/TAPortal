@@ -1,0 +1,23 @@
+@using System.Security.Claims
+@{
+    var displayName = User.FindFirst("display_name")?.Value ?? User.Identity?.Name ?? "Người dùng";
+    var roles = string.Join(", ", User.Claims.Where(x => x.Type == ClaimTypes.Role).Select(x => x.Value));
+    var initials = string.Concat(displayName.Split(' ', StringSplitOptions.RemoveEmptyEntries).TakeLast(2).Select(x => char.ToUpperInvariant(x[0])));
+    if (string.IsNullOrWhiteSpace(initials)) initials = "TA";
+}
+<header class="navbar navbar-expand-md d-print-none ta-topbar"><div class="container-xl ta-topbar-inner">
+    <button class="ta-mobile-menu" type="button" data-ta-sidebar-open aria-label="Mở điều hướng"><i class="ti ti-menu-2"></i></button>
+    <div class="ta-global-search" role="search" aria-label="Tìm kiếm toàn cục (sắp ra mắt)"><i class="ti ti-search"></i><input type="search" placeholder="Tìm kiếm trong T.A Portal..." aria-label="Tìm kiếm toàn cục" disabled title="Tính năng sẽ được bổ sung sau" /><span>Sắp ra mắt</span></div>
+    <div class="navbar-nav flex-row align-items-center ms-auto ta-topbar-actions">
+        <button class="ta-topbar-icon" type="button" aria-label="Thông báo" title="Thông báo"><i class="ti ti-bell"></i></button>
+        <div class="nav-item dropdown">
+            <a href="#" class="nav-link d-flex align-items-center text-reset p-0 ta-user-trigger" data-bs-toggle="dropdown" aria-expanded="false"><span class="avatar avatar-sm ta-avatar">@initials</span><span class="d-none d-md-block ps-2 ta-user-meta"><strong class="ta-user-name">@displayName</strong><small>@(string.IsNullOrWhiteSpace(roles) ? "Tài khoản Portal" : roles)</small></span><i class="ti ti-chevron-down d-none d-md-block ms-2 text-secondary"></i></a>
+            <div class="dropdown-menu dropdown-menu-end dropdown-menu-arrow">
+                <div class="ta-dropdown-identity"><strong>@displayName</strong><small>@(string.IsNullOrWhiteSpace(roles) ? "Tài khoản Portal" : roles)</small></div><div class="dropdown-divider"></div>
+                <a asp-controller="Account" asp-action="Profile" class="dropdown-item"><i class="ti ti-user-circle"></i><span>Hồ sơ cá nhân</span></a>
+                <a asp-controller="Account" asp-action="ChangePassword" class="dropdown-item"><i class="ti ti-key"></i><span>Đổi mật khẩu</span></a><div class="dropdown-divider"></div>
+                <form asp-controller="Account" asp-action="Logout" method="post"><button class="dropdown-item text-danger" type="submit" data-ta-loading data-ta-loading-text="Đang đăng xuất..."><i class="ti ti-logout"></i><span>Đăng xuất</span></button></form>
+            </div>
+        </div>
+    </div>
+</div></header>

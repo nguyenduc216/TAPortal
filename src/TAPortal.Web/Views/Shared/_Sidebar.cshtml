@@ -1,0 +1,30 @@
+@using System.Security.Claims
+@using TAPortal.Web.Services
+@inject PortalDb PortalDb
+@{
+    var hasUserId = Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var userId);
+    // FEATURE_ID: TAPORTAL-UI-PORTAL-SHELL
+    // CHANGE_ID: TAPORTAL-20261010-UI-PORTAL-SHELL-001
+    // Consume the Phase 6A authorized tree; rendering never duplicates permission decisions.
+    var rootMenus = hasUserId ? await PortalDb.GetNavigationMenuTreeAsync(userId) : Array.Empty<TAPortal.Web.Models.PortalMenuNode>();
+}
+<aside class="navbar navbar-vertical ta-sidebar" data-ta-sidebar data-bs-theme="dark" aria-label="Điều hướng chính">
+    <div class="ta-sidebar-head">
+        <a asp-controller="Home" asp-action="Index" class="ta-brand text-decoration-none" title="T.A Portal">
+            <img src="~/images/ta-logo.png" class="ta-sidebar-logo" alt="T.A" />
+            <span class="ta-brand-copy ta-sidebar-label"><strong>T.A Portal</strong><small>Không gian điều hành</small></span>
+        </a>
+        <button class="ta-sidebar-collapse" type="button" data-ta-sidebar-toggle aria-label="Thu gọn thanh điều hướng" aria-pressed="false" title="Thu gọn thanh điều hướng"><i class="ti ti-layout-sidebar-left-collapse"></i></button>
+        <button class="ta-sidebar-mobile-close" type="button" data-ta-sidebar-close aria-label="Đóng điều hướng"><i class="ti ti-x"></i></button>
+    </div>
+    <nav class="ta-sidebar-scroll">
+        <div class="ta-nav-caption ta-sidebar-label">Điều hướng</div>
+        <ul class="navbar-nav ta-nav-list">
+            @foreach (var menuNode in rootMenus)
+            {
+                <partial name="_SidebarMenuNode" model="menuNode" view-data='new ViewDataDictionary(ViewData) { ["Depth"] = 0 }' />
+            }
+        </ul>
+    </nav>
+    <div class="ta-sidebar-footer"><i class="ti ti-shield-check"></i><span class="ta-sidebar-label">Truy cập được bảo vệ bởi RBAC</span></div>
+</aside>
