@@ -27,3 +27,13 @@ The source before `TAPORTAL-20261010-CORE-AUTH-MENU-001` is the recovered archit
 - Use `ACTION:<ui-or-endpoint-key>` policies when an endpoint should follow `FunctionActionPermissions` dynamically.
 - Phase 6B may recursively render `PortalMenuNode.Children` at arbitrary depth without changing the query contract.
 - Future administration writes for role, user override, and menu/action mappings should add structured `AuditLogs` entries in the same transaction.
+
+## Changes
+
+### TAPORTAL-20261010-CORE-AUTH-MENU-001
+
+Established request-time database permission resolution, FunctionAction policies, and the hierarchical authorized-menu backend.
+
+### TAPORTAL-20261010-CORE-AUTH-MENU-002
+
+Hardened migration 053 for an existing `TAPortalSys` FunctionAction schema: wrong-database guard, compatible-contract preflight, safe FK/index reconciliation, conflict-aware idempotent seed, transactional postflight, and a read-only text verification script. Authorization semantics used by runtime code now have focused tests for DENY precedence, unknown/mapped actions, and menu filtering. Runtime execution remains conditional on authorized access to `TAPortalSys`.
