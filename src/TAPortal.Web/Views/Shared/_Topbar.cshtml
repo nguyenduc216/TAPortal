@@ -9,7 +9,9 @@
     <button class="ta-mobile-menu" type="button" data-ta-sidebar-open aria-label="Mở điều hướng"><i class="ti ti-menu-2"></i></button>
     <div class="ta-global-search" role="search" aria-label="Tìm kiếm toàn cục (sắp ra mắt)"><i class="ti ti-search"></i><input type="search" placeholder="Tìm kiếm trong T.A Portal..." aria-label="Tìm kiếm toàn cục" disabled title="Tính năng sẽ được bổ sung sau" /><span>Sắp ra mắt</span></div>
     <div class="navbar-nav flex-row align-items-center ms-auto ta-topbar-actions">
-        <button class="ta-topbar-icon" type="button" aria-label="Thông báo" title="Thông báo"><i class="ti ti-bell"></i></button>
+        <a asp-controller="Home" asp-action="Index" class="ta-topbar-icon" aria-label="Bảng điều khiển" title="Bảng điều khiển"><i class="ti ti-layout-dashboard"></i></a>
+        <span class="ta-topbar-divider" aria-hidden="true"></span>
+        <button class="ta-topbar-icon" type="button" aria-label="Thông báo" title="Thông báo"><i class="ti ti-bell"></i><span class="ta-notification-dot" aria-hidden="true"></span></button>
         <div class="nav-item dropdown">
             <a href="#" class="nav-link d-flex align-items-center text-reset p-0 ta-user-trigger" data-bs-toggle="dropdown" aria-expanded="false"><span class="avatar avatar-sm ta-avatar">@initials</span><span class="d-none d-md-block ps-2 ta-user-meta"><strong class="ta-user-name">@displayName</strong><small>@(string.IsNullOrWhiteSpace(roles) ? "Tài khoản Portal" : roles)</small></span><i class="ti ti-chevron-down d-none d-md-block ms-2 text-secondary"></i></a>
             <div class="dropdown-menu dropdown-menu-end dropdown-menu-arrow">

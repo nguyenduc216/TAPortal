@@ -1,9 +1,31 @@
 @model DashboardVm
 @{ ViewData["Title"] = "Tổng quan"; }
-<div class="ta-page-header"><div class="ta-page-heading"><div class="ta-page-pretitle">Dashboard điều hành</div><h1 class="ta-page-title">Tổng quan hệ thống</h1><p class="ta-page-subtitle">Theo dõi nhanh dữ liệu vận hành hiện có của T.A Portal.</p></div><div class="ta-page-actions"><span class="badge bg-azure-lt"><i class="ti ti-clock me-1"></i>Cập nhật theo thời gian thực</span></div></div>
-<div class="row row-deck row-cards">
-@foreach (var item in new[]{("Khách hàng",Model.CustomerCount,"ti-building-store","#176b87"),("Người dùng",Model.UserCount,"ti-users","#6758c5"),("Đang hoạt động",Model.ActiveUserCount,"ti-user-check","#16845b"),("Vai trò",Model.RoleCount,"ti-shield-lock","#d68b12")}) {
-<div class="col-sm-6 col-xl-3"><div class="card ta-stat-card" style="--ta-stat-accent:@item.Item4"><div class="card-body"><div class="d-flex align-items-center"><div class="ta-stat-icon me-3"><i class="ti @item.Item3"></i></div><div><div class="ta-stat-label">@item.Item1</div><div class="ta-stat-value">@item.Item2</div></div></div></div></div></div>}
-<div class="col-lg-7"><div class="card h-100"><div class="card-header"><h2 class="card-title"><i class="ti ti-activity me-2 text-azure"></i>Hoạt động gần đây</h2></div><div class="ta-empty-state"><i class="ti ti-history"></i><h3 class="h4 mt-2 mb-1">Nhật ký hoạt động</h3><p class="mb-0">Module audit sẽ hiển thị các thao tác gần nhất tại đây.</p></div></div></div>
-<div class="col-lg-5"><div class="card h-100"><div class="card-header"><h2 class="card-title"><i class="ti ti-heart-rate-monitor me-2 text-teal"></i>Trạng thái hệ thống</h2></div><div class="list-group list-group-flush ta-system-list"><div class="list-group-item d-flex justify-content-between"><span><i class="ti ti-browser me-2 text-secondary"></i>Ứng dụng</span><span class="badge badge-ta-active">Hoạt động</span></div><div class="list-group-item d-flex justify-content-between"><span><i class="ti ti-database me-2 text-secondary"></i>Cơ sở dữ liệu</span><span class="badge badge-ta-active">Kết nối</span></div><div class="list-group-item d-flex justify-content-between"><span><i class="ti ti-shield-check me-2 text-secondary"></i>Phân quyền</span><span class="badge bg-blue-lt">RBAC</span></div></div></div></div>
+<div class="ta-page-header ta-dashboard-header">
+    <div class="ta-page-heading"><div class="ta-page-pretitle"><i class="ti ti-layout-dashboard me-1"></i>Dashboard điều hành</div><h1 class="ta-page-title">Tổng quan hệ thống</h1><p class="ta-page-subtitle">Theo dõi nhanh dữ liệu vận hành hiện có của T.A Portal.</p></div>
+    <div class="ta-page-actions"><span class="ta-live-status"><span></span>Hệ thống đang hoạt động</span></div>
+</div>
+<div class="row row-deck row-cards ta-kpi-grid">
+@foreach (var item in new[]{
+    ("Khách hàng",Model.CustomerCount,"ti-building-store","azure","Hồ sơ khách hàng"),
+    ("Người dùng",Model.UserCount,"ti-users","indigo","Tài khoản đã ghi nhận"),
+    ("Đang hoạt động",Model.ActiveUserCount,"ti-user-check","green","Tài khoản khả dụng"),
+    ("Vai trò",Model.RoleCount,"ti-shield-lock","orange","Nhóm quyền truy cập")})
+{
+    <div class="col-sm-6 col-xl-3"><div class="card ta-stat-card ta-stat-@item.Item4"><div class="card-body">
+        <div class="ta-stat-top"><div class="ta-stat-icon"><i class="ti @item.Item3" aria-hidden="true"></i></div><span class="ta-stat-orbit"><i class="ti ti-arrow-up-right"></i></span></div>
+        <div class="ta-stat-value">@item.Item2</div><div class="ta-stat-label">@item.Item1</div><div class="ta-stat-note">@item.Item5</div>
+    </div></div></div>
+}
+</div>
+<div class="ta-quick-strip mt-3">
+    <div class="ta-quick-intro"><span class="ta-quick-icon"><i class="ti ti-bolt"></i></span><div><strong>Truy cập nhanh</strong><small>Các tác vụ tài khoản thường dùng</small></div></div>
+    <div class="ta-quick-actions"><a asp-controller="Account" asp-action="Profile" class="ta-quick-action"><i class="ti ti-user-circle"></i><span>Hồ sơ cá nhân</span><i class="ti ti-chevron-right"></i></a><a asp-controller="Account" asp-action="ChangePassword" class="ta-quick-action"><i class="ti ti-key"></i><span>Đổi mật khẩu</span><i class="ti ti-chevron-right"></i></a></div>
+</div>
+<div class="row row-deck row-cards mt-1">
+    <div class="col-lg-7"><div class="card ta-dashboard-panel h-100"><div class="card-header"><div><h2 class="card-title"><span class="ta-card-title-icon bg-azure-lt text-azure"><i class="ti ti-activity"></i></span>Hoạt động gần đây</h2><div class="ta-card-kicker">Luồng vận hành hệ thống</div></div><span class="badge bg-azure-lt">Audit</span></div><div class="ta-empty-state ta-empty-illustrated"><div class="ta-empty-visual"><i class="ti ti-history-toggle"></i><span></span><span></span></div><h3 class="h4 mt-3 mb-1">Chưa có hoạt động để hiển thị</h3><p class="mb-0">Nhật ký thao tác gần nhất sẽ xuất hiện tại khu vực này.</p></div></div></div>
+    <div class="col-lg-5"><div class="card ta-dashboard-panel h-100"><div class="card-header"><div><h2 class="card-title"><span class="ta-card-title-icon bg-green-lt text-green"><i class="ti ti-heart-rate-monitor"></i></span>Trạng thái hệ thống</h2><div class="ta-card-kicker">Theo dõi các thành phần cốt lõi</div></div><span class="ta-health-score"><i class="ti ti-circle-check-filled"></i>Ổn định</span></div><div class="list-group list-group-flush ta-system-list">
+        <div class="list-group-item"><span class="ta-system-icon bg-azure-lt text-azure"><i class="ti ti-browser"></i></span><div><strong>Ứng dụng Portal</strong><small>Dịch vụ web sẵn sàng</small></div><span class="badge badge-ta-active">Hoạt động</span></div>
+        <div class="list-group-item"><span class="ta-system-icon bg-indigo-lt text-indigo"><i class="ti ti-database"></i></span><div><strong>Cơ sở dữ liệu</strong><small>Kết nối dữ liệu hiện hành</small></div><span class="badge badge-ta-active">Kết nối</span></div>
+        <div class="list-group-item"><span class="ta-system-icon bg-orange-lt text-orange"><i class="ti ti-shield-check"></i></span><div><strong>Phân quyền</strong><small>Kiểm soát truy cập động</small></div><span class="badge bg-blue-lt">RBAC</span></div>
+    </div></div></div>
 </div>

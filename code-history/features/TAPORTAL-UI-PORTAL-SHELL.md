@@ -52,3 +52,4 @@ The topbar uses existing display-name and role claims, derives fallback initials
 ## Ordered change registry
 
 1. `TAPORTAL-20261010-UI-PORTAL-SHELL-001` — split shell ownership, recursive authorized navigation, active ancestry, persisted collapse/mobile behavior, compact topbar/design tokens, and proof-page refinements.
+2. `TAPORTAL-20261010-UI-PORTAL-SHELL-002` — repair the Tabler Icons webfont asset path, normalize seeded icon classes, strengthen sidebar hierarchy/active presentation, enrich the topbar, and give the real-metric dashboard denser visual composition.
