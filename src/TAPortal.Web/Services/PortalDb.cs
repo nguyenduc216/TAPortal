@@ -422,7 +422,7 @@ WHERE Id=@id AND RowVersion=@rowVersion AND IsDeleted=0;
         const string dependencySql = """
 DECLARE @HasDependency bit=0;
 IF OBJECT_ID(N'dbo.Teams',N'U') IS NOT NULL AND COL_LENGTH(N'dbo.Teams',N'DepartmentId') IS NOT NULL
-    EXEC sys.sp_executesql N'IF EXISTS(SELECT 1 FROM dbo.Teams WHERE DepartmentId=@id) SET @found=1;',N'@id uniqueidentifier,@found bit OUTPUT',@id,@HasDependency OUTPUT;
+    EXEC sys.sp_executesql N'IF EXISTS(SELECT 1 FROM dbo.Teams WHERE DepartmentId=@id AND IsDeleted=0) SET @found=1;',N'@id uniqueidentifier,@found bit OUTPUT',@id,@HasDependency OUTPUT;
 IF @HasDependency=0 AND OBJECT_ID(N'dbo.EmployeeAssignments',N'U') IS NOT NULL AND COL_LENGTH(N'dbo.EmployeeAssignments',N'DepartmentId') IS NOT NULL
     EXEC sys.sp_executesql N'IF EXISTS(SELECT 1 FROM dbo.EmployeeAssignments WHERE DepartmentId=@id) SET @found=1;',N'@id uniqueidentifier,@found bit OUTPUT',@id,@HasDependency OUTPUT;
 SELECT @HasDependency;
@@ -465,6 +465,73 @@ WHERE Id=@id AND RowVersion=@rowVersion AND IsDeleted=0;
         cmd.Parameters.Add("@userId", System.Data.SqlDbType.UniqueIdentifier).Value = (object?)userId ?? DBNull.Value;
         return cmd;
     }
+
+    // FEATURE_ID: TAPORTAL-HR-MASTER-DATA
+    // CHANGE_ID: TAPORTAL-20261010-HR-MASTER-DATA-002
+    // Team writes validate active Department and same-Department acyclic ancestry in the write transaction.
+    public async Task<IReadOnlyList<TeamRow>> GetTeamsAsync()
+    {
+        var list=new List<TeamRow>(); await using var cn=Open(); await cn.OpenAsync();
+        const string sql="""
+SELECT t.Id,t.DepartmentId,d.Code,d.Name,t.ParentTeamId,p.Code,p.Name,t.Code,t.Name,t.Description,t.SortOrder,t.IsActive,t.CreatedAt,t.UpdatedAt,t.RowVersion
+FROM dbo.Teams t JOIN dbo.Departments d ON d.Id=t.DepartmentId LEFT JOIN dbo.Teams p ON p.Id=t.ParentTeamId
+WHERE t.IsDeleted=0 ORDER BY d.SortOrder,d.Name,t.SortOrder,t.Name;
+""";
+        await using var cmd=new SqlCommand(sql,cn); await using var rd=await cmd.ExecuteReaderAsync();
+        while(await rd.ReadAsync()) list.Add(new(rd.GetGuid(0),rd.GetGuid(1),rd.GetString(2),rd.GetString(3),rd.IsDBNull(4)?null:rd.GetGuid(4),rd.IsDBNull(5)?null:rd.GetString(5),rd.IsDBNull(6)?null:rd.GetString(6),rd.GetString(7),rd.GetString(8),rd.IsDBNull(9)?null:rd.GetString(9),rd.GetInt32(10),rd.GetBoolean(11),rd.GetDateTime(12),rd.IsDBNull(13)?null:rd.GetDateTime(13),Convert.ToBase64String((byte[])rd[14])));
+        return list;
+    }
+
+    public async Task<(IReadOnlyList<TeamDepartmentOption> Departments,IReadOnlyList<TeamParentOption> Teams)> GetTeamOptionsAsync()
+    {
+        var departments=new List<TeamDepartmentOption>(); var teams=new List<TeamParentOption>(); await using var cn=Open(); await cn.OpenAsync();
+        await using(var cmd=new SqlCommand("SELECT Id,Code,Name FROM dbo.Departments WHERE IsDeleted=0 AND IsActive=1 ORDER BY SortOrder,Name",cn)) { await using var rd=await cmd.ExecuteReaderAsync(); while(await rd.ReadAsync()) departments.Add(new(rd.GetGuid(0),rd.GetString(1),rd.GetString(2))); }
+        await using(var cmd=new SqlCommand("SELECT Id,DepartmentId,Code,Name,ParentTeamId FROM dbo.Teams WHERE IsDeleted=0 ORDER BY SortOrder,Name",cn)) { await using var rd=await cmd.ExecuteReaderAsync(); while(await rd.ReadAsync()) teams.Add(new(rd.GetGuid(0),rd.GetGuid(1),rd.GetString(2),rd.GetString(3),rd.IsDBNull(4)?null:rd.GetGuid(4))); }
+        return(departments,teams);
+    }
+
+    public async Task<bool> TeamCodeExistsAsync(string code,Guid? excludingId=null)
+    { await using var cn=Open(); await cn.OpenAsync(); await using var cmd=new SqlCommand("SELECT COUNT(1) FROM dbo.Teams WHERE Code=@code AND IsDeleted=0 AND (@id IS NULL OR Id<>@id)",cn); cmd.Parameters.Add("@code",System.Data.SqlDbType.VarChar,50).Value=TeamRules.NormalizeCode(code); cmd.Parameters.Add("@id",System.Data.SqlDbType.UniqueIdentifier).Value=(object?)excludingId??DBNull.Value; return Convert.ToInt32(await cmd.ExecuteScalarAsync())>0; }
+
+    public async Task<TeamWriteResult> CreateTeamAsync(TeamCreateVm vm,Guid? userId)
+    {
+        await using var cn=Open(); await cn.OpenAsync(); await using var tx=(SqlTransaction)await cn.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
+        var valid=await ValidateTeamHierarchyAsync(cn,tx,null,vm.DepartmentId,vm.ParentTeamId); if(valid!=TeamWriteResult.Success){await tx.RollbackAsync();return valid;}
+        await using var cmd=TeamCommand("INSERT dbo.Teams(Id,DepartmentId,ParentTeamId,Code,Name,Description,SortOrder,IsActive,IsDeleted,CreatedBy) VALUES(NEWID(),@departmentId,@parentId,@code,@name,@description,@sortOrder,@isActive,0,@userId)",cn,tx,vm,userId);
+        try{await cmd.ExecuteNonQueryAsync();await tx.CommitAsync();return TeamWriteResult.Success;}catch(SqlException ex) when(ex.Number is 2601 or 2627){await tx.RollbackAsync();return TeamWriteResult.DuplicateCode;}
+    }
+
+    public async Task<TeamWriteResult> UpdateTeamAsync(TeamUpdateVm vm,byte[] rowVersion,Guid? userId)
+    {
+        await using var cn=Open(); await cn.OpenAsync(); await using var tx=(SqlTransaction)await cn.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
+        var valid=await ValidateTeamHierarchyAsync(cn,tx,vm.Id,vm.DepartmentId,vm.ParentTeamId); if(valid!=TeamWriteResult.Success){await tx.RollbackAsync();return valid;}
+        await using var cmd=TeamCommand("UPDATE dbo.Teams SET DepartmentId=@departmentId,ParentTeamId=@parentId,Code=@code,Name=@name,Description=@description,SortOrder=@sortOrder,IsActive=@isActive,UpdatedAt=SYSUTCDATETIME(),UpdatedBy=@userId WHERE Id=@id AND RowVersion=@rowVersion AND IsDeleted=0",cn,tx,vm,userId); cmd.Parameters.Add("@id",System.Data.SqlDbType.UniqueIdentifier).Value=vm.Id; cmd.Parameters.Add("@rowVersion",System.Data.SqlDbType.Timestamp,8).Value=rowVersion;
+        try{if(await cmd.ExecuteNonQueryAsync()!=1){await tx.RollbackAsync();return TeamWriteResult.ConcurrencyConflict;}await tx.CommitAsync();return TeamWriteResult.Success;}catch(SqlException ex) when(ex.Number is 2601 or 2627){await tx.RollbackAsync();return TeamWriteResult.DuplicateCode;}
+    }
+
+    public async Task<TeamWriteResult> SetTeamActiveAsync(Guid id,bool active,byte[] rowVersion,Guid? userId)
+    { await using var cn=Open();await cn.OpenAsync();await using var cmd=new SqlCommand("UPDATE dbo.Teams SET IsActive=@active,UpdatedAt=SYSUTCDATETIME(),UpdatedBy=@userId WHERE Id=@id AND RowVersion=@rowVersion AND IsDeleted=0",cn);cmd.Parameters.AddWithValue("@id",id);cmd.Parameters.AddWithValue("@active",active);cmd.Parameters.AddWithValue("@rowVersion",rowVersion);cmd.Parameters.AddWithValue("@userId",(object?)userId??DBNull.Value);return await cmd.ExecuteNonQueryAsync()==1?TeamWriteResult.Success:TeamWriteResult.ConcurrencyConflict; }
+
+    public async Task<TeamWriteResult> SoftDeleteTeamAsync(Guid id,byte[] rowVersion,Guid? userId)
+    {
+        await using var cn=Open();await cn.OpenAsync();await using var tx=(SqlTransaction)await cn.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
+        const string deps="""DECLARE @used bit=CASE WHEN EXISTS(SELECT 1 FROM dbo.Teams WHERE ParentTeamId=@id AND IsDeleted=0) THEN 1 ELSE 0 END; IF @used=0 AND OBJECT_ID(N'dbo.EmployeeAssignments',N'U') IS NOT NULL AND COL_LENGTH(N'dbo.EmployeeAssignments',N'TeamId') IS NOT NULL EXEC sys.sp_executesql N'IF EXISTS(SELECT 1 FROM dbo.EmployeeAssignments WHERE TeamId=@id) SET @found=1;',N'@id uniqueidentifier,@found bit OUTPUT',@id,@used OUTPUT; SELECT @used;""";
+        await using(var dep=new SqlCommand(deps,cn,tx)){dep.Parameters.AddWithValue("@id",id);if(Convert.ToBoolean(await dep.ExecuteScalarAsync())){await tx.RollbackAsync();return TeamWriteResult.HasDependencies;}}
+        await using var cmd=new SqlCommand("UPDATE dbo.Teams SET IsDeleted=1,IsActive=0,DeletedAt=SYSUTCDATETIME(),DeletedBy=@userId,UpdatedAt=SYSUTCDATETIME(),UpdatedBy=@userId WHERE Id=@id AND RowVersion=@rowVersion AND IsDeleted=0",cn,tx);cmd.Parameters.AddWithValue("@id",id);cmd.Parameters.AddWithValue("@rowVersion",rowVersion);cmd.Parameters.AddWithValue("@userId",(object?)userId??DBNull.Value);if(await cmd.ExecuteNonQueryAsync()!=1){await tx.RollbackAsync();return TeamWriteResult.ConcurrencyConflict;}await tx.CommitAsync();return TeamWriteResult.Success;
+    }
+
+    private static async Task<TeamWriteResult> ValidateTeamHierarchyAsync(SqlConnection cn,SqlTransaction tx,Guid? teamId,Guid departmentId,Guid? parentId)
+    {
+        if(teamId.HasValue&&parentId==teamId)return TeamWriteResult.SelfParent;
+        await using(var dep=new SqlCommand("SELECT COUNT(1) FROM dbo.Departments WHERE Id=@id AND IsDeleted=0 AND IsActive=1",cn,tx)){dep.Parameters.AddWithValue("@id",departmentId);if(Convert.ToInt32(await dep.ExecuteScalarAsync())!=1)return TeamWriteResult.InvalidDepartment;}
+        if(!parentId.HasValue)return TeamWriteResult.Success;
+        await using(var parent=new SqlCommand("SELECT DepartmentId FROM dbo.Teams WHERE Id=@id AND IsDeleted=0",cn,tx)){parent.Parameters.AddWithValue("@id",parentId.Value);var value=await parent.ExecuteScalarAsync();if(value is not Guid parentDepartment)return TeamWriteResult.InvalidParent;if(parentDepartment!=departmentId)return TeamWriteResult.InvalidParent;}
+        if(teamId.HasValue){const string cycle=""";WITH Ancestors AS(SELECT Id,ParentTeamId FROM dbo.Teams WHERE Id=@parent AND IsDeleted=0 UNION ALL SELECT t.Id,t.ParentTeamId FROM dbo.Teams t JOIN Ancestors a ON t.Id=a.ParentTeamId WHERE t.IsDeleted=0) SELECT COUNT(1) FROM Ancestors WHERE Id=@team OPTION(MAXRECURSION 32767);""";await using var cmd=new SqlCommand(cycle,cn,tx);cmd.Parameters.AddWithValue("@parent",parentId.Value);cmd.Parameters.AddWithValue("@team",teamId.Value);if(Convert.ToInt32(await cmd.ExecuteScalarAsync())>0)return TeamWriteResult.Cycle;}
+        return TeamWriteResult.Success;
+    }
+
+    private static SqlCommand TeamCommand(string sql,SqlConnection cn,SqlTransaction tx,TeamCreateVm vm,Guid? userId)
+    {var cmd=new SqlCommand(sql,cn,tx);cmd.Parameters.AddWithValue("@departmentId",vm.DepartmentId);cmd.Parameters.AddWithValue("@parentId",(object?)vm.ParentTeamId??DBNull.Value);cmd.Parameters.Add("@code",System.Data.SqlDbType.VarChar,50).Value=TeamRules.NormalizeCode(vm.Code);cmd.Parameters.Add("@name",System.Data.SqlDbType.NVarChar,250).Value=vm.Name.Trim();cmd.Parameters.Add("@description",System.Data.SqlDbType.NVarChar,1000).Value=string.IsNullOrWhiteSpace(vm.Description)?DBNull.Value:vm.Description.Trim();cmd.Parameters.AddWithValue("@sortOrder",vm.SortOrder);cmd.Parameters.AddWithValue("@isActive",vm.IsActive);cmd.Parameters.AddWithValue("@userId",(object?)userId??DBNull.Value);return cmd;}
 
     public async Task<DashboardVm> GetDashboardAsync()
     {

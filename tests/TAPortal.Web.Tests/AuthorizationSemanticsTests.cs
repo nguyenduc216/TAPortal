@@ -47,4 +47,12 @@ public sealed class AuthorizationSemanticsTests
         var unrelated = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "HR.DEPARTMENT.VIEW" };
         Assert.False(AuthorizationSemantics.HasAnyMappedPermission(unrelated, new[] { "HR.DEPARTMENT.DELETE" }, true, false));
     }
+
+    [Fact]
+    public void TeamAction_AndMenuRequireMappedTeamPermission()
+    {
+        var viewOnly=new HashSet<string>(StringComparer.OrdinalIgnoreCase){"HR.TEAM.VIEW"};
+        Assert.True(AuthorizationSemantics.HasAnyMappedPermission(viewOnly,new[]{"HR.TEAM.VIEW"},true,true));
+        Assert.False(AuthorizationSemantics.HasAnyMappedPermission(viewOnly,new[]{"HR.TEAM.DELETE"},true,false));
+    }
 }

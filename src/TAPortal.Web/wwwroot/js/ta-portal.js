@@ -66,6 +66,38 @@
         table.closest('.ta-table-card')?.querySelector('[data-ta-no-results]')?.classList.toggle('d-none', visible !== 0 || value === '');
     };
 
+    window.taFilterTeams = () => {
+        const table = document.getElementById('teamsTable');
+        if (!table) return;
+        const query = (document.getElementById('teamSearch')?.value || '').trim().toLocaleLowerCase('vi');
+        const departmentId = document.getElementById('teamDepartmentFilter')?.value || '';
+        let visible = 0;
+        table.querySelectorAll('tbody tr[data-ta-row]').forEach((row) => {
+            const matchesText = row.innerText.toLocaleLowerCase('vi').includes(query);
+            const matchesDepartment = !departmentId || row.dataset.departmentId === departmentId;
+            row.hidden = !(matchesText && matchesDepartment);
+            if (!row.hidden) visible += 1;
+        });
+        table.closest('.ta-table-card')?.querySelector('[data-ta-no-results]')?.classList.toggle('d-none', visible !== 0 || (!query && !departmentId));
+    };
+
+    const filterTeamParents = (form) => {
+        const department = form.querySelector('[data-ta-team-department]');
+        const parent = form.querySelector('[data-ta-team-parent]');
+        if (!department || !parent) return;
+        const selectedDepartment = department.value;
+        Array.from(parent.options).forEach((option) => {
+            if (!option.value) return;
+            option.hidden = option.dataset.departmentId !== selectedDepartment;
+            option.disabled = option.hidden;
+        });
+        if (parent.selectedOptions[0]?.disabled) parent.value = '';
+    };
+    document.querySelectorAll('[data-ta-team-form]').forEach((form) => {
+        filterTeamParents(form);
+        form.querySelector('[data-ta-team-department]')?.addEventListener('change', () => filterTeamParents(form));
+    });
+
     window.taCheckPassword = (value, rulesId) => {
         const box = document.getElementById(rulesId);
         if (!box) return;

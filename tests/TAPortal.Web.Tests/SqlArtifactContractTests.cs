@@ -67,6 +67,43 @@ public sealed class SqlArtifactContractTests
         Assert.DoesNotContain("DELETE FROM dbo.Departments", source, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Fact]
+    public void TeamMigration_ProtectsHierarchyAuthorizationAndUniqueness()
+    {
+        var sql=ReadRepositoryFile("database","migrations","056-hr-team-master.sql");
+        Assert.Contains("IF DB_NAME()<>N'TAPortalSys'",sql,StringComparison.Ordinal);
+        Assert.Contains("FK_Teams_Departments",sql,StringComparison.Ordinal);
+        Assert.Contains("FK_Teams_ParentTeam",sql,StringComparison.Ordinal);
+        Assert.Contains("CK_Teams_NotSelfParent",sql,StringComparison.Ordinal);
+        Assert.Contains("UX_Teams_Code_NotDeleted",sql,StringComparison.Ordinal);
+        Assert.Contains("Teams contains a hierarchy cycle",sql,StringComparison.Ordinal);
+        Assert.Contains("HR.TEAM.DELETE",sql,StringComparison.Ordinal);
+        Assert.DoesNotContain("DROP TABLE",sql,StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("TRUNCATE",sql,StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void TeamWrites_UseConcurrencyAndFutureSafeDependencies()
+    {
+        var source=ReadRepositoryFile("src","TAPortal.Web","Services","PortalDb.cs");
+        Assert.Contains("ParentTeamId=@parentId",source,StringComparison.Ordinal);
+        Assert.Contains("RowVersion=@rowVersion AND IsDeleted=0",source,StringComparison.Ordinal);
+        Assert.Contains("COL_LENGTH(N'dbo.EmployeeAssignments',N'TeamId')",source,StringComparison.Ordinal);
+        Assert.Contains("ParentTeamId=@id AND IsDeleted=0",source,StringComparison.Ordinal);
+        Assert.DoesNotContain("DELETE FROM dbo.Teams",source,StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void TeamVerify_IsReadOnlyAndRaisesOnFailures()
+    {
+        var sql=ReadRepositoryFile("database","scripts","verify","056-verify-hr-team.sql");
+        Assert.Contains("OVERALL STATUS:",sql,StringComparison.Ordinal);
+        Assert.Contains("RAISERROR",sql,StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("INSERT dbo.",sql,StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("UPDATE dbo.",sql,StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("DELETE FROM dbo.",sql,StringComparison.OrdinalIgnoreCase);
+    }
+
     private static string ReadRepositoryFile(params string[] parts)
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

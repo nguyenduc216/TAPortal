@@ -13,6 +13,7 @@ public sealed class AuthorizationContractTests
     [InlineData(typeof(CustomersController), "Customers.Index")]
     [InlineData(typeof(MenusController), "Menus.Index")]
     [InlineData(typeof(DepartmentsController), "Departments.Index")]
+    [InlineData(typeof(TeamsController), "Teams.Index")]
     public void ProtectedControllers_UseDatabaseFunctionActionPolicy(Type controllerType, string actionKey)
     {
         var attribute = Assert.Single(controllerType.GetCustomAttributes(typeof(AuthorizeAttribute), true).Cast<AuthorizeAttribute>());
@@ -30,5 +31,17 @@ public sealed class AuthorizationContractTests
         var method = typeof(DepartmentsController).GetMethod(methodName)!;
         var attribute = Assert.Single(method.GetCustomAttributes(typeof(AuthorizeAttribute), true).Cast<AuthorizeAttribute>());
         Assert.Equal(PermissionPolicies.FunctionActionPrefix + actionKey, attribute.Policy);
+    }
+
+    [Theory]
+    [InlineData(nameof(TeamsController.Create), "Teams.Create")]
+    [InlineData(nameof(TeamsController.Update), "Teams.Update")]
+    [InlineData(nameof(TeamsController.ToggleStatus), "Teams.Update")]
+    [InlineData(nameof(TeamsController.Delete), "Teams.Delete")]
+    public void TeamMutations_EnforceDatabaseFunctionActionPolicy(string methodName,string actionKey)
+    {
+        var method=typeof(TeamsController).GetMethod(methodName)!;
+        var attribute=Assert.Single(method.GetCustomAttributes(typeof(AuthorizeAttribute),true).Cast<AuthorizeAttribute>());
+        Assert.Equal(PermissionPolicies.FunctionActionPrefix+actionKey,attribute.Policy);
     }
 }
