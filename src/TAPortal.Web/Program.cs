@@ -25,6 +25,10 @@ builder.Services.AddScoped<IAuthorizationHandler, PermissionHandler>();
 builder.Services.AddScoped<IAuthorizationHandler, FunctionActionHandler>();
 builder.Services.AddSingleton<PasswordService>();
 builder.Services.AddScoped<PortalDb>();
+// FEATURE_ID: TAPORTAL-PLATFORM-BLAZOR-MIGRATION
+// CHANGE_ID: TAPORTAL-20261011-BLAZOR-MIGRATION-008
+// Components use a testable contract while PortalDb remains the production implementation and SQL boundary.
+builder.Services.AddScoped<IBlazorPortalService>(services => services.GetRequiredService<PortalDb>());
 builder.Services.AddScoped<OperationalDb>();
 builder.Services.AddScoped<GlobalLoadingService>();
 

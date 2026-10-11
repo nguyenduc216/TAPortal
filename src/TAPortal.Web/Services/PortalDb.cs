@@ -6,7 +6,7 @@ namespace TAPortal.Web.Services;
 
 public sealed record AuthUserSnapshot(Guid Id, string Username, string DisplayName, string? Email, string? Phone, string PasswordHash, IReadOnlyList<string> Roles, IReadOnlyList<string> Permissions);
 
-public sealed class PortalDb
+public sealed class PortalDb : IBlazorPortalService
 {
     private sealed class MenuAuthorizationRow(PortalMenu menu)
     {

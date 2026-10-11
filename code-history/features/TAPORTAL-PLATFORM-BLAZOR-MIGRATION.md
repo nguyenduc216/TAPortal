@@ -33,6 +33,13 @@ No database schema or migration changes. Interactive Server requires persistent 
 5. Migrate dashboard route.
 6. Continue page parity migration before retiring MVC ownership.
 7. Integration hardening: route/security audits, bUnit component rendering, repeatable Playwright scaffolding, staging/test-environment guidance, secure Git inventory/checkpoint, and active-account write revalidation.
+8. Functional parity completion: Department/Team edit, Team parent selection, Roles/Menus retry states, component behavior tests, and staging-readiness documentation.
+
+## Phase 8 functional parity
+
+`TAPORTAL-20261011-BLAZOR-MIGRATION-008` completes the verified MVC edit surface for Departments and Teams on the Blazor trial routes. Both flows reuse existing validation models and `PortalDb` update methods, preserve row-version concurrency, recheck function-action permissions at write time, prevent duplicate submissions, sanitize database failures, and refresh only after successful persistence. Team parent options are department-scoped and exclude self in the UI while the existing serializable database transaction remains authoritative for department, self-parent, and cycle validation.
+
+Roles and Menus now distinguish loading, authorization denial, empty, success, and retryable data failures. A narrow `IBlazorPortalService` contract leaves SQL ownership in `PortalDb` and enables real bUnit interaction tests without a database connection. The staging runbook and Playwright suite document secret injection, approved accounts/data cleanup, WebSocket/reconnect evidence, and opt-in writes. MVC routes and schema remain unchanged. Because no authorized staging account/environment is available, authenticated browser and reconnect evidence remain pending; status is PARTIAL and cutover remains NO.
 
 ## Phase 7 integration hardening
 
