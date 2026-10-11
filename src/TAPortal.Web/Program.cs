@@ -42,6 +42,10 @@ if (!app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();
+// FEATURE_ID: TAPORTAL-PLATFORM-BLAZOR-MIGRATION
+// CHANGE_ID: TAPORTAL-20261011-BLAZOR-MIGRATION-009
+// Preserve status codes while replacing blank local/runtime responses with the branded status page.
+app.UseStatusCodePagesWithReExecute("/home/status-code", "?code={0}");
 app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();

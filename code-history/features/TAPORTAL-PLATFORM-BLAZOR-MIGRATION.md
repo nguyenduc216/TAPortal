@@ -34,6 +34,13 @@ No database schema or migration changes. Interactive Server requires persistent 
 6. Continue page parity migration before retiring MVC ownership.
 7. Integration hardening: route/security audits, bUnit component rendering, repeatable Playwright scaffolding, staging/test-environment guidance, secure Git inventory/checkpoint, and active-account write revalidation.
 8. Functional parity completion: Department/Team edit, Team parent selection, Roles/Menus retry states, component behavior tests, and staging-readiness documentation.
+9. Local runtime verification: real Kestrel/Chromium multi-viewport checks, read-only database authentication-path validation, anonymous route evidence, and branded HTTP status handling.
+
+## Phase 9 local runtime verification
+
+`TAPORTAL-20261011-BLAZOR-MIGRATION-009` executed the application locally rather than relying on source inspection. Release Kestrel startup, responsive Chromium rendering, assets, JavaScript interaction, browser errors, anonymous authorization redirects, a synthetic invalid-login database read, and HTTP 404 behavior were tested. A blank default 404 was the only source defect found and was replaced with a branded anonymous status page that preserves the original status code.
+
+The local SQL read succeeded but again negotiated TLS 1.0. No authorized Playwright storage state was available, so authenticated Blazor/SignalR/reconnect checks remain blocked without bypass. Local anonymous evidence is PASS; server staging and production cutover remain NO.
 
 ## Phase 8 functional parity
 

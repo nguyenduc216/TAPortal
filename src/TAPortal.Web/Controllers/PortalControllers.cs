@@ -19,6 +19,16 @@ public sealed class HomeController(PortalDb db) : Controller
         Response.StatusCode = StatusCodes.Status500InternalServerError;
         return View(new ErrorVm(Activity.Current?.Id ?? HttpContext.TraceIdentifier));
     }
+
+    // CHANGE_ID: TAPORTAL-20261011-BLAZOR-MIGRATION-009 — render an anonymous, branded response while preserving the original HTTP status.
+    [AllowAnonymous]
+    [HttpGet("/home/status-code")]
+    public IActionResult StatusCodePage(int code)
+    {
+        var safeCode = code is >= 400 and <= 599 ? code : StatusCodes.Status404NotFound;
+        Response.StatusCode = safeCode;
+        return View("StatusCode", safeCode);
+    }
 }
 
 [Authorize(Policy = PermissionPolicies.FunctionActionPrefix + "Users.Index")]
