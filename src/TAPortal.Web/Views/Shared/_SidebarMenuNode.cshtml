@@ -1,0 +1,45 @@
+@model PortalMenuNode
+@{
+    var depth = ViewData["Depth"] is int value ? value : 0;
+    var currentPath = Context.Request.Path.Value?.TrimEnd('/').ToLowerInvariant();
+    currentPath = string.IsNullOrEmpty(currentPath) ? "/" : currentPath;
+    bool IsRouteActive(string? route) {
+        if (string.IsNullOrWhiteSpace(route) || route == "#") return false;
+        var path = route.Split('?', '#')[0].TrimEnd('/').ToLowerInvariant();
+        return (string.IsNullOrEmpty(path) ? "/" : path) == currentPath;
+    }
+    bool HasActive(PortalMenuNode node) => IsRouteActive(node.Menu.Route) || node.Children.Any(HasActive);
+    var active = IsRouteActive(Model.Menu.Route);
+    var branchActive = active || Model.Children.Any(HasActive);
+    var hasChildren = Model.Children.Count > 0;
+    var submenuId = $"ta-menu-{Model.Menu.Id:N}";
+    // FEATURE_ID: TAPORTAL-UI-PORTAL-SHELL
+    // CHANGE_ID: TAPORTAL-20261010-UI-PORTAL-SHELL-002
+    // Normalize either `ti-name` or seeded `ti ti-name` values into one glyph class.
+    var icon = (Model.Menu.Icon ?? string.Empty).Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault(x => x.StartsWith("ti-"));
+    icon ??= hasChildren ? "ti-folders" : "ti-point";
+    var route = string.IsNullOrWhiteSpace(Model.Menu.Route) ? "#" : Model.Menu.Route;
+}
+<li class="nav-item ta-nav-node @(hasChildren ? "ta-nav-branch" : "") @(branchActive ? "is-active-branch is-open" : "")" data-ta-nav-node data-depth="@depth">
+    <div class="ta-nav-row">
+        @if (hasChildren && route == "#")
+        {
+            <button class="nav-link ta-nav-link ta-nav-group-trigger @(branchActive ? "active" : "")" type="button" data-ta-submenu-toggle aria-expanded="@(branchActive ? "true" : "false")" aria-controls="@submenuId" title="@Model.Menu.Name" style="--ta-menu-depth:@depth">
+                <span class="nav-link-icon"><i class="ti @icon" aria-hidden="true"></i></span><span class="nav-link-title ta-sidebar-label">@Model.Menu.Name</span><span class="ta-branch-count ta-sidebar-label">@Model.Children.Count</span><span class="ta-submenu-chevron ta-sidebar-label"><i class="ti ti-chevron-down"></i></span>
+            </button>
+        }
+        else
+        {
+            <a class="nav-link ta-nav-link @(active ? "active" : "")" href="@route" title="@Model.Menu.Name" aria-current="@(active ? "page" : null)" style="--ta-menu-depth:@depth">
+                <span class="nav-link-icon"><i class="ti @icon" aria-hidden="true"></i></span><span class="nav-link-title ta-sidebar-label">@Model.Menu.Name</span>@if (hasChildren) { <span class="ta-branch-count ta-sidebar-label">@Model.Children.Count</span> }
+            </a>
+            @if (hasChildren) { <button class="ta-submenu-toggle ta-sidebar-label" type="button" data-ta-submenu-toggle aria-expanded="@(branchActive ? "true" : "false")" aria-controls="@submenuId" aria-label="Mở hoặc đóng @Model.Menu.Name"><i class="ti ti-chevron-down"></i></button> }
+        }
+    </div>
+    @if (hasChildren)
+    {
+        <div class="ta-submenu-reveal" id="@submenuId"><div><ul class="ta-nav-children">
+            @foreach (var child in Model.Children) { <partial name="_SidebarMenuNode" model="child" view-data='new ViewDataDictionary(ViewData) { ["Depth"] = depth + 1 }' /> }
+        </ul></div></div>
+    }
+</li>

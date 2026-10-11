@@ -1,0 +1,17 @@
+@page "/blazor/roles"
+@attribute [Authorize]
+@inject IBlazorPortalService Db
+@inject AuthenticationStateProvider Authentication
+@inject GlobalLoadingService Loading
+<PageTitle>Vai trò - T.A Portal</PageTitle><div class="ta-page-header"><div class="ta-page-heading"><div class="ta-page-pretitle">Quản trị</div><h1 class="ta-page-title">Vai trò</h1><p class="ta-page-subtitle">Danh sách vai trò theo MVC hiện hành.</p></div></div>
+@if (_loading) { <p class="text-secondary" role="status">Đang tải...</p> }
+else if (!_allowed) { <div class="alert alert-danger">Bạn không có quyền truy cập chức năng này.</div> }
+else if (_error is not null) { <div class="alert alert-danger" role="alert">@_error <button class="btn btn-sm btn-outline-danger ms-2" @onclick="LoadAsync">Thử lại</button></div> }
+else { <div class="card"><div class="table-responsive"><table class="table table-vcenter"><thead><tr><th>Mã</th><th>Tên</th><th>Mô tả</th><th>Hệ thống</th><th>Trạng thái</th></tr></thead><tbody>@foreach (var role in _roles) { <tr><td><code>@role.Code</code></td><td>@role.Name</td><td>@role.Description</td><td>@(role.IsSystem ? "Có" : "Không")</td><td>@(role.IsActive ? "ACTIVE" : "INACTIVE")</td></tr> }</tbody></table></div>@if (_roles.Count == 0) { <div class="card-body text-secondary">Không có vai trò.</div> }</div> }
+@code {
+ private List<PortalRole> _roles = new(); private bool _loading = true, _allowed; private string? _error;
+ // CHANGE_ID: TAPORTAL-20261011-BLAZOR-MIGRATION-008 — initialize through the retryable role loader.
+ protected override Task OnInitializedAsync() => LoadAsync();
+ // CHANGE_ID: TAPORTAL-20261011-BLAZOR-MIGRATION-008 — expose loading, denied, empty, success and retryable error states safely.
+ private async Task LoadAsync() { _loading=true;_error=null;using var scope=Loading.Begin("Đang tải vai trò...");try{var p=(await Authentication.GetAuthenticationStateAsync()).User;if(!Guid.TryParse(p.FindFirstValue(ClaimTypes.NameIdentifier),out var id)){_allowed=false;return;}_allowed=await Db.HasFunctionActionAsync(id,"Roles.Index");if(_allowed)_roles=await Db.GetRolesAsync();}catch{_error="Không thể tải vai trò. Vui lòng thử lại.";}finally{_loading=false;} }
+}

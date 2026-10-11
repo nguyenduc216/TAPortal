@@ -1,0 +1,12 @@
+# Phase 7 security remediation register
+
+| Issue | Severity | Root Cause | Owner | Required Action | Verification | Status |
+|---|---|---|---|---|---|---|
+| Plaintext SQL credential in local appsettings and historical publish outputs | CRITICAL | Local configuration and old artifacts were handled outside a secret provider | Application/operations | Rotate credential; move to secret store; inventory backups/shares; separately assess Git history | Old credential rejected; repo/publish secret scan clean; app starts from secret injection | OPEN — no production credential action authorized |
+| SQL connection negotiated TLS 1.0 | HIGH | Database/network endpoint permits obsolete protocol negotiation | SQL/network | Enable TLS 1.2+, deploy trusted certificate, remove trust bypass after certificate rollout | SqlClient connection has no downgrade/certificate warning | OPEN |
+| Public SQL endpoint | HIGH | Database endpoint is reachable outside an approved private application network | Network/security | Restrict by VPN/private network and firewall allow-list | External unapproved source cannot connect; staging/app sources can | OPEN |
+| Missing OperationalDb tables/ownership | HIGH | Configured database does not contain tables referenced by the legacy operational repository | Architecture/database | Decide correct database or retire obsolete methods; provide migration owner if required | Every OperationalDb query maps to an approved deployed schema and integration test | OPEN |
+| Publish artifacts may contain local configuration | HIGH | Default publish copies content configuration unless release packaging excludes it | Release/operations | Keep appsettings excluded, inject required staging settings externally, inventory old artifacts, and rotate exposed credentials | Artifact has no appsettings/secret; staging starts from secret injection; retention documented | MITIGATED IN PHASE 8 ARTIFACT, operational cleanup OPEN |
+| No authorized staging accounts/reset fixture | MEDIUM | Staging identity and deterministic data lifecycle have not been provisioned | QA/operations | Provision synthetic permission matrix and approved cleanup fixture | Authenticated Playwright and CRUD matrix execute repeatably without production data | OPEN — authenticated runtime blocked |
+
+No production security, firewall, SQL Server, credential, or history-rewrite action was performed in this change.

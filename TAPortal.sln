@@ -6,6 +6,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TAPortal.DbMcp", "src\TAPor
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TAPortal.Web", "src\TAPortal.Web\TAPortal.Web.csproj", "{86EF41A7-9348-4CC0-AEB0-02A41DBFF8D5}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TAPortal.Web.Tests", "tests\TAPortal.Web.Tests\TAPortal.Web.Tests.csproj", "{1E83450A-A061-4B52-83F7-7020C8FD122E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -20,5 +22,9 @@ Global
 		{86EF41A7-9348-4CC0-AEB0-02A41DBFF8D5}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{86EF41A7-9348-4CC0-AEB0-02A41DBFF8D5}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{86EF41A7-9348-4CC0-AEB0-02A41DBFF8D5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1E83450A-A061-4B52-83F7-7020C8FD122E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1E83450A-A061-4B52-83F7-7020C8FD122E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1E83450A-A061-4B52-83F7-7020C8FD122E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1E83450A-A061-4B52-83F7-7020C8FD122E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

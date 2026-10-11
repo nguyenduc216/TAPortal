@@ -1,0 +1,11 @@
+@inject AuthenticationStateProvider Auth
+@implements IDisposable
+@code {
+    private string Name = "Người dùng";
+    protected override async Task OnInitializedAsync() { Auth.AuthenticationStateChanged += OnAuthenticationStateChanged; await RefreshAsync(await Auth.GetAuthenticationStateAsync()); }
+    // CHANGE_ID: TAPORTAL-20261011-BLAZOR-MIGRATION-007 — keep circuit identity chrome synchronized after auth-state changes.
+    private void OnAuthenticationStateChanged(Task<AuthenticationState> stateTask) => _ = InvokeAsync(async () => { await RefreshAsync(await stateTask); StateHasChanged(); });
+    private Task RefreshAsync(AuthenticationState state) { var user=state.User; Name=user.Identity?.IsAuthenticated==true ? user.FindFirst("display_name")?.Value ?? user.Identity.Name ?? "Người dùng" : "Người dùng"; return Task.CompletedTask; }
+    public void Dispose() => Auth.AuthenticationStateChanged -= OnAuthenticationStateChanged;
+}
+<header class="navbar navbar-expand-md d-print-none ta-topbar"><div class="container-xl ta-topbar-inner"><button class="ta-mobile-menu" type="button" aria-label="Mở điều hướng"><i class="ti ti-menu-2"></i></button><div class="ta-global-search"><i class="ti ti-search"></i><span>Tìm kiếm trong T.A Portal...</span></div><div class="navbar-nav flex-row align-items-center ms-auto"><span class="avatar avatar-sm ta-avatar">@string.Concat(Name.Split(' ', StringSplitOptions.RemoveEmptyEntries).TakeLast(2).Select(x => x[0]))</span><span class="d-none d-md-block ps-2 ta-user-meta"><strong>@Name</strong></span></div></div></header>

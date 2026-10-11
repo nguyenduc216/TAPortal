@@ -1,0 +1,12 @@
+{
+  "name": "taportal-phase7-playwright",
+  "private": true,
+  "scripts": {
+    "test": "playwright test",
+    "test:anonymous": "playwright test --grep @anonymous",
+    "test:authenticated": "playwright test --grep @authenticated"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.55.0"
+  }
+}

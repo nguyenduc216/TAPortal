@@ -40,8 +40,10 @@ public sealed class AccountController(PortalDb db, PasswordService passwords) : 
         };
         if (!string.IsNullOrWhiteSpace(user.Email)) claims.Add(new Claim(ClaimTypes.Email, user.Email));
         claims.AddRange(user.Roles.Select(r => new Claim(ClaimTypes.Role, r)));
-        claims.AddRange(user.Permissions.Select(p => new Claim("permission", p)));
 
+        // FEATURE_ID: TAPORTAL-CORE-AUTH-MENU
+        // CHANGE_ID: TAPORTAL-20261010-CORE-AUTH-MENU-001
+        // Roles remain informational claims; permissions are intentionally resolved from the database per request.
         var principal = new ClaimsPrincipal(new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme));
         await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal,
             new AuthenticationProperties { IsPersistent = vm.RememberMe, AllowRefresh = true });
@@ -97,7 +99,11 @@ public sealed class AccountController(PortalDb db, PasswordService passwords) : 
             return View(vm);
         }
 
-        await db.UpdatePasswordAsync(user.Id, passwords.Hash(vm.NewPassword));
+        if (!await db.UpdatePasswordAsync(user.Id, passwords.Hash(vm.NewPassword)))
+        {
+            ModelState.AddModelError(string.Empty, "Phiên đăng nhập không còn hợp lệ.");
+            return View(vm);
+        }
         TempData["Success"] = "Đã đổi mật khẩu thành công.";
         return RedirectToAction(nameof(Profile));
     }

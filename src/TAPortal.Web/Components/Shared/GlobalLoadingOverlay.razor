@@ -1,0 +1,43 @@
+@implements IDisposable
+@inject GlobalLoadingService Loading
+@if (_visible) { <div class="ta-loading-overlay" aria-live="polite" role="status"><span class="spinner-border" aria-hidden="true"></span><span>@Loading.Message</span></div> }
+@code {
+    private bool _visible;
+    private CancellationTokenSource? _visibilityCts;
+
+    protected override void OnInitialized()
+    {
+        // FEATURE_ID: TAPORTAL-PLATFORM-BLAZOR-MIGRATION
+        // CHANGE_ID: TAPORTAL-20261011-BLAZOR-MIGRATION-002
+        // Subscribe once per circuit; UI changes are marshalled through the component dispatcher.
+        Loading.Changed += OnLoadingChanged;
+    }
+
+    private void OnLoadingChanged()
+    {
+        _ = InvokeAsync(async () =>
+        {
+            _visibilityCts?.Cancel();
+            _visibilityCts?.Dispose();
+            _visibilityCts = new CancellationTokenSource();
+            var token = _visibilityCts.Token;
+            if (Loading.IsBusy)
+            {
+                try { await Task.Delay(200, token); } catch (OperationCanceledException) { return; }
+                if (!token.IsCancellationRequested && Loading.IsBusy) _visible = true;
+            }
+            else _visible = false;
+            await InvokeAsync(StateHasChanged);
+        });
+    }
+
+    public void Dispose()
+    {
+        // FEATURE_ID: TAPORTAL-PLATFORM-BLAZOR-MIGRATION
+        // CHANGE_ID: TAPORTAL-20261011-BLAZOR-MIGRATION-002
+        // Detach the circuit event and cancel delayed rendering during disposal.
+        Loading.Changed -= OnLoadingChanged;
+        _visibilityCts?.Cancel();
+        _visibilityCts?.Dispose();
+    }
+}

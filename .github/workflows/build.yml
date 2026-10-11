@@ -2,7 +2,7 @@ name: build
 
 on:
   push:
-    branches: [ main, feature/** ]
+    branches: [ main, feature/**, feat/** ]
   pull_request:
     branches: [ main ]
 
@@ -24,6 +24,12 @@ jobs:
 
       - name: Build
         run: dotnet build TAPortal.sln --configuration Release --no-restore
+
+      - name: Test
+        run: dotnet test TAPortal.sln --configuration Release --no-build
+
+      - name: Publish Web
+        run: dotnet publish src/TAPortal.Web/TAPortal.Web.csproj --configuration Release --no-build --output artifacts/web
 
       - name: Publish MCP
         run: dotnet publish src/TAPortal.DbMcp/TAPortal.DbMcp.csproj --configuration Release --no-build --output artifacts/mcp
