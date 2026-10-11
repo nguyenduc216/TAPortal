@@ -1,0 +1,21 @@
+@page "/blazor/users"
+@attribute [Authorize]
+@inject PortalDb Db
+@inject PasswordService Passwords
+@inject AuthenticationStateProvider Authentication
+@inject GlobalLoadingService Loading
+
+<PageTitle>Người dùng - T.A Portal</PageTitle>
+<div class="ta-page-header"><div class="ta-page-heading"><div class="ta-page-pretitle">Quản trị</div><h1 class="ta-page-title">Người dùng</h1><p class="ta-page-subtitle">Danh sách và tạo tài khoản theo quyền MVC hiện hành.</p></div></div>
+@if (_loading) { <p class="text-secondary">Đang tải...</p> }
+else if (!_allowed) { <div class="alert alert-danger">Bạn không có quyền truy cập chức năng này.</div> }
+else { @if (!string.IsNullOrWhiteSpace(_message)) { <div class="alert @(_success ? "alert-success" : "alert-danger")">@_message</div> }
+<div class="row row-cards"><div class="col-lg-8"><div class="card"><div class="card-header"><h2 class="card-title">Danh sách tài khoản</h2></div><div class="table-responsive"><table class="table table-vcenter"><thead><tr><th>Tài khoản</th><th>Tên hiển thị</th><th>Email</th><th>Trạng thái</th></tr></thead><tbody>@foreach (var user in _users) { <tr><td>@user.Username</td><td>@user.DisplayName</td><td>@user.Email</td><td><span class="badge @(user.IsActive ? "bg-green-lt" : "bg-secondary-lt")">@user.Status</span></td></tr> }</tbody></table></div>@if (_users.Count == 0) { <div class="card-body text-secondary">Không có tài khoản.</div>}</div></div>
+<div class="col-lg-4"><div class="card"><div class="card-header"><h2 class="card-title">Tạo tài khoản</h2></div><div class="card-body"><EditForm Model="_create" OnValidSubmit="CreateAsync"><DataAnnotationsValidator /><ValidationSummary /><InputText class="form-control mb-2" placeholder="Tên đăng nhập" @bind-Value="_create.Username" /><InputText class="form-control mb-2" placeholder="Tên hiển thị" @bind-Value="_create.DisplayName" /><InputText class="form-control mb-2" placeholder="Email" @bind-Value="_create.Email" /><InputText type="password" class="form-control mb-3" placeholder="Mật khẩu" @bind-Value="_create.Password" /><button class="btn btn-primary" disabled="@_saving">@(_saving ? "Đang tạo..." : "Tạo tài khoản")</button></EditForm></div></div></div></div> }
+
+@code {
+    private List<PortalUser> _users = new(); private UserCreateVm _create = new(); private bool _loading = true, _allowed, _saving, _success; private string? _message;
+    protected override async Task OnInitializedAsync() { using var scope = Loading.Begin("Đang tải người dùng..."); try { var id = await CurrentUserId(); _allowed = id.HasValue && await Db.HasFunctionActionAsync(id.Value, "Users.Index"); if (_allowed) _users = await Db.GetUsersAsync(); } catch { _message = "Không thể tải danh sách người dùng."; } finally { _loading = false; } }
+    private async Task CreateAsync() { if (_saving) return; _saving = true; _message = null; using var scope = Loading.Begin("Đang tạo tài khoản..."); try { var id = await CurrentUserId(); if (!id.HasValue || !await Db.HasFunctionActionAsync(id.Value, "Users.Create")) { _success = false; _message = "Bạn không có quyền tạo tài khoản."; return; } var policy = PasswordPolicy.Validate(_create.Password); if (!policy.IsValid) { _success = false; _message = policy.Error; return; } if (await Db.UsernameExistsAsync(_create.Username)) { _success = false; _message = "Tên đăng nhập đã tồn tại."; return; } await Db.CreateUserAsync(_create, Passwords.Hash(_create.Password), id); _users = await Db.GetUsersAsync(); _create = new(); _success = true; _message = "Đã tạo người dùng mới."; } catch { _success = false; _message = "Không thể tạo tài khoản lúc này."; } finally { _saving = false; } }
+    private async Task<Guid?> CurrentUserId() { var p = (await Authentication.GetAuthenticationStateAsync()).User; return Guid.TryParse(p.FindFirst(ClaimTypes.NameIdentifier)?.Value, out var id) ? id : null; }
+}

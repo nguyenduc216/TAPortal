@@ -1,0 +1,7 @@
+@page "/"
+@attribute [Authorize]
+@inject PortalDb Db
+@implements IDisposable
+<PageTitle>Tổng quan - T.A Portal</PageTitle>
+@if (_model is null) { <p class="text-secondary">Đang tải...</p> } else { <div class="ta-page-header"><div><div class="ta-page-pretitle"><i class="ti ti-layout-dashboard me-1"></i>Dashboard điều hành</div><h1 class="ta-page-title">Tổng quan hệ thống</h1><p class="ta-page-subtitle">Theo dõi nhanh dữ liệu vận hành hiện có của T.A Portal.</p></div></div><div class="row row-deck row-cards ta-kpi-grid">@foreach (var item in Items) { <div class="col-sm-6 col-xl-3"><div class="card ta-stat-card"><div class="card-body"><div class="ta-stat-value">@item.Value</div><div class="ta-stat-label">@item.Label</div><div class="ta-stat-note">@item.Note</div></div></div></div> }</div> }
+@code { private DashboardVm? _model; private (string Label,int Value,string Note)[] Items => _model is null ? [] : [("Khách hàng",_model.CustomerCount,"Hồ sơ khách hàng"),("Người dùng",_model.UserCount,"Tài khoản đã ghi nhận"),("Đang hoạt động",_model.ActiveUserCount,"Tài khoản khả dụng"),("Vai trò",_model.RoleCount,"Nhóm quyền truy cập")]; protected override async Task OnInitializedAsync() => _model = await Db.GetDashboardAsync(); public void Dispose() { } }

@@ -1,0 +1,2 @@
+<div class="list-group-item"><div><i class="ti @(Node.Menu.Icon ?? "ti-point") me-2"></i><strong>@Node.Menu.Name</strong>@if (!string.IsNullOrWhiteSpace(Node.Menu.Route)) { <span class="text-secondary ms-2">@Node.Menu.Route</span> }</div>@foreach (var child in Node.Children) { <div class="ms-4"><MenuNode Node="child" /></div> }</div>
+@code { [Parameter, EditorRequired] public PortalMenuNode Node { get; set; } = default!; }

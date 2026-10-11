@@ -1,0 +1,43 @@
+@page "/blazor/account/profile"
+@attribute [Authorize]
+@inject PortalDb Db
+@inject AuthenticationStateProvider Authentication
+@inject NavigationManager Navigation
+@inject GlobalLoadingService Loading
+
+<PageTitle>Hồ sơ cá nhân - T.A Portal</PageTitle>
+<div class="ta-page-header"><div class="ta-page-heading"><div class="ta-page-pretitle">Tài khoản</div><h1 class="ta-page-title">Hồ sơ cá nhân</h1><p class="ta-page-subtitle">Thông tin nhận diện và quyền truy cập của bạn.</p></div><div class="ta-page-actions"><a class="btn btn-primary" href="/blazor/account/change-password"><i class="ti ti-key"></i> Đổi mật khẩu</a></div></div>
+@if (_loading) { <p class="text-secondary">Đang tải...</p> }
+else if (_missing) { <div class="alert alert-danger">Không tìm thấy thông tin tài khoản.</div> }
+else { <EditForm Model="_edit" OnValidSubmit="SaveAsync"><DataAnnotationsValidator /><ValidationSummary />
+    @if (!string.IsNullOrWhiteSpace(_message)) { <div class="alert @(_success ? "alert-success" : "alert-danger")" role="alert">@_message</div> }
+    <div class="row row-cards"><div class="col-lg-5"><div class="card h-100"><div class="card-body"><div class="ta-profile-hero"><div class="ta-profile-avatar">@Initials</div><div><h2 class="h3 mb-1">@_edit.DisplayName</h2><div class="text-secondary">@@@_user!.Username</div><span class="badge badge-ta-active mt-2">Đang hoạt động</span></div></div></div></div></div>
+    <div class="col-lg-7"><div class="card h-100"><div class="card-header"><h2 class="card-title"><i class="ti ti-id me-2"></i>Thông tin tài khoản</h2></div><div class="card-body"><div class="mb-3"><label class="form-label">Tên hiển thị</label><InputText class="form-control" @bind-Value="_edit.DisplayName" /><ValidationMessage For="@(() => _edit.DisplayName)" /></div><div class="mb-3"><label class="form-label">Email</label><InputText class="form-control" @bind-Value="_edit.Email" /><ValidationMessage For="@(() => _edit.Email)" /></div><div class="mb-3"><label class="form-label">Điện thoại</label><InputText class="form-control" @bind-Value="_edit.Phone" /><ValidationMessage For="@(() => _edit.Phone)" /></div><div class="mb-3"><label class="form-label">Tên tài khoản</label><input class="form-control" value="@_user.Username" readonly /></div><button class="btn btn-primary" type="submit" disabled="@_saving">@( _saving ? "Đang lưu..." : "Lưu thay đổi")</button></div></div></div></div>
+}</EditForm> }
+
+@code {
+    private AuthUserSnapshot? _user;
+    private ProfileEditVm _edit = new();
+    private bool _loading = true, _saving, _missing, _success;
+    private string? _message;
+    private string Initials => string.Concat((_edit.DisplayName ?? string.Empty).Split(' ', StringSplitOptions.RemoveEmptyEntries).TakeLast(2).Select(x => char.ToUpperInvariant(x[0]))) is { Length: > 0 } value ? value : "TA";
+
+    protected override async Task OnInitializedAsync()
+    {
+        // CHANGE_ID: TAPORTAL-20261011-BLAZOR-MIGRATION-004
+        using var scope = Loading.Begin("Đang tải hồ sơ...");
+        try { var principal = (await Authentication.GetAuthenticationStateAsync()).User; if (!Guid.TryParse(principal.FindFirst(ClaimTypes.NameIdentifier)?.Value, out var id) || (_user = await Db.GetAuthUserByIdAsync(id)) is null) { _missing = true; return; } _edit = new() { DisplayName = _user.DisplayName, Email = _user.Email, Phone = _user.Phone }; }
+        catch (Exception) { _missing = true; _message = "Không thể tải thông tin tài khoản."; }
+        finally { _loading = false; }
+    }
+
+    private async Task SaveAsync()
+    {
+        if (_saving || _user is null) return; _saving = true; _message = null;
+        using var scope = Loading.Begin("Đang lưu hồ sơ...");
+        // CHANGE_ID: TAPORTAL-20261011-BLAZOR-MIGRATION-007 — revalidate circuit identity and active account at write time.
+        try { var principal = (await Authentication.GetAuthenticationStateAsync()).User; if (!Guid.TryParse(principal.FindFirst(ClaimTypes.NameIdentifier)?.Value, out var currentId) || currentId != _user.Id || await Db.GetAuthUserByIdAsync(currentId) is null) { _success = false; _message = "Phiên đăng nhập không còn hợp lệ."; return; } if (!await Db.UpdateProfileAsync(currentId, _edit)) { _success = false; _message = "Không thể cập nhật tài khoản."; return; } _user = await Db.GetAuthUserByIdAsync(currentId); _success = true; _message = "Đã lưu thông tin hồ sơ."; }
+        catch (Exception) { _success = false; _message = "Không thể cập nhật tài khoản lúc này."; }
+        finally { _saving = false; }
+    }
+}

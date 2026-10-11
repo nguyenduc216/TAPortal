@@ -1,0 +1,16 @@
+@page "/blazor/customers"
+@attribute [Authorize]
+@inject PortalDb Db
+@inject AuthenticationStateProvider Authentication
+@inject GlobalLoadingService Loading
+<PageTitle>Khách hàng - T.A Portal</PageTitle>
+<div class="ta-page-header"><div class="ta-page-heading"><div class="ta-page-pretitle">CRM</div><h1 class="ta-page-title">Danh sách khách hàng</h1><p class="ta-page-subtitle">Tra cứu hồ sơ và thông tin liên hệ khách hàng.</p></div></div>
+@if (_loading) { <p class="text-secondary">Đang tải...</p> }
+else if (!_allowed) { <div class="alert alert-danger">Bạn không có quyền truy cập chức năng này.</div> }
+else { @if (_error is not null) { <div class="alert alert-danger">@_error</div> } <div class="card ta-table-card"><div class="card-header ta-toolbar"><input class="form-control" placeholder="Tìm theo mã, tên, MST..." @bind="_search" @bind:event="oninput" /></div><div class="table-responsive"><table class="table table-vcenter"><thead><tr><th>Mã KH</th><th>Tên khách hàng</th><th>MST</th><th>Email</th><th>Điện thoại</th><th>Trạng thái</th></tr></thead><tbody>@foreach (var x in Filtered) { <tr><td><code>@x.Code</code></td><td class="fw-semibold">@x.Name</td><td>@(x.TaxCode ?? "—")</td><td>@(x.Email ?? "—")</td><td>@(x.Phone ?? "—")</td><td>@x.Status</td></tr> }</tbody></table></div>@if (!Filtered.Any()) { <div class="card-body text-secondary">@(_customers.Count == 0 ? "Chưa có khách hàng." : "Không tìm thấy kết quả phù hợp.")</div>}</div> }
+@code {
+    private List<CustomerRow> _customers = new(); private bool _loading = true, _allowed; private string _search = ""; private string? _error;
+    private IEnumerable<CustomerRow> Filtered => _customers.Where(x => string.IsNullOrWhiteSpace(_search) || $"{x.Code} {x.Name} {x.TaxCode}".Contains(_search, StringComparison.OrdinalIgnoreCase));
+    // CHANGE_ID: TAPORTAL-20261011-BLAZOR-MIGRATION-006 — load only after server-side action authorization.
+    protected override async Task OnInitializedAsync() { using var scope = Loading.Begin("Đang tải khách hàng..."); try { var user = (await Authentication.GetAuthenticationStateAsync()).User; if (Guid.TryParse(user.FindFirstValue(ClaimTypes.NameIdentifier), out var id)) { _allowed = await Db.HasFunctionActionAsync(id, "Customers.Index"); if (_allowed) _customers = await Db.GetCustomersAsync(); } } catch { _error = "Không thể tải danh sách khách hàng."; } finally { _loading = false; } }
+}

@@ -1,0 +1,9 @@
+@inherits LayoutComponentBase
+<div class="page ta-app-shell">
+    <Sidebar />
+    <div class="page-wrapper ta-shell-main">
+        <Topbar />
+        <main class="page-body ta-page-content ta-page-enter" id="main-content"><div class="container-xl">@Body</div></main>
+    </div>
+    <GlobalLoadingOverlay />
+</div>

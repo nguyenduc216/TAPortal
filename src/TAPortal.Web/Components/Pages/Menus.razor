@@ -1,0 +1,8 @@
+@page "/blazor/menus"
+@attribute [Authorize]
+@inject PortalDb Db
+@inject AuthenticationStateProvider Authentication
+@inject GlobalLoadingService Loading
+<PageTitle>Menu - T.A Portal</PageTitle><div class="ta-page-header"><div class="ta-page-heading"><div class="ta-page-pretitle">Quản trị</div><h1 class="ta-page-title">Dynamic menus</h1><p class="ta-page-subtitle">Cây menu đã lọc theo quyền hiện hành.</p></div></div>
+@if (_loading) { <p class="text-secondary">Đang tải...</p> } else if (!_allowed) { <div class="alert alert-danger">Bạn không có quyền truy cập chức năng này.</div> } else if (_menus.Count == 0) { <div class="alert alert-info">Không có menu khả dụng.</div> } else { <div class="card"><div class="list-group list-group-flush">@foreach (var node in _menus) { <MenuNode Node="node" /> }</div></div> }
+@code { private IReadOnlyList<PortalMenuNode> _menus = Array.Empty<PortalMenuNode>(); private bool _loading = true, _allowed; protected override async Task OnInitializedAsync() { using var scope = Loading.Begin("Đang tải menu..."); try { var p = (await Authentication.GetAuthenticationStateAsync()).User; if (Guid.TryParse(p.FindFirstValue(ClaimTypes.NameIdentifier), out var id)) { _allowed = await Db.HasFunctionActionAsync(id, "Menus.Index"); if (_allowed) _menus = await Db.GetNavigationMenuTreeAsync(id); } } catch { } finally { _loading = false; } } }

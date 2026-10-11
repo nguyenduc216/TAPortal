@@ -30,6 +30,20 @@ public sealed class ChangePasswordVm
     public string ConfirmPassword { get; set; } = string.Empty;
 }
 
+public sealed class ProfileEditVm
+{
+    [Required(ErrorMessage = "Vui lòng nhập tên hiển thị.")]
+    [StringLength(200, ErrorMessage = "Tên hiển thị không được vượt quá 200 ký tự.")]
+    public string DisplayName { get; set; } = string.Empty;
+
+    [EmailAddress(ErrorMessage = "Email không hợp lệ.")]
+    [StringLength(320, ErrorMessage = "Email không được vượt quá 320 ký tự.")]
+    public string? Email { get; set; }
+
+    [StringLength(50, ErrorMessage = "Số điện thoại không được vượt quá 50 ký tự.")]
+    public string? Phone { get; set; }
+}
+
 public sealed class UserCreateVm
 {
     [Required] public string Username { get; set; } = string.Empty;

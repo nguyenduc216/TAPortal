@@ -161,6 +161,43 @@ WHERE ur.UserId=@id AND r.IsDeleted=0 AND r.IsActive=1;
         return user with { Roles = roles, Permissions = permissions.ToList() };
     }
 
+    // FEATURE_ID: TAPORTAL-PLATFORM-BLAZOR-MIGRATION
+    // CHANGE_ID: TAPORTAL-20261011-BLAZOR-MIGRATION-004
+    // Resolve the profile from the authenticated server-side claim; never trust a client-supplied user id.
+    public async Task<AuthUserSnapshot?> GetAuthUserByIdAsync(Guid userId)
+    {
+        await using var cn = Open();
+        await cn.OpenAsync();
+        await using var cmd = new SqlCommand("SELECT TOP 1 Username FROM dbo.Users WHERE Id=@id AND IsDeleted=0 AND IsActive=1 AND Status='ACTIVE'", cn);
+        cmd.Parameters.AddWithValue("@id", userId);
+        var username = await cmd.ExecuteScalarAsync();
+        return username is string value ? await GetAuthUserAsync(value) : null;
+    }
+
+    // FEATURE_ID: TAPORTAL-PLATFORM-BLAZOR-MIGRATION
+    // CHANGE_ID: TAPORTAL-20261011-BLAZOR-MIGRATION-004
+    // Update only explicitly allowed profile fields and scope the write to the authenticated active account.
+    public async Task<bool> UpdateProfileAsync(Guid userId, ProfileEditVm model)
+    {
+        await using var cn = Open();
+        await cn.OpenAsync();
+        const string sql = """
+UPDATE dbo.Users
+SET DisplayName=@displayName, Email=@email, NormalizedEmail=@normalizedEmail, Phone=@phone,
+    UpdatedAt=SYSUTCDATETIME(), UpdatedBy=@id
+WHERE Id=@id AND IsDeleted=0 AND IsActive=1 AND Status='ACTIVE';
+""";
+        await using var cmd = new SqlCommand(sql, cn);
+        cmd.Parameters.AddWithValue("@id", userId);
+        cmd.Parameters.AddWithValue("@displayName", model.DisplayName.Trim());
+        cmd.Parameters.AddWithValue("@email", (object?)NormalizeOptional(model.Email) ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@normalizedEmail", (object?)NormalizeOptional(model.Email)?.ToUpperInvariant() ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@phone", (object?)NormalizeOptional(model.Phone) ?? DBNull.Value);
+        return await cmd.ExecuteNonQueryAsync() == 1;
+    }
+
+    private static string? NormalizeOptional(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
     public async Task TouchLoginAsync(Guid userId)
     {
         await using var cn = Open(); await cn.OpenAsync();
@@ -218,13 +255,16 @@ VALUES(@id,@username,@nu,@email,@ne,@phone,@name,@hash,'ACTIVE',1,@createdBy);
         return id;
     }
 
-    public async Task UpdatePasswordAsync(Guid userId, string passwordHash)
+    // FEATURE_ID: TAPORTAL-PLATFORM-BLAZOR-MIGRATION
+    // CHANGE_ID: TAPORTAL-20261011-BLAZOR-MIGRATION-007
+    // The mutation itself revalidates active-account state so a disabled circuit cannot win a check/write race.
+    public async Task<bool> UpdatePasswordAsync(Guid userId, string passwordHash)
     {
         await using var cn = Open(); await cn.OpenAsync();
-        await using var cmd = new SqlCommand("UPDATE dbo.Users SET PasswordHash=@h,UpdatedAt=SYSUTCDATETIME(),UpdatedBy=@id WHERE Id=@id", cn);
+        await using var cmd = new SqlCommand("UPDATE dbo.Users SET PasswordHash=@h,UpdatedAt=SYSUTCDATETIME(),UpdatedBy=@id WHERE Id=@id AND IsDeleted=0 AND IsActive=1 AND Status='ACTIVE'", cn);
         cmd.Parameters.AddWithValue("@h", passwordHash);
         cmd.Parameters.AddWithValue("@id", userId);
-        await cmd.ExecuteNonQueryAsync();
+        return await cmd.ExecuteNonQueryAsync() == 1;
     }
 
     public async Task<List<PortalUser>> GetUsersAsync()

@@ -1,0 +1,13 @@
+@inject PortalDb Db
+@inject AuthenticationStateProvider Auth
+@implements IDisposable
+<aside class="navbar navbar-vertical ta-sidebar" data-bs-theme="dark" aria-label="Điều hướng chính">
+    <div class="ta-sidebar-head"><a href="/" class="ta-brand text-decoration-none"><img src="images/ta-logo.png" class="ta-sidebar-logo" alt="T.A" /><span class="ta-brand-copy ta-sidebar-label"><strong>T.A Portal</strong><small>Không gian điều hành</small></span></a></div>
+    <nav class="ta-sidebar-scroll"><div class="ta-nav-caption ta-sidebar-label">Điều hướng</div><ul class="navbar-nav ta-nav-list">@foreach (var node in _nodes) { <SidebarMenuNode Node="node" Depth="0" /> }</ul></nav>
+    <div class="ta-sidebar-footer"><i class="ti ti-shield-check"></i><span class="ta-sidebar-label">Truy cập được bảo vệ bởi RBAC</span></div>
+</aside>
+@code {
+    private IReadOnlyList<PortalMenuNode> _nodes = Array.Empty<PortalMenuNode>();
+    protected override async Task OnInitializedAsync() { var state = await Auth.GetAuthenticationStateAsync(); if (Guid.TryParse(state.User.FindFirstValue(ClaimTypes.NameIdentifier), out var id)) _nodes = await Db.GetNavigationMenuTreeAsync(id); }
+    public void Dispose() { }
+}

@@ -2,6 +2,10 @@
 	"folders": [
 		{
 			"path": "."
+		},
+		{
+			"name": "TAPortal.Web.Tests",
+			"path": "../tests/TAPortal.Web.Tests"
 		}
 	],
 	"settings": {}

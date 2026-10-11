@@ -99,7 +99,11 @@ public sealed class AccountController(PortalDb db, PasswordService passwords) : 
             return View(vm);
         }
 
-        await db.UpdatePasswordAsync(user.Id, passwords.Hash(vm.NewPassword));
+        if (!await db.UpdatePasswordAsync(user.Id, passwords.Hash(vm.NewPassword)))
+        {
+            ModelState.AddModelError(string.Empty, "Phiên đăng nhập không còn hợp lệ.");
+            return View(vm);
+        }
         TempData["Success"] = "Đã đổi mật khẩu thành công.";
         return RedirectToAction(nameof(Profile));
     }
