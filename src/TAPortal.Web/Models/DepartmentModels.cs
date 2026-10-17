@@ -34,6 +34,8 @@ public sealed record DepartmentRow(Guid Id, string Code, string Name, string? De
 
 public class DepartmentCreateVm
 {
+    // CHANGE_ID: TAPORTAL-20261013-CRM-PHASE0-001 — required at persistence when the schema has BranchId.
+    public Guid? BranchId { get; set; }
     [Required(ErrorMessage = "Vui lòng nhập mã phòng ban.")]
     [StringLength(DepartmentRules.CodeMaxLength, ErrorMessage = "Mã phòng ban tối đa 50 ký tự.")]
     public string Code { get; set; } = string.Empty;
@@ -76,5 +78,6 @@ public enum DepartmentWriteResult
     DuplicateCode,
     ConcurrencyConflict,
     HasDependencies,
+    InvalidBranch,
     NotFound
 }

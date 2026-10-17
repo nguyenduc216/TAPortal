@@ -49,6 +49,12 @@ app.UseStatusCodePagesWithReExecute("/home/status-code", "?code={0}");
 app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
+// Razor component endpoints carry antiforgery metadata, including on GET requests.
+// Run after authentication/authorization and before endpoint execution.
+app.UseAntiforgery();
+
+app.MapGet("/health/client-readiness", () => Results.Json(new { ready = true, maintenance = false }))
+    .AllowAnonymous();
 
 app.MapRazorComponents<TAPortal.Web.Components.App>()
     .AddInteractiveServerRenderMode();

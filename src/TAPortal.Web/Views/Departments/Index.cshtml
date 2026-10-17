@@ -27,6 +27,7 @@
 <div class="modal fade ta-crud-modal" id="departmentCreate" tabindex="-1" aria-labelledby="departmentCreateTitle" aria-hidden="true"><div class="modal-dialog"><div class="modal-content"><form asp-action="Create" method="post"><div class="modal-header"><h2 class="modal-title" id="departmentCreateTitle"><i class="ti ti-building-plus"></i>Thêm phòng ban</h2><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Đóng"></button></div><div class="modal-body"><partial name="_DepartmentFields" model='new DepartmentCreateVm { IsActive=true }' /></div><div class="modal-footer"><button class="btn me-auto" type="button" data-bs-dismiss="modal">Hủy</button><button class="btn btn-primary" type="submit" data-ta-loading data-ta-loading-text="Đang lưu..."><i class="ti ti-device-floppy"></i>Lưu phòng ban</button></div></form></div></div></div>
 }
 
+@{ ViewData["HrDepartmentEditing"] = true; }
 @foreach (var department in Model.Departments)
 {
     var modalKey = department.Id.ToString("N");

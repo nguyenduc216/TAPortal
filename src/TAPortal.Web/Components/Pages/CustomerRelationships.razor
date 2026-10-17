@@ -1,0 +1,108 @@
+@page "/blazor/customers/{CustomerId:guid}"
+@using Microsoft.JSInterop
+@inject IBlazorPortalService Db
+@inject AuthenticationStateProvider Authentication
+@inject GlobalLoadingService Loading
+@inject Microsoft.JSInterop.IJSRuntime JS
+<PageTitle>Quan hệ khách hàng - T.A Portal</PageTitle>
+<div class="ta-page-header"><div class="ta-page-heading"><div class="ta-page-pretitle"><a href="/blazor/customers">CRM / Khách hàng</a> / Quan hệ</div><h1 class="ta-page-title">@(_detail?.Customer.Name ?? "Quan hệ khách hàng")</h1><p class="ta-page-subtitle">Nhân viên phụ trách, chi nhánh chia sẻ và đội dịch vụ.</p></div></div>
+@if (_notice is not null) { <div class="alert alert-success" role="status">@_notice</div> }
+@if (_error is not null) { <div class="alert alert-danger" role="alert">@_error</div> }
+@if (_loading) { <p role="status">Đang tải quan hệ...</p> }
+else if (_detail is null) { <div class="alert alert-warning" role="alert">Không tìm thấy khách hàng hoặc bạn không có quyền xem quan hệ.</div> }
+else
+{
+    @Section("Nhân viên được phân công", "ti ti-users", 0, _detail.Employees, _detail.CanAssign)
+    @Section("Chi nhánh chia sẻ", "ti ti-building", 1, _detail.Branches, _detail.CanShare)
+    @Section("Đội dịch vụ", "ti ti-users-group", 2, _detail.Teams, _detail.CanTeam)
+}
+@if (_dialog && _detail is not null)
+{
+    <dialog id="ta-relation-dialog" class="ta-customer-dialog" aria-labelledby="relation-title">
+        <div class="modal-header"><h2 class="modal-title" id="relation-title">@(_revoke ? "Thu hồi" : _editing ? "Chỉnh sửa" : "Thêm") @KindName</h2><button type="button" class="btn-close" aria-label="Đóng" disabled="@_saving" @onclick="Close"></button></div>
+        <div class="modal-body">
+            @if (_saveError is not null) { <div class="alert alert-danger" role="alert">@_saveError</div> }
+            @if (_revoke) { <p>Xác nhận thu hồi quan hệ với <strong>@_selected?.Label</strong>? Lịch sử sẽ được giữ lại.</p> }
+            else
+            {
+                <fieldset disabled="@_saving">
+                    @if (_editing) { <p class="fw-semibold">@_selected?.Label</p> }
+                    else { <label class="form-label">@KindName<select class="form-select" aria-label="Chọn đối tượng" @bind="_target"><option value="@Guid.Empty">Chọn...</option>@foreach (var option in CurrentOptions) { <option value="@option.Id">@option.Label @option.Context</option> }</select></label> }
+                    @if (_kind == 0) { <label class="form-label">Vai trò<select class="form-select" aria-label="Vai trò" @bind="_role"><option value="OWNER">OWNER</option><option value="PRIMARY">PRIMARY</option><option value="SECONDARY">SECONDARY</option><option value="VIEWER">VIEWER</option></select></label> }
+                    <label class="form-label">Hiệu lực từ<input class="form-control" type="date" aria-label="Hiệu lực từ" @bind="_from" /></label>
+                    <label class="form-label">Hiệu lực đến<input class="form-control" type="date" aria-label="Hiệu lực đến" @bind="_to" /></label>
+                </fieldset>
+            }
+        </div>
+        <div class="modal-footer"><button type="button" class="btn btn-ta-secondary" disabled="@_saving" @onclick="Close">Hủy</button><button type="button" class="btn btn-ta-gold" disabled="@_saving" @onclick="SaveAsync">@(_saving ? "Đang lưu..." : _revoke ? "Xác nhận thu hồi" : "Lưu quan hệ")</button></div>
+    </dialog>
+}
+@code {
+    [Parameter] public Guid CustomerId { get; set; }
+    private CrmRelationshipDetail? _detail;
+    private bool _loading = true, _saving, _dialog, _openPending, _editing, _revoke;
+    private int _kind;
+    private CrmRelationshipRow? _selected;
+    private Guid _target;
+    private DateTime _from = DateTime.Today;
+    private DateTime? _to;
+    private string _role = "PRIMARY";
+    private string? _error, _notice, _saveError;
+    private string KindName => _kind switch { 0 => "nhân viên", 1 => "chi nhánh", _ => "đội dịch vụ" };
+    private IReadOnlyList<CrmTargetOption> CurrentOptions => _kind switch { 0 => _detail?.EmployeeOptions, 1 => _detail?.BranchOptions, _ => _detail?.TeamOptions } ?? Array.Empty<CrmTargetOption>();
+    private bool CanMutate => _detail is not null && (_kind switch { 0 => _detail.CanAssign, 1 => _detail.CanShare, _ => _detail.CanTeam });
+    private async Task<Guid?> ActorAsync() { var user = (await Authentication.GetAuthenticationStateAsync()).User; return user.Identity?.IsAuthenticated == true && Guid.TryParse(user.FindFirstValue(ClaimTypes.NameIdentifier), out var id) ? id : null; }
+    protected override Task OnParametersSetAsync() => LoadAsync();
+    private async Task LoadAsync()
+    {
+        _loading = true; _detail = null; _error = null;
+        using var scope = Loading.Begin("Đang tải quan hệ khách hàng...");
+        try { var actor = await ActorAsync(); if (actor.HasValue) _detail = await Db.GetCrmRelationshipDetailAsync(CustomerId, actor.Value); }
+        catch { _error = "Không thể tải quan hệ khách hàng."; }
+        finally { _loading = false; }
+    }
+    private Microsoft.AspNetCore.Components.RenderFragment Section(string title, string icon, int kind, IReadOnlyList<CrmRelationshipRow> rows, bool permitted) => @<div class="card ta-table-card mb-3"><div class="card-header ta-toolbar"><h2 class="card-title"><i class="@icon" aria-hidden="true"></i> @title</h2>@if (permitted) { <button class="btn btn-ta-secondary btn-sm" @onclick="() => Open(kind, null, false)"><i class="ti ti-plus" aria-hidden="true"></i> Thêm</button> }</div><div class="table-responsive"><table class="table table-vcenter card-table"><thead><tr><th>Đối tượng</th><th>Bối cảnh / Vai trò</th><th>Hiệu lực</th><th>Trạng thái</th><th>Thao tác</th></tr></thead><tbody>@foreach (var row in rows) { <tr><td class="fw-semibold">@row.Label</td><td>@row.Context @row.RoleCode</td><td>@row.ValidFrom.ToString("dd/MM/yyyy") — @(row.ValidTo?.ToString("dd/MM/yyyy") ?? "Không giới hạn")</td><td><span class="badge @(row.IsActive ? "badge-ta-active" : "bg-secondary-lt")">@(row.IsActive ? "Hoạt động" : "Đã thu hồi")</span></td><td>@if (permitted && row.IsActive) { <button class="btn btn-sm btn-ta-secondary" @onclick="() => Open(kind, row, false)">Sửa</button> <button class="btn btn-sm btn-ta-secondary" @onclick="() => Open(kind, row, true)">Thu hồi</button> }</td></tr> }</tbody></table></div>@if (rows.Count == 0) { <div class="ta-table-empty" role="status">Chưa có quan hệ nào.</div> }</div>;
+    private void Open(int kind, CrmRelationshipRow? row, bool revoke)
+    {
+        if (_saving || _detail is null || !(kind switch { 0 => _detail.CanAssign, 1 => _detail.CanShare, _ => _detail.CanTeam })) return;
+        _kind = kind; _selected = row; _editing = row is not null; _revoke = revoke; _target = row?.TargetId ?? Guid.Empty;
+        _from = row?.ValidFrom.ToDateTime(TimeOnly.MinValue) ?? DateTime.Today;
+        _to = row?.ValidTo?.ToDateTime(TimeOnly.MinValue); _role = row?.RoleCode ?? "PRIMARY";
+        _saveError = null; _dialog = _openPending = true;
+    }
+    protected override async Task OnAfterRenderAsync(bool firstRender) { if (_openPending) { _openPending = false; await JS.InvokeVoidAsync("taCustomers.open", "ta-relation-dialog"); } }
+    private void Close() { if (!_saving) { _dialog = false; _openPending = false; } }
+    private async Task SaveAsync()
+    {
+        if (_saving || !_dialog || !CanMutate) return;
+        _saveError = null;
+        if (!_revoke && ((_selected is null && (_target == Guid.Empty || !CurrentOptions.Any(o => o.Id == _target))) || _to < _from)) { _saveError = "Vui lòng chọn đối tượng và kiểm tra ngày hiệu lực."; return; }
+        _saving = true;
+        try
+        {
+            var actor = await ActorAsync();
+            if (!actor.HasValue) { _saveError = "Phiên đăng nhập đã hết hạn."; return; }
+            CrmRelationWriteResult result;
+            if (_revoke && _selected is not null)
+            {
+                var request = new CrmRelationRevokeRequest(_selected.Id, _selected.RowVersion);
+                result = _kind switch { 0 => await Db.RevokeCustomerEmployeeAssignmentAsync(request, actor.Value), 1 => await Db.RevokeCustomerBranchShareAsync(request, actor.Value), _ => await Db.RevokeCustomerServiceTeamAsync(request, actor.Value) };
+            }
+            else if (_editing && _selected is not null)
+            {
+                var request = new CrmRelationChangeRequest(_selected.Id, _selected.RowVersion, DateOnly.FromDateTime(_from), _to.HasValue ? DateOnly.FromDateTime(_to.Value) : null, _kind == 0 ? _role : null);
+                result = _kind switch { 0 => await Db.ChangeCustomerEmployeeAssignmentAsync(request, actor.Value), 1 => await Db.ChangeCustomerBranchShareAsync(request, actor.Value), _ => await Db.ChangeCustomerServiceTeamAsync(request, actor.Value) };
+            }
+            else
+            {
+                var request = new CrmRelationWriteRequest(CustomerId, _target, DateOnly.FromDateTime(_from), _to.HasValue ? DateOnly.FromDateTime(_to.Value) : null, _kind == 0 ? _role : null);
+                result = _kind switch { 0 => await Db.CreateCustomerEmployeeAssignmentAsync(request, actor.Value), 1 => await Db.CreateCustomerBranchShareAsync(request, actor.Value), _ => await Db.CreateCustomerServiceTeamAsync(request, actor.Value) };
+            }
+            if (result == CrmRelationWriteResult.Success) { _dialog = false; _notice = "Đã cập nhật quan hệ."; await LoadAsync(); }
+            else if (result == CrmRelationWriteResult.ConcurrencyConflict) { _dialog = false; await LoadAsync(); _error = "Quan hệ đã thay đổi bởi người khác. Dữ liệu đã được tải lại; vui lòng kiểm tra trước khi thử lại."; }
+            else { _saveError = result switch { CrmRelationWriteResult.Forbidden => "Bạn không có quyền thực hiện thao tác này.", CrmRelationWriteResult.Overlap => "Khoảng thời gian bị trùng với quan hệ hiện có.", CrmRelationWriteResult.Invalid => "Đối tượng hoặc ngày hiệu lực không hợp lệ.", CrmRelationWriteResult.NotFound => "Quan hệ không còn tồn tại.", _ => "Không thể lưu quan hệ lúc này." }; if (result is CrmRelationWriteResult.Forbidden or CrmRelationWriteResult.NotFound) { _dialog = false; await LoadAsync(); _error = "Quyền truy cập hoặc quan hệ đã thay đổi. Dữ liệu đã được tải lại."; } }
+        }
+        catch { _saveError = "Không thể lưu quan hệ lúc này."; }
+        finally { _saving = false; }
+    }
+}

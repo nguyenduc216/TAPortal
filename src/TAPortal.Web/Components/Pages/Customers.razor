@@ -1,16 +1,82 @@
 @page "/blazor/customers"
+@using Microsoft.JSInterop
 @attribute [Authorize]
-@inject PortalDb Db
+@inject IBlazorPortalService Db
 @inject AuthenticationStateProvider Authentication
 @inject GlobalLoadingService Loading
+@inject Microsoft.JSInterop.IJSRuntime JS
 <PageTitle>Khách hàng - T.A Portal</PageTitle>
-<div class="ta-page-header"><div class="ta-page-heading"><div class="ta-page-pretitle">CRM</div><h1 class="ta-page-title">Danh sách khách hàng</h1><p class="ta-page-subtitle">Tra cứu hồ sơ và thông tin liên hệ khách hàng.</p></div></div>
-@if (_loading) { <p class="text-secondary">Đang tải...</p> }
+@* CHANGE_ID: TAPORTAL-20261012-CUSTOMERS-001 — retain trial ownership and share action/empty/table design with MVC. *@
+<div class="ta-page-header"><div class="ta-page-heading"><div class="ta-page-pretitle">CRM / Khách hàng</div><h1 class="ta-page-title">Danh sách khách hàng</h1><p class="ta-page-subtitle">Quản lý hồ sơ và thông tin liên hệ khách hàng.</p></div><div class="ta-page-actions">
+<button class="btn btn-ta-secondary" disabled="@(!_allowed || _loading || _exporting || _error is not null)" @onclick="ExportAsync"><i class="ti ti-file-export" aria-hidden="true"></i>@(_exporting ? "Đang xuất..." : "Xuất dữ liệu")</button>
+<button class="btn btn-ta-gold" disabled="@(!_canCreate || _loading || _saving)" @onclick="OpenCreate" title="@(!_canCreate ? "Bạn chưa được cấp quyền thêm khách hàng." : "Thêm khách hàng")"><i class="ti ti-user-plus" aria-hidden="true"></i>Thêm khách hàng</button>
+</div></div>
+@if (_notice is not null) { <div class="alert alert-success ta-customer-toast" role="status">@_notice</div> }
+@if (_loading) { <p role="status">Đang tải khách hàng...</p> }
+else if (_error is not null) { <div class="alert alert-danger" role="alert">@_error <button class="btn btn-link" @onclick="LoadAsync">Thử lại</button></div> }
 else if (!_allowed) { <div class="alert alert-danger">Bạn không có quyền truy cập chức năng này.</div> }
-else { @if (_error is not null) { <div class="alert alert-danger">@_error</div> } <div class="card ta-table-card"><div class="card-header ta-toolbar"><input class="form-control" placeholder="Tìm theo mã, tên, MST..." @bind="_search" @bind:event="oninput" /></div><div class="table-responsive"><table class="table table-vcenter"><thead><tr><th>Mã KH</th><th>Tên khách hàng</th><th>MST</th><th>Email</th><th>Điện thoại</th><th>Trạng thái</th></tr></thead><tbody>@foreach (var x in Filtered) { <tr><td><code>@x.Code</code></td><td class="fw-semibold">@x.Name</td><td>@(x.TaxCode ?? "—")</td><td>@(x.Email ?? "—")</td><td>@(x.Phone ?? "—")</td><td>@x.Status</td></tr> }</tbody></table></div>@if (!Filtered.Any()) { <div class="card-body text-secondary">@(_customers.Count == 0 ? "Chưa có khách hàng." : "Không tìm thấy kết quả phù hợp.")</div>}</div> }
+else {
+<div class="card ta-table-card ta-customers-table"><div class="card-header ta-toolbar"><div class="input-icon ta-search-compact"><span class="input-icon-addon"><i class="ti ti-search" aria-hidden="true"></i></span><input type="search" class="form-control" aria-label="Tìm khách hàng" placeholder="Tìm mã, tên, MST, email..." @bind="_search" @bind:event="oninput" /></div><span class="text-secondary">@Filtered.Count() khách hàng · Xuất theo tìm kiếm</span></div>
+<div class="table-responsive"><table class="table table-vcenter card-table"><thead><tr><th>Mã KH</th><th>Tên khách hàng</th><th>MST</th><th>Email</th><th>Điện thoại</th><th>Trạng thái</th></tr></thead><tbody>
+@foreach (var x in Filtered) { <tr><td><code class="ta-code">@x.Code</code></td><td class="fw-semibold"><a href="@($"/blazor/customers/{x.Id:D}")">@x.Name</a></td><td>@(x.TaxCode ?? "—")</td><td>@(x.Email ?? "—")</td><td>@(x.Phone ?? "—")</td><td><span class="badge @(x.Status == "ACTIVE" ? "badge-ta-active" : "bg-secondary-lt")">@x.Status</span></td></tr> }
+</tbody></table></div>
+@if (!Filtered.Any()) { <div class="ta-table-empty ta-customer-empty" role="status"><span class="ta-empty-icon"><i class="ti ti-users-group" aria-hidden="true"></i></span><span>@(_customers.Count == 0 ? "Chưa có khách hàng." : "Không tìm thấy kết quả phù hợp.")</span></div> }
+</div> }
+@if (_showCreate) {
+<dialog id="ta-customer-dialog" class="ta-customer-dialog" aria-labelledby="customer-create-title">
+<EditForm Model="_create" OnValidSubmit="SaveAsync" data-ta-unsaved="true"><DataAnnotationsValidator />
+<div class="modal-header"><h2 id="customer-create-title" class="modal-title">Thêm khách hàng</h2><button type="button" class="btn-close" aria-label="Đóng" disabled="@_saving" @onclick="CloseCreate"></button></div>
+<div class="modal-body"><ValidationSummary />
+@if (_saveError is not null) { <div class="alert alert-danger" role="alert">@_saveError</div> }
+<fieldset class="ta-customer-fields" disabled="@_saving">
+<label class="form-label">Mã khách hàng <span aria-hidden="true">*</span><InputText class="form-control" @bind-Value="_create.Code" maxlength="50" aria-label="Mã khách hàng" /><ValidationMessage For="() => _create.Code" /></label>
+<label class="form-label">Tên khách hàng <span aria-hidden="true">*</span><InputText class="form-control" @bind-Value="_create.Name" maxlength="250" aria-label="Tên khách hàng" /><ValidationMessage For="() => _create.Name" /></label>
+<label class="form-label">Mã số thuế<InputText class="form-control" @bind-Value="_create.TaxCode" maxlength="50" aria-label="Mã số thuế" /></label>
+<label class="form-label">Email<InputText class="form-control" @bind-Value="_create.Email" maxlength="256" aria-label="Email" /><ValidationMessage For="() => _create.Email" /></label>
+<label class="form-label">Điện thoại<InputText class="form-control" @bind-Value="_create.Phone" maxlength="50" aria-label="Điện thoại" /></label>
+<label class="form-label">Trạng thái<InputSelect class="form-select" @bind-Value="_create.Status" aria-label="Trạng thái"><option value="ACTIVE">Hoạt động</option><option value="INACTIVE">Ngừng hoạt động</option></InputSelect></label>
+</fieldset></div><div class="modal-footer"><button class="btn btn-ta-secondary" type="button" disabled="@_saving" @onclick="CloseCreate">Hủy</button><button class="btn btn-ta-gold" disabled="@_saving">@(_saving ? "Đang lưu..." : "Lưu khách hàng")</button></div>
+</EditForm></dialog> }
 @code {
-    private List<CustomerRow> _customers = new(); private bool _loading = true, _allowed; private string _search = ""; private string? _error;
-    private IEnumerable<CustomerRow> Filtered => _customers.Where(x => string.IsNullOrWhiteSpace(_search) || $"{x.Code} {x.Name} {x.TaxCode}".Contains(_search, StringComparison.OrdinalIgnoreCase));
-    // CHANGE_ID: TAPORTAL-20261011-BLAZOR-MIGRATION-006 — load only after server-side action authorization.
-    protected override async Task OnInitializedAsync() { using var scope = Loading.Begin("Đang tải khách hàng..."); try { var user = (await Authentication.GetAuthenticationStateAsync()).User; if (Guid.TryParse(user.FindFirstValue(ClaimTypes.NameIdentifier), out var id)) { _allowed = await Db.HasFunctionActionAsync(id, "Customers.Index"); if (_allowed) _customers = await Db.GetCustomersAsync(); } } catch { _error = "Không thể tải danh sách khách hàng."; } finally { _loading = false; } }
+    private List<CustomerRow> _customers = new();
+    private CustomerCreateVm _create = new();
+    private bool _loading = true, _allowed, _canCreate, _saving, _exporting, _showCreate, _openPending;
+    private string _search = "";
+    private string? _error, _saveError, _notice;
+    private IEnumerable<CustomerRow> Filtered => CustomerRules.Filter(_customers, _search);
+    // CHANGE_ID: TAPORTAL-20261012-CUSTOMERS-001 — identity is resolved from current circuit authentication on each operation.
+    private async Task<Guid?> UserIdAsync() { var user = (await Authentication.GetAuthenticationStateAsync()).User; return user.Identity?.IsAuthenticated == true && Guid.TryParse(user.FindFirstValue(ClaimTypes.NameIdentifier), out var id) ? id : null; }
+    // CHANGE_ID: TAPORTAL-20261012-CUSTOMERS-001 — initialize through the same reload/permission path used after saves.
+    protected override Task OnInitializedAsync() => LoadAsync();
+    // CHANGE_ID: TAPORTAL-20261012-CUSTOMERS-001 — errors never masquerade as empty data; revoke previously allowed UI before rechecking.
+    private async Task LoadAsync() {
+        _loading = true; _allowed = _canCreate = false; _error = null;
+        using var scope = Loading.Begin("Đang tải khách hàng...");
+        try { var id = await UserIdAsync(); _allowed = id.HasValue && await Db.HasFunctionActionAsync(id.Value, "Customers.Index"); if (_allowed) { _canCreate = await Db.HasFunctionActionAsync(id!.Value, "Customers.Create"); _customers = await Db.GetCustomersAsync(id.Value); } }
+        catch { _error = "Không thể tải danh sách khách hàng."; } finally { _loading = false; }
+    }
+    // CHANGE_ID: TAPORTAL-20261012-CUSTOMERS-001 — open native modal after rendering for focus containment, Escape handling and keyboard support.
+    private void OpenCreate() { if (!_canCreate || _saving) return; _create = new(); _saveError = null; _showCreate = _openPending = true; }
+    // CHANGE_ID: TAPORTAL-20261012-CUSTOMERS-001 — modal JS adds no second business loading coordinator.
+    protected override async Task OnAfterRenderAsync(bool firstRender) { if (_openPending) { _openPending = false; await JS.InvokeVoidAsync("taCustomers.open", "ta-customer-dialog"); } }
+    // CHANGE_ID: TAPORTAL-20261012-CUSTOMERS-001 — cancellation is disabled during persistence and removes unsaved markers with the form.
+    private void CloseCreate() { if (!_saving) _showCreate = false; }
+    // CHANGE_ID: TAPORTAL-20261012-CUSTOMERS-001 — save gate is set before awaits, permissions are refreshed, failed forms retain values.
+    private async Task SaveAsync() {
+        if (_saving) return; _saving = true; _saveError = null;
+        try {
+            var id = await UserIdAsync();
+            if (!id.HasValue || !await Db.HasFunctionActionAsync(id.Value, "Customers.Index") || !await Db.HasFunctionActionAsync(id.Value, "Customers.Create")) { _saveError = CustomerRules.Message(CustomerWriteResult.Forbidden); return; }
+            CustomerRules.Normalize(_create);
+            var result = await Db.CreateCustomerAsync(_create, id.Value);
+            if (result != CustomerWriteResult.Success) { _saveError = CustomerRules.Message(result); return; }
+            _showCreate = false; _notice = CustomerRules.Message(result); await LoadAsync();
+        } catch { _saveError = CustomerRules.Message(CustomerWriteResult.Failed); } finally { _saving = false; }
+    }
+    // CHANGE_ID: TAPORTAL-20261012-CUSTOMERS-001 — HTTP export rechecks VIEW permission and streams an actual workbook using the current filter.
+    private async Task ExportAsync() {
+        if (_exporting) return; _exporting = true;
+        try { await JS.InvokeVoidAsync("taCustomers.export", _search); }
+        catch { _error = "Không thể xuất dữ liệu lúc này."; } finally { _exporting = false; }
+    }
 }

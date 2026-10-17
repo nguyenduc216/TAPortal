@@ -37,6 +37,10 @@ else
         }
         else if (_canCreate)
         {
+            @if (_schema.DepartmentHasBranch)
+            {
+                <label class="form-label">Chi nhánh</label><select class="form-select mb-2" @bind="_create.BranchId" aria-label="Chi nhánh phòng ban"><option value="">Chọn chi nhánh</option>@foreach(var branch in _schema.Branches){<option value="@branch.Id">@branch.Code – @branch.Name</option>}</select>
+            }
             <div class="card"><div class="card-header"><h2 class="card-title">Thêm phòng ban</h2></div><div class="card-body"><EditForm Model="_create" OnValidSubmit="CreateAsync"><DataAnnotationsValidator /><ValidationSummary /><InputText class="form-control mb-2" @bind-Value="_create.Code" placeholder="Mã" /><InputText class="form-control mb-2" @bind-Value="_create.Name" placeholder="Tên" /><InputText class="form-control mb-2" @bind-Value="_create.Description" placeholder="Mô tả" /><InputNumber class="form-control mb-2" @bind-Value="_create.SortOrder" /><button class="btn btn-primary" disabled="@_saving">@(_saving ? "Đang lưu..." : "Lưu")</button></EditForm></div></div>
         }
         </div>
@@ -47,13 +51,14 @@ else
     private List<DepartmentRow> _items = new();
     private DepartmentCreateVm _create = new() { IsActive = true };
     private DepartmentUpdateVm? _editing;
+    private HrSchemaOptions _schema = new(false, false, true, []);
     private bool _loading = true, _allowed, _canCreate, _canUpdate, _canDelete, _saving, _success;
     private string? _message;
 
     // CHANGE_ID: TAPORTAL-20261011-BLAZOR-MIGRATION-008 — resolve the authenticated circuit identity for authorization decisions.
     private async Task<Guid?> UserIdAsync() { var user = (await Authentication.GetAuthenticationStateAsync()).User; return Guid.TryParse(user.FindFirstValue(ClaimTypes.NameIdentifier), out var id) ? id : null; }
     // CHANGE_ID: TAPORTAL-20261011-BLAZOR-MIGRATION-008 — load the projection and permissions with visible failure state.
-    protected override async Task OnInitializedAsync() { using var scope = Loading.Begin("Đang tải phòng ban..."); try { var id = await UserIdAsync(); _allowed = id.HasValue && await Db.HasFunctionActionAsync(id.Value, "Departments.Index"); if (_allowed) { var p = await Db.GetEffectivePermissionsAsync(id!.Value); _canCreate = p.Contains("HR.DEPARTMENT.CREATE"); _canUpdate = p.Contains("HR.DEPARTMENT.UPDATE"); _canDelete = p.Contains("HR.DEPARTMENT.DELETE"); await ReloadAsync(); } } catch { Fail("Không thể tải phòng ban."); } finally { _loading = false; } }
+    protected override async Task OnInitializedAsync() { using var scope = Loading.Begin("Đang tải phòng ban..."); try { var id = await UserIdAsync(); _allowed = id.HasValue && await Db.HasFunctionActionAsync(id.Value, "Departments.Index"); if (_allowed) { var p = await Db.GetEffectivePermissionsAsync(id!.Value); _canCreate = p.Contains("HR.DEPARTMENT.CREATE"); _canUpdate = p.Contains("HR.DEPARTMENT.UPDATE"); _canDelete = p.Contains("HR.DEPARTMENT.DELETE"); _schema = await Db.GetHrSchemaOptionsAsync(); await ReloadAsync(); } } catch { Fail("Không thể tải phòng ban."); } finally { _loading = false; } }
     // CHANGE_ID: TAPORTAL-20261011-BLAZOR-MIGRATION-008 — refresh rows after authorized successful writes.
     private async Task ReloadAsync() => _items = (await Db.GetDepartmentsAsync()).ToList();
     // CHANGE_ID: TAPORTAL-20261011-BLAZOR-MIGRATION-008 — preserve server id and row version when entering edit mode.
@@ -71,5 +76,5 @@ else
     // CHANGE_ID: TAPORTAL-20261011-BLAZOR-MIGRATION-008 — expose a consistent operation failure.
     private void Fail(string text) { _success = false; _message = text; }
     // CHANGE_ID: TAPORTAL-20261011-BLAZOR-MIGRATION-008 — translate typed persistence outcomes without hiding conflicts.
-    private void Report(DepartmentWriteResult r, string ok) { _success = r == DepartmentWriteResult.Success; _message = _success ? ok : r == DepartmentWriteResult.DuplicateCode ? "Mã phòng ban đã tồn tại." : r == DepartmentWriteResult.HasDependencies ? "Không thể xóa phòng ban đang được sử dụng." : "Dữ liệu đã thay đổi, vui lòng tải lại."; }
+    private void Report(DepartmentWriteResult r, string ok) { _success = r == DepartmentWriteResult.Success; _message = _success ? ok : r == DepartmentWriteResult.DuplicateCode ? "Mã phòng ban đã tồn tại." : r == DepartmentWriteResult.InvalidBranch ? "Vui lòng chọn chi nhánh đang hoạt động." : r == DepartmentWriteResult.HasDependencies ? "Không thể xóa phòng ban đang được sử dụng." : "Dữ liệu đã thay đổi, vui lòng tải lại."; }
 }
