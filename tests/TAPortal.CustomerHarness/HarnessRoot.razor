@@ -1,0 +1,5 @@
+@page "/blazor-test"
+@using Microsoft.AspNetCore.Components.Web
+@using TAPortal.Web.Components.Pages
+@* CHANGE_ID: TAPORTAL-20261012-CUSTOMERS-001 — test-only host renders the real interactive component with in-memory data. *@
+<!doctype html><html lang="vi"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><base href="/"/><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@@tabler/core@1.0.0-beta21/dist/css/tabler.min.css"/><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css"/><link rel="stylesheet" href="/css/ta-portal.css"/></head><body><main class="container-xl py-3"><Customers @rendermode="RenderMode.InteractiveServer" /></main><script src="/js/taportal-customers.js"></script><script src="/_framework/blazor.web.js"></script></body></html>

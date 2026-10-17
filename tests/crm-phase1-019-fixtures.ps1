@@ -1,0 +1,41 @@
+param([switch]$Provision)
+$ErrorActionPreference = 'Stop'
+if (-not $Provision) { throw 'Explicit -Provision required. No automatic cleanup is performed.' }
+$root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
+$config = Get-Content (Join-Path $root 'src/TAPortal.Web/appsettings.json') -Raw | ConvertFrom-Json
+$cn = New-Object System.Data.SqlClient.SqlConnection([string]$config.Database.ConnectionString)
+$ids = @{
+ company='01900000-0000-4000-8000-000000000001'; branch1='01900000-0000-4000-8000-000000000002'; branch2='01900000-0000-4000-8000-000000000003'; department='01900000-0000-4000-8000-000000000004'; team1='01900000-0000-4000-8000-000000000005'; team2='01900000-0000-4000-8000-000000000006'
+ user1='01900000-0000-4000-8000-000000000011'; user2='01900000-0000-4000-8000-000000000012'; user3='01900000-0000-4000-8000-000000000013'
+ employee1='01900000-0000-4000-8000-000000000021'; employee2='01900000-0000-4000-8000-000000000022'; employee3='01900000-0000-4000-8000-000000000023'
+ assignment1='01900000-0000-4000-8000-000000000031'; assignment2='01900000-0000-4000-8000-000000000032'; assignment3='01900000-0000-4000-8000-000000000033'
+ customer1='01900000-0000-4000-8000-000000000041'; customer2='01900000-0000-4000-8000-000000000042'; customer3='01900000-0000-4000-8000-000000000043'; customer4='01900000-0000-4000-8000-000000000044'
+}
+function Invoke-FixtureSql([string]$sql, [hashtable]$values) {
+ $cmd = $cn.CreateCommand(); $cmd.Transaction = $tx; $cmd.CommandText = $sql; $cmd.CommandTimeout = 30
+ foreach ($key in $values.Keys) { $p=$cmd.Parameters.Add('@'+$key,[System.Data.SqlDbType]::UniqueIdentifier); $p.Value=[guid]$values[$key] }
+ try { [void]$cmd.ExecuteNonQuery() } finally { $cmd.Dispose() }
+}
+try {
+ $cn.Open()
+ if ($cn.Database -ne 'TAPortalSys') { throw 'Database identity mismatch; refusing fixture writes.' }
+ $tx = $cn.BeginTransaction([System.Data.IsolationLevel]::Serializable)
+ try {
+  Invoke-FixtureSql "IF EXISTS(SELECT 1 FROM dbo.Companies WHERE Code='TA_DEV_CRM_019_CO' AND Id<>@id) THROW 51019,'Fixture code collision: Companies',1; IF EXISTS(SELECT 1 FROM dbo.Companies WHERE Id=@id AND Code<>'TA_DEV_CRM_019_CO') THROW 51019,'Fixture ID collision: Companies',1; IF NOT EXISTS(SELECT 1 FROM dbo.Companies WHERE Id=@id) INSERT dbo.Companies(Id,Code,Name) VALUES(@id,'TA_DEV_CRM_019_CO',N'TA_DEV_CRM_019 synthetic company');" @{id=$ids.company}
+  foreach($n in 1..2) { Invoke-FixtureSql "IF EXISTS(SELECT 1 FROM dbo.Branches WHERE Code='TA_DEV_CRM_019_B$n' AND Id<>@id) THROW 51019,'Fixture branch code collision',1; IF EXISTS(SELECT 1 FROM dbo.Branches WHERE Id=@id AND (Code<>'TA_DEV_CRM_019_B$n' OR CompanyId<>@company)) THROW 51019,'Fixture branch ID collision',1; IF NOT EXISTS(SELECT 1 FROM dbo.Branches WHERE Id=@id) INSERT dbo.Branches(Id,CompanyId,Code,Name) VALUES(@id,@company,'TA_DEV_CRM_019_B$n',N'TA_DEV_CRM_019 branch $n');" @{id=$ids["branch$n"];company=$ids.company} }
+  Invoke-FixtureSql "IF EXISTS(SELECT 1 FROM dbo.Departments WHERE Code='TA_DEV_CRM_019_D' AND Id<>@id) THROW 51019,'Fixture department code collision',1; IF EXISTS(SELECT 1 FROM dbo.Departments WHERE Id=@id AND (Code<>'TA_DEV_CRM_019_D' OR BranchId<>@branch)) THROW 51019,'Fixture department ID collision',1; IF NOT EXISTS(SELECT 1 FROM dbo.Departments WHERE Id=@id) INSERT dbo.Departments(Id,BranchId,Code,Name) VALUES(@id,@branch,'TA_DEV_CRM_019_D',N'TA_DEV_CRM_019 department');" @{id=$ids.department;branch=$ids.branch1}
+  foreach($n in 1..2) { Invoke-FixtureSql "IF EXISTS(SELECT 1 FROM dbo.Teams WHERE Code='TA_DEV_CRM_019_T$n' AND Id<>@id) THROW 51019,'Fixture team code collision',1; IF EXISTS(SELECT 1 FROM dbo.Teams WHERE Id=@id AND (Code<>'TA_DEV_CRM_019_T$n' OR BranchId<>@branch)) THROW 51019,'Fixture team ID collision',1; IF NOT EXISTS(SELECT 1 FROM dbo.Teams WHERE Id=@id) INSERT dbo.Teams(Id,BranchId,DepartmentId,Code,Name) VALUES(@id,@branch,@dept,'TA_DEV_CRM_019_T$n',N'TA_DEV_CRM_019 team $n');" @{id=$ids["team$n"];branch=$ids.branch1;dept=$ids.department} }
+  foreach($n in 1..3) {
+   Invoke-FixtureSql "IF EXISTS(SELECT 1 FROM dbo.Users WHERE Username='TA_DEV_CRM_019_U$n' AND Id<>@id) THROW 51019,'Fixture username collision',1; IF EXISTS(SELECT 1 FROM dbo.Users WHERE Id=@id AND Username<>'TA_DEV_CRM_019_U$n') THROW 51019,'Fixture user ID collision',1; IF NOT EXISTS(SELECT 1 FROM dbo.Users WHERE Id=@id) INSERT dbo.Users(Id,Username,NormalizedUsername,DisplayName,PasswordHash) VALUES(@id,'TA_DEV_CRM_019_U$n','TA_DEV_CRM_019_U$n',N'TA_DEV_CRM_019 actor $n',NULL);" @{id=$ids["user$n"]}
+   Invoke-FixtureSql "IF EXISTS(SELECT 1 FROM dbo.Employees WHERE EmployeeCode='TA_DEV_CRM_019_E$n' AND Id<>@id) THROW 51019,'Fixture employee code collision',1; IF EXISTS(SELECT 1 FROM dbo.Employees WHERE Id=@id AND (EmployeeCode<>'TA_DEV_CRM_019_E$n' OR UserId<>@user)) THROW 51019,'Fixture employee ID collision',1; IF NOT EXISTS(SELECT 1 FROM dbo.Employees WHERE Id=@id) INSERT dbo.Employees(Id,EmployeeCode,UserId,CurrentStatusId,FullName,StartDate) SELECT @id,'TA_DEV_CRM_019_E$n',@user,s.Id,N'TA_DEV_CRM_019 employee $n',DATEADD(day,-10,CONVERT(date,GETDATE())) FROM dbo.EmployeeStatuses s WHERE s.Code='ACTIVE' AND s.IsActive=1; IF NOT EXISTS(SELECT 1 FROM dbo.Employees WHERE Id=@id) THROW 51019,'ACTIVE EmployeeStatus missing',1;" @{id=$ids["employee$n"];user=$ids["user$n"]}
+   $team=if($n -eq 2){$ids.team2}else{$ids.team1}
+   Invoke-FixtureSql "IF EXISTS(SELECT 1 FROM dbo.EmployeeAssignments WHERE Id=@id AND (EmployeeId<>@employee OR BranchId<>@branch OR TeamId<>@team OR IsPrimary<>1 OR IsCurrent<>1)) THROW 51019,'Fixture HR assignment collision',1; IF NOT EXISTS(SELECT 1 FROM dbo.EmployeeAssignments WHERE Id=@id) INSERT dbo.EmployeeAssignments(Id,EmployeeId,BranchId,DepartmentId,TeamId,ValidFrom,IsPrimary,IsCurrent) VALUES(@id,@employee,@branch,@dept,@team,DATEADD(day,-10,CONVERT(date,GETDATE())),1,1);" @{id=$ids["assignment$n"];employee=$ids["employee$n"];branch=$ids.branch1;dept=$ids.department;team=$team}
+  }
+  foreach($n in 1..4) { $branch=if($n -eq 4){$ids.branch2}else{$ids.branch1}; Invoke-FixtureSql "IF EXISTS(SELECT 1 FROM dbo.Customers WHERE Code='TA_DEV_CRM_019_C$n' AND Id<>@id) THROW 51019,'Fixture customer code collision',1; IF EXISTS(SELECT 1 FROM dbo.Customers WHERE Id=@id AND (Code<>'TA_DEV_CRM_019_C$n' OR OwnerBranchId<>@branch)) THROW 51019,'Fixture customer ID collision',1; IF NOT EXISTS(SELECT 1 FROM dbo.Customers WHERE Id=@id) INSERT dbo.Customers(Id,Code,Name,OwnerBranchId) VALUES(@id,'TA_DEV_CRM_019_C$n',N'TA_DEV_CRM_019 customer $n',@branch);" @{id=$ids["customer$n"];branch=$branch} }
+  foreach($permission in @('CRM.CUSTOMERS.VIEW','CRM.CUSTOMERS.ASSIGN','CRM.CUSTOMERS.SHARE','CRM.CUSTOMERS.TEAM')) {
+   $cmd=$cn.CreateCommand();$cmd.Transaction=$tx;$cmd.CommandText="IF NOT EXISTS(SELECT 1 FROM dbo.Permissions WHERE Code=@code AND IsActive=1 AND IsDeleted=0) THROW 51019,'CRM permission missing',1; INSERT dbo.UserPermissions(UserId,PermissionId,Effect) SELECT @user,p.Id,'ALLOW' FROM dbo.Permissions p WHERE p.Code=@code AND NOT EXISTS(SELECT 1 FROM dbo.UserPermissions up WHERE up.UserId=@user AND up.PermissionId=p.Id);";[void]$cmd.Parameters.Add('@code',[System.Data.SqlDbType]::VarChar,100);$cmd.Parameters['@code'].Value=$permission;[void]$cmd.Parameters.Add('@user',[System.Data.SqlDbType]::UniqueIdentifier);$cmd.Parameters['@user'].Value=[guid]$ids.user1;try{[void]$cmd.ExecuteNonQuery()}finally{$cmd.Dispose()}
+  }
+  Invoke-FixtureSql "IF NOT EXISTS(SELECT 1 FROM dbo.DataScopes WHERE ScopeType='COMPANY' AND IsActive=1) THROW 51019,'COMPANY scope missing',1; INSERT dbo.UserDataScopes(UserId,DataScopeId,FunctionCode,ScopeReferenceId,Effect) SELECT @user,ds.Id,'Customers',@company,'ALLOW' FROM dbo.DataScopes ds WHERE ds.ScopeType='COMPANY' AND ds.IsActive=1 AND NOT EXISTS(SELECT 1 FROM dbo.UserDataScopes u WHERE u.UserId=@user AND u.DataScopeId=ds.Id AND u.FunctionCode='Customers' AND u.ScopeReferenceId=@company);" @{user=$ids.user1;company=$ids.company}
+  $tx.Commit();'FIXTURE_PROVISION=PASS; DATABASE=TAPortalSys; ACTOR='+$ids.user1+'; CUSTOMER='+$ids.customer1
+ } catch { $tx.Rollback();throw } finally { $tx.Dispose() }
+} finally { $cn.Dispose() }
