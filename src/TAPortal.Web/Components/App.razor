@@ -16,7 +16,9 @@
 <body>
     <Routes @rendermode="RenderMode.InteractiveServer" />
     <ReconnectModal />
+    @* CHANGE_ID: TAPORTAL-20261012-CUSTOMERS-001 — shared customer dialog and authorized workbook download helpers. *@
+    <script src="js/taportal-customers.js"></script>
     <script src="_framework/blazor.web.js"></script>
-    <script src="js/taportal-reconnect.js"></script>
+    <script src="js/taportal-reconnect.js" asp-append-version="true"></script>
 </body>
 </html>

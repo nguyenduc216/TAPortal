@@ -1,4 +1,5 @@
 @model PortalMenuNode
+@* CHANGE_ID: TAPORTAL-20261012-RECOVERY-014 — omit counts while preserving branch toggles and permission-filtered children. *@
 @{
     var depth = ViewData["Depth"] is int value ? value : 0;
     var currentPath = Context.Request.Path.Value?.TrimEnd('/').ToLowerInvariant();
@@ -25,13 +26,13 @@
         @if (hasChildren && route == "#")
         {
             <button class="nav-link ta-nav-link ta-nav-group-trigger @(branchActive ? "active" : "")" type="button" data-ta-submenu-toggle aria-expanded="@(branchActive ? "true" : "false")" aria-controls="@submenuId" title="@Model.Menu.Name" style="--ta-menu-depth:@depth">
-                <span class="nav-link-icon"><i class="ti @icon" aria-hidden="true"></i></span><span class="nav-link-title ta-sidebar-label">@Model.Menu.Name</span><span class="ta-branch-count ta-sidebar-label">@Model.Children.Count</span><span class="ta-submenu-chevron ta-sidebar-label"><i class="ti ti-chevron-down"></i></span>
+                <span class="nav-link-icon"><i class="ti @icon" aria-hidden="true"></i></span><span class="nav-link-title ta-sidebar-label">@Model.Menu.Name</span><span class="ta-submenu-chevron ta-sidebar-label"><i class="ti ti-chevron-down"></i></span>
             </button>
         }
         else
         {
             <a class="nav-link ta-nav-link @(active ? "active" : "")" href="@route" title="@Model.Menu.Name" aria-current="@(active ? "page" : null)" style="--ta-menu-depth:@depth">
-                <span class="nav-link-icon"><i class="ti @icon" aria-hidden="true"></i></span><span class="nav-link-title ta-sidebar-label">@Model.Menu.Name</span>@if (hasChildren) { <span class="ta-branch-count ta-sidebar-label">@Model.Children.Count</span> }
+                <span class="nav-link-icon"><i class="ti @icon" aria-hidden="true"></i></span><span class="nav-link-title ta-sidebar-label">@Model.Menu.Name</span>
             </a>
             @if (hasChildren) { <button class="ta-submenu-toggle ta-sidebar-label" type="button" data-ta-submenu-toggle aria-expanded="@(branchActive ? "true" : "false")" aria-controls="@submenuId" aria-label="Mở hoặc đóng @Model.Menu.Name"><i class="ti ti-chevron-down"></i></button> }
         }

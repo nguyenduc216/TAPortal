@@ -21,7 +21,7 @@ else
   <div class="card" data-testid="team-edit"><div class="card-header"><h2 class="card-title">Sửa Team</h2></div><div class="card-body"><EditForm Model="_editing" OnValidSubmit="UpdateAsync"><DataAnnotationsValidator /><ValidationSummary />
    <InputSelect class="form-select mb-2" @bind-Value="_editing.DepartmentId" @bind-Value:after="OnEditDepartmentChanged"><option value="@Guid.Empty">Chọn phòng ban</option>@foreach (var d in _departments) { <option value="@d.Id">@d.Code – @d.Name</option> }</InputSelect>
    <InputSelect class="form-select mb-2" @bind-Value="_editing.ParentTeamId"><option value="">Không có Team cha</option>@foreach (var t in ParentsFor(_editing, true)) { <option value="@t.Id">@t.Code – @t.Name</option> }</InputSelect>
-   <InputText class="form-control mb-2" @bind-Value="_editing.Code" placeholder="Mã" /><InputText class="form-control mb-2" @bind-Value="_editing.Name" placeholder="Tên" /><InputText class="form-control mb-2" @bind-Value="_editing.Description" placeholder="Mô tả" /><InputNumber class="form-control mb-2" @bind-Value="_editing.SortOrder" /><label class="form-check mb-3"><InputCheckbox class="form-check-input" @bind-Value="_editing.IsActive" /><span class="form-check-label">Hoạt động</span></label>
+   <InputText class="form-control mb-2" @bind-Value="_editing.Code" placeholder="Mã" /><InputText class="form-control mb-2" @bind-Value="_editing.Name" placeholder="Tên" />@if (_schema.TeamHasDescription) { <InputText class="form-control mb-2" @bind-Value="_editing.Description" placeholder="Mô tả" /> }<InputNumber class="form-control mb-2" @bind-Value="_editing.SortOrder" /><label class="form-check mb-3"><InputCheckbox class="form-check-input" @bind-Value="_editing.IsActive" /><span class="form-check-label">Hoạt động</span></label>
    <button class="btn btn-primary" disabled="@_saving">@(_saving ? "Đang lưu..." : "Cập nhật")</button> <button type="button" class="btn btn-link" disabled="@_saving" @onclick="CancelEdit">Hủy</button>
   </EditForm></div></div>
  }
@@ -30,7 +30,7 @@ else
   <div class="card"><div class="card-header"><h2 class="card-title">Thêm Team</h2></div><div class="card-body"><EditForm Model="_create" OnValidSubmit="CreateAsync"><DataAnnotationsValidator /><ValidationSummary />
    <InputSelect class="form-select mb-2" @bind-Value="_create.DepartmentId" @bind-Value:after="OnCreateDepartmentChanged"><option value="@Guid.Empty">Chọn phòng ban</option>@foreach (var d in _departments) { <option value="@d.Id">@d.Code – @d.Name</option> }</InputSelect>
    <InputSelect class="form-select mb-2" @bind-Value="_create.ParentTeamId"><option value="">Không có Team cha</option>@foreach (var t in ParentsFor(_create, false)) { <option value="@t.Id">@t.Code – @t.Name</option> }</InputSelect>
-   <InputText class="form-control mb-2" @bind-Value="_create.Code" placeholder="Mã" /><InputText class="form-control mb-2" @bind-Value="_create.Name" placeholder="Tên" /><InputText class="form-control mb-2" @bind-Value="_create.Description" placeholder="Mô tả" /><InputNumber class="form-control mb-2" @bind-Value="_create.SortOrder" /><label class="form-check mb-3"><InputCheckbox class="form-check-input" @bind-Value="_create.IsActive" /><span class="form-check-label">Hoạt động</span></label>
+   <InputText class="form-control mb-2" @bind-Value="_create.Code" placeholder="Mã" /><InputText class="form-control mb-2" @bind-Value="_create.Name" placeholder="Tên" />@if (_schema.TeamHasDescription) { <InputText class="form-control mb-2" @bind-Value="_create.Description" placeholder="Mô tả" /> }<InputNumber class="form-control mb-2" @bind-Value="_create.SortOrder" /><label class="form-check mb-3"><InputCheckbox class="form-check-input" @bind-Value="_create.IsActive" /><span class="form-check-label">Hoạt động</span></label>
    <button class="btn btn-primary" disabled="@_saving">@(_saving ? "Đang lưu..." : "Lưu")</button>
   </EditForm></div></div>
  }
@@ -39,6 +39,7 @@ else
 
 @code {
  private List<TeamRow> _teams = new(); private List<TeamDepartmentOption> _departments = new(); private List<TeamParentOption> _parentTeams = new();
+ private HrSchemaOptions _schema = new(false, false, true, []);
  private TeamCreateVm _create = new() { IsActive = true }; private TeamUpdateVm? _editing;
  private bool _loading = true, _allowed, _canCreate, _canUpdate, _canDelete, _saving, _success; private string _search = "", _departmentFilter = ""; private string? _message;
  private IEnumerable<TeamRow> Filtered => _teams.Where(x => (string.IsNullOrWhiteSpace(_search) || $"{x.Code} {x.Name}".Contains(_search, StringComparison.OrdinalIgnoreCase)) && (string.IsNullOrWhiteSpace(_departmentFilter) || x.DepartmentId.ToString() == _departmentFilter));
@@ -52,7 +53,7 @@ else
  // CHANGE_ID: TAPORTAL-20261011-BLAZOR-MIGRATION-008 — resolve current circuit identity for authorization decisions.
  private async Task<Guid?> UserIdAsync() { var user = (await Authentication.GetAuthenticationStateAsync()).User; return Guid.TryParse(user.FindFirstValue(ClaimTypes.NameIdentifier), out var id) ? id : null; }
  // CHANGE_ID: TAPORTAL-20261011-BLAZOR-MIGRATION-008 — load projections and action permissions with visible failure state.
- protected override async Task OnInitializedAsync() { using var scope = Loading.Begin("Đang tải Team..."); try { var id = await UserIdAsync(); _allowed = id.HasValue && await Db.HasFunctionActionAsync(id.Value, "Teams.Index"); if (_allowed) { var p = await Db.GetEffectivePermissionsAsync(id!.Value); _canCreate = p.Contains("HR.TEAM.CREATE"); _canUpdate = p.Contains("HR.TEAM.UPDATE"); _canDelete = p.Contains("HR.TEAM.DELETE"); await ReloadAsync(); } } catch { Fail("Không thể tải Team."); } finally { _loading = false; } }
+ protected override async Task OnInitializedAsync() { using var scope = Loading.Begin("Đang tải Team..."); try { var id = await UserIdAsync(); _allowed = id.HasValue && await Db.HasFunctionActionAsync(id.Value, "Teams.Index"); if (_allowed) { var p = await Db.GetEffectivePermissionsAsync(id!.Value); _canCreate = p.Contains("HR.TEAM.CREATE"); _canUpdate = p.Contains("HR.TEAM.UPDATE"); _canDelete = p.Contains("HR.TEAM.DELETE"); _schema=await Db.GetHrSchemaOptionsAsync(); await ReloadAsync(); } } catch { Fail("Không thể tải Team."); } finally { _loading = false; } }
  // CHANGE_ID: TAPORTAL-20261011-BLAZOR-MIGRATION-008 — reload team and hierarchy option snapshots together.
  private async Task ReloadAsync() { _teams = (await Db.GetTeamsAsync()).ToList(); var options = await Db.GetTeamOptionsAsync(); _departments = options.Departments.ToList(); _parentTeams = options.Teams.ToList(); }
  // CHANGE_ID: TAPORTAL-20261011-BLAZOR-MIGRATION-008 — preserve server-owned identity and concurrency token in edit mode.
@@ -70,5 +71,5 @@ else
  // CHANGE_ID: TAPORTAL-20261011-BLAZOR-MIGRATION-008 — expose a consistent operation failure.
  private void Fail(string text){_success=false;_message=text;}
  // CHANGE_ID: TAPORTAL-20261011-BLAZOR-MIGRATION-008 — translate typed hierarchy and concurrency outcomes.
- private void Report(TeamWriteResult r,string ok){_success=r==TeamWriteResult.Success;_message=_success?ok:r switch{TeamWriteResult.DuplicateCode=>"Mã Team đã tồn tại.",TeamWriteResult.InvalidDepartment=>"Phòng ban không tồn tại hoặc không hoạt động.",TeamWriteResult.InvalidParent=>"Team cha phải tồn tại và thuộc cùng phòng ban.",TeamWriteResult.SelfParent=>"Team không thể là cha của chính nó.",TeamWriteResult.Cycle=>"Quan hệ Team cha tạo thành vòng lặp.",TeamWriteResult.HasDependencies=>"Không thể xóa Team đang được sử dụng.",_=>"Dữ liệu đã thay đổi, vui lòng tải lại."};}
+ private void Report(TeamWriteResult r,string ok){_success=r==TeamWriteResult.Success;_message=_success?ok:r switch{TeamWriteResult.DuplicateCode=>"Mã Team đã tồn tại.",TeamWriteResult.InvalidDepartment=>"Phòng ban không tồn tại hoặc không hoạt động.",TeamWriteResult.InvalidParent=>"Team cha phải tồn tại và thuộc cùng phòng ban.",TeamWriteResult.SelfParent=>"Team không thể là cha của chính nó.",TeamWriteResult.Cycle=>"Quan hệ Team cha tạo thành vòng lặp.",TeamWriteResult.UnsupportedDescription=>"Schema hiện tại chưa hỗ trợ mô tả Team.",TeamWriteResult.HasDependencies=>"Không thể xóa Team đang được sử dụng.",_=>"Dữ liệu đã thay đổi, vui lòng tải lại."};}
 }

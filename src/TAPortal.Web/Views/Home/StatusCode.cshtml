@@ -1,0 +1,13 @@
+@model int
+@{
+    ViewData["Title"] = Model == 404 ? "Không tìm thấy trang" : "Không thể xử lý yêu cầu";
+}
+
+<main class="ta-auth-form min-vh-100" aria-labelledby="status-title">
+    <section class="card ta-login-card text-center p-4 p-md-5">
+        <div class="display-3 fw-bold text-primary mb-3">@Model</div>
+        <h1 id="status-title" class="h2">@(Model == 404 ? "Không tìm thấy trang" : "Không thể xử lý yêu cầu")</h1>
+        <p class="text-secondary mb-4">@(Model == 404 ? "Địa chỉ bạn yêu cầu không tồn tại hoặc đã được di chuyển." : "Vui lòng thử lại sau.")</p>
+        <div><a class="btn btn-primary" href="/account/login">Về trang đăng nhập</a></div>
+    </section>
+</main>

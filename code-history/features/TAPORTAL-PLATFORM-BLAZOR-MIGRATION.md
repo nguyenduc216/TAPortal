@@ -34,6 +34,14 @@ No database schema or migration changes. Interactive Server requires persistent 
 6. Continue page parity migration before retiring MVC ownership.
 7. Integration hardening: route/security audits, bUnit component rendering, repeatable Playwright scaffolding, staging/test-environment guidance, secure Git inventory/checkpoint, and active-account write revalidation.
 8. Functional parity completion: Department/Team edit, Team parent selection, Roles/Menus retry states, component behavior tests, and staging-readiness documentation.
+9. Local runtime verification: real Kestrel/Chromium multi-viewport checks, read-only database authentication-path validation, anonymous route evidence, and branded HTTP status handling.
+10. Recovery heartbeat hardening: background readiness probing while hidden, failure threshold, controlled Kestrel interruption tests, and diagnostics without sensitive data (`TAPORTAL-20261012-RECOVERY-013`).
+
+## Phase 9 local runtime verification
+
+`TAPORTAL-20261011-BLAZOR-MIGRATION-009` executed the application locally rather than relying on source inspection. Release Kestrel startup, responsive Chromium rendering, assets, JavaScript interaction, browser errors, anonymous authorization redirects, a synthetic invalid-login database read, and HTTP 404 behavior were tested. A blank default 404 was the only source defect found and was replaced with a branded anonymous status page that preserves the original status code.
+
+The local SQL read succeeded but again negotiated TLS 1.0. No authorized Playwright storage state was available, so authenticated Blazor/SignalR/reconnect checks remain blocked without bypass. Local anonymous evidence is PASS; server staging and production cutover remain NO.
 
 ## Phase 8 functional parity
 
@@ -68,3 +76,6 @@ Added authenticated trial routes `/blazor/users`, `/blazor/roles`, and `/blazor/
 
 ## Customers and HR trial (CHANGE_ID: TAPORTAL-20261011-BLAZOR-MIGRATION-006)
 MVC audit verified Customers as read-only list/search, Departments as CRUD/status/soft-delete, and Teams as CRUD/status/soft-delete with department/parent hierarchy validation. Added `/blazor/customers`, `/blazor/hr/departments`, and `/blazor/hr/teams` using existing PortalDb methods, models, dynamic action permissions, authenticated server identity, row-version handling, scoped loading, validation, empty/error states, and duplicate-submit guards. MVC route ownership, schema, data, production sidebar, and configuration remain unchanged. Phase 6 automated tests cover normalization/validation, hierarchy and cycle protection, write-model overposting surface, and trial route ownership. Authenticated browser parity and approved database writes remain blocked; cutover remains NO.
+
+## Recovery 014 UI polish (CHANGE_ID: TAPORTAL-20261012-RECOVERY-014)
+Separate heartbeat/dismiss timers and framework-confirmed circuit recovery fix the stuck success overlay. Shared TA logo/ring loading, MVC count removal, and MVC/Blazor Customer surfaces are verified by 79 .NET tests and eight focused Playwright cases, including real Kestrel outages at three viewports. Canonical publish and restricted deployment ZIP were refreshed with configuration preserved. Authenticated IIS acceptance and a safe checkpoint of overlapping uncommitted predecessor work remain blocked; production replacement is not approved. See `20261012-0249_TAPORTAL-20261012-RECOVERY-014_ui-recovery-polish.md`.

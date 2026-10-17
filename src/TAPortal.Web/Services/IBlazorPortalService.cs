@@ -7,8 +7,27 @@ namespace TAPortal.Web.Services;
 // Narrow component-facing contract keeps SQL ownership in PortalDb while enabling behavior-level component tests.
 public interface IBlazorPortalService
 {
+    Task<HrSchemaOptions> GetHrSchemaOptionsAsync();
+    // CHANGE_ID: TAPORTAL-20261012-CUSTOMERS-001 — reuse the existing testable PortalDb boundary for customer UI and MVC.
+    Task<List<CustomerRow>> GetCustomersAsync(Guid userId);
+    Task<List<CustomerRow>> GetCustomersAsync(Guid userId, string? search) => GetCustomersAsync(userId);
+    Task<CustomerWriteResult> CreateCustomerAsync(CustomerCreateVm vm, Guid userId);
     Task<bool> HasFunctionActionAsync(Guid userId, string actionKey);
     Task<IReadOnlySet<string>> GetEffectivePermissionsAsync(Guid userId);
+    // Existing harness implementations remain safe: workflow calls fail closed until explicitly implemented.
+    Task<CrmRelationWriteResult> CreateCustomerEmployeeAssignmentAsync(CrmRelationWriteRequest request, Guid actorId)
+        => Task.FromResult(CrmRelationWriteResult.Forbidden);
+    Task<CrmRelationWriteResult> CreateCustomerBranchShareAsync(CrmRelationWriteRequest request, Guid actorId)
+        => Task.FromResult(CrmRelationWriteResult.Forbidden);
+    Task<CrmRelationWriteResult> CreateCustomerServiceTeamAsync(CrmRelationWriteRequest request, Guid actorId)
+        => Task.FromResult(CrmRelationWriteResult.Forbidden);
+    Task<CrmRelationshipDetail?> GetCrmRelationshipDetailAsync(Guid customerId, Guid actorId) => Task.FromResult<CrmRelationshipDetail?>(null);
+    Task<CrmRelationWriteResult> ChangeCustomerEmployeeAssignmentAsync(CrmRelationChangeRequest request, Guid actorId) => Task.FromResult(CrmRelationWriteResult.Forbidden);
+    Task<CrmRelationWriteResult> RevokeCustomerEmployeeAssignmentAsync(CrmRelationRevokeRequest request, Guid actorId) => Task.FromResult(CrmRelationWriteResult.Forbidden);
+    Task<CrmRelationWriteResult> ChangeCustomerBranchShareAsync(CrmRelationChangeRequest request, Guid actorId) => Task.FromResult(CrmRelationWriteResult.Forbidden);
+    Task<CrmRelationWriteResult> RevokeCustomerBranchShareAsync(CrmRelationRevokeRequest request, Guid actorId) => Task.FromResult(CrmRelationWriteResult.Forbidden);
+    Task<CrmRelationWriteResult> ChangeCustomerServiceTeamAsync(CrmRelationChangeRequest request, Guid actorId) => Task.FromResult(CrmRelationWriteResult.Forbidden);
+    Task<CrmRelationWriteResult> RevokeCustomerServiceTeamAsync(CrmRelationRevokeRequest request, Guid actorId) => Task.FromResult(CrmRelationWriteResult.Forbidden);
     Task<IReadOnlyList<DepartmentRow>> GetDepartmentsAsync();
     Task<DepartmentWriteResult> CreateDepartmentAsync(DepartmentCreateVm vm, Guid? userId);
     Task<DepartmentWriteResult> UpdateDepartmentAsync(DepartmentUpdateVm vm, byte[] rowVersion, Guid? userId);

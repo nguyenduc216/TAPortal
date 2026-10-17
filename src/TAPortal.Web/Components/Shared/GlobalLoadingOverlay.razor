@@ -1,6 +1,7 @@
 @implements IDisposable
 @inject GlobalLoadingService Loading
-@if (_visible) { <div class="ta-loading-overlay" aria-live="polite" role="status"><span class="spinner-border" aria-hidden="true"></span><span>@Loading.Message</span></div> }
+@* CHANGE_ID: TAPORTAL-20261012-RECOVERY-014 — share the stationary TA logo and animated ring with recovery. *@
+@if (_visible) { <div class="ta-loading-overlay" aria-live="polite" role="status"><span class="ta-master-loading" aria-hidden="true"><span class="ta-master-loading-ring"></span><img src="/images/ta-logo.png" alt="" width="52" height="52" /></span><span>@Loading.Message</span></div> }
 @code {
     private bool _visible;
     private CancellationTokenSource? _visibilityCts;

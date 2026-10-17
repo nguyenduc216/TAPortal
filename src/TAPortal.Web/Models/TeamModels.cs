@@ -43,4 +43,4 @@ public sealed class TeamUpdateVm:TeamCreateVm { [Required] public Guid Id { get;
 public sealed class TeamMutationVm { [Required] public Guid Id { get; set; } [Required] public string RowVersion { get; set; }=string.Empty; public bool IsActive { get; set; } }
 public sealed record TeamFormVm(TeamCreateVm Value,IReadOnlyList<TeamDepartmentOption> Departments,IReadOnlyList<TeamParentOption> ParentTeams,Guid? EditingId=null);
 public sealed record TeamPageVm(IReadOnlyList<TeamRow> Teams,IReadOnlyList<TeamDepartmentOption> Departments,IReadOnlyList<TeamParentOption> ParentTeams,bool CanCreate,bool CanUpdate,bool CanDelete);
-public enum TeamWriteResult { Success,DuplicateCode,ConcurrencyConflict,InvalidDepartment,InvalidParent,SelfParent,Cycle,HasDependencies }
+public enum TeamWriteResult { Success,DuplicateCode,ConcurrencyConflict,InvalidDepartment,InvalidParent,SelfParent,Cycle,HasDependencies,UnsupportedDescription }

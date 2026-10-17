@@ -13,6 +13,8 @@ public sealed class DepartmentsController(PortalDb db) : Controller
 {
     public async Task<IActionResult> Index()
     {
+        // CHANGE_ID: TAPORTAL-20261013-CRM-PHASE0-001 — choose a real active branch for new departments.
+        ViewData["HrSchema"] = await db.GetHrSchemaOptionsAsync();
         var permissions = await db.GetEffectivePermissionsAsync(CurrentUserId() ?? Guid.Empty);
         return View(new DepartmentPageVm(
             await db.GetDepartmentsAsync(),
@@ -32,10 +34,7 @@ public sealed class DepartmentsController(PortalDb db) : Controller
         if (!ModelState.IsValid) return ValidationRedirect();
 
         var result = await db.CreateDepartmentAsync(vm, CurrentUserId());
-        TempData[result == DepartmentWriteResult.Success ? "Success" : "Error"] = result == DepartmentWriteResult.Success
-            ? "Đã tạo phòng ban mới."
-            : "Mã phòng ban đã tồn tại. Vui lòng sử dụng mã khác.";
-        return RedirectToAction(nameof(Index));
+        return MutationRedirect(result, "Đã tạo phòng ban mới.");
     }
 
     [HttpPost("update")]
@@ -101,6 +100,7 @@ public sealed class DepartmentsController(PortalDb db) : Controller
         {
             DepartmentWriteResult.DuplicateCode => "Mã phòng ban đã tồn tại. Vui lòng sử dụng mã khác.",
             DepartmentWriteResult.HasDependencies => "Không thể xóa phòng ban đang được sử dụng bởi đội nhóm hoặc phân công nhân sự.",
+            DepartmentWriteResult.InvalidBranch => "Vui lòng chọn chi nhánh đang hoạt động.",
             _ => "Dữ liệu phòng ban đã được thay đổi bởi người khác. Vui lòng tải lại và thử lại."
         };
         return RedirectToAction(nameof(Index));

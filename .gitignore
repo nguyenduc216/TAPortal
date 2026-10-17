@@ -20,6 +20,18 @@ appsettings.Local.json
 .env.*
 secrets.json
 
+# TAPortal.Web runtime configuration may contain the approved SQL credential.
+# Keep the safe template trackable while excluding deployed/local configuration.
+src/TAPortal.Web/appsettings.json
+src/TAPortal.Web/appsettings.*.json
+!src/TAPortal.Web/appsettings.example.json
+
+# Local IIS handoff artifacts and verification directories
+TAPortal-Blazor-IIS-Deploy.zip
+TAPortal-Blazor-IIS-Handoff.zip
+.TAPortal-IIS-*
+publish-TAPortal-backup-*/
+
 # Logs
 logs/
 *.log
