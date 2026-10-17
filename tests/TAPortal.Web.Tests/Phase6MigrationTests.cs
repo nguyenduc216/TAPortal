@@ -44,7 +44,7 @@ public sealed class Phase6MigrationTests
     [Fact]
     public void TrialRoutes_AreDedicatedToBlazorComponents()
     {
-        var root = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "TAPortal.Web", "Components", "Pages"));
+        var root = TestRepositoryRoot.FilePath("src", "TAPortal.Web", "Components", "Pages");
         Assert.Contains("@page \"/blazor/customers\"", File.ReadAllText(Path.Combine(root, "Customers.razor")));
         Assert.Contains("@page \"/blazor/hr/departments\"", File.ReadAllText(Path.Combine(root, "HrDepartments.razor")));
         Assert.Contains("@page \"/blazor/hr/teams\"", File.ReadAllText(Path.Combine(root, "HrTeams.razor")));
