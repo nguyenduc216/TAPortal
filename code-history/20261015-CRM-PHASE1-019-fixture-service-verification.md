@@ -1,0 +1,13 @@
+# TAPORTAL-20261015-CRM-PHASE1-019 — development SQL fixture and service verification
+
+FEATURE_ID: TAPORTAL-CRM-CUSTOMER-360
+
+Status: PARTIAL. TAPortalSys is the only database used. Provisioned synthetic records via `tests/crm-phase1-019-fixtures.ps1 -Provision` inside a SERIALIZABLE transaction, using parameterized identifiers and collision checks. No cleanup was run. The existing account was not changed.
+
+Fixture manifest (GUIDs share `01900000-0000-4000-8000-0000000000NN`; all code/name markers start `TA_DEV_CRM_019`): company 01; branches 02,03; department 04 (branch 02); teams 05,06 (branch 02, department 04); users 11,12,13 (PasswordHash NULL); employees 21,22,23 linked respectively to users 11,12,13; current primary HR assignments 31,32,33; customers 41,42,43 (branch 02), 44 (branch 03). Actor 11 has VIEW/ASSIGN/SHARE/TEAM ALLOW and Customers COMPANY scope referencing company 01. No real accounts, roles or existing grants modified. Fixture rows are retained for development; never run broad cleanup. Before any manual cleanup, verify each ID and marker, its child relations/audits and any later dependencies, then remove only confirmed fixture-owned rows in reverse dependency order within a reviewed transaction.
+
+Real PortalDb service test: `TAPORTAL_CRM_019_SQL=1 dotnet test tests/TAPortal.Web.Tests/TAPortal.Web.Tests.csproj -c Release --filter FullyQualifiedName~CrmPhase1019SqlTests`. Executed list/detail, forbidden actor, and three Create → Change → Revoke cycles; overlap and stale/repeated RowVersion conflict assertions passed. SQL state readback: one inactive relation per type and nine actor audit rows; four synthetic customers remain. Test only mutates fixture-owned customer 41 and actor 11 relations. On repeat it revokes any still-active fixture-owned target relations before starting. Additional scope matrix, invalid target, forced audit failure, and concurrent writers remain NOT_RUN.
+
+Verified defect: SQL Server rejected unquoted `deny` alias in customer list and mutation authorization queries. Quoted it as `[deny]`; service test then passed. This is a real SQL syntax repair, not an authorization bypass.
+
+Browser login is blocked: fixture users have NULL PasswordHash by design. Owner must set a password using the application's approved password-management flow and provide authenticated external Playwright storage state without disclosing credentials; no login bypass was created. Authenticated Playwright and publish remain NOT_RUN.
