@@ -1,0 +1,5 @@
+# TAPORTAL-20261017-FUNCTIONAL-AUDIT-001
+
+Audit report: `docs/audits/TAPORTAL-FUNCTIONAL-AUDIT-20261017.md`.
+
+Source baseline `25eb8c24a14c371f9dcef58ab7e9707196b6521e`; retained local configuration and prior test artifacts. Read-only TAPortalSys schema inspection confirms CRM/HR base tables, but no banking/payment/invoice/provider/wallet objects or migration ledger by queried names. Kestrel started on 5080; owner temp browser state redirected to login in fresh desktop/mobile contexts. Overlay was hidden on the login page; no verified P0 root cause or repair. SQL-backed CRM-019/020 selection 3/4 passed: reused fixture overlap; opt-in full suite 138/139, default full suite 139/139. No migration, source repair, PR merge, push or IIS deployment. Functional acceptance withheld. See report for matrix and prioritized backlog.
