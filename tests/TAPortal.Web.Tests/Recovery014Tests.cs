@@ -25,7 +25,7 @@ namespace TAPortal.Web.Tests;
 // CHANGE_ID: TAPORTAL-20261012-RECOVERY-014 — isolated real-component/view rendering, without database access or runtime auth bypass.
 public sealed class Recovery014Tests : TestContext
 {
-    private static readonly string Root = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../../"));
+    private static string Root => TestRepositoryRoot.Resolve();
     private static void Export(string name, string markup)
     {
         var directory = Path.Combine(AppContext.BaseDirectory, "recovery-014-fixtures");

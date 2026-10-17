@@ -150,10 +150,6 @@ public sealed class SqlArtifactContractTests
 
     private static string ReadRepositoryFile(params string[] parts)
     {
-        var directory = new DirectoryInfo(AppContext.BaseDirectory);
-        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "TAPortal.sln")))
-            directory=directory.Parent;
-        Assert.NotNull(directory);
-        return File.ReadAllText(Path.Combine(new[] { directory!.FullName }.Concat(parts).ToArray()));
+        return File.ReadAllText(TestRepositoryRoot.FilePath(parts));
     }
 }

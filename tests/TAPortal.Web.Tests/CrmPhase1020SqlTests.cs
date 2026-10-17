@@ -15,7 +15,7 @@ public sealed class CrmPhase1020SqlTests
 
     private static (PortalDb db, string connectionString) OpenFixture()
     {
-        var root = new DirectoryInfo(AppContext.BaseDirectory);
+        var root = new DirectoryInfo(TestRepositoryRoot.Resolve());
         while (root is not null && !File.Exists(Path.Combine(root.FullName, "src", "TAPortal.Web", "TAPortal.Web.csproj"))) root = root.Parent;
         Assert.NotNull(root);
         var config = new ConfigurationBuilder().AddJsonFile(Path.Combine(root!.FullName, "src", "TAPortal.Web", "appsettings.json")).Build();
