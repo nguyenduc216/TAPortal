@@ -12,6 +12,8 @@ public interface IBlazorPortalService
     Task<List<CustomerRow>> GetCustomersAsync(Guid userId);
     Task<List<CustomerRow>> GetCustomersAsync(Guid userId, string? search) => GetCustomersAsync(userId);
     Task<CustomerWriteResult> CreateCustomerAsync(CustomerCreateVm vm, Guid userId);
+    Task<CustomerWriteResult> UpdateCustomerAsync(Guid customerId, CustomerCreateVm vm, Guid userId) => Task.FromResult(CustomerWriteResult.Forbidden);
+    Task<CustomerWriteResult> DeleteCustomerAsync(Guid customerId, Guid userId) => Task.FromResult(CustomerWriteResult.Forbidden);
     Task<bool> HasFunctionActionAsync(Guid userId, string actionKey);
     Task<IReadOnlySet<string>> GetEffectivePermissionsAsync(Guid userId);
     // Existing harness implementations remain safe: workflow calls fail closed until explicitly implemented.

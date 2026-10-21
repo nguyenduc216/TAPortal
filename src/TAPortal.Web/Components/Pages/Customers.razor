@@ -17,30 +17,35 @@ else if (_error is not null) { <div class="alert alert-danger" role="alert">@_er
 else if (!_allowed) { <div class="alert alert-danger">Bạn không có quyền truy cập chức năng này.</div> }
 else {
 <div class="card ta-table-card ta-customers-table"><div class="card-header ta-toolbar"><div class="input-icon ta-search-compact"><span class="input-icon-addon"><i class="ti ti-search" aria-hidden="true"></i></span><input type="search" class="form-control" aria-label="Tìm khách hàng" placeholder="Tìm mã, tên, MST, email..." @bind="_search" @bind:event="oninput" /></div><span class="text-secondary">@Filtered.Count() khách hàng · Xuất theo tìm kiếm</span></div>
-<div class="table-responsive"><table class="table table-vcenter card-table"><thead><tr><th>Mã KH</th><th>Tên khách hàng</th><th>MST</th><th>Email</th><th>Điện thoại</th><th>Trạng thái</th></tr></thead><tbody>
-@foreach (var x in Filtered) { <tr><td><code class="ta-code">@x.Code</code></td><td class="fw-semibold"><a href="@($"/blazor/customers/{x.Id:D}")">@x.Name</a></td><td>@(x.TaxCode ?? "—")</td><td>@(x.Email ?? "—")</td><td>@(x.Phone ?? "—")</td><td><span class="badge @(x.Status == "ACTIVE" ? "badge-ta-active" : "bg-secondary-lt")">@x.Status</span></td></tr> }
+<div class="table-responsive"><table class="table table-vcenter card-table"><thead><tr><th>Mã KH</th><th>Tên khách hàng</th><th>MST</th><th>Email</th><th>Điện thoại</th><th>Trạng thái</th><th>Thao tác</th></tr></thead><tbody>
+@foreach (var x in Filtered.Skip((_page - 1) * 10).Take(10)) { <tr><td><code class="ta-code">@x.Code</code></td><td class="fw-semibold"><a href="@($"/blazor/customers/{x.Id:D}")">@x.Name</a></td><td>@(x.TaxCode ?? "—")</td><td>@(x.Email ?? "—")</td><td>@(x.Phone ?? "—")</td><td><span class="badge @(x.Status == "ACTIVE" ? "badge-ta-active" : "bg-secondary-lt")">@x.Status</span></td><td class="ta-customer-actions"><button type="button" class="btn btn-ta-edit btn-sm" disabled="@(!_canUpdate)" title="@(!_canUpdate ? "Bạn chưa có quyền sửa" : "Sửa khách hàng")" @onclick="() => OpenEdit(x)"><i class="ti ti-edit"></i> Sửa</button><button type="button" class="btn btn-ta-delete btn-sm" disabled="@(!_canDelete)" title="@(!_canDelete ? "Bạn chưa có quyền xóa" : "Xóa khách hàng")" @onclick="() => DeleteAsync(x)"><i class="ti ti-trash"></i> Xóa</button></td></tr> }
 </tbody></table></div>
 @if (!Filtered.Any()) { <div class="ta-table-empty ta-customer-empty" role="status"><span class="ta-empty-icon"><i class="ti ti-users-group" aria-hidden="true"></i></span><span>@(_customers.Count == 0 ? "Chưa có khách hàng." : "Không tìm thấy kết quả phù hợp.")</span></div> }
-</div> }
+</div><div class="ta-customer-pagination"><span>@Filtered.Count() khách hàng · Trang @_page/@Math.Max(1, (Filtered.Count() + 9) / 10)</span><div><button type="button" class="btn btn-ta-secondary btn-sm" disabled="@(_page <= 1)" @onclick="() => _page--"><i class="ti ti-chevron-left"></i> Trước</button><button type="button" class="btn btn-ta-secondary btn-sm" disabled="@(_page * 10 >= Filtered.Count())" @onclick="() => _page++">Sau <i class="ti ti-chevron-right"></i></button></div></div> }
 @if (_showCreate) {
 <dialog id="ta-customer-dialog" class="ta-customer-dialog" aria-labelledby="customer-create-title">
 <EditForm Model="_create" OnValidSubmit="SaveAsync" data-ta-unsaved="true"><DataAnnotationsValidator />
-<div class="modal-header"><h2 id="customer-create-title" class="modal-title">Thêm khách hàng</h2><button type="button" class="btn-close" aria-label="Đóng" disabled="@_saving" @onclick="CloseCreate"></button></div>
-<div class="modal-body"><ValidationSummary />
+<div class="modal-header"><h2 id="customer-create-title" class="modal-title">@(_editingId.HasValue ? "Chỉnh sửa khách hàng" : "Thêm khách hàng")</h2><button type="button" class="btn-close" aria-label="Đóng" disabled="@_saving" @onclick="CloseCreate"></button></div>
+<div class="ta-customer-tabs" role="tablist"><button type="button" class="@(_contactTab == "info" ? "is-active" : "")" @onclick='() => _contactTab = "info"'><i class="ti ti-building"></i> Thông tin</button><button type="button" class="@(_contactTab == "contacts" ? "is-active" : "")" @onclick='() => _contactTab = "contacts"'><i class="ti ti-address-book"></i> Người liên hệ</button></div><div class="modal-body"><ValidationSummary />
 @if (_saveError is not null) { <div class="alert alert-danger" role="alert">@_saveError</div> }
-<fieldset class="ta-customer-fields" disabled="@_saving">
-<label class="form-label">Mã khách hàng <span aria-hidden="true">*</span><InputText class="form-control" @bind-Value="_create.Code" maxlength="50" aria-label="Mã khách hàng" /><ValidationMessage For="() => _create.Code" /></label>
+@if (_contactTab == "info") { <fieldset class="ta-customer-fields" disabled="@_saving">
+<label class="form-label"><i class="ti ti-hash"></i> Mã khách hàng <span aria-hidden="true">*</span><InputText class="form-control" @bind-Value="_create.Code" maxlength="6" aria-label="Mã khách hàng" /><ValidationMessage For="() => _create.Code" /></label>
 <label class="form-label">Tên khách hàng <span aria-hidden="true">*</span><InputText class="form-control" @bind-Value="_create.Name" maxlength="250" aria-label="Tên khách hàng" /><ValidationMessage For="() => _create.Name" /></label>
 <label class="form-label">Mã số thuế<InputText class="form-control" @bind-Value="_create.TaxCode" maxlength="50" aria-label="Mã số thuế" /></label>
 <label class="form-label">Email<InputText class="form-control" @bind-Value="_create.Email" maxlength="256" aria-label="Email" /><ValidationMessage For="() => _create.Email" /></label>
 <label class="form-label">Điện thoại<InputText class="form-control" @bind-Value="_create.Phone" maxlength="50" aria-label="Điện thoại" /></label>
+<label class="form-label"><i class="ti ti-map-pin"></i> Địa chỉ công ty<InputText class="form-control" @bind-Value="_create.Address" maxlength="1000" /></label>
+<label class="form-label"><i class="ti ti-photo"></i> URL logo công ty<InputText class="form-control" @bind-Value="_create.LogoUrl" maxlength="500" /></label>
 <label class="form-label">Trạng thái<InputSelect class="form-select" @bind-Value="_create.Status" aria-label="Trạng thái"><option value="ACTIVE">Hoạt động</option><option value="INACTIVE">Ngừng hoạt động</option></InputSelect></label>
-</fieldset></div><div class="modal-footer"><button class="btn btn-ta-secondary" type="button" disabled="@_saving" @onclick="CloseCreate">Hủy</button><button class="btn btn-ta-gold" disabled="@_saving">@(_saving ? "Đang lưu..." : "Lưu khách hàng")</button></div>
+</fieldset> } else { <div class="ta-contact-section"><div class="ta-contact-heading"><h3>Danh sách người liên hệ</h3><button type="button" class="btn btn-ta-secondary btn-sm" @onclick="() => _create.Contacts.Add(new())"><i class="ti ti-user-plus"></i> Thêm người liên hệ</button></div><div class="table-responsive"><table class="table table-vcenter ta-contact-table"><thead><tr><th>Họ tên</th><th>Chức vụ</th><th>Email</th><th>Điện thoại</th><th></th></tr></thead><tbody>@for (var i = 0; i < _create.Contacts.Count; i++) { var index = i; <tr><td><InputText class="form-control" @bind-Value="_create.Contacts[index].Name" /></td><td><InputText class="form-control" @bind-Value="_create.Contacts[index].Role" /></td><td><InputText class="form-control" @bind-Value="_create.Contacts[index].Email" /></td><td><InputText class="form-control" @bind-Value="_create.Contacts[index].Phone" /></td><td><button type="button" class="btn btn-ta-delete btn-sm" @onclick="() => _create.Contacts.RemoveAt(index)"><i class="ti ti-trash"></i> Xóa</button></td></tr> }</tbody></table></div>@if (_create.Contacts.Count == 0) { <p class="ta-contact-empty">Chưa có người liên hệ.</p> }</div> } </div><div class="modal-footer"><button class="btn btn-ta-secondary" type="button" disabled="@_saving" @onclick="CloseCreate"><i class="ti ti-x"></i> Hủy</button><button class="btn btn-ta-gold" disabled="@_saving"><i class="ti ti-device-floppy"></i> @(_saving ? "Đang lưu..." : "Lưu khách hàng")</button></div>
 </EditForm></dialog> }
 @code {
     private List<CustomerRow> _customers = new();
     private CustomerCreateVm _create = new();
-    private bool _loading = true, _allowed, _canCreate, _saving, _exporting, _showCreate, _openPending;
+    private bool _loading = true, _allowed, _canCreate, _canUpdate, _canDelete, _saving, _exporting, _showCreate, _openPending;
+    private Guid? _editingId;
+    private int _page = 1;
+    private string _contactTab = "info";
     private string _search = "";
     private string? _error, _saveError, _notice;
     private IEnumerable<CustomerRow> Filtered => CustomerRules.Filter(_customers, _search);
@@ -50,13 +55,15 @@ else {
     protected override Task OnInitializedAsync() => LoadAsync();
     // CHANGE_ID: TAPORTAL-20261012-CUSTOMERS-001 — errors never masquerade as empty data; revoke previously allowed UI before rechecking.
     private async Task LoadAsync() {
-        _loading = true; _allowed = _canCreate = false; _error = null;
+        _loading = true; _allowed = _canCreate = _canUpdate = _canDelete = false; _error = null;
         using var scope = Loading.Begin("Đang tải khách hàng...");
-        try { var id = await UserIdAsync(); _allowed = id.HasValue && await Db.HasFunctionActionAsync(id.Value, "Customers.Index"); if (_allowed) { _canCreate = await Db.HasFunctionActionAsync(id!.Value, "Customers.Create"); _customers = await Db.GetCustomersAsync(id.Value); } }
+        try { var id = await UserIdAsync(); _allowed = id.HasValue && await Db.HasFunctionActionAsync(id.Value, "Customers.Index"); if (_allowed) { _canCreate = await Db.HasFunctionActionAsync(id!.Value, "Customers.Create"); _canUpdate = await Db.HasFunctionActionAsync(id.Value, "Customers.Update"); _canDelete = await Db.HasFunctionActionAsync(id.Value, "Customers.Delete"); _customers = await Db.GetCustomersAsync(id.Value); } }
         catch { _error = "Không thể tải danh sách khách hàng."; } finally { _loading = false; }
     }
     // CHANGE_ID: TAPORTAL-20261012-CUSTOMERS-001 — open native modal after rendering for focus containment, Escape handling and keyboard support.
-    private void OpenCreate() { if (!_canCreate || _saving) return; _create = new(); _saveError = null; _showCreate = _openPending = true; }
+    private void OpenCreate() { if (!_canCreate || _saving) return; _editingId = null; _create = new(); _contactTab = "info"; _saveError = null; _showCreate = _openPending = true; }
+    private void OpenEdit(CustomerRow x) { if (!_canUpdate || _saving) return; _editingId = x.Id; _contactTab = "info"; _create = new() { Code=x.Code, Name=x.Name, TaxCode=x.TaxCode, Email=x.Email, Phone=x.Phone, Address=x.Address, LogoUrl=x.LogoUrl, Status=x.Status, Contacts=x.Contacts.Select(c => new CustomerContactVm { Name=c.Name, Role=c.Role, Email=c.Email, Phone=c.Phone }).ToList() }; _saveError=null; _showCreate=_openPending=true; }
+    private async Task DeleteAsync(CustomerRow x) { if (!_canDelete || _saving || !await JS.InvokeAsync<bool>("confirm", $"Xóa khách hàng {x.Name}?")) return; var id=await UserIdAsync(); if (id.HasValue && await Db.DeleteCustomerAsync(x.Id,id.Value)==CustomerWriteResult.Success) { _notice="Đã xóa khách hàng."; await LoadAsync(); } else _error="Không thể xóa khách hàng."; }
     // CHANGE_ID: TAPORTAL-20261012-CUSTOMERS-001 — modal JS adds no second business loading coordinator.
     protected override async Task OnAfterRenderAsync(bool firstRender) { if (_openPending) { _openPending = false; await JS.InvokeVoidAsync("taCustomers.open", "ta-customer-dialog"); } }
     // CHANGE_ID: TAPORTAL-20261012-CUSTOMERS-001 — cancellation is disabled during persistence and removes unsaved markers with the form.
@@ -66,9 +73,9 @@ else {
         if (_saving) return; _saving = true; _saveError = null;
         try {
             var id = await UserIdAsync();
-            if (!id.HasValue || !await Db.HasFunctionActionAsync(id.Value, "Customers.Index") || !await Db.HasFunctionActionAsync(id.Value, "Customers.Create")) { _saveError = CustomerRules.Message(CustomerWriteResult.Forbidden); return; }
+            if (!id.HasValue || !await Db.HasFunctionActionAsync(id.Value, "Customers.Index") || !await Db.HasFunctionActionAsync(id.Value, _editingId.HasValue ? "Customers.Update" : "Customers.Create")) { _saveError = CustomerRules.Message(CustomerWriteResult.Forbidden); return; }
             CustomerRules.Normalize(_create);
-            var result = await Db.CreateCustomerAsync(_create, id.Value);
+            var result = _editingId.HasValue ? await Db.UpdateCustomerAsync(_editingId.Value, _create, id.Value) : await Db.CreateCustomerAsync(_create, id.Value);
             if (result != CustomerWriteResult.Success) { _saveError = CustomerRules.Message(result); return; }
             _showCreate = false; _notice = CustomerRules.Message(result); await LoadAsync();
         } catch { _saveError = CustomerRules.Message(CustomerWriteResult.Failed); } finally { _saving = false; }

@@ -72,6 +72,8 @@ public sealed class CustomersController(IBlazorPortalService db) : Controller
         try
         {
             ViewData["CanCreate"] = await Allowed("Customers.Create");
+            ViewData["CanUpdate"] = await Allowed("Customers.Update");
+            ViewData["CanDelete"] = await Allowed("Customers.Delete");
             return View(await db.GetCustomersAsync(Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!)));
         }
         catch { ViewData["LoadError"] = "Không thể tải danh sách khách hàng. Vui lòng tải lại."; return View(new List<CustomerRow>()); }
@@ -92,6 +94,33 @@ public sealed class CustomersController(IBlazorPortalService db) : Controller
             if (result != CustomerWriteResult.Success) return BadRequest(new { message = CustomerRules.Message(result) });
             TempData["Success"] = CustomerRules.Message(result);
             return Json(new { success = true });
+        }
+        catch { return StatusCode(500, new { message = CustomerRules.Message(CustomerWriteResult.Failed) }); }
+    }
+    [HttpPost, ValidateAntiForgeryToken]
+    [Authorize(Policy = PermissionPolicies.FunctionActionPrefix + "Customers.Update")]
+    public async Task<IActionResult> Update(Guid id, CustomerCreateVm vm)
+    {
+        if (!await Allowed("Customers.Index") || !await Allowed("Customers.Update")) return Forbid();
+        CustomerRules.Normalize(vm);
+        ModelState.Clear(); TryValidateModel(vm);
+        if (!ModelState.IsValid || !CustomerRules.IsValid(vm)) return BadRequest(new { message = "Vui lòng kiểm tra thông tin khách hàng và người liên hệ." });
+        try
+        {
+            var result = await db.UpdateCustomerAsync(id, vm, Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!));
+            return result == CustomerWriteResult.Success ? Json(new { success = true }) : BadRequest(new { message = CustomerRules.Message(result) });
+        }
+        catch { return StatusCode(500, new { message = CustomerRules.Message(CustomerWriteResult.Failed) }); }
+    }
+    [HttpPost, ValidateAntiForgeryToken]
+    [Authorize(Policy = PermissionPolicies.FunctionActionPrefix + "Customers.Delete")]
+    public async Task<IActionResult> Delete(Guid id)
+    {
+        if (!await Allowed("Customers.Index") || !await Allowed("Customers.Delete")) return Forbid();
+        try
+        {
+            var result = await db.DeleteCustomerAsync(id, Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!));
+            return result == CustomerWriteResult.Success ? Json(new { success = true }) : BadRequest(new { message = CustomerRules.Message(result) });
         }
         catch { return StatusCode(500, new { message = CustomerRules.Message(CustomerWriteResult.Failed) }); }
     }

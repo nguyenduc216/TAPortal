@@ -6,16 +6,83 @@
 @inject GlobalLoadingService Loading
 
 <PageTitle>Người dùng - T.A Portal</PageTitle>
-<div class="ta-page-header"><div class="ta-page-heading"><div class="ta-page-pretitle">Quản trị</div><h1 class="ta-page-title">Người dùng</h1><p class="ta-page-subtitle">Danh sách và tạo tài khoản theo quyền MVC hiện hành.</p></div></div>
+<div class="ta-page-header"><div class="ta-page-heading"><div class="ta-page-pretitle">Quản trị</div><h1 class="ta-page-title">Người dùng</h1><p class="ta-page-subtitle">Quản lý tài khoản và vai trò theo quyền hiện hành.</p></div></div>
 @if (_loading) { <p class="text-secondary">Đang tải...</p> }
 else if (!_allowed) { <div class="alert alert-danger">Bạn không có quyền truy cập chức năng này.</div> }
-else { @if (!string.IsNullOrWhiteSpace(_message)) { <div class="alert @(_success ? "alert-success" : "alert-danger")">@_message</div> }
-<div class="row row-cards"><div class="col-lg-8"><div class="card"><div class="card-header"><h2 class="card-title">Danh sách tài khoản</h2></div><div class="table-responsive"><table class="table table-vcenter"><thead><tr><th>Tài khoản</th><th>Tên hiển thị</th><th>Email</th><th>Trạng thái</th></tr></thead><tbody>@foreach (var user in _users) { <tr><td>@user.Username</td><td>@user.DisplayName</td><td>@user.Email</td><td><span class="badge @(user.IsActive ? "bg-green-lt" : "bg-secondary-lt")">@user.Status</span></td></tr> }</tbody></table></div>@if (_users.Count == 0) { <div class="card-body text-secondary">Không có tài khoản.</div>}</div></div>
-<div class="col-lg-4"><div class="card"><div class="card-header"><h2 class="card-title">Tạo tài khoản</h2></div><div class="card-body"><EditForm Model="_create" OnValidSubmit="CreateAsync"><DataAnnotationsValidator /><ValidationSummary /><InputText class="form-control mb-2" placeholder="Tên đăng nhập" @bind-Value="_create.Username" /><InputText class="form-control mb-2" placeholder="Tên hiển thị" @bind-Value="_create.DisplayName" /><InputText class="form-control mb-2" placeholder="Email" @bind-Value="_create.Email" /><InputText type="password" class="form-control mb-3" placeholder="Mật khẩu" @bind-Value="_create.Password" /><button class="btn btn-primary" disabled="@_saving">@(_saving ? "Đang tạo..." : "Tạo tài khoản")</button></EditForm></div></div></div></div> }
+else { @if (!string.IsNullOrWhiteSpace(_message)) { <div role="alert" class="alert @(_success ? "alert-success" : "alert-danger")">@_message</div> } <button type="button" class="btn btn-outline-secondary mb-3" disabled="@_saving" @onclick="ReloadAsync">Làm mới danh sách</button>
+<div class="row row-cards"><div class="col-lg-8"><div class="card"><div class="card-header"><h2 class="card-title">Danh sách tài khoản</h2></div><div class="card-body"><input class="form-control" aria-label="Tìm tài khoản" placeholder="Tìm tài khoản, tên hoặc email" @bind="_search" @bind:event="oninput" @bind:after="ResetPage" /></div><div class="table-responsive"><table class="table table-vcenter"><thead><tr><th>Tài khoản</th><th>Tên hiển thị</th><th>Email</th><th>Trạng thái</th><th></th></tr></thead><tbody>@foreach (var user in VisibleUsers) { <tr><td>@user.Username</td><td>@user.DisplayName</td><td>@user.Email</td><td><span class="badge @(user.IsActive ? "bg-green-lt" : "bg-secondary-lt")">@user.Status</span></td><td><button type="button" class="btn btn-sm btn-outline-primary" @onclick="() => SelectAsync(user)">Quản lý</button></td></tr> }</tbody></table></div>@if (FilteredUsers.Count == 0) { <div class="card-body text-secondary">Không có tài khoản phù hợp.</div>}<div class="card-footer d-flex align-items-center gap-2"><button type="button" class="btn btn-outline-secondary" disabled="@(_page == 0)" @onclick="() => _page--">Trước</button><span>Trang @(_page + 1) / @PageCount</span><button type="button" class="btn btn-outline-secondary" disabled="@(_page + 1 >= PageCount)" @onclick="() => _page++">Sau</button></div></div></div>
+<div class="col-lg-4"><div class="card"><div class="card-header"><h2 class="card-title">Tạo tài khoản</h2></div><div class="card-body"><EditForm Model="_create" OnValidSubmit="CreateAsync"><DataAnnotationsValidator /><ValidationSummary /><InputText class="form-control mb-2" placeholder="Tên đăng nhập" @bind-Value="_create.Username" /><InputText class="form-control mb-2" placeholder="Tên hiển thị" @bind-Value="_create.DisplayName" /><InputText class="form-control mb-2" placeholder="Email" @bind-Value="_create.Email" /><InputText type="password" class="form-control mb-3" placeholder="Mật khẩu" @bind-Value="_create.Password" /><button class="btn btn-primary" disabled="@_saving">@(_saving ? "Đang tạo..." : "Tạo tài khoản")</button></EditForm></div></div></div></div>
+@if (_selected is not null) {
+<div class="card mt-3"><div class="card-header"><h2 class="card-title">Quản lý: @_selected.Username</h2></div><div class="card-body">
+<EditForm Model="_edit" OnValidSubmit="SaveAsync"><DataAnnotationsValidator /><ValidationSummary />
+<label class="form-label">Tên hiển thị</label><InputText class="form-control mb-2" @bind-Value="_edit.DisplayName" />
+<label class="form-label">Email</label><InputText class="form-control mb-2" @bind-Value="_edit.Email" />
+<label class="form-label">Số điện thoại</label><InputText class="form-control mb-2" @bind-Value="_edit.Phone" />
+<button class="btn btn-primary me-2" disabled="@_saving">Lưu thay đổi</button><button type="button" class="btn btn-outline-secondary" disabled="@_saving" @onclick="Cancel">Hủy</button></EditForm>
+<hr /><p>Trạng thái: @(_selected.IsActive ? "Đang hoạt động" : "Đã tắt")</p>
+@if (!_confirmStatus) { <button type="button" class="btn btn-outline-warning" @onclick="() => _confirmStatus = true">@(_selected.IsActive ? "Tắt tài khoản" : "Bật tài khoản")</button> }
+else { <p>Xác nhận @(_selected.IsActive ? "tắt" : "bật") tài khoản @_selected.Username?</p><button type="button" class="btn btn-warning me-2" disabled="@_saving" @onclick="ToggleActiveAsync">Xác nhận</button><button type="button" class="btn btn-outline-secondary" @onclick="() => _confirmStatus = false">Hủy</button> }
+<hr /><h3>Vai trò</h3><ul>@foreach (var role in _roles.Where(r => _roleIds.Contains(r.Id))) { <li>@role.Name <button type="button" class="btn btn-sm btn-outline-danger" disabled="@_saving" @onclick="() => ChangeRoleAsync(role.Id, false)">Gỡ</button></li> }</ul>
+<select class="form-select mb-2" aria-label="Vai trò để thêm" @bind="_newRoleId"><option value="">Chọn vai trò</option>@foreach (var role in _roles.Where(r => r.IsActive && !_roleIds.Contains(r.Id))) { <option value="@role.Id">@role.Name</option> }</select><button type="button" class="btn btn-outline-primary" disabled="@(_saving || !_newRoleId.HasValue)" @onclick="() => ChangeRoleAsync(_newRoleId!.Value, true)">Thêm vai trò</button>
+</div></div> }
+}
 
 @code {
     private List<PortalUser> _users = new(); private UserCreateVm _create = new(); private bool _loading = true, _allowed, _saving, _success; private string? _message;
+    private string _search = string.Empty;
+    private int _page;
+    private const int PageSize = 20;
+    private List<PortalUser> FilteredUsers => _users.Where(u => string.IsNullOrWhiteSpace(_search) ||
+        u.Username.Contains(_search.Trim(), StringComparison.OrdinalIgnoreCase) ||
+        u.DisplayName.Contains(_search.Trim(), StringComparison.OrdinalIgnoreCase) ||
+        (u.Email?.Contains(_search.Trim(), StringComparison.OrdinalIgnoreCase) ?? false)).ToList();
+    private int PageCount => Math.Max(1, (FilteredUsers.Count + PageSize - 1) / PageSize);
+    private IEnumerable<PortalUser> VisibleUsers => FilteredUsers.Skip(_page * PageSize).Take(PageSize);
+    private void ResetPage() => _page = 0;
+    private PortalUser? _selected;
+    private UserProfileUpdate _edit = new();
+    private List<PortalRole> _roles = new();
+    private IReadOnlyList<Guid> _roleIds = Array.Empty<Guid>();
+    private Guid? _newRoleId;
+    private bool _confirmStatus;
+    private async Task SelectAsync(PortalUser user)
+    {
+        try { _users = await Db.GetUsersAsync(); _selected = _users.FirstOrDefault(x => x.Id == user.Id); if (_selected is null) return;
+            _edit = new() { Id = _selected.Id, DisplayName = _selected.DisplayName, Email = _selected.Email, Phone = _selected.Phone };
+            _roles = await Db.GetRolesAsync(); _roleIds = await Db.GetUserRoleIdsAsync(user.Id); _newRoleId = null; _confirmStatus = false; }
+        catch { _success = false; _message = "Không thể tải chi tiết tài khoản."; }
+    }
+    private void Cancel() { _selected = null; _edit = new(); _confirmStatus = false; _message = "Đã hủy chỉnh sửa; không lưu thay đổi."; _success = true; }
+    private async Task ReloadAsync()
+    {
+        try { _users = await Db.GetUsersAsync(); _page = Math.Min(_page, PageCount - 1);
+            if (_selected is not null) await SelectAsync(_selected);
+            _success = true; _message = "Đã làm mới dữ liệu."; }
+        catch { _success = false; _message = "Không thể làm mới dữ liệu."; }
+    }
+    private async Task SaveAsync() => await ChangeAsync(() => Db.UpdateManagedUserAsync(_actor, _edit));
+    private async Task ToggleActiveAsync()
+    {
+        if (_selected is null || !_confirmStatus) return;
+        await ChangeAsync(() => Db.SetManagedUserActiveAsync(_actor, _selected.Id, !_selected.IsActive));
+    }
+    private async Task ChangeRoleAsync(Guid roleId, bool assign)
+    {
+        if (_selected is null) return;
+        await ChangeAsync(() => Db.SetManagedUserRoleAsync(_actor, _selected.Id, roleId, assign));
+    }
+    private Guid _actor;
+    private async Task ChangeAsync(Func<Task<bool>> mutation)
+    {
+        if (_saving || _selected is null) return;
+        _saving = true; _message = null;
+        try { var id = await CurrentUserId(); if (!id.HasValue) { _success = false; _message = "Phiên đăng nhập không hợp lệ."; return; }
+            _actor = id.Value; _success = await mutation(); _message = _success ? "Đã lưu thay đổi." : "Không được phép hoặc dữ liệu không còn hợp lệ.";
+            if (_success) await SelectAsync(_selected); }
+        catch { _success = false; _message = "Không thể lưu thay đổi."; }
+        finally { _saving = false; }
+    }
     protected override async Task OnInitializedAsync() { using var scope = Loading.Begin("Đang tải người dùng..."); try { var id = await CurrentUserId(); _allowed = id.HasValue && await Db.HasFunctionActionAsync(id.Value, "Users.Index"); if (_allowed) _users = await Db.GetUsersAsync(); } catch { _message = "Không thể tải danh sách người dùng."; } finally { _loading = false; } }
-    private async Task CreateAsync() { if (_saving) return; _saving = true; _message = null; using var scope = Loading.Begin("Đang tạo tài khoản..."); try { var id = await CurrentUserId(); if (!id.HasValue || !await Db.HasFunctionActionAsync(id.Value, "Users.Create")) { _success = false; _message = "Bạn không có quyền tạo tài khoản."; return; } var policy = PasswordPolicy.Validate(_create.Password); if (!policy.IsValid) { _success = false; _message = policy.Error; return; } if (await Db.UsernameExistsAsync(_create.Username)) { _success = false; _message = "Tên đăng nhập đã tồn tại."; return; } await Db.CreateUserAsync(_create, Passwords.Hash(_create.Password), id); _users = await Db.GetUsersAsync(); _create = new(); _success = true; _message = "Đã tạo người dùng mới."; } catch { _success = false; _message = "Không thể tạo tài khoản lúc này."; } finally { _saving = false; } }
+    private async Task CreateAsync() { if (_saving) return; _saving = true; _message = null; using var scope = Loading.Begin("Đang tạo tài khoản..."); try { var id = await CurrentUserId(); if (!id.HasValue || !await Db.HasFunctionActionAsync(id.Value, "Users.Create")) { _success = false; _message = "Bạn không có quyền tạo tài khoản."; return; } var policy = PasswordPolicy.Validate(_create.Password); if (!policy.IsValid) { _success = false; _message = policy.Error; return; } if (await Db.UsernameExistsAsync(_create.Username)) { _success = false; _message = "Tên đăng nhập đã tồn tại."; return; } if (!await Db.CreateManagedUserAsync(id.Value, _create, Passwords.Hash(_create.Password))) { _success = false; _message = "Không thể tạo tài khoản; hãy kiểm tra dữ liệu hoặc quyền truy cập."; return; } _users = await Db.GetUsersAsync(); _page = 0; _create = new(); _success = true; _message = "Đã tạo người dùng mới."; } catch { _success = false; _message = "Không thể tạo tài khoản lúc này."; } finally { _saving = false; } }
     private async Task<Guid?> CurrentUserId() { var p = (await Authentication.GetAuthenticationStateAsync()).User; return Guid.TryParse(p.FindFirst(ClaimTypes.NameIdentifier)?.Value, out var id) ? id : null; }
 }

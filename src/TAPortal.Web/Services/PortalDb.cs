@@ -400,7 +400,7 @@ ORDER BY m.SortOrder,m.Name,m.Id;
         if (!employeeContext.CanAccessCustomers) return list;
         await using var cn = Open(); await cn.OpenAsync();
         const string sql = """
-SELECT c.Id,c.Code,c.Name,c.TaxCode,c.Email,c.Phone,c.Status
+SELECT c.Id,c.Code,c.Name,c.TaxCode,c.Email,c.Phone,c.Status,c.Address,c.LogoUrl
 FROM dbo.Customers c
 WHERE c.IsDeleted=0 AND EXISTS(
  SELECT 1 FROM dbo.Users u WHERE u.Id=@userId AND u.IsDeleted=0 AND u.IsActive=1 AND u.Status='ACTIVE'
@@ -464,7 +464,15 @@ WHERE c.IsDeleted=0 AND EXISTS(
             (object?)employeeContext.CurrentOrganization?.Id ?? DBNull.Value;
         cmd.Parameters.Add("@search", System.Data.SqlDbType.NVarChar, 300).Value = string.IsNullOrWhiteSpace(search) ? DBNull.Value : $"%{search.Trim()}%";
         await using var rd = await cmd.ExecuteReaderAsync();
-        while (await rd.ReadAsync()) list.Add(new(rd.GetGuid(0),rd.GetString(1),rd.GetString(2),rd.IsDBNull(3)?null:rd.GetString(3),rd.IsDBNull(4)?null:rd.GetString(4),rd.IsDBNull(5)?null:rd.GetString(5),rd.GetString(6)));
+        while (await rd.ReadAsync()) list.Add(new(rd.GetGuid(0),rd.GetString(1),rd.GetString(2),rd.IsDBNull(3)?null:rd.GetString(3),rd.IsDBNull(4)?null:rd.GetString(4),rd.IsDBNull(5)?null:rd.GetString(5),rd.GetString(6)) { Address = rd.IsDBNull(7) ? null : rd.GetString(7), LogoUrl = rd.IsDBNull(8) ? null : rd.GetString(8) });
+        await rd.CloseAsync();
+        if (list.Count > 0)
+        {
+            await using var contacts = new SqlCommand("SELECT cc.CustomerId,cc.Name,cc.Role,cc.Email,cc.Phone FROM dbo.CustomerContacts cc JOIN dbo.Customers c ON c.Id=cc.CustomerId WHERE cc.IsDeleted=0 AND c.IsDeleted=0 ORDER BY cc.SortOrder,cc.Name", cn);
+            await using var cr = await contacts.ExecuteReaderAsync();
+            var lookup = list.ToDictionary(x => x.Id);
+            while (await cr.ReadAsync()) if (lookup.TryGetValue(cr.GetGuid(0), out var customer)) customer.Contacts.Add(new CustomerContactVm { Name = cr.GetString(1), Role = cr.IsDBNull(2) ? null : cr.GetString(2), Email = cr.IsDBNull(3) ? null : cr.GetString(3), Phone = cr.IsDBNull(4) ? null : cr.GetString(4) });
+        }
         return list;
     }
 
@@ -476,8 +484,9 @@ WHERE c.IsDeleted=0 AND EXISTS(
         if (!CustomerRules.IsValid(vm)) return CustomerWriteResult.Invalid;
         await using var cn = Open(); await cn.OpenAsync();
         const string sql = """
-INSERT dbo.Customers(Code,Name,TaxCode,Email,Phone,Status,IsActive,CreatedBy)
-SELECT @code,@name,@taxCode,@email,@phone,@status,@isActive,@userId
+INSERT dbo.Customers(Code,Name,TaxCode,Email,Phone,Address,LogoUrl,Status,IsActive,CreatedBy)
+OUTPUT inserted.Id
+SELECT @code,@name,@taxCode,@email,@phone,@address,@logoUrl,@status,@isActive,@userId
 WHERE EXISTS(SELECT 1 FROM dbo.Users WHERE Id=@userId AND IsDeleted=0 AND IsActive=1 AND Status='ACTIVE');
 """;
         await using var cmd = new SqlCommand(sql, cn);
@@ -486,12 +495,62 @@ WHERE EXISTS(SELECT 1 FROM dbo.Users WHERE Id=@userId AND IsDeleted=0 AND IsActi
         cmd.Parameters.Add("@taxCode", System.Data.SqlDbType.VarChar, 50).Value = (object?)vm.TaxCode ?? DBNull.Value;
         cmd.Parameters.Add("@email", System.Data.SqlDbType.NVarChar, 256).Value = (object?)vm.Email ?? DBNull.Value;
         cmd.Parameters.Add("@phone", System.Data.SqlDbType.NVarChar, 50).Value = (object?)vm.Phone ?? DBNull.Value;
+        cmd.Parameters.Add("@address", System.Data.SqlDbType.NVarChar, 1000).Value = (object?)vm.Address ?? DBNull.Value;
+        cmd.Parameters.Add("@logoUrl", System.Data.SqlDbType.NVarChar, 500).Value = (object?)vm.LogoUrl ?? DBNull.Value;
         cmd.Parameters.Add("@status", System.Data.SqlDbType.VarChar, 30).Value = vm.Status;
         cmd.Parameters.Add("@isActive", System.Data.SqlDbType.Bit).Value = vm.Status == "ACTIVE";
         cmd.Parameters.Add("@userId", System.Data.SqlDbType.UniqueIdentifier).Value = userId;
-        try { return await cmd.ExecuteNonQueryAsync() == 1 ? CustomerWriteResult.Success : CustomerWriteResult.Forbidden; }
+        try { var created = await cmd.ExecuteScalarAsync(); if (created is not Guid customerId) return CustomerWriteResult.Forbidden; await SaveContactsAsync(cn, customerId, vm.Contacts); return CustomerWriteResult.Success; }
         catch (SqlException ex) when (ex.Number is 2601 or 2627) { return CustomerWriteResult.DuplicateCode; }
         catch (SqlException) { return CustomerWriteResult.Failed; }
+    }
+
+    public async Task<CustomerWriteResult> UpdateCustomerAsync(Guid customerId, CustomerCreateVm vm, Guid userId)
+    {
+        if (!await HasFunctionActionAsync(userId, "Customers.Index") || !await HasFunctionActionAsync(userId, "Customers.Update")) return CustomerWriteResult.Forbidden;
+        CustomerRules.Normalize(vm);
+        if (!CustomerRules.IsValid(vm) || ! (await GetCustomersAsync(userId)).Any(x => x.Id == customerId)) return CustomerWriteResult.Invalid;
+        await using var cn = Open(); await cn.OpenAsync();
+        await using var tx = (SqlTransaction)await cn.BeginTransactionAsync();
+        try
+        {
+            await using var cmd = new SqlCommand("UPDATE dbo.Customers SET Code=@code,Name=@name,TaxCode=@tax,Email=@email,Phone=@phone,Address=@address,LogoUrl=@logo,Status=@status,IsActive=@active,UpdatedBy=@user,UpdatedAt=SYSUTCDATETIME() WHERE Id=@id AND IsDeleted=0", cn, tx);
+            cmd.Parameters.AddWithValue("@code", vm.Code); cmd.Parameters.AddWithValue("@name", vm.Name);
+            cmd.Parameters.AddWithValue("@tax", (object?)vm.TaxCode ?? DBNull.Value); cmd.Parameters.AddWithValue("@email", (object?)vm.Email ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@phone", (object?)vm.Phone ?? DBNull.Value); cmd.Parameters.AddWithValue("@address", (object?)vm.Address ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@logo", (object?)vm.LogoUrl ?? DBNull.Value); cmd.Parameters.AddWithValue("@status", vm.Status);
+            cmd.Parameters.AddWithValue("@active", vm.Status == "ACTIVE"); cmd.Parameters.AddWithValue("@user", userId); cmd.Parameters.AddWithValue("@id", customerId);
+            if (await cmd.ExecuteNonQueryAsync() != 1) return CustomerWriteResult.Invalid;
+            await SaveContactsAsync(cn, customerId, vm.Contacts, tx);
+            await tx.CommitAsync(); return CustomerWriteResult.Success;
+        }
+        catch (SqlException ex) when (ex.Number is 2601 or 2627) { return CustomerWriteResult.DuplicateCode; }
+        catch (SqlException) { return CustomerWriteResult.Failed; }
+    }
+
+    public async Task<CustomerWriteResult> DeleteCustomerAsync(Guid customerId, Guid userId)
+    {
+        if (!await HasFunctionActionAsync(userId, "Customers.Index") || !await HasFunctionActionAsync(userId, "Customers.Delete")) return CustomerWriteResult.Forbidden;
+        if (!(await GetCustomersAsync(userId)).Any(x => x.Id == customerId)) return CustomerWriteResult.Invalid;
+        await using var cn = Open(); await cn.OpenAsync();
+        await using var cmd = new SqlCommand("UPDATE dbo.Customers SET IsDeleted=1,DeletedAt=SYSUTCDATETIME(),DeletedBy=@user,UpdatedAt=SYSUTCDATETIME(),UpdatedBy=@user WHERE Id=@id AND IsDeleted=0", cn);
+        cmd.Parameters.AddWithValue("@user", userId); cmd.Parameters.AddWithValue("@id", customerId);
+        try { return await cmd.ExecuteNonQueryAsync() == 1 ? CustomerWriteResult.Success : CustomerWriteResult.Invalid; }
+        catch (SqlException) { return CustomerWriteResult.Failed; }
+    }
+
+    private static async Task SaveContactsAsync(SqlConnection cn, Guid id, List<CustomerContactVm> contacts, SqlTransaction? tx = null)
+    {
+        await using var cmd = new SqlCommand("DELETE FROM dbo.CustomerContacts WHERE CustomerId=@id;", cn, tx);
+        cmd.Parameters.AddWithValue("@id", id); await cmd.ExecuteNonQueryAsync();
+        for (var i = 0; i < contacts.Count; i++)
+        {
+            await using var insert = new SqlCommand("INSERT dbo.CustomerContacts(CustomerId,Name,Role,Email,Phone,SortOrder) VALUES(@id,@name,@role,@email,@phone,@sort)", cn, tx);
+            insert.Parameters.AddWithValue("@id", id); insert.Parameters.AddWithValue("@name", contacts[i].Name);
+            insert.Parameters.AddWithValue("@role", (object?)contacts[i].Role ?? DBNull.Value); insert.Parameters.AddWithValue("@email", (object?)contacts[i].Email ?? DBNull.Value);
+            insert.Parameters.AddWithValue("@phone", (object?)contacts[i].Phone ?? DBNull.Value); insert.Parameters.AddWithValue("@sort", i);
+            await insert.ExecuteNonQueryAsync();
+        }
     }
 
     // FEATURE_ID: TAPORTAL-HR-MASTER-DATA
