@@ -1,0 +1,5 @@
+@model CustomerMembership
+@{ViewData["Title"]="Dashboard";}
+<p class="eyebrow">TỔNG QUAN DOANH NGHIỆP</p><h1>Dashboard</h1><div class="hero"><p>Xin chào, @User.FindFirst("display_name")?.Value</p><h2>@Model.Name</h2><p>@Model.Code · Mã số thuế: @(Model.TaxCode??"Chưa cập nhật")</p><span class="badge-active">Customer Portal đã kích hoạt</span></div>
+<div class="grid"><section class="panel"><h3>VAI TRÒ DOANH NGHIỆP</h3><div class="value">@Model.Role</div><p class="muted">Quyền trong doanh nghiệp hiện tại</p></section><section class="panel"><h3>TÀI KHOẢN</h3><div class="value">Đang hoạt động</div><p class="muted">@User.Identity?.Name</p></section><section class="panel"><h3>DOANH NGHIỆP</h3><div class="value">@Model.Code</div><a href="/profile/company">Xem hồ sơ doanh nghiệp →</a></section></div>
+<h2>Dịch vụ tài chính</h2><div class="grid">@foreach(var label in new[]{"Tài khoản ngân hàng","QR thanh toán","Giao dịch","Công nợ","Đối soát","Báo cáo"}){<section class="panel"><h3>@label</h3><div class="value muted">Chưa kích hoạt</div><p class="muted">Chưa có dữ liệu</p></section>}</div>

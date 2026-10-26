@@ -1,0 +1,3 @@
+@model CustomerUser
+@{ViewData["Title"]="Thông tin cá nhân";}
+<h1>Thông tin cá nhân</h1><div class="panel"><dl><dt>Họ tên</dt><dd>@Model.DisplayName</dd><dt>Username</dt><dd>@Model.Username</dd><dt>Email</dt><dd>@Model.Email</dd><dt>Trạng thái</dt><dd>Đang hoạt động</dd></dl><a href="/account/change-password" class="btn btn-primary">Đổi mật khẩu</a></div>

@@ -63,6 +63,7 @@ WHERE ur.UserId=@id AND r.IsDeleted=0 AND r.IsActive=1;
         const string permSql = """
 SELECT DISTINCT p.Code
 FROM dbo.UserRoles ur
+JOIN dbo.Roles r ON r.Id=ur.RoleId AND r.IsActive=1 AND r.IsDeleted=0
 JOIN dbo.RolePermissions rp ON rp.RoleId=ur.RoleId
 JOIN dbo.Permissions p ON p.Id=rp.PermissionId
 WHERE ur.UserId=@id AND p.IsDeleted=0 AND p.IsActive=1

@@ -1,0 +1,4 @@
+@model IReadOnlyList<CustomerMembership>
+@{ViewData["Title"]="Chọn doanh nghiệp";}
+<p class="eyebrow">KHÔNG GIAN LÀM VIỆC</p><h1>Chọn doanh nghiệp</h1><p class="muted">Truy cập doanh nghiệp bạn được cấp quyền quản lý.</p>
+@foreach(var c in Model){<form method="post" asp-action="SelectCustomer"><input type="hidden" name="customerId" value="@c.CustomerId"/><button class="company-option"><strong>@c.Name</strong><br/><span class="muted">@c.Code · @c.Role</span></button></form>}

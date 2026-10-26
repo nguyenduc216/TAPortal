@@ -1,0 +1,26 @@
+name: Customer Portal MVP 01
+on:
+  push:
+    branches: [main, 'feature/**']
+  pull_request:
+    branches: [main]
+jobs:
+  customer-portal:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Start isolated SQL LocalDB test host
+        run: sqllocaldb start MSSQLLocalDB
+      - run: dotnet restore TAPortal.sln
+      - run: dotnet build TAPortal.sln -c Release --no-restore
+      - run: dotnet test TAPortal.sln -c Release --no-build --logger trx --results-directory TestResults
+      - run: dotnet publish src/TAPortal.Web/TAPortal.Web.csproj -c Release --no-build -o publish/admin
+      - run: dotnet publish src/TACustomerPortal.Web/TACustomerPortal.Web.csproj -c Release --no-build -o publish/customer
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: customer-portal-test-results
+          path: TestResults

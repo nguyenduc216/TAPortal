@@ -1,0 +1,3 @@
+@model LoginVm
+@{ViewData["Title"]="Đăng nhập";}
+<div class="auth-card"><p class="eyebrow">T.A CUSTOMER PORTAL</p><h1>Chào mừng trở lại</h1><p class="muted">Đăng nhập để truy cập doanh nghiệp của bạn.</p><form method="post" asp-action="Login"><div asp-validation-summary="All"></div><label>Tên đăng nhập<input asp-for="Username" class="form-control" autocomplete="username" required maxlength="100"/></label><label>Mật khẩu<input asp-for="Password" type="password" class="form-control" autocomplete="current-password" required maxlength="256"/></label><button class="btn btn-primary w-100">Đăng nhập</button></form><p class="muted mt-4">Liên hệ quản trị viên T.A để được cấp tài khoản.</p></div>

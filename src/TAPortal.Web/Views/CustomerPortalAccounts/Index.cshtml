@@ -1,0 +1,17 @@
+@model List<TAPortal.Shared.MembershipAdminRow>
+@{ ViewData["Title"]="Tài khoản Customer Portal"; }
+<h1>Tài khoản Customer Portal</h1>
+<form asp-action="Save" method="post" class="card card-body mb-4">
+<h2>Tạo / gán tài khoản</h2>
+<label>Doanh nghiệp<select name="CustomerId" class="form-select" required><option value="">Chọn doanh nghiệp</option>@foreach(var c in (List<TAPortal.Web.Models.CustomerRow>)ViewBag.Customers){<option value="@c.Id">@c.Name</option>}</select></label>
+<label>Tài khoản hiện có<select name="UserId" class="form-select"><option value="">Tạo tài khoản mới</option>@foreach(var u in (List<TAPortal.Web.Models.PortalUser>)ViewBag.Users){<option value="@u.Id">@u.Username ? @u.DisplayName</option>}</select></label>
+<label>Username (tài khoản mới)<input class="form-control" name="Username" maxlength="100" autocomplete="off" /></label>
+<label>Họ tên<input class="form-control" name="DisplayName" maxlength="200" /></label>
+<label>Email<input class="form-control" name="Email" type="email" maxlength="256" /></label>
+<label>Mật khẩu ban đầu<input class="form-control" name="Password" type="password" maxlength="256" autocomplete="new-password" /></label>
+<label>Vai trò<select name="PortalRole" class="form-select"><option>VIEWER</option><option>ADMIN</option><option>OWNER</option></select></label>
+<button class="btn btn-primary mt-3">Lưu và kích hoạt</button>
+</form>
+<div class="table-responsive"><table class="table card-table"><thead><tr><th>Họ tên / Username</th><th>Email</th><th>Doanh nghiệp</th><th>Vai trò</th><th>Trạng thái</th><th>Đăng nhập gần nhất (UTC)</th><th>Thao tác</th></tr></thead><tbody>
+@foreach(var r in Model){<tr><td>@r.DisplayName<br/>@r.Username</td><td>@r.Email</td><td>@r.CustomerName</td><td><form asp-action="Save" method="post"><input type="hidden" name="UserId" value="@r.UserId"/><input type="hidden" name="CustomerId" value="@r.CustomerId"/><select name="PortalRole" class="form-select" aria-label="Vai trò">@foreach(var role in new[]{"OWNER","ADMIN","VIEWER"}){<option selected="@(r.Role==role)" value="@role">@role</option>}</select><button class="btn btn-sm">Đổi vai trò / kích hoạt</button></form></td><td>@r.Status / @(r.Active?"Đang cấp quyền":"Đã thu hồi")</td><td>@r.LastLogin</td><td><form asp-action="SetActive" method="post"><input type="hidden" name="userId" value="@r.UserId"/><input type="hidden" name="customerId" value="@r.CustomerId"/><input type="hidden" name="active" value="@((!r.Active).ToString())"/><button class="btn btn-outline-primary">@(r.Active?"Khóa quyền truy cập":"Kích hoạt lại")</button></form></td></tr>}
+</tbody></table></div>

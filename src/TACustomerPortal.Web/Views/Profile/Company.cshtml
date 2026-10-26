@@ -1,0 +1,3 @@
+@model CustomerMembership
+@{ViewData["Title"]="Hồ sơ doanh nghiệp";}
+<h1>Hồ sơ doanh nghiệp</h1><div class="panel"><h2>@Model.Name</h2><dl><dt>Mã khách hàng</dt><dd>@Model.Code</dd><dt>Mã số thuế</dt><dd>@Model.TaxCode</dd><dt>Email</dt><dd>@Model.Email</dd><dt>Điện thoại</dt><dd>@Model.Phone</dd><dt>Địa chỉ</dt><dd>@Model.Address</dd><dt>Vai trò của bạn</dt><dd>@Model.Role</dd></dl></div>

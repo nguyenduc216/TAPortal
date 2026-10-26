@@ -1,11 +1,13 @@
 /* TAPortal - Initial administrator seed
    Creates the bootstrap admin account if it does not exist.
-   Password: Admin@123
+   Password: provided by operator using a generated PBKDF2 hash
    IMPORTANT: change the password immediately after first login.
    PasswordHash uses TAPortal.Web PBKDF2-SHA256 format.
 */
-USE [TAPortal];
-GO
+-- Operator must set @AdminPasswordHash in this same batch using TAPortal.Shared.PasswordService.
+DECLARE @AdminPasswordHash nvarchar(1000) = NULL;
+IF @AdminPasswordHash IS NULL THROW 51000,'Supply a unique operator-generated password hash; fixed-password bootstrap is disabled',1;
+-- Target database must be selected explicitly.
 
 DECLARE @AdminRole uniqueidentifier = (SELECT TOP 1 Id FROM dbo.Roles WHERE Code='SYS_ADMIN' AND IsDeleted=0);
 
@@ -28,7 +30,7 @@ BEGIN
     VALUES(
         @AdminUser,
         'admin','ADMIN','admin@ta.local','ADMIN@TA.LOCAL',N'T.A Administrator',
-        'PBKDF2$SHA256$150000$W/VCjeERevqOcWVTVYOPsA==$kfjc7OPGVPv2J2jmxfQ6kLno3TNfD0miHQ1tT74LDFs=',
+        @AdminPasswordHash,
         'ACTIVE',1,0
     );
 END

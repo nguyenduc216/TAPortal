@@ -26,7 +26,7 @@ public sealed class AccountController(PortalDb db, PasswordService passwords) : 
     {
         if (!ModelState.IsValid) return View(vm);
         var user = await db.GetAuthUserAsync(vm.Username);
-        if (user is null || !passwords.Verify(vm.Password, user.PasswordHash))
+        if (user is null || !passwords.Verify(vm.Password, user.PasswordHash) || (user.Roles.Count == 0 && user.Permissions.Count == 0))
         {
             ModelState.AddModelError(string.Empty, "Tài khoản hoặc mật khẩu không đúng.");
             return View(vm);
@@ -36,7 +36,8 @@ public sealed class AccountController(PortalDb db, PasswordService passwords) : 
         {
             new(ClaimTypes.NameIdentifier, user.Id.ToString()),
             new(ClaimTypes.Name, user.Username),
-            new("display_name", user.DisplayName)
+            new("display_name", user.DisplayName),
+            new("password_stamp", Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(user.PasswordHash))))
         };
         if (!string.IsNullOrWhiteSpace(user.Email)) claims.Add(new Claim(ClaimTypes.Email, user.Email));
         claims.AddRange(user.Roles.Select(r => new Claim(ClaimTypes.Role, r)));
