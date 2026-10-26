@@ -8,6 +8,9 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Data.SqlClient;
 using TACustomerPortal.Web.Services;
 using TAPortal.Shared;
+using Microsoft.AspNetCore.TestHost;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace TACustomerPortal.Tests;
 public sealed class PortalTests : IAsyncLifetime
@@ -233,6 +236,8 @@ public sealed class PortalTests : IAsyncLifetime
 
         var loginToken = await AdminToken("/account/login");
         Assert.Equal(HttpStatusCode.Redirect, (await adminClient.PostAsync("/account/login", new FormUrlEncodedContent(new Dictionary<string, string> { { "Username", "customer" }, { "Password", Password }, { "__RequestVerificationToken", loginToken } }))).StatusCode);
+        foreach (var route in new[] {"/", "/customers", "/users", "/account/profile"})
+            Assert.Equal(HttpStatusCode.OK, (await adminClient.GetAsync(route)).StatusCode);
         var token = await AdminToken("/customerportalaccounts");
         var result = await adminClient.PostAsync("/customerportalaccounts/save", new FormUrlEncodedContent(new Dictionary<string, string> { { "CustomerId", b.ToString() }, { "Username", "provisioned" }, { "DisplayName", "Provisioned user" }, { "Password", Password }, { "PortalRole", "VIEWER" }, { "__RequestVerificationToken", token } }));
         Assert.Equal(HttpStatusCode.Redirect, result.StatusCode);
@@ -305,13 +310,19 @@ public sealed class PortalTests : IAsyncLifetime
     public async Task LoginRateLimited()
     {
         for (var i = 0; i < 10; i++)
-            Assert.Equal(HttpStatusCode.OK, (await Login("wrong")).StatusCode);
+        {
+            client.DefaultRequestHeaders.Remove("X-Forwarded-For");
+            client.DefaultRequestHeaders.Add("X-Forwarded-For", "192.0.2." + (i + 1));
+            Assert.Equal(HttpStatusCode.OK, (await Post("/account/login", new() { { "Username", "unknown-" + i }, { "Password", "wrong" } }, "/account/login")).StatusCode);
+        }
+
         Assert.Equal(HttpStatusCode.TooManyRequests, (await Login("wrong")).StatusCode);
     }
 
     [Fact]
     public async Task DatabaseConstraintsAndTransactionRollback()
     {
+        await GrantSystemAdmin();
         await Assert.ThrowsAsync<SqlException>(() => Execute("INSERT dbo.CustomerPortalMemberships(UserId,CustomerId,PortalRole) VALUES(@u,@a,'VIEWER')", ("@u", user), ("@a", a)));
         await Assert.ThrowsAsync<SqlException>(() => Execute("INSERT dbo.CustomerPortalMemberships(UserId,CustomerId,PortalRole) VALUES(NEWID(),@a,'VIEWER')", ("@a", a)));
         await Assert.ThrowsAsync<SqlException>(() => Execute("INSERT dbo.CustomerPortalMemberships(UserId,CustomerId,PortalRole) VALUES(@u,NEWID(),'VIEWER')", ("@u", user)));
@@ -324,14 +335,15 @@ public sealed class PortalTests : IAsyncLifetime
     [Fact]
     public async Task ProvisionReactivateAndMigrationIdempotency()
     {
+        await GrantSystemAdmin();
         var store = new MembershipAdminStore(Configuration);
         await store.Save(new() { CustomerId = b, Username = "new-user", DisplayName = "New user", PortalRole = "ADMIN" }, user, passwords.Hash(Password));
-        var rows = await store.List(b);
+        var rows = await store.List(user, b);
         Assert.Single(rows);
         await store.SetActive(rows[0].UserId, b, false, user);
-        Assert.False((await store.List(b))[0].Active);
+        Assert.False((await store.List(user, b))[0].Active);
         await store.Save(new() { CustomerId = b, UserId = rows[0].UserId, PortalRole = "VIEWER" }, user, null);
-        Assert.True((await store.List(b))[0].Active);
+        Assert.True((await store.List(user, b))[0].Active);
         await Script("database/migrations/008-customer-portal-memberships.sql");
         await Script("database/scripts/004-verify-customer-portal.sql");
         Assert.Equal(2, await Count("SELECT COUNT(*) FROM dbo.Users"));
@@ -339,6 +351,213 @@ public sealed class PortalTests : IAsyncLifetime
         Assert.Equal(2, await Count("SELECT COUNT(*) FROM dbo.CustomerPortalMemberships"));
         await Assert.ThrowsAsync<SqlException>(() => Script("database/scripts/005-rollback-customer-portal.sql"));
         Assert.Equal(2, await Count("SELECT COUNT(*) FROM dbo.CustomerPortalMemberships"));
+    }
+
+    private Task GrantSystemAdmin() => Execute("INSERT dbo.Roles(Id,Code,Name) VALUES(NEWID(),'SYS_ADMIN','Admin'); INSERT dbo.UserRoles(UserId,RoleId) SELECT @u,Id FROM dbo.Roles WHERE Code='SYS_ADMIN';", ("@u", user));
+    [Theory]
+    [InlineData("customer")]
+    [InlineData("direct-permission")]
+    [InlineData("agent-role")]
+    public async Task RestrictedActorsCannotListOrMutateAnyCustomer(string actorKind)
+    {
+        if (actorKind == "direct-permission")
+            await Execute("INSERT dbo.UserPermissions(UserId,PermissionId,Effect) SELECT @u,Id,'ALLOW' FROM dbo.Permissions;", ("@u", user));
+        if (actorKind == "agent-role")
+            await Execute("INSERT dbo.Roles(Id,Code,Name) VALUES(NEWID(),'AGENT_ADMIN','Agent admin'); INSERT dbo.UserRoles(UserId,RoleId) SELECT @u,Id FROM dbo.Roles; INSERT dbo.RolePermissions(RoleId,PermissionId) SELECT r.Id,p.Id FROM dbo.Roles r CROSS JOIN dbo.Permissions p;", ("@u", user));
+        var store = new MembershipAdminStore(Configuration);
+        // Both assigned and foreign CustomerIds are denied: MVP 01 delegates no management to Agents.
+        foreach (var customerId in new[]
+        {
+            a,
+            b
+        }
+
+        )
+        {
+            await Assert.ThrowsAsync<UnauthorizedAccessException>(() => store.List(user, customerId));
+            await Assert.ThrowsAsync<UnauthorizedAccessException>(() => store.Save(new() { CustomerId = customerId, UserId = user, PortalRole = "ADMIN" }, user, null));
+            await Assert.ThrowsAsync<UnauthorizedAccessException>(() => store.SetActive(user, customerId, false, user));
+        }
+
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => store.List(user, null));
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => store.Save(new() { CustomerId = b, Username = "unauthorized", DisplayName = "Unauthorized", PortalRole = "OWNER" }, user, passwords.Hash(Password)));
+        Assert.Equal(1, await Count("SELECT COUNT(*) FROM dbo.Users"));
+        Assert.Equal(1, await Count("SELECT COUNT(*) FROM dbo.CustomerPortalMemberships WHERE IsActive=1 AND PortalRole='OWNER'"));
+    }
+
+    [Theory]
+    [InlineData("role-inactive")]
+    [InlineData("role-deleted")]
+    [InlineData("user-inactive")]
+    [InlineData("user-deleted")]
+    [InlineData("user-status")]
+    [InlineData("role-revoked")]
+    public async Task StoreRechecksLiveAdministratorStatus(string state)
+    {
+        await GrantSystemAdmin();
+        var store = new MembershipAdminStore(Configuration);
+        Assert.Single(await store.List(user, a));
+        await Execute(state switch
+        {
+            "role-inactive" => "UPDATE dbo.Roles SET IsActive=0",
+            "role-deleted" => "UPDATE dbo.Roles SET IsDeleted=1",
+            "user-inactive" => "UPDATE dbo.Users SET IsActive=0",
+            "user-deleted" => "UPDATE dbo.Users SET IsDeleted=1",
+            "user-status" => "UPDATE dbo.Users SET Status='LOCKED'",
+            _ => "DELETE dbo.UserRoles"
+        });
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => store.List(user, null));
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => store.Save(new() { CustomerId = b, UserId = user, PortalRole = "OWNER" }, user, null));
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => store.SetActive(user, a, false, user));
+        Assert.Equal(1, await Count("SELECT COUNT(*) FROM dbo.CustomerPortalMemberships WHERE IsActive=1"));
+    }
+
+    [Fact]
+    public async Task PermissionAloneCannotOpenGlobalListsOrInvokeManagementActions()
+    {
+        await Execute("INSERT dbo.Permissions(Id,Code,Name,ActionCode) VALUES(NEWID(),'AUTH.USERS.VIEW','View users','VIEW'),(NEWID(),'AUTH.USERS.CREATE','Create users','CREATE'); INSERT dbo.UserPermissions(UserId,PermissionId,Effect) SELECT @u,Id,'ALLOW' FROM dbo.Permissions;", ("@u", user));
+        using var adminFactory = AdminFactory();
+        using var adminClient = adminFactory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false, BaseAddress = new Uri("https://localhost") });
+        await AdminLogin(adminClient);
+        foreach (var route in new[]
+        {
+            "/",
+            "/customers",
+            "/users",
+            "/customerportalaccounts",
+            "/customerportalaccounts?customerId=" + b
+        }
+
+        )
+            AssertDenied(await adminClient.GetAsync(route));
+        var token = await ReadToken(adminClient, "/account/changepassword");
+        foreach (var route in new[]
+        {
+            "/customerportalaccounts/save",
+            "/customerportalaccounts/setactive",
+            "/users/create"
+        }
+
+        )
+        {
+            // Supplying another actor is ignored; the server uses the authenticated principal.
+            var response = await adminClient.PostAsync(route, new FormUrlEncodedContent(new Dictionary<string, string> { { "CustomerId", b.ToString() }, { "UserId", user.ToString() }, { "PortalRole", "OWNER" }, { "active", "true" }, { "actor", Guid.NewGuid().ToString() }, { "__RequestVerificationToken", token } }));
+            AssertDenied(response);
+        }
+
+        Assert.Equal(1, await Count("SELECT COUNT(*) FROM dbo.Users"));
+        Assert.Equal(1, await Count("SELECT COUNT(*) FROM dbo.CustomerPortalMemberships"));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task AdminRoleRevocationAppliesToExistingSession(bool retainPermissions)
+    {
+        await GrantSystemAdmin();
+        if (retainPermissions)
+            await Execute("INSERT dbo.UserPermissions(UserId,PermissionId,Effect) SELECT @u,Id,'ALLOW' FROM dbo.Permissions", ("@u",user));
+        using var adminFactory = AdminFactory();
+        using var adminClient = adminFactory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false, BaseAddress = new Uri("https://localhost") });
+        await AdminLogin(adminClient);
+        Assert.Equal(HttpStatusCode.OK, (await adminClient.GetAsync("/customerportalaccounts")).StatusCode);
+        await Execute("DELETE dbo.UserRoles");
+        var response = await adminClient.GetAsync("/customerportalaccounts");
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        Assert.Contains(retainPermissions ? "/account/access-denied" : "/account/login", response.Headers.Location!.OriginalString.ToLowerInvariant());
+    }
+
+    private WebApplicationFactory<admin::Program> AdminFactory() => new WebApplicationFactory<admin::Program>().WithWebHostBuilder(builder => builder.UseEnvironment("Development").ConfigureAppConfiguration((_, c) => c.AddConfiguration(Configuration)));
+    private static void AssertDenied(HttpResponseMessage response)
+    {
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        Assert.Contains("/account/access-denied", response.Headers.Location!.OriginalString.ToLowerInvariant());
+    }
+
+    private static async Task<string> ReadToken(HttpClient target, string path)
+    {
+        var response = await target.GetAsync(path);
+        response.EnsureSuccessStatusCode();
+        return WebUtility.HtmlDecode(Regex.Match(await response.Content.ReadAsStringAsync(), "name=\"__RequestVerificationToken\"[^>]*value=\"([^\"]+)\"").Groups[1].Value);
+    }
+
+    private static async Task AdminLogin(HttpClient target)
+    {
+        var token = await ReadToken(target, "/account/login");
+        var result = await target.PostAsync("/account/login", new FormUrlEncodedContent(new Dictionary<string, string> { { "Username", "customer" }, { "Password", Password }, { "__RequestVerificationToken", token } }));
+        Assert.Equal(HttpStatusCode.Redirect, result.StatusCode);
+    }
+
+    [Theory]
+    [InlineData("customer")]
+    [InlineData("unknown-account")]
+    public async Task AccountThrottleNormalizesNamesAndDoesNotRevealExistence(string username)
+    {
+        for (var i = 0; i < 5; i++)
+        {
+            var response = await Post("/account/login", new() { { "Username", i % 2 == 0 ? username : "  " + username.ToUpperInvariant() + "  " }, { "Password", "wrong" } }, "/account/login");
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        }
+
+        Assert.Equal(HttpStatusCode.TooManyRequests, (await Post("/account/login", new() { { "Username", username }, { "Password", "wrong" } }, "/account/login")).StatusCode);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ForwardedHeadersOnlyAffectLimitsForConfiguredSocketProxy(bool trusted)
+    {
+        using var proxyFactory = ProxyFactory(trusted);
+        using var target = proxyFactory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false, BaseAddress = new Uri("https://localhost") });
+        for (var i = 0; i < 11; i++)
+        {
+            var result = await ProxyLogin(target, "proxy-unknown-" + i, "198.51.100." + (i + 1));
+            Assert.Equal(!trusted && i == 10 ? HttpStatusCode.TooManyRequests : HttpStatusCode.OK, result.StatusCode);
+        }
+    }
+
+    [Fact]
+    public async Task ChangingForwardedIpCannotBypassAccountThrottle()
+    {
+        using var proxyFactory = ProxyFactory(true);
+        using var target = proxyFactory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false, BaseAddress = new Uri("https://localhost") });
+        for (var i = 0; i < 6; i++)
+            Assert.Equal(i == 5 ? HttpStatusCode.TooManyRequests : HttpStatusCode.OK, (await ProxyLogin(target, "customer", "198.51.100." + (i + 1))).StatusCode);
+    }
+
+    [Fact]
+    public async Task UntrustedForwardedProtoCannotDowngradeRequest()
+    {
+        using var proxyFactory = ProxyFactory(false);
+        using var target = proxyFactory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false, BaseAddress = new Uri("https://localhost") });
+        target.DefaultRequestHeaders.Add("X-Forwarded-Proto", "http");
+        Assert.Equal(HttpStatusCode.OK, (await target.GetAsync("/account/login")).StatusCode);
+    }
+
+    private WebApplicationFactory<Program> ProxyFactory(bool trusted) => new WebApplicationFactory<Program>().WithWebHostBuilder(builder => builder.UseEnvironment("Development").ConfigureAppConfiguration((_, c) => c.AddConfiguration(Configuration).AddInMemoryCollection(new Dictionary<string, string?> { // Deliberately configure a different trusted proxy for the untrusted-socket case.
+    { "ReverseProxy:KnownProxies:0", trusted ? "192.0.2.10" : "192.0.2.11" } })).ConfigureTestServices(services => services.AddSingleton<IStartupFilter>(new FixedSocketProxy())));
+    private static async Task<HttpResponseMessage> ProxyLogin(HttpClient target, string username, string forwardedIp)
+    {
+        target.DefaultRequestHeaders.Remove("X-Forwarded-For");
+        target.DefaultRequestHeaders.Add("X-Forwarded-For", forwardedIp);
+        target.DefaultRequestHeaders.Remove("X-Forwarded-Proto");
+        target.DefaultRequestHeaders.Add("X-Forwarded-Proto", "https");
+        var token = await ReadToken(target, "/account/login");
+        return await target.PostAsync("/account/login", new FormUrlEncodedContent(new Dictionary<string, string> { { "Username", username }, { "Password", "wrong" }, { "__RequestVerificationToken", token } }));
+    }
+
+    private sealed class FixedSocketProxy : IStartupFilter
+    {
+        public Action<IApplicationBuilder> Configure(Action<IApplicationBuilder> next) => app =>
+        {
+            // Test-only socket identity, never derived from a request header.
+            app.Use((context, nextMiddleware) =>
+            {
+                context.Connection.RemoteIpAddress = IPAddress.Parse("192.0.2.10");
+                return nextMiddleware(context);
+            });
+            next(app);
+        };
     }
 
     [Theory]

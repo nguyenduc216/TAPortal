@@ -14,7 +14,7 @@ public sealed class AccountController(PortalDb db, PasswordService passwords) : 
     [HttpGet]
     public IActionResult Login(string? returnUrl = null)
     {
-        if (User.Identity?.IsAuthenticated == true) return RedirectToAction("Index", "Home");
+        if (User.Identity?.IsAuthenticated == true) return User.IsInRole("SYS_ADMIN") ? RedirectToAction("Index", "Home") : RedirectToAction(nameof(Profile));
         ViewBag.ReturnUrl = returnUrl;
         return View(new LoginVm());
     }
@@ -49,7 +49,7 @@ public sealed class AccountController(PortalDb db, PasswordService passwords) : 
         await db.TouchLoginAsync(user.Id);
 
         if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl)) return LocalRedirect(returnUrl);
-        return RedirectToAction("Index", "Home");
+        return user.Roles.Contains("SYS_ADMIN") ? RedirectToAction("Index", "Home") : RedirectToAction(nameof(Profile));
     }
 
     [Authorize]

@@ -8,7 +8,7 @@ using TAPortal.Web.Services;
 
 namespace TAPortal.Web.Controllers;
 
-[Authorize(Policy = "PERM:CUSTOMERS.VIEW")]
+[Authorize(Policy = "SystemAdminOnly")]
 public sealed class HomeController(PortalDb db) : Controller
 {
     public async Task<IActionResult> Index() => View(await db.GetDashboardAsync());
@@ -21,7 +21,7 @@ public sealed class HomeController(PortalDb db) : Controller
     }
 }
 
-[Authorize(Policy = PermissionPolicies.Prefix + "AUTH.USERS.VIEW")]
+[Authorize(Policy = "SystemAdminOnly")]
 public sealed class UsersController(PortalDb db, PasswordService passwords) : Controller
 {
     public async Task<IActionResult> Index() => View(await db.GetUsersAsync());
@@ -52,7 +52,7 @@ public sealed class RolesController(PortalDb db) : Controller
     public async Task<IActionResult> Index() => View(await db.GetRolesAsync());
 }
 
-[Authorize(Policy = "PERM:CUSTOMERS.VIEW")]
+[Authorize(Policy = "SystemAdminOnly")]
 public sealed class CustomersController(PortalDb db) : Controller
 {
     public async Task<IActionResult> Index() => View(await db.GetCustomersAsync());

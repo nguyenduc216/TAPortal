@@ -10,7 +10,7 @@ using TAPortal.Shared;
 
 namespace TACustomerPortal.Web.Controllers;
 [Route("account")]
-public sealed class AccountController(ICustomerStore store, PasswordService passwords) : Controller
+public sealed class AccountController(ICustomerStore store, PasswordService passwords, LoginAttemptLimiter attempts) : Controller
 {
     // Perform the same expensive password verification for unknown usernames.
     private static readonly string DummyHash = new PasswordService().Hash(Guid.NewGuid() + "Aa1!");
@@ -21,6 +21,12 @@ public sealed class AccountController(ICustomerStore store, PasswordService pass
     {
         if (!ModelState.IsValid)
             return View(vm);
+        if (!attempts.TryAcquire(vm.Username))
+        {
+            Response.Headers.RetryAfter = "60";
+            return StatusCode(StatusCodes.Status429TooManyRequests);
+        }
+
         var user = await store.FindUser(vm.Username);
         var valid = passwords.Verify(vm.Password, user?.PasswordHash ?? DummyHash);
         var memberships = user is null ? [] : await store.Memberships(user.Id);

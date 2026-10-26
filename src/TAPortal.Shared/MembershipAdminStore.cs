@@ -28,10 +28,26 @@ public sealed record MembershipAdminRow(Guid UserId, Guid CustomerId, string Dis
 public sealed class MembershipAdminStore(IConfiguration configuration)
 {
     private SqlConnection Connection() => new(configuration["Database:ConnectionString"]);
-    public async Task<List<MembershipAdminRow>> List(Guid? customerId)
+    // MVP 01 deliberately has no delegated Agent scope. Never accept actor identity from request data.
+    private static async Task RequireSystemAdmin(SqlConnection cn, SqlTransaction? tx, Guid actor)
+    {
+        await using var cmd = new SqlCommand("""
+SELECT COUNT(*) FROM dbo.Users u
+JOIN dbo.UserRoles ur ON ur.UserId=u.Id
+JOIN dbo.Roles r ON r.Id=ur.RoleId
+WHERE u.Id=@actor AND u.IsActive=1 AND u.IsDeleted=0 AND u.Status='ACTIVE'
+AND r.Code='SYS_ADMIN' AND r.IsActive=1 AND r.IsDeleted=0;
+""", cn, tx);
+        cmd.Parameters.AddWithValue("@actor", actor);
+        if (Convert.ToInt32(await cmd.ExecuteScalarAsync()) == 0)
+            throw new UnauthorizedAccessException("Only active SYS_ADMIN users can manage customer portal accounts.");
+    }
+
+    public async Task<List<MembershipAdminRow>> List(Guid actor, Guid? customerId)
     {
         await using var cn = Connection();
         await cn.OpenAsync();
+        await RequireSystemAdmin(cn, null, actor);
         await using var cmd = new SqlCommand("""
 SELECT u.Id,c.Id,u.DisplayName,u.Username,u.Email,c.Name,m.PortalRole,m.IsActive,CASE WHEN u.IsDeleted=1 THEN 'DELETED' WHEN u.IsActive=0 THEN 'LOCKED' ELSE u.Status END,u.LastLoginAt
 FROM dbo.CustomerPortalMemberships m JOIN dbo.Users u ON u.Id=m.UserId JOIN dbo.Customers c ON c.Id=m.CustomerId
@@ -50,6 +66,7 @@ WHERE (@c IS NULL OR c.Id=@c) ORDER BY c.Name,u.DisplayName
         await using var cn = Connection();
         await cn.OpenAsync();
         await using var tx = (SqlTransaction)await cn.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
+        await RequireSystemAdmin(cn, tx, actor);
         var id = input.UserId ?? Guid.NewGuid();
         if (!input.UserId.HasValue)
         {
@@ -88,11 +105,14 @@ ELSE INSERT dbo.CustomerPortalMemberships(Id,UserId,CustomerId,PortalRole,IsActi
     {
         await using var cn = Connection();
         await cn.OpenAsync();
-        await using var cmd = new SqlCommand("UPDATE dbo.CustomerPortalMemberships SET IsActive=@active,UpdatedAt=SYSUTCDATETIME(),UpdatedBy=@actor WHERE UserId=@u AND CustomerId=@c", cn);
+        await using var tx = (SqlTransaction)await cn.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
+        await RequireSystemAdmin(cn, tx, actor);
+        await using var cmd = new SqlCommand("UPDATE dbo.CustomerPortalMemberships SET IsActive=@active,UpdatedAt=SYSUTCDATETIME(),UpdatedBy=@actor WHERE UserId=@u AND CustomerId=@c", cn, tx);
         cmd.Parameters.AddWithValue("@active", active);
         cmd.Parameters.AddWithValue("@actor", actor);
         cmd.Parameters.AddWithValue("@u", userId);
         cmd.Parameters.AddWithValue("@c", customerId);
         await cmd.ExecuteNonQueryAsync();
+        await tx.CommitAsync();
     }
 }

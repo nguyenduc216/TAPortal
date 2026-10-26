@@ -29,9 +29,12 @@
                 </h1>
                 <div class="collapse navbar-collapse show">
                     <ul class="navbar-nav pt-lg-3">
+                        @if (User.IsInRole("SYS_ADMIN"))
+                        {
                         <li class="nav-item"><a class="nav-link" asp-controller="Home" asp-action="Index"><span class="nav-link-icon"><i class="ti ti-layout-dashboard"></i></span><span class="nav-link-title">Tổng quan</span></a></li>
                         <li class="nav-item"><a class="nav-link" asp-controller="Customers" asp-action="Index"><span class="nav-link-icon"><i class="ti ti-building-store"></i></span><span class="nav-link-title">Khách hàng</span></a></li>
                         <li class="nav-item"><a class="nav-link" asp-controller="Users" asp-action="Index"><span class="nav-link-icon"><i class="ti ti-users"></i></span><span class="nav-link-title">Người dùng</span></a></li>
+                        }
                         <li class="nav-item"><a class="nav-link" asp-controller="Roles" asp-action="Index"><span class="nav-link-icon"><i class="ti ti-shield-lock"></i></span><span class="nav-link-title">Vai trò &amp; phân quyền</span></a></li>
                         <li class="nav-item"><a class="nav-link" asp-controller="Menus" asp-action="Index"><span class="nav-link-icon"><i class="ti ti-list-details"></i></span><span class="nav-link-title">Quản lý menu</span></a></li>
                         <li class="nav-item"><a class="nav-link" href="#"><span class="nav-link-icon"><i class="ti ti-settings"></i></span><span class="nav-link-title">Cấu hình hệ thống</span></a></li>
