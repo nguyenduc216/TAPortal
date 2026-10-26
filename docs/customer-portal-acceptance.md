@@ -42,7 +42,7 @@ Test result: `publish/test-results/customer-portal.trx` (artifact local, không 
 
 ## F. Pull Request
 
-Draft PR vào main được tạo sau commit/push nhánh feature/customer-portal-mvp01. Xem URL trong phản hồi bàn giao và mục liên kết PR của repository. Không tự merge.
+Draft PR [#7](https://github.com/nguyenduc216/TAPortal/pull/7) vào main, từ nhánh feature/customer-portal-mvp01. Commit triển khai: 38a8d8e. Không tự merge.
 
 ## G. Công việc tiếp theo
 
