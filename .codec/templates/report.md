@@ -1,6 +1,6 @@
 # CODEC DELIVERY REPORT — {{CHANGE_ID}}
 
-Feature ID: `{{FEATURE_ID}}`  
+Feature ID: `{{FEATURE_ID}}`
 Change ID: `{{CHANGE_ID}}`
 
 1. Mục tiêu và kết quả thực tế:

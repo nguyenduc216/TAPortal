@@ -4,7 +4,7 @@
     "created_at": "2026-10-27T13:56:59.421243+00:00",
     "title": "Install repository workflow and change history",
     "status": "COMPLETED",
-    "commit_sha": null,
+    "commit_sha": "fa9610411a1e9ea59bcc5894776aba84b19ea7c7",
     "migration_status": "NOT_EXECUTED",
     "publish_status": "NOT_PUBLISHED",
     "merge_status": "PENDING_APPROVAL",
@@ -47,6 +47,8 @@
       "Operator confirms exact publish paths for TAPortal.Web and TACustomerPortal.Web before any publish/deploy"
     ],
     "installation_source": "Codec-TAPortal-Workflow-v1.zip",
-    "installation_zip_sha256": "cd39814a8461b2753e4a8185d5e10a2af70d740e1e7ea2b4a1e90a210b541463"
+    "installation_zip_sha256": "cd39814a8461b2753e4a8185d5e10a2af70d740e1e7ea2b4a1e90a210b541463",
+    "push_status": "PUSHED",
+    "commit_note": "Installation commit SHA; follow-up metadata commit records this SHA and removes upstream template trailing whitespace. Final delivery HEAD is reported to operator."
   }
 ]
