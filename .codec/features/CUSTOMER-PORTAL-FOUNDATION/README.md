@@ -12,7 +12,7 @@
 
 | Change ID | Ngày UTC | Nội dung | Commit SHA | Migration | Publish | Merge |
 |---|---|---|---|---|---|---|
-| `CUSTOMER-PORTAL-FOUNDATION-CHG-20261027T141827Z-E64647` | 2026-10-27 | Customer Portal MVP 01 Checkpoint 1 | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |
+| `CUSTOMER-PORTAL-FOUNDATION-CHG-20261027T141827Z-E64647` | 2026-10-27 | Customer Portal MVP 01 Checkpoint 1 | 1d048d1ec3b52cda301c18154949bb1e1ac41c8f | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |
 
 ## Verified baseline and checkpoint state
 Existing source already implements independent Customer Portal login/logout, company selection, dashboard, profiles, shared password changes and SYS_ADMIN-only membership management. No feature history preceded this change; baseline verified from source/PR #7, not assumed from chat.

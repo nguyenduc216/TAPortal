@@ -55,8 +55,8 @@ Only target: WIN-HSHL54Q184K\MSSQLSERVER2014 / TAPortalSys. Operator uses DBeave
 Rollback is not part of installation: D:/T.A/TAPortal/TAPortal/database/scripts/005-rollback-customer-portal.sql, operator approval and backup required, refuses populated table and wrong DB. No SQL was run, including seeds/rollback. No database created.
 
 ## Delivery and remaining work
-Implementation commit SHA: PENDING_COMMIT (follow-up metadata records exact SHA).
-Push: PENDING. Merge: PENDING_APPROVAL, merge SHA: none.
+Implementation commit SHA: 1d048d1ec3b52cda301c18154949bb1e1ac41c8f. Follow-up metadata records this SHA; final delivery HEAD reported separately.
+Implementation push: PUSHED. PR #7 description updated; remains OPEN/DRAFT. Merge: PENDING_APPROVAL, merge SHA: none.
 Publish: NOT_PUBLISHED. Deploy: NOT_DEPLOYED. Artifact SHA256: N/A.
 Both publish targets remain PENDING_CONFIGURATION; this did not block source/test work.
 Operator pending: review/audit actual TAPortalSys schema and existing migration state, manually apply only required SQL, validate real provisioning/revocation/tenant isolation and Admin regression; later approve exact fixed publish paths and IIS HTTPS/key persistence/ACL/proxy/WAF/browser UAT. No merge or publish authorization inferred.

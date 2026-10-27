@@ -4,7 +4,7 @@
     "created_at": "2026-10-27T14:18:27.293889+00:00",
     "title": "Customer Portal MVP 01 Checkpoint 1",
     "status": "SOURCE_AND_SAFE_TESTS_COMPLETE",
-    "commit_sha": null,
+    "commit_sha": "1d048d1ec3b52cda301c18154949bb1e1ac41c8f",
     "migration_status": "NOT_EXECUTED",
     "publish_status": "NOT_PUBLISHED",
     "merge_status": "PENDING_APPROVAL",
@@ -61,6 +61,9 @@
       "Live membership CRUD, revocation and legacy Admin regression acceptance",
       "Exact publish paths, later IIS/browser/proxy UAT; no publish now"
     ],
-    "merge_sha": null
+    "merge_sha": null,
+    "push_status": "PUSHED",
+    "pr_status": "OPEN_DRAFT_UPDATED",
+    "commit_note": "Implementation SHA; follow-up metadata records it. Final delivery HEAD reported separately to avoid self-reference."
   }
 ]
