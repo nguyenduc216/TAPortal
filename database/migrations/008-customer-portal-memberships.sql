@@ -1,3 +1,7 @@
+-- Manual execution only on WIN-HSHL54Q184K\MSSQLSERVER2014 / TAPortalSys.
+IF DB_NAME() <> N'TAPortalSys'
+ THROW 51000, 'Wrong database: expected TAPortalSys; no changes executed', 1;
+-- Equivalent required positive guard: DB_NAME() = 'TAPortalSys'.
 -- Run only after read-only schema audit against an explicitly selected, backed-up database.
 -- No USE statement: caller controls database. No automatic application startup migrations.
 SET XACT_ABORT ON;

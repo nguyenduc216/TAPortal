@@ -10,6 +10,7 @@ using TAPortal.Shared;
 
 namespace TACustomerPortal.Web.Controllers;
 [Route("account")]
+[ResponseCache(Location = ResponseCacheLocation.None, NoStore = true)]
 public sealed class AccountController(ICustomerStore store, PasswordService passwords, LoginAttemptLimiter attempts) : Controller
 {
     // Perform the same expensive password verification for unknown usernames.
@@ -60,7 +61,11 @@ public sealed class AccountController(ICustomerStore store, PasswordService pass
         var user = await store.FindUser(UserId);
         if (user is null)
             return Challenge();
-        await HttpContext.SignInAsync(CustomerIdentity.Create(user, customerId), new AuthenticationProperties { IsPersistent = false });
+        // Switching tenants must not renew the fixed two-hour login lifetime.
+        var session = await HttpContext.AuthenticateAsync();
+        if (!session.Succeeded || session.Properties is null)
+            return Challenge();
+        await HttpContext.SignInAsync(CustomerIdentity.Create(user, customerId), session.Properties);
         return Redirect("/");
     }
 

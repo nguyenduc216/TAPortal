@@ -4,6 +4,7 @@ using TACustomerPortal.Web.Security;
 using TACustomerPortal.Web.Services;
 
 namespace TACustomerPortal.Web.Controllers;
+[ResponseCache(Location = ResponseCacheLocation.None, NoStore = true)]
 public sealed class ProfileController(ICurrentCustomerContext customer, ICustomerStore store) : Controller
 {
     public async Task<IActionResult> Company()

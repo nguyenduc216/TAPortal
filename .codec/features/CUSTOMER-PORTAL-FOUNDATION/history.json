@@ -1,0 +1,66 @@
+[
+  {
+    "change_id": "CUSTOMER-PORTAL-FOUNDATION-CHG-20261027T141827Z-E64647",
+    "created_at": "2026-10-27T14:18:27.293889+00:00",
+    "title": "Customer Portal MVP 01 Checkpoint 1",
+    "status": "SOURCE_AND_SAFE_TESTS_COMPLETE",
+    "commit_sha": null,
+    "migration_status": "NOT_EXECUTED",
+    "publish_status": "NOT_PUBLISHED",
+    "merge_status": "PENDING_APPROVAL",
+    "objective": "Complete Checkpoint 1 without SQL mutation, database creation, publish, deploy or merge",
+    "scope": "Customer Portal foundation review, session/cache hardening, guarded SQL handoff and safe tests",
+    "technical_decisions": [
+      "Preserve existing MVP functions",
+      "SYS_ADMIN-only management retained",
+      "Switch preserves original session expiration",
+      "No-store sensitive responses",
+      "Memory-only safe tests; legacy SQL tests disabled",
+      "CI build/test only"
+    ],
+    "files_changed": [
+      ".codec/changes/CUSTOMER-PORTAL-FOUNDATION-CHG-20261027T141827Z-E64647.md",
+      ".codec/features/CUSTOMER-PORTAL-FOUNDATION/README.md",
+      ".codec/features/CUSTOMER-PORTAL-FOUNDATION/history.json",
+      ".codec/reports/CUSTOMER-PORTAL-FOUNDATION-CHG-20261027T141827Z-E64647.md",
+      ".github/workflows/build.yml",
+      ".github/workflows/customer-portal.yml",
+      ".gitignore",
+      "database/migrations/008-customer-portal-memberships.sql",
+      "database/scripts/005-rollback-customer-portal.sql",
+      "docs/customer-portal-runbook.md",
+      "src/TACustomerPortal.Web/Controllers/AccountController.cs",
+      "src/TACustomerPortal.Web/Controllers/DashboardController.cs",
+      "src/TACustomerPortal.Web/Controllers/ProfileController.cs",
+      "tests/TACustomerPortal.Tests/PortalTests.cs",
+      "tests/TACustomerPortal.Tests/SafePortalTests.cs"
+    ],
+    "migrations": [
+      {
+        "path": "database/migrations/008-customer-portal-memberships.sql",
+        "operation": "UPDATED_GUARD",
+        "status": "NOT_EXECUTED"
+      },
+      {
+        "path": "database/scripts/005-rollback-customer-portal.sql",
+        "operation": "UPDATED_GUARD",
+        "status": "NOT_EXECUTED"
+      }
+    ],
+    "build_result": "PASS: Release 0 warnings / 0 errors",
+    "test_result": {
+      "passed": 34,
+      "failed": 0,
+      "skipped_legacy_methods": 25,
+      "sql_connected": false
+    },
+    "deploy_status": "NOT_DEPLOYED",
+    "pr_url": "https://github.com/nguyenduc216/TAPortal/pull/7",
+    "remaining_work": [
+      "Operator schema audit and manual SQL only if required",
+      "Live membership CRUD, revocation and legacy Admin regression acceptance",
+      "Exact publish paths, later IIS/browser/proxy UAT; no publish now"
+    ],
+    "merge_sha": null
+  }
+]

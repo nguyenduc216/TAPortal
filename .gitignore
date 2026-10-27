@@ -34,3 +34,6 @@ Thumbs.db
 /Codec-TAPortal-Workflow-v1.zip
 __pycache__/
 *.pyc
+
+# Local test evidence (summaries live in Codec reports)
+TestResults/

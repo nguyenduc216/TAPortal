@@ -2,9 +2,9 @@
 
 ## Chuẩn bị database
 
-Không ứng dụng nào tự chạy migration. Chưa xác minh schema của database triển khai thực tế. DBA phải xác định server/database từ cấu hình của TAPortal (có thể là TAPortalSys), sao lưu, rồi chạy `database/scripts/003-customer-portal-schema-audit.sql` chỉ đọc. So sánh GUID, cột trạng thái, quan hệ User–Customer hiện có với báo cáo audit. Nếu đã có quan hệ tương đương, dừng và điều chỉnh mapping trước khi áp dụng. Không chạy lại migration 001–007 vào database đang hoạt động vì các script cũ chứa USE TAPortal.
+Codec target: SQL Server `WIN-HSHL54Q184K\MSSQLSERVER2014`, sole database `TAPortalSys`. No database creation or automated SQL mutation. Actual schema has not been audited in this checkpoint. Operator must back up and review the read-only audit `database/scripts/003-customer-portal-schema-audit.sql`. Check GUIDs, status columns and existing User-Customer mappings. If an equivalent mapping or incompatible membership table exists, stop for review. Do NOT rerun legacy migrations 001-007: they contain USE TAPortal.
 
-Sau khi review trên staging: chọn database rõ ràng trong SSMS/sqlcmd, chạy `database/migrations/008-customer-portal-memberships.sql`, rồi `database/scripts/004-verify-customer-portal.sql`. Migration tạo duy nhất bảng CustomerPortalMemberships cùng hai permission CUSTOMERS.VIEW và CUSTOMERS.PORTAL.MANAGE. Không thay đổi dữ liệu Users/Customers. MVP 01 chỉ cho SYS_ADMIN quản trị tài khoản portal và xem overview/danh sách Customers/Users toàn hệ thống. Hai permission được giữ cho tương thích migration nhưng không đủ để mở các trang này. Không cấp SYS_ADMIN cho Agent/nhân viên hạn chế để vượt giới hạn; chưa có delegated Agent scope. Customer OWNER/ADMIN chỉ là vai trò trong doanh nghiệp, không cấp quyền quản trị TAPortal.
+After operator review/backup, select TAPortalSys explicitly in DBeaver or SSMS. Apply migration 008 ONLY if schema audit confirms it is required, then run read-only verification 004. It creates the membership table and two compatibility permissions, without updating Users/Customers. MVP 01 remains SYS_ADMIN-only for account management/global lists; customer OWNER/ADMIN/VIEWER never grants system administration. No Agent delegation.
 
 Rollback: dừng Customer Portal và chức năng cấp tài khoản; khôi phục bản ứng dụng trước đó. Script `005-rollback-customer-portal.sql` chỉ xóa bảng membership khi rỗng và từ chối nếu có dữ liệu. Xuất/lưu trữ dữ liệu và xin review riêng trước bất kỳ thao tác xóa nào. Các permission được giữ để không mất lịch sử cấp quyền. Có thể giữ bảng mới khi rollback ứng dụng.
 
@@ -30,15 +30,13 @@ Khách hàng vào `/account/login`. Một membership được tự chọn; nhi�
 dotnet restore TAPortal.sln
 dotnet build TAPortal.sln -c Release --no-restore
 dotnet test TAPortal.sln -c Release --no-build
-dotnet publish src/TAPortal.Web/TAPortal.Web.csproj -c Release --no-build -o publish/admin
-dotnet publish src/TACustomerPortal.Web/TACustomerPortal.Web.csproj -c Release --no-build -o publish/customer
 ```
 
-Tests yêu cầu Windows + SQL LocalDB MSSQLLocalDB, tự tạo database ngẫu nhiên `TACustomerPortal_Test_<guid>` rồi xóa đúng database đó. Không nhận connection string production. CI Windows riêng chạy bộ kiểm thử này; CI build Linux hiện có tiếp tục được giữ. Không dùng database test như môi trường triển khai.
+Checkpoint 1 uses SafePortalTests: real HTTP/cookie/CSRF/views with an in-memory ICustomerStore and invalid SQL configuration. No SQL connection. Legacy PortalTests are explicitly skipped and initialization is blocked because they create/drop LocalDB databases. Historical LocalDB results are not current evidence. CI performs restore/build/safe tests only, without LocalDB or publish. SQL CRUD/constraints/transactions still require operator verification.
 
 ## IIS độc lập
 
-Cài .NET 8 Hosting Bundle. Tạo hai IIS sites, application pools riêng (No Managed Code), identity riêng, physical paths tương ứng publish/admin và publish/customer. Cấp HTTPS binding theo domain của môi trường, production environment và AllowedHosts phù hợp; không cần sửa mã nguồn để đổi domain. web.config được SDK sinh khi publish. Không dùng chung thư mục publish, cookie hoặc key ring.
+IIS deployment is NOT performed in Checkpoint 1. Publish paths remain PENDING_CONFIGURATION for both web apps. Operator must confirm exact fixed existing paths, separate sites/app pools/identities and HTTPS bindings before any approved publish/deploy. Never create/rename/move destinations automatically or use example paths as actual configuration.
 
 Thiết lập riêng từng app: `ASPNETCORE_ENVIRONMENT=Production`, `Database__ConnectionString`, `DataProtection__KeyPath` là đường dẫn bền vững nằm ngoài web root, cùng logging destination. Cấp ACL key folder chỉ cho đúng application pool identity; bật Load User Profile. Trên Windows key ring dùng DPAPI theo identity. Backup key ring theo chính sách vận hành. Các deployment nhiều máy cần cơ chế key encryption/certificate dùng chung trong từng ứng dụng, không chia key giữa hai ứng dụng. Mỗi site dùng thư mục log/thu thập stdout hoặc central logging riêng; mặc định application log đi qua ASP.NET logging providers. Không bật stdout vô hạn mà không có retention.
 
@@ -56,6 +54,17 @@ Tất cả POST dùng antiforgery; logout chỉ POST.
 
 ## Giới hạn xác minh
 
-Đã có kiểm thử HTTP in-process và SQL LocalDB; đây không thay thế UAT trên schema/database thực tế hoặc IIS. Chưa kết nối database thực tế, chưa chạy migration thực tế, chưa deploy production. Kiểm tra HTTPS bindings, ACL, identity, log routing và tải CDN Tabler trong mạng triển khai trước khi nghiệm thu. Các project/flow cũ được build và publish; chưa thể khẳng định toàn bộ nghiệp vụ TAPortal trên production từ tests mới.
+Current evidence: safe HTTP in-process tests and Release solution build. No live DB/schema/SQL CRUD or IIS/browser UAT validation in Checkpoint 1; no publish or deploy. Check HTTPS, persistent Data Protection keys, ACL, app identities, CDN access, multi-instance WAF/proxy behavior and all legacy Admin business flows during operator UAT. Earlier SQL LocalDB/publish results are historical only.
 
 MVP 02: TINGEE, tài khoản ngân hàng và Merchant cần contract, secret management và mô hình phân quyền theo tenant được review riêng.
+
+## Checkpoint 1 manual SQL handoff
+
+All paths below are relative to repository root. Codex did NOT execute these scripts.
+1. Operator confirms server/database, backup and read-only audit: `database/scripts/003-customer-portal-schema-audit.sql`. Review Users/Customers/Permissions/Roles/UserRoles, auth/status columns, existing relationships.
+2. Only if needed and approved: `database/migrations/008-customer-portal-memberships.sql`. Guard rejects a non-TAPortalSys database before starting a transaction. Do not duplicate or replay existing migrations blindly.
+3. Read-only verification: `database/scripts/004-verify-customer-portal.sql`. Expect valid FKs, unique user/customer pair, allowed roles and no duplicates.
+4. Review `database/scripts/006-customer-portal-least-privilege.sql` (commented grants guidance) before operator applies permissions to confirmed identities.
+Rollback 005 is NOT an installation step; separate operator approval/backup is required. It checks TAPortalSys and refuses to drop populated memberships.
+
+Tenant switching preserves original IssuedUtc/ExpiresUtc and cannot extend the two-hour session. Account/dashboard/profile pages send Cache-Control: no-store.

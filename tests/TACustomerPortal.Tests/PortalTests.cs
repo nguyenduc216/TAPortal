@@ -42,7 +42,9 @@ public sealed class PortalTests : IAsyncLifetime
         }
     }
 
-    public async Task InitializeAsync()
+    public Task InitializeAsync() => throw new InvalidOperationException("Disabled by Codec policy: no database creation or mutating SQL tests.");
+
+    private async Task LegacyInitializeAsync()
     {
         if (!OperatingSystem.IsWindows())
             throw new InvalidOperationException("SQL integration tests require Windows LocalDB; do not use production");
@@ -60,7 +62,9 @@ public sealed class PortalTests : IAsyncLifetime
         client = factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false, BaseAddress = new Uri("https://localhost") });
     }
 
-    public async Task DisposeAsync()
+    public Task DisposeAsync() => Task.CompletedTask;
+
+    private async Task LegacyDisposeAsync()
     {
         client?.Dispose();
         if (factory != null)
@@ -115,7 +119,7 @@ public sealed class PortalTests : IAsyncLifetime
     }
 
     private Task<HttpResponseMessage> Login(string password = Password) => Post("/account/login", new() { { "Username", "customer" }, { "Password", password } }, "/account/login");
-    [Fact]
+    [Fact(Skip = "Codec policy: legacy SQL tests create/drop databases; use SafePortalTests.")]
     public async Task SeparateUsersSeeOnlyTheirOwnCustomer()
     {
         var second = Guid.NewGuid();
@@ -129,7 +133,7 @@ public sealed class PortalTests : IAsyncLifetime
         Assert.DoesNotContain("Company Alpha", html);
     }
 
-    [Fact]
+    [Fact(Skip = "Codec policy: legacy SQL tests create/drop databases; use SafePortalTests.")]
     public async Task CustomerCookieHasIndependentSecurityAttributes()
     {
         var response = await Login();
@@ -140,7 +144,7 @@ public sealed class PortalTests : IAsyncLifetime
         Assert.DoesNotContain("TA.Portal.Auth=", cookie);
     }
 
-    [Fact]
+    [Fact(Skip = "Codec policy: legacy SQL tests create/drop databases; use SafePortalTests.")]
     public async Task ValidLoginAndTenantIsolation()
     {
         Assert.Equal(HttpStatusCode.Redirect, (await Login()).StatusCode);
@@ -152,7 +156,7 @@ public sealed class PortalTests : IAsyncLifetime
         Assert.DoesNotContain("Company Beta", profile);
     }
 
-    [Theory]
+    [Theory(Skip = "Codec policy: legacy SQL tests create/drop databases; use SafePortalTests.")]
     [InlineData("wrong")]
     [InlineData("locked")]
     [InlineData("deleted")]
@@ -176,7 +180,7 @@ public sealed class PortalTests : IAsyncLifetime
         Assert.Equal(HttpStatusCode.Redirect, (await client.GetAsync("/")).StatusCode);
     }
 
-    [Fact]
+    [Fact(Skip = "Codec policy: legacy SQL tests create/drop databases; use SafePortalTests.")]
     public async Task MultiCustomerSwitchRechecksMembership()
     {
         await Execute("INSERT dbo.CustomerPortalMemberships(UserId,CustomerId,PortalRole) VALUES(@u,@b,'VIEWER')", ("@u", user), ("@b", b));
@@ -188,7 +192,7 @@ public sealed class PortalTests : IAsyncLifetime
         Assert.Equal(HttpStatusCode.Redirect, (await client.GetAsync("/")).StatusCode);
     }
 
-    [Fact]
+    [Fact(Skip = "Codec policy: legacy SQL tests create/drop databases; use SafePortalTests.")]
     public async Task SystemAdminHasNoMembershipBypass()
     {
         await Execute("INSERT dbo.Roles(Id,Code,Name) VALUES(NEWID(),'SYS_ADMIN','Admin'); INSERT dbo.UserRoles(UserId,RoleId) SELECT @u,Id FROM dbo.Roles; UPDATE dbo.CustomerPortalMemberships SET IsActive=0;", ("@u", user));
@@ -196,7 +200,7 @@ public sealed class PortalTests : IAsyncLifetime
         Assert.Equal(HttpStatusCode.Redirect, (await client.GetAsync("/")).StatusCode);
     }
 
-    [Fact]
+    [Fact(Skip = "Codec policy: legacy SQL tests create/drop databases; use SafePortalTests.")]
     public async Task CustomerCannotLoginToAdminOrReuseCustomerCookie()
     {
         await Login();
@@ -222,7 +226,7 @@ public sealed class PortalTests : IAsyncLifetime
         Assert.Equal(HttpStatusCode.Redirect, (await adminClient.SendAsync(request)).StatusCode);
     }
 
-    [Fact]
+    [Fact(Skip = "Codec policy: legacy SQL tests create/drop databases; use SafePortalTests.")]
     public async Task AdminCanProvisionWithoutGrantingSystemRole()
     {
         await Execute("INSERT dbo.Roles(Id,Code,Name) VALUES(NEWID(),'SYS_ADMIN','Admin'); INSERT dbo.UserRoles(UserId,RoleId) SELECT @u,Id FROM dbo.Roles;", ("@u", user));
@@ -245,7 +249,7 @@ public sealed class PortalTests : IAsyncLifetime
         Assert.Equal(0, await Count("SELECT COUNT(*) FROM dbo.UserRoles ur JOIN dbo.Users u ON u.Id=ur.UserId WHERE u.Username='provisioned'"));
     }
 
-    [Fact]
+    [Fact(Skip = "Codec policy: legacy SQL tests create/drop databases; use SafePortalTests.")]
     public async Task AnonymousBusinessPagesChallenge()
     {
         foreach (var path in new[]
@@ -260,7 +264,7 @@ public sealed class PortalTests : IAsyncLifetime
             Assert.Equal(HttpStatusCode.Redirect, (await client.GetAsync(path)).StatusCode);
     }
 
-    [Fact]
+    [Fact(Skip = "Codec policy: legacy SQL tests create/drop databases; use SafePortalTests.")]
     public async Task CannotSelectForeignCustomer()
     {
         await Login();
@@ -270,7 +274,7 @@ public sealed class PortalTests : IAsyncLifetime
         Assert.Contains("Company Alpha", await client.GetStringAsync("/"));
     }
 
-    [Fact]
+    [Fact(Skip = "Codec policy: legacy SQL tests create/drop databases; use SafePortalTests.")]
     public async Task RevocationInvalidatesExistingCookie()
     {
         await Login();
@@ -278,7 +282,7 @@ public sealed class PortalTests : IAsyncLifetime
         Assert.Equal(HttpStatusCode.Redirect, (await client.GetAsync("/")).StatusCode);
     }
 
-    [Fact]
+    [Fact(Skip = "Codec policy: legacy SQL tests create/drop databases; use SafePortalTests.")]
     public async Task PasswordChangeIsSharedAndInvalidatesOtherSessions()
     {
         await Login();
@@ -297,7 +301,7 @@ public sealed class PortalTests : IAsyncLifetime
         Assert.Equal(HttpStatusCode.Redirect, (await Login("New-password!678")).StatusCode);
     }
 
-    [Fact]
+    [Fact(Skip = "Codec policy: legacy SQL tests create/drop databases; use SafePortalTests.")]
     public async Task CsrfAndLogout()
     {
         await Login();
@@ -306,7 +310,7 @@ public sealed class PortalTests : IAsyncLifetime
         Assert.Equal(HttpStatusCode.Redirect, (await client.GetAsync("/")).StatusCode);
     }
 
-    [Fact]
+    [Fact(Skip = "Codec policy: legacy SQL tests create/drop databases; use SafePortalTests.")]
     public async Task LoginRateLimited()
     {
         for (var i = 0; i < 10; i++)
@@ -319,7 +323,7 @@ public sealed class PortalTests : IAsyncLifetime
         Assert.Equal(HttpStatusCode.TooManyRequests, (await Login("wrong")).StatusCode);
     }
 
-    [Fact]
+    [Fact(Skip = "Codec policy: legacy SQL tests create/drop databases; use SafePortalTests.")]
     public async Task DatabaseConstraintsAndTransactionRollback()
     {
         await GrantSystemAdmin();
@@ -332,7 +336,7 @@ public sealed class PortalTests : IAsyncLifetime
         Assert.Equal(1, await Count("SELECT COUNT(*) FROM dbo.Users"));
     }
 
-    [Fact]
+    [Fact(Skip = "Codec policy: legacy SQL tests create/drop databases; use SafePortalTests.")]
     public async Task ProvisionReactivateAndMigrationIdempotency()
     {
         await GrantSystemAdmin();
@@ -354,7 +358,7 @@ public sealed class PortalTests : IAsyncLifetime
     }
 
     private Task GrantSystemAdmin() => Execute("INSERT dbo.Roles(Id,Code,Name) VALUES(NEWID(),'SYS_ADMIN','Admin'); INSERT dbo.UserRoles(UserId,RoleId) SELECT @u,Id FROM dbo.Roles WHERE Code='SYS_ADMIN';", ("@u", user));
-    [Theory]
+    [Theory(Skip = "Codec policy: legacy SQL tests create/drop databases; use SafePortalTests.")]
     [InlineData("customer")]
     [InlineData("direct-permission")]
     [InlineData("agent-role")]
@@ -385,7 +389,7 @@ public sealed class PortalTests : IAsyncLifetime
         Assert.Equal(1, await Count("SELECT COUNT(*) FROM dbo.CustomerPortalMemberships WHERE IsActive=1 AND PortalRole='OWNER'"));
     }
 
-    [Theory]
+    [Theory(Skip = "Codec policy: legacy SQL tests create/drop databases; use SafePortalTests.")]
     [InlineData("role-inactive")]
     [InlineData("role-deleted")]
     [InlineData("user-inactive")]
@@ -412,7 +416,7 @@ public sealed class PortalTests : IAsyncLifetime
         Assert.Equal(1, await Count("SELECT COUNT(*) FROM dbo.CustomerPortalMemberships WHERE IsActive=1"));
     }
 
-    [Fact]
+    [Fact(Skip = "Codec policy: legacy SQL tests create/drop databases; use SafePortalTests.")]
     public async Task PermissionAloneCannotOpenGlobalListsOrInvokeManagementActions()
     {
         await Execute("INSERT dbo.Permissions(Id,Code,Name,ActionCode) VALUES(NEWID(),'AUTH.USERS.VIEW','View users','VIEW'),(NEWID(),'AUTH.USERS.CREATE','Create users','CREATE'); INSERT dbo.UserPermissions(UserId,PermissionId,Effect) SELECT @u,Id,'ALLOW' FROM dbo.Permissions;", ("@u", user));
@@ -449,7 +453,7 @@ public sealed class PortalTests : IAsyncLifetime
         Assert.Equal(1, await Count("SELECT COUNT(*) FROM dbo.CustomerPortalMemberships"));
     }
 
-    [Theory]
+    [Theory(Skip = "Codec policy: legacy SQL tests create/drop databases; use SafePortalTests.")]
     [InlineData(false)]
     [InlineData(true)]
     public async Task AdminRoleRevocationAppliesToExistingSession(bool retainPermissions)
@@ -488,7 +492,7 @@ public sealed class PortalTests : IAsyncLifetime
         Assert.Equal(HttpStatusCode.Redirect, result.StatusCode);
     }
 
-    [Theory]
+    [Theory(Skip = "Codec policy: legacy SQL tests create/drop databases; use SafePortalTests.")]
     [InlineData("customer")]
     [InlineData("unknown-account")]
     public async Task AccountThrottleNormalizesNamesAndDoesNotRevealExistence(string username)
@@ -502,7 +506,7 @@ public sealed class PortalTests : IAsyncLifetime
         Assert.Equal(HttpStatusCode.TooManyRequests, (await Post("/account/login", new() { { "Username", username }, { "Password", "wrong" } }, "/account/login")).StatusCode);
     }
 
-    [Theory]
+    [Theory(Skip = "Codec policy: legacy SQL tests create/drop databases; use SafePortalTests.")]
     [InlineData(false)]
     [InlineData(true)]
     public async Task ForwardedHeadersOnlyAffectLimitsForConfiguredSocketProxy(bool trusted)
@@ -516,7 +520,7 @@ public sealed class PortalTests : IAsyncLifetime
         }
     }
 
-    [Fact]
+    [Fact(Skip = "Codec policy: legacy SQL tests create/drop databases; use SafePortalTests.")]
     public async Task ChangingForwardedIpCannotBypassAccountThrottle()
     {
         using var proxyFactory = ProxyFactory(true);
@@ -525,7 +529,7 @@ public sealed class PortalTests : IAsyncLifetime
             Assert.Equal(i == 5 ? HttpStatusCode.TooManyRequests : HttpStatusCode.OK, (await ProxyLogin(target, "customer", "198.51.100." + (i + 1))).StatusCode);
     }
 
-    [Fact]
+    [Fact(Skip = "Codec policy: legacy SQL tests create/drop databases; use SafePortalTests.")]
     public async Task UntrustedForwardedProtoCannotDowngradeRequest()
     {
         using var proxyFactory = ProxyFactory(false);
@@ -560,7 +564,7 @@ public sealed class PortalTests : IAsyncLifetime
         };
     }
 
-    [Theory]
+    [Theory(Skip = "Codec policy: legacy SQL tests create/drop databases; use SafePortalTests.")]
     [InlineData("PBKDF2$SHA256$0$AA==$AA==")]
     [InlineData("PBKDF2$SHA256$150000$bad$bad")]
     [InlineData("invalid")]
