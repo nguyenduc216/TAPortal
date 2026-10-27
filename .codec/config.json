@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "project": "TAPortal",
+  "database": {
+    "server": "WIN-HSHL54Q184K\\MSSQLSERVER2014",
+    "name": "TAPortalSys",
+    "create_database_allowed": false,
+    "execute_migrations_allowed": false,
+    "execute_mutating_sql_allowed": false,
+    "allowed_databases": [
+      "TAPortalSys"
+    ],
+    "migration_execution": "MANUAL_DBEAVER_OR_SSMS",
+    "required_migration_guard": "DB_NAME() = 'TAPortalSys'",
+    "duplicate_migrations_allowed": false
+  },
+  "deploy": {
+    "targets": {
+      "TAPortal.Web": "",
+      "TACustomerPortal.Web": ""
+    },
+    "allow_alternate_target": false,
+    "create_target_directory": false,
+    "require_approval": true,
+    "require_migrations_confirmed": true,
+    "status": "PENDING_CONFIGURATION",
+    "rename_or_move_target_allowed": false,
+    "separate_source_sha_and_artifact_sha256": true
+  },
+  "git": {
+    "main_branch": "main",
+    "new_branch_only_when_needed": true,
+    "merge_requires_approval": true,
+    "force_push_allowed": false
+  },
+  "history": {
+    "feature_dir": ".codec/features",
+    "change_dir": ".codec/changes",
+    "report_dir": ".codec/reports",
+    "append_only": true,
+    "change_id_format": "FEATURE-ID-CHG-YYYYMMDDTHHMMSSZ-XXXXXX",
+    "read_before_source": true
+  }
+}

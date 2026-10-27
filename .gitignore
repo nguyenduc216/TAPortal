@@ -29,3 +29,8 @@ logs/
 Thumbs.db
 .vscode/
 .idea/
+
+# Local Codec installation archive / Python cache
+/Codec-TAPortal-Workflow-v1.zip
+__pycache__/
+*.pyc
