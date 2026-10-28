@@ -23,7 +23,7 @@ public sealed class HomeController(PortalDb db) : Controller
 }
 
 [Authorize(Policy = "SystemAdminOnly")]
-public sealed class UsersController(PortalDb db, PasswordService passwords) : Controller
+public sealed class UsersController(PortalDb db, PasswordService passwords, IUserRoleStore roleStore, ILogger<UsersController> logger) : Controller
 {
     public async Task<IActionResult> Index() => View(await db.GetUsersAsync());
 
@@ -93,6 +93,58 @@ public sealed class UsersController(PortalDb db, PasswordService passwords) : Co
         }
         ViewBag.Roles = await db.GetUserRoleNamesAsync(id);
         return View(vm);
+    }
+
+    [HttpGet]
+    [Authorize(Policy = PermissionPolicies.Prefix + "AUTH.ROLES.MANAGE")]
+    public async Task<IActionResult> Roles(Guid id)
+    {
+        var snapshot = await roleStore.GetAsync(id);
+        return snapshot is null ? NotFound() : View(snapshot);
+    }
+
+    // Binds only the selected role ids and the concurrency stamp; every other posted field is ignored.
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [Authorize(Policy = PermissionPolicies.Prefix + "AUTH.ROLES.MANAGE")]
+    public async Task<IActionResult> Roles(Guid id, [FromForm] List<Guid>? roleIds, [FromForm] string? stamp)
+    {
+        if (ActorId(User) is not Guid actor) return Forbid();
+        if (!ModelState.IsValid)
+            return await RolesError(id, "Danh sách vai trò gửi lên không hợp lệ.");
+        var result = await roleStore.UpdateAsync(actor, id, (roleIds ?? []).Distinct().ToList(), stamp, HttpContext.Connection.RemoteIpAddress?.ToString());
+        switch (result.Outcome)
+        {
+            case RoleChangeOutcome.NotFound:
+                return NotFound();
+            case RoleChangeOutcome.Forbidden:
+                return Forbid();
+            case RoleChangeOutcome.NoChange:
+                TempData["Success"] = "Vai trò không thay đổi.";
+                return RedirectToAction(nameof(Roles), new { id });
+            case RoleChangeOutcome.Updated:
+                logger.LogInformation("User roles updated. Actor {ActorId}, target {UserId}, added {Added}, removed {Removed}, audit persisted {AuditPersisted}.", actor, id, string.Join(",", result.Added ?? []), string.Join(",", result.Removed ?? []), result.AuditPersisted);
+                if (!result.AuditPersisted)
+                    logger.LogWarning("dbo.AuditLogs unavailable; role change for {UserId} recorded only in application logs.", id);
+                TempData["Success"] = "Đã cập nhật vai trò. Quyền mới có hiệu lực từ request kế tiếp của người dùng." + (result.AuditPersisted ? "" : " Lưu ý: chưa ghi được nhật ký audit vào cơ sở dữ liệu (bảng AuditLogs chưa sẵn sàng).");
+                return RedirectToAction(nameof(Roles), new { id });
+            case RoleChangeOutcome.InvalidRole:
+                return await RolesError(id, "Vai trò không hợp lệ hoặc đã ngừng hoạt động.");
+            case RoleChangeOutcome.LastSystemAdmin:
+                return await RolesError(id, "Không thể thu hồi vai trò Quản trị hệ thống (SYS_ADMIN) của quản trị viên hoạt động cuối cùng.");
+            default:
+                return await RolesError(id, "Vai trò của người dùng vừa được thay đổi bởi thao tác khác. Đã tải lại dữ liệu mới nhất, vui lòng kiểm tra và lưu lại.");
+        }
+    }
+
+    private async Task<IActionResult> RolesError(Guid id, string message)
+    {
+        var snapshot = await roleStore.GetAsync(id);
+        if (snapshot is null) return NotFound();
+        ModelState.Clear();
+        ModelState.AddModelError(string.Empty, message);
+        Response.StatusCode = StatusCodes.Status400BadRequest;
+        return View(nameof(Roles), snapshot);
     }
 
     internal static Guid? ActorId(ClaimsPrincipal user) => Guid.TryParse(user.FindFirstValue(ClaimTypes.NameIdentifier), out var id) ? id : null;

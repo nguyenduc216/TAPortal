@@ -1,0 +1,37 @@
+@model UserRoleSnapshot
+@{
+    ViewData["Title"] = "Vai trò người dùng";
+    var actorId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+    var isSelf = string.Equals(actorId, Model.UserId.ToString(), StringComparison.OrdinalIgnoreCase);
+    var adminCount = Model.SystemAdminIds.Count;
+    var active = Model.UserActive && Model.Status == "ACTIVE";
+}
+<div class="page-header"><div class="row align-items-center"><div class="col"><div class="page-pretitle"><a asp-action="Index">Người dùng</a> / Vai trò</div><h2 class="page-title">Vai trò: @Model.DisplayName <span class="text-secondary fs-4">(@Model.Username)</span></h2></div></div></div>
+<div class="row mt-3"><div class="col-lg-8"><div class="card"><form asp-action="Roles" asp-route-id="@Model.UserId" method="post">
+<input type="hidden" name="stamp" value="@Model.Stamp" />
+<div class="card-body">
+<div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+<div class="mb-3">Trạng thái tài khoản: <span class="badge @(active ? "badge-ta-active" : "bg-secondary-lt")">@(active ? "Hoạt động" : "Ngừng")</span>@if (isSelf) {<span class="badge bg-yellow-lt ms-2">Tài khoản của bạn</span>}</div>
+<fieldset><legend class="form-label">Vai trò quản trị TAPortal</legend>
+@foreach (var role in Model.Roles)
+{
+    var assigned = Model.AssignedRoleIds.Contains(role.Id);
+    if (!role.IsActive)
+    {
+        if (assigned) {<div class="form-check"><input class="form-check-input" type="checkbox" checked disabled id="role-@role.Id" /><label class="form-check-label text-secondary" for="role-@role.Id">@role.Name <code>@role.Code</code> — vai trò đã ngừng hoạt động, được giữ nguyên</label></div>}
+        continue;
+    }
+    <div class="form-check">
+        <input class="form-check-input" type="checkbox" name="roleIds" value="@role.Id" id="role-@role.Id" checked="@assigned" />
+        <label class="form-check-label" for="role-@role.Id">@role.Name <code>@role.Code</code>@if (role.Code == RoleChangePolicy.SystemAdminCode) {<span class="badge bg-red-lt ms-1">Toàn quyền hệ thống</span>}</label>
+    </div>
+}
+</fieldset>
+<div class="form-hint mt-3">
+    Chỉ SYS_ADMIN được thay đổi vai trò. Không thể gỡ SYS_ADMIN khỏi quản trị viên hoạt động cuối cùng (hiện có @adminCount quản trị viên hoạt động).
+    Thay đổi có hiệu lực từ request kế tiếp của người dùng; mật khẩu, tên đăng nhập và quyền Customer Portal (OWNER/ADMIN/VIEWER) không bị ảnh hưởng.
+</div>
+@if (isSelf) {<div class="alert alert-warning mt-3 mb-0" role="note">Bạn đang sửa vai trò của chính mình. Gỡ SYS_ADMIN sẽ làm bạn mất quyền quản trị ngay ở request kế tiếp.</div>}
+</div>
+<div class="card-footer d-flex gap-2"><a asp-action="Index" class="btn"><i class="ti ti-arrow-left" aria-hidden="true"></i>Quay lại</a><button type="submit" class="btn btn-primary ms-auto" data-ta-loading data-ta-loading-text="Đang lưu..."><i class="ti ti-device-floppy" aria-hidden="true"></i><span>Lưu vai trò</span></button></div>
+</form></div></div></div>

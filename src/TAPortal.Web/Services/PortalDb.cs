@@ -211,6 +211,20 @@ WHERE Id=@id AND IsDeleted=0;
         return list;
     }
 
+    public async Task<Dictionary<Guid, List<string>>> GetUserRoleMapAsync()
+    {
+        var map = new Dictionary<Guid, List<string>>();
+        await using var cn = Open(); await cn.OpenAsync();
+        await using var cmd = new SqlCommand("SELECT ur.UserId,r.Name FROM dbo.UserRoles ur JOIN dbo.Roles r ON r.Id=ur.RoleId WHERE r.IsDeleted=0 ORDER BY r.Name", cn);
+        await using var rd = await cmd.ExecuteReaderAsync();
+        while (await rd.ReadAsync())
+        {
+            if (!map.TryGetValue(rd.GetGuid(0), out var list)) map[rd.GetGuid(0)] = list = new();
+            list.Add(rd.GetString(1));
+        }
+        return map;
+    }
+
     public async Task<bool> CustomerCodeExistsAsync(string code)
     {
         await using var cn = Open(); await cn.OpenAsync();
