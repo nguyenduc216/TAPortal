@@ -288,5 +288,116 @@
       "Operator: confirm dbo.AuditLogs and INSERT permission in TAPortalSys (AUD-25)",
       "Approval needed before permission-matrix editing, role creation or direct UserPermissions management"
     ]
+  },
+  {
+    "change_id": "TAPORTAL-SYSTEM-AUDIT-CHG-20261028T173600Z-62724B",
+    "created_at": "2026-10-28T17:36:00.889019+00:00",
+    "title": "Checkpoint 7 account status, tax code integrity, user soft delete, audit preflight (AUD-15/16/17/25)",
+    "status": "ADMIN_ARTIFACT_PUBLISHED_PARTIAL_PENDING_OPERATOR",
+    "agent": "Claude Code (claude-opus-5-5)",
+    "checkpoint": "CHECKPOINT-07-ACCOUNT-INTEGRITY",
+    "operator_decision": "No server deploy, global UAT or main merge until the final checkpoint",
+    "starting_sha": "3fddd8c28a0f30cc29b39c75e7be323ce2d5b4db",
+    "commit_sha": "6a2462b526de34e9f166541447c6e2f6d51bad59",
+    "commit_note": "Application source SHA built and published; delivery metadata commit reported separately to avoid self-reference.",
+    "migration_status": "AUTHORED_NOT_EXECUTED (009 optional, 010 conditional)",
+    "publish_status": "PUBLISHED_ADMIN_ONLY",
+    "merge_status": "PENDING_APPROVAL",
+    "objective": "AUD-15 consistent account status, AUD-16 tax code integrity, AUD-17 safe soft delete, AUD-25 audit preflight",
+    "scope": "TAPortal.Web stores/controllers/views, SQL scripts for operator review, safe tests. Shared and Customer Portal unchanged",
+    "findings": {
+      "AUD-15": "FIXED (application): one eligibility rule displayed; transactional edit with stamp; last active SYS_ADMIN protected against concurrent deactivation. Changing Users.Status values PENDING_APPROVAL",
+      "AUD-16": "PARTIAL: application-level normalization/format/duplicate check inside SERIALIZABLE transaction FIXED; database uniqueness via optional migration 009 PENDING_OPERATOR (MIGRATION_NOT_EXECUTED)",
+      "AUD-17": "PARTIAL: user soft delete FIXED; customer soft delete, restore, purge and retention PENDING_APPROVAL",
+      "AUD-25": "PARTIAL: verify script 007, conditional migration 010, grant template 009 authored; RequireDurableAudit option added (default false); database state NOT_VERIFIED, PENDING_OPERATOR",
+      "AUD-27": "FIXED (MEDIUM): two SYS_ADMINs could deactivate each other concurrently and leave none",
+      "AUD-28": "FIXED (LOW): concurrent user edits silently overwrote each other",
+      "AUD-29": "OPEN (LOW, corrects CP6 statement): a principal with no permission on dbo.AuditLogs cannot see it, so with RequireDurableAudit=false changes proceed without durable audit instead of failing"
+    },
+    "technical_decisions": [
+      "Login eligibility = IsDeleted=0 AND IsActive=1 AND Status='ACTIVE' everywhere (already true in SQL; now explicit in AccountStatusPolicy)",
+      "Status is never changed by the UI; unknown status values keep the account locked",
+      "Soft delete sets IsDeleted=1, IsActive=0 (DeletedAt/DeletedBy only if columns exist); no cascade to roles, memberships or history",
+      "Tax code: whitespace-only normalization, 10 or 10-3 digits for new/changed values, duplicates checked among all non-deleted customers",
+      "Durable audit mandatory only when Security:Audit:RequireDurableAudit=true, enabled by operator after scripts/007 PASS",
+      "Superseded unguarded PortalDb write methods removed"
+    ],
+    "files_changed": [
+      "src/TAPortal.Web/Services/UserAccountStore.cs",
+      "src/TAPortal.Web/Services/CustomerAdminStore.cs",
+      "src/TAPortal.Web/Services/UserRoleStore.cs",
+      "src/TAPortal.Web/Services/PortalDb.cs",
+      "src/TAPortal.Web/Controllers/PortalControllers.cs",
+      "src/TAPortal.Web/Models/PortalModels.cs",
+      "src/TAPortal.Web/Program.cs",
+      "src/TAPortal.Web/Views/Users/Edit.cshtml",
+      "src/TAPortal.Web/Views/Users/Delete.cshtml",
+      "src/TAPortal.Web/Views/Users/Index.cshtml",
+      "src/TAPortal.Web/Views/Customers/Edit.cshtml",
+      "tests/TACustomerPortal.Tests/SafeAdminAccountTests.cs",
+      "database/scripts/007-verify-audit-logs.sql",
+      "database/scripts/008-audit-customer-taxcode-duplicates.sql",
+      "database/scripts/009-grant-admin-audit-insert-template.sql",
+      "database/scripts/010-rollback-customer-taxcode-unique-index.sql",
+      "database/migrations/009-customer-taxcode-unique-index.sql",
+      "database/migrations/010-create-audit-logs-if-missing.sql",
+      "docs/audits/taportal-checkpoint7-account-integrity-TAPORTAL-SYSTEM-AUDIT-CHG-20261028T173600Z-62724B.md",
+      ".codec/features/TAPORTAL-SYSTEM-AUDIT/README.md",
+      ".codec/features/TAPORTAL-SYSTEM-AUDIT/history.json",
+      ".codec/changes/TAPORTAL-SYSTEM-AUDIT-CHG-20261028T173600Z-62724B.md",
+      ".codec/reports/TAPORTAL-SYSTEM-AUDIT-CHG-20261028T173600Z-62724B.md",
+      ".codec/reports/TAPORTAL-SYSTEM-AUDIT-CHG-20261028T173600Z-62724B-TAPortal.Web.sha256"
+    ],
+    "migrations": [
+      { "path": "database/migrations/009-customer-taxcode-unique-index.sql", "operation": "OPTIONAL_FILTERED_UNIQUE_INDEX", "status": "NOT_EXECUTED", "precondition": "scripts/008 PASS" },
+      { "path": "database/migrations/010-create-audit-logs-if-missing.sql", "operation": "CONDITIONAL_CREATE_TABLE", "status": "NOT_EXECUTED", "precondition": "scripts/007 reports table missing" }
+    ],
+    "database_status": "DATABASE_NOT_VERIFIED (read-only MCP taportal-db db_ping failed)",
+    "build_result": "PASS: Release 0 warnings / 0 errors",
+    "test_result": {
+      "safe_passed": 136,
+      "safe_failed": 0,
+      "safe_skipped": 0,
+      "new_tests": 32,
+      "codec_passed": 4,
+      "codec_validate": "PASS",
+      "legacy_sql_tests": "NOT_SELECTED",
+      "smoke_admin": "15/15 PASS",
+      "not_verified": [
+        "SQL locking/serializable behaviour",
+        "real soft-delete UPDATE and DeletedAt/DeletedBy columns",
+        "AuditLogs writes",
+        "deleted-user rejection by live SQL login/cookie queries",
+        "SQL scripts 007-010 (authored, not executed)"
+      ]
+    },
+    "artifacts": {
+      "TAPortal.Web": {
+        "target": "D:\\T.A\\TAPortal\\TAPortal\\publish\\deployed-TAPortal.Web",
+        "status": "PUBLISHED",
+        "exit_code": 0,
+        "published_utc": "2026-10-28T17:44:29Z",
+        "file_count": 57,
+        "artifact_sha256": "fc042e76e4c6a4e55c7a9a681106cc986e1114e6c9c97240f592750c9bbea727",
+        "dll_sha256": "be56321509188e9c0b878c8355b49f5ba80d4ef0c1b4821912bcbf9b2693d128",
+        "manifest": ".codec/reports/TAPORTAL-SYSTEM-AUDIT-CHG-20261028T173600Z-62724B-TAPortal.Web.sha256",
+        "previous": "5adf697b9fab26d521761cdb81d667121eb49147939bb1a3bfe9326c3c4afd36; backup publish/rollback/TAPORTAL-SYSTEM-AUDIT-CHG-20261028T173600Z-62724B/deployed-TAPortal.Web",
+        "migration_dependency": "None required; works on current schema. Database-level tax uniqueness and durable audit need operator scripts"
+      },
+      "TACustomerPortal.Web": {
+        "status": "NOT_REQUIRED",
+        "reason": "No change under src/TACustomerPortal.Web or src/TAPortal.Shared",
+        "artifact_sha256_unchanged": "ea77b3be501ea28fe80ce54665a805b6798b502137347ce11f7d356547f8ac34"
+      }
+    },
+    "iis_status": "NOT_CHECKED",
+    "deploy_status": "NOT_DEPLOYED",
+    "pr_url": "https://github.com/nguyenduc216/TAPortal/pull/7",
+    "merge_sha": null,
+    "remaining_work": [
+      "Operator: run read-only scripts 007 and 008; decide on migrations 009/010 and grant 009; then enable RequireDurableAudit",
+      "Approval: customer soft delete policy, restore/purge/retention, meaning of non-ACTIVE Users.Status values",
+      "Final consolidated deploy/UAT after the last checkpoint"
+    ]
   }
 ]
