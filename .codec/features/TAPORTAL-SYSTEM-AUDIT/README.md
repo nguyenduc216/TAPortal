@@ -16,3 +16,7 @@
 
 ## Current status
 19 findings (0 CRITICAL, 2 HIGH, 8 MEDIUM, 9 LOW); 12 FIXED, 7 OPEN. Release build 0/0; 65 safe tests + 4 Codec tests PASS; validate PASS. Admin artifact `4b308e3b…ea35` (57 files), Customer artifact `ea77b3be…ac34` (54 files), both local only. SQL write paths and authenticated UI rendering await operator UAT. Details: latest report and docs/audits/.
+| `TAPORTAL-SYSTEM-AUDIT-CHG-20261028T170619Z-0CBC7E` | 2026-10-28 | Checkpoint 5 Admin login rate limiting (AUD-13) and authenticated no-store (AUD-14) | 183414102691ffb373d436951b27cf191d902fc2 | NONE_REQUIRED | PUBLISHED (local, Admin only) / NOT_DEPLOYED | PENDING_APPROVAL |
+
+## Checkpoint 5 — current status
+AUD-13 and AUD-14 FIXED; new findings AUD-20/21/22 FIXED, AUD-23/24 OPEN. Release build 0/0; 84 safe tests + 4 Codec tests PASS; validate PASS; Admin smoke 11/11. Admin artifact `42d6a733…19cb4` (57 files); Customer NOT_REQUIRED (unchanged `ea77b3be…ac34`). Database not accessed. Prior status lines above are historical.

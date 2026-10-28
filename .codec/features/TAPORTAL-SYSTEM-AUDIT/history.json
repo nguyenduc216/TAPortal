@@ -111,5 +111,94 @@
       "AUD-13/AUD-14 Admin login throttle and no-store",
       "Separately approved live deployment"
     ]
+  },
+  {
+    "change_id": "TAPORTAL-SYSTEM-AUDIT-CHG-20261028T170619Z-0CBC7E",
+    "created_at": "2026-10-28T17:06:19.115736+00:00",
+    "title": "Checkpoint 5 Admin login rate limiting (AUD-13) and authenticated no-store (AUD-14)",
+    "status": "ADMIN_ARTIFACT_PUBLISHED_UAT_PENDING",
+    "agent": "Claude Code (claude-opus-5-5)",
+    "checkpoint": "CHECKPOINT-05-ADMIN-SECURITY",
+    "starting_sha": "1e1dda00255dd9fefa4db18ada8076f406e2bb68",
+    "commit_sha": "183414102691ffb373d436951b27cf191d902fc2",
+    "commit_note": "Application source SHA built and published; delivery metadata commit reported separately to avoid self-reference.",
+    "migration_status": "NONE_REQUIRED",
+    "publish_status": "PUBLISHED_ADMIN_ONLY",
+    "merge_status": "PENDING_APPROVAL",
+    "objective": "Fix AUD-13 (Admin login throttling) and AUD-14 (no-store for authenticated Admin responses) with deterministic safe tests and an Admin-only local publish",
+    "scope": "TAPortal.Web Program/AccountController/Login view/new AdminLoginThrottle; safe tests; contract test filter; runbook. Shared and Customer Portal unchanged",
+    "findings": {
+      "AUD-13": "FIXED",
+      "AUD-14": "FIXED",
+      "AUD-20": "FIXED (MEDIUM: username enumeration via login timing)",
+      "AUD-21": "FIXED (LOW: login page advertised the admin username)",
+      "AUD-22": "FIXED (LOW: cookie AccessDeniedPath returned 404)",
+      "AUD-23": "OPEN (LOW: residual timing from role/permission queries for existing users)",
+      "AUD-24": "OPEN (MEDIUM, deployment: per-process counters; proxy IP shared partition; needs gateway/WAF limit)"
+    },
+    "technical_decisions": [
+      "Custom in-memory fixed-window throttle on TimeProvider instead of System.Threading.RateLimiting (no TimeProvider support in .NET 8; account partition needs bound form data)",
+      "Two partitions: SHA-256 normalized account (5/5 min, IP independent) and socket IP (20/5 min); all attempts counted; no SQL, no permanent lockout",
+      "Throttle evaluated before validation, lookup and hashing; antiforgery still runs first",
+      "No forwarded-header processing; trusted proxies not configured without approval",
+      "Central no-store middleware after UseStaticFiles; Clear-Site-Data cache on logout",
+      "Customer Portal not republished: no source or dependency change"
+    ],
+    "files_changed": [
+      "AGENTS.md",
+      ".agents/skills/codec/SKILL.md",
+      "docs/customer-portal-runbook.md",
+      "src/TAPortal.Web/Program.cs",
+      "src/TAPortal.Web/Controllers/AccountController.cs",
+      "src/TAPortal.Web/Security/AdminLoginThrottle.cs",
+      "src/TAPortal.Web/Views/Account/Login.cshtml",
+      "tests/TACustomerPortal.Tests/SafeAdminSecurityTests.cs",
+      "docs/audits/taportal-checkpoint5-admin-security-TAPORTAL-SYSTEM-AUDIT-CHG-20261028T170619Z-0CBC7E.md",
+      ".codec/features/TAPORTAL-SYSTEM-AUDIT/README.md",
+      ".codec/features/TAPORTAL-SYSTEM-AUDIT/history.json",
+      ".codec/changes/TAPORTAL-SYSTEM-AUDIT-CHG-20261028T170619Z-0CBC7E.md",
+      ".codec/reports/TAPORTAL-SYSTEM-AUDIT-CHG-20261028T170619Z-0CBC7E.md",
+      ".codec/reports/TAPORTAL-SYSTEM-AUDIT-CHG-20261028T170619Z-0CBC7E-TAPortal.Web.sha256"
+    ],
+    "migrations": [],
+    "database_status": "DATABASE_NOT_VERIFIED (not accessed)",
+    "build_result": "PASS: Release 0 warnings / 0 errors",
+    "test_result": {
+      "safe_passed": 84,
+      "safe_failed": 0,
+      "safe_skipped": 0,
+      "new_security_tests": 19,
+      "codec_passed": 4,
+      "codec_validate": "PASS",
+      "legacy_sql_tests": "NOT_SELECTED",
+      "smoke_admin": "11/11 PASS"
+    },
+    "artifacts": {
+      "TAPortal.Web": {
+        "target": "D:\\T.A\\TAPortal\\TAPortal\\publish\\deployed-TAPortal.Web",
+        "status": "PUBLISHED",
+        "exit_code": 0,
+        "published_utc": "2026-10-28T17:12:32Z",
+        "file_count": 57,
+        "artifact_sha256": "42d6a7334a744094e4a8135463801a477b93fe86dd5e811c93cedf311e119cb4",
+        "dll_sha256": "c64ce149392fa0a9d6e8786cc9efdcb5682a7331621ce5cca849aef34be973f4",
+        "manifest": ".codec/reports/TAPORTAL-SYSTEM-AUDIT-CHG-20261028T170619Z-0CBC7E-TAPortal.Web.sha256",
+        "previous": "4b308e3bfbfddf80cffaf1fd099981d07b597128af1d5ab03e31ebca8b05ea35; backup publish/rollback/TAPORTAL-SYSTEM-AUDIT-CHG-20261028T170619Z-0CBC7E/deployed-TAPortal.Web"
+      },
+      "TACustomerPortal.Web": {
+        "status": "NOT_REQUIRED",
+        "reason": "No change under src/TACustomerPortal.Web or src/TAPortal.Shared",
+        "artifact_sha256_unchanged": "ea77b3be501ea28fe80ce54665a805b6798b502137347ce11f7d356547f8ac34"
+      }
+    },
+    "iis_status": "NOT_CHECKED",
+    "deploy_status": "NOT_DEPLOYED",
+    "pr_url": "https://github.com/nguyenduc216/TAPortal/pull/7",
+    "merge_sha": null,
+    "remaining_work": [
+      "Operator UAT of real login throttling, Back/Forward after logout and authenticated headers in browsers",
+      "Gateway/WAF shared login limit for production or multi-instance hosting (AUD-24)",
+      "AUD-12 remains out of scope"
+    ]
   }
 ]
