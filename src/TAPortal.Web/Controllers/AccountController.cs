@@ -4,12 +4,16 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TAPortal.Web.Models;
+using TAPortal.Web.Security;
 using TAPortal.Web.Services;
 
 namespace TAPortal.Web.Controllers;
 
-public sealed class AccountController(PortalDb db, PasswordService passwords) : Controller
+public sealed class AccountController(PortalDb db, PasswordService passwords, AdminLoginThrottle throttle, ILogger<AccountController> logger) : Controller
 {
+    // Unknown usernames still pay the full PBKDF2 cost so response time does not reveal which accounts exist.
+    private static readonly string DummyHash = new PasswordService().Hash(Guid.NewGuid() + "Aa1!");
+
     [AllowAnonymous]
     [HttpGet]
     public IActionResult Login(string? returnUrl = null)
@@ -24,10 +28,26 @@ public sealed class AccountController(PortalDb db, PasswordService passwords) : 
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Login(LoginVm vm, string? returnUrl = null)
     {
+        // Throttle before validation, lookup or hashing so every POST is bounded identically for existing and unknown accounts.
+        var decision = throttle.TryAcquire(HttpContext.Connection.RemoteIpAddress, vm.Username);
+        if (!decision.Allowed)
+        {
+            var seconds = (int)Math.Ceiling(decision.RetryAfter.TotalSeconds);
+            logger.LogWarning("Admin login throttled. Account partition {AccountTag}, retry after {Seconds}s.", AdminLoginThrottle.PartitionTag(vm.Username), seconds);
+            Response.StatusCode = StatusCodes.Status429TooManyRequests;
+            Response.Headers.RetryAfter = seconds.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            ModelState.Clear();
+            ModelState.AddModelError(string.Empty, $"Bạn đã thử đăng nhập quá nhiều lần. Vui lòng thử lại sau khoảng {Math.Max(1, (int)Math.Ceiling(decision.RetryAfter.TotalMinutes))} phút.");
+            vm.Password = string.Empty;
+            return View(vm);
+        }
+
         if (!ModelState.IsValid) return View(vm);
         var user = await db.GetAuthUserAsync(vm.Username);
-        if (user is null || !passwords.Verify(vm.Password, user.PasswordHash) || (user.Roles.Count == 0 && user.Permissions.Count == 0))
+        var validPassword = passwords.Verify(vm.Password, user?.PasswordHash ?? DummyHash);
+        if (user is null || !validPassword || (user.Roles.Count == 0 && user.Permissions.Count == 0))
         {
+            logger.LogInformation("Admin login failed. Account partition {AccountTag}.", AdminLoginThrottle.PartitionTag(vm.Username));
             ModelState.AddModelError(string.Empty, "Tài khoản hoặc mật khẩu không đúng.");
             return View(vm);
         }
@@ -58,6 +78,8 @@ public sealed class AccountController(PortalDb db, PasswordService passwords) : 
     public async Task<IActionResult> Logout()
     {
         await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+        // Ask supporting browsers to drop any cached admin pages for this origin (no-store already prevents storing them).
+        Response.Headers["Clear-Site-Data"] = "\"cache\"";
         return RedirectToAction(nameof(Login));
     }
 

@@ -17,7 +17,7 @@ if (!string.IsNullOrWhiteSpace(builder.Configuration["DataProtection:KeyPath"]))
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme).AddCookie(options =>
 {
     options.LoginPath = "/account/login";
-    options.AccessDeniedPath = "/account/access-denied";
+    options.AccessDeniedPath = "/account/accessdenied"; // conventional route of AccountController.AccessDenied
     options.Cookie.Name = "TA.Portal.Auth";
     options.Cookie.HttpOnly = true;
     options.Cookie.SecurePolicy = builder.Environment.IsDevelopment() ? CookieSecurePolicy.SameAsRequest : CookieSecurePolicy.Always;
@@ -56,6 +56,16 @@ builder.Services.AddScoped<IAuthorizationHandler, PermissionHandler>();
 builder.Services.AddSingleton<PasswordService>();
 builder.Services.AddScoped<PortalDb>();
 builder.Services.AddScoped<MembershipAdminStore>();
+builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddSingleton(sp =>
+{
+    var options = new AdminLoginThrottleOptions();
+    builder.Configuration.GetSection("Security:AdminLogin").Bind(options);
+    if (options.AccountPermitLimit < 1 || options.IpPermitLimit < 1 || options.Window <= TimeSpan.Zero)
+        throw new InvalidOperationException("Security:AdminLogin limits must be positive.");
+    return options;
+});
+builder.Services.AddSingleton<AdminLoginThrottle>();
 var app = builder.Build();
 if (!app.Environment.IsDevelopment())
 {
@@ -65,6 +75,20 @@ if (!app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();
+// Every dynamic admin response (pages, redirects, 401/403/429, errors) must never be stored by browsers or proxies.
+// Registered after UseStaticFiles, so CSS/JS/images keep their normal caching.
+app.Use((context, next) =>
+{
+    context.Response.OnStarting(() =>
+    {
+        var headers = context.Response.Headers;
+        headers.CacheControl = "no-store, no-cache, max-age=0";
+        headers.Pragma = "no-cache";
+        headers.Expires = "0";
+        return Task.CompletedTask;
+    });
+    return next(context);
+});
 app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();

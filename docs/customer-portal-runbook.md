@@ -29,10 +29,14 @@ Khách hàng vào `/account/login`. Một membership được tự chọn; nhi�
 ```powershell
 dotnet restore TAPortal.sln
 dotnet build TAPortal.sln -c Release --no-restore
-dotnet test tests/TACustomerPortal.Tests/TACustomerPortal.Tests.csproj -c Release --no-build --filter "FullyQualifiedName~SafePortalTests|FullyQualifiedName~SafeAdminCrudTests"
+dotnet test tests/TACustomerPortal.Tests/TACustomerPortal.Tests.csproj -c Release --no-build --filter "FullyQualifiedName~TACustomerPortal.Tests.Safe"
 ```
 
-SafeAdminCrudTests (TAPORTAL-SYSTEM-AUDIT) cover Admin authorization, CSRF, overposting and validation for user/customer edit without SQL. Authenticated Admin page rendering and SQL writes remain operator UAT.
+SafeAdminCrudTests (TAPORTAL-SYSTEM-AUDIT) cover Admin authorization, CSRF, overposting and validation for user/customer edit without SQL. SafeAdminSecurityTests (Checkpoint 5) cover Admin login throttling and no-store headers with a fake clock. Authenticated Admin page rendering and SQL writes remain operator UAT.
+
+### Admin login protection (Checkpoint 5)
+POST /account/login on TAPortal Admin is limited in memory per process: 5 attempts per normalized account per 5 minutes (independent of IP) and 20 attempts per socket IP per 5 minutes. Every attempt counts, including successful ones; over the limit the response is HTTP 429 with Retry-After and a generic message, and the window recovers automatically (no permanent lockout, nothing written to SQL). Optional overrides outside Git: `Security__AdminLogin__AccountPermitLimit`, `Security__AdminLogin__IpPermitLimit`, `Security__AdminLogin__Window` (for example `00:05:00`); invalid values stop startup. Admin does not process X-Forwarded-For: behind a reverse proxy all clients share the proxy IP partition, so the IP limit becomes global — add a gateway/WAF limit for production. Counters reset on app pool recycle and are not shared between instances.
+All dynamic Admin responses send `Cache-Control: no-store, no-cache, max-age=0`, `Pragma: no-cache`, `Expires: 0`; static CSS/JS/images keep normal caching. Logout also sends `Clear-Site-Data: "cache"`.
 
 Checkpoint 1 uses SafePortalTests: real HTTP/cookie/CSRF/views with an in-memory ICustomerStore and invalid SQL configuration. No SQL connection. Legacy PortalTests are explicitly skipped and initialization is blocked because they create/drop LocalDB databases. Historical LocalDB results are not current evidence. CI performs restore/build/safe tests only, without LocalDB or publish. SQL CRUD/constraints/transactions still require operator verification.
 
