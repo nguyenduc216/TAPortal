@@ -21,7 +21,9 @@ class CodecTests(unittest.TestCase):
         self.root = pathlib.Path(self.temp.name)
         meta = self.root / '.codec'
         shutil.copytree(SOURCE / 'templates', meta / 'templates')
-        shutil.copyfile(SOURCE / 'config.json', meta / 'config.json')
+        cfg = json.loads((SOURCE / 'config.json').read_text(encoding='utf-8'))
+        cfg['deploy']['targets'] = {name: str(pathlib.PureWindowsPath(self.root) / 'publish' / ('deployed-' + name)) for name in cfg['deploy']['targets']}
+        (meta / 'config.json').write_text(json.dumps(cfg), encoding='utf-8')
         for name in ('features', 'changes', 'reports'):
             (meta / name).mkdir()
         self.root_patch = patch.object(codec, 'ROOT', self.root)
@@ -55,7 +57,7 @@ class CodecTests(unittest.TestCase):
     def test_rejects_policy_regressions(self):
         path = codec.META / 'config.json'
         original = json.loads(path.read_text())
-        mutations = [('database', 'name', 'OtherDB'), ('database', 'execute_mutating_sql_allowed', True), ('deploy', 'require_approval', False), ('git', 'force_push_allowed', True), ('history', 'append_only', False)]
+        mutations = [('database', 'name', 'OtherDB'), ('database', 'execute_mutating_sql_allowed', True), ('deploy', 'require_approval', False), ('deploy', 'require_iis_preflight', False), ('deploy', 'live_iis_overwrite_requires_separate_approval', False), ('deploy', 'targets', {'TACustomerPortal.Web': r'C:\wrong'}), ('git', 'force_push_allowed', True), ('history', 'append_only', False)]
         for section, key, value in mutations:
             with self.subTest(key=key), contextlib.redirect_stdout(io.StringIO()):
                 cfg = json.loads(json.dumps(original))

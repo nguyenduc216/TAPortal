@@ -43,7 +43,8 @@ def validate():
     cfg=json.loads((META/'config.json').read_text(encoding='utf-8'))
     errors=[]
     if cfg['database']['create_database_allowed'] or cfg['database']['execute_migrations_allowed'] or cfg['database']['execute_mutating_sql_allowed']: errors.append('Database mutation is not allowed')
-    if cfg['deploy']['allow_alternate_target'] or cfg['deploy']['create_target_directory']: errors.append('Publish target guard disabled')
+    if cfg['deploy']['allow_alternate_target']: errors.append('Alternate publish targets forbidden')
+    if cfg['deploy'].get('require_iis_preflight') is not True or cfg['deploy'].get('live_iis_overwrite_requires_separate_approval') is not True: errors.append('IIS safety guards missing')
     if not cfg['git']['merge_requires_approval']: errors.append('Merge approval disabled')
     if cfg['database']['server'] != r'WIN-HSHL54Q184K\MSSQLSERVER2014' or cfg['database']['name'] != 'TAPortalSys': errors.append('Unexpected SQL server/database')
     if cfg['database'].get('allowed_databases') != ['TAPortalSys']: errors.append('Only TAPortalSys is allowed')
@@ -67,6 +68,9 @@ def validate():
     if missing and cfg['deploy'].get('status') != 'PENDING_CONFIGURATION': errors.append('Missing publish paths must remain PENDING_CONFIGURATION')
     for value in cfg['deploy']['targets'].values():
         if value and not pathlib.PureWindowsPath(value).is_absolute(): errors.append('Publish path must be absolute')
+    for project, value in cfg['deploy']['targets'].items():
+        expected = pathlib.PureWindowsPath(ROOT) / 'publish' / ('deployed-' + project)
+        if value and pathlib.PureWindowsPath(value) != expected: errors.append('Publish path violates fixed convention: ' + project)
     print('POLICY:', 'PASS' if not errors else 'FAIL')
     print('Publish targets awaiting operator configuration:', ', '.join(missing) or 'none')
     for e in errors:print('ERROR:',e)

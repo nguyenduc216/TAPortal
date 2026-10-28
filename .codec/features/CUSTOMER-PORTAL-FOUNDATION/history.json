@@ -65,5 +65,54 @@
     "push_status": "PUSHED",
     "pr_status": "OPEN_DRAFT_UPDATED",
     "commit_note": "Implementation SHA; follow-up metadata records it. Final delivery HEAD reported separately to avoid self-reference."
+  },
+  {
+    "change_id": "CUSTOMER-PORTAL-FOUNDATION-CHG-20261028T005216Z-E6FF4A",
+    "created_at": "2026-10-28T00:52:16.007153+00:00",
+    "title": "Customer Portal MVP01 Publish Checkpoint 3",
+    "status": "PUBLISH_BLOCKED_IIS_PREFLIGHT",
+    "commit_sha": "383db10a00343c71e3e08fbd963ef09bcea743dd",
+    "migration_status": "OPERATOR_REPORTED_APPLIED_008_NOT_RERUN",
+    "publish_status": "BLOCKED",
+    "merge_status": "PENDING_APPROVAL",
+    "commit_note": "Production source SHA tested; delivery metadata commit reported separately.",
+    "objective": "Customer-only conventional artifact publish after safe preflight",
+    "scope": "Codec policy/config/validator/runbook; no production source changes",
+    "technical_decisions": [
+      "Fixed csproj-derived paths",
+      "Unreadable IIS mapping blocks artifact writes",
+      "Preserve user SQL edit"
+    ],
+    "files_changed": [
+      "AGENTS.md",
+      ".agents/skills/codec/SKILL.md",
+      ".codec/README.md",
+      ".codec/config.json",
+      ".codec/tools/codec.py",
+      ".codec/tools/test_codec.py",
+      "docs/customer-portal-runbook.md",
+      ".codec/features/CUSTOMER-PORTAL-FOUNDATION/README.md",
+      ".codec/features/CUSTOMER-PORTAL-FOUNDATION/history.json",
+      ".codec/changes/CUSTOMER-PORTAL-FOUNDATION-CHG-20261028T005216Z-E6FF4A.md",
+      ".codec/reports/CUSTOMER-PORTAL-FOUNDATION-CHG-20261028T005216Z-E6FF4A.md"
+    ],
+    "migrations": [],
+    "database_status": "VERIFIED_WITH_WARNINGS_OPERATOR_REPORTED",
+    "build_result": "PASS: 0 warnings, 0 errors",
+    "test_result": {
+      "safe_passed": 34,
+      "failed": 0,
+      "codec_tests_passed": 3,
+      "legacy_sql_tests": "NOT_SELECTED"
+    },
+    "deploy_status": "NOT_DEPLOYED",
+    "artifact_sha256": null,
+    "publish_target": "D:\\T.A\\TAPortal\\TAPortal\\publish\\deployed-TACustomerPortal.Web",
+    "merge_sha": null,
+    "remaining_work": [
+      "Operator IIS mappings/read access and new safety preflight",
+      "Publish and verify artifacts after gate",
+      "Separate IIS configuration authorization and customer membership/UAT"
+    ]
   }
 ]

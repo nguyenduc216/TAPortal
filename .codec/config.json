@@ -16,16 +16,19 @@
   },
   "deploy": {
     "targets": {
-      "TAPortal.Web": "",
-      "TACustomerPortal.Web": ""
+      "TAPortal.Web": "D:\\T.A\\TAPortal\\TAPortal\\publish\\deployed-TAPortal.Web",
+      "TACustomerPortal.Web": "D:\\T.A\\TAPortal\\TAPortal\\publish\\deployed-TACustomerPortal.Web"
     },
     "allow_alternate_target": false,
-    "create_target_directory": false,
+    "create_target_directory": true,
     "require_approval": true,
     "require_migrations_confirmed": true,
-    "status": "PENDING_CONFIGURATION",
+    "status": "CONFIGURED",
     "rename_or_move_target_allowed": false,
-    "separate_source_sha_and_artifact_sha256": true
+    "separate_source_sha_and_artifact_sha256": true,
+    "target_pattern": "<WORKSPACE_ROOT>\\publish\\deployed-<PROJECT_NAME>",
+    "require_iis_preflight": true,
+    "live_iis_overwrite_requires_separate_approval": true
   },
   "git": {
     "main_branch": "main",

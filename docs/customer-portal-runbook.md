@@ -36,7 +36,7 @@ Checkpoint 1 uses SafePortalTests: real HTTP/cookie/CSRF/views with an in-memory
 
 ## IIS độc lập
 
-IIS deployment is NOT performed in Checkpoint 1. Publish paths remain PENDING_CONFIGURATION for both web apps. Operator must confirm exact fixed existing paths, separate sites/app pools/identities and HTTPS bindings before any approved publish/deploy. Never create/rename/move destinations automatically or use example paths as actual configuration.
+Checkpoint 3 authorizes artifact publishing only to `D:\T.A\TAPortal\TAPortal\publish\deployed-TACustomerPortal.Web`. All web projects follow `publish/deployed-<csproj filename without extension>`. Creating this exact folder is allowed after safety preflight. Admin publishing and IIS changes are outside this checkpoint. Inspect IIS mappings, existing artifacts and write permissions first; unreadable mappings block publishing. A live IIS target requires separate overwrite approval.
 
 Thiết lập riêng từng app: `ASPNETCORE_ENVIRONMENT=Production`, `Database__ConnectionString`, `DataProtection__KeyPath` là đường dẫn bền vững nằm ngoài web root, cùng logging destination. Cấp ACL key folder chỉ cho đúng application pool identity; bật Load User Profile. Trên Windows key ring dùng DPAPI theo identity. Backup key ring theo chính sách vận hành. Các deployment nhiều máy cần cơ chế key encryption/certificate dùng chung trong từng ứng dụng, không chia key giữa hai ứng dụng. Mỗi site dùng thư mục log/thu thập stdout hoặc central logging riêng; mặc định application log đi qua ASP.NET logging providers. Không bật stdout vô hạn mà không có retention.
 
@@ -68,3 +68,10 @@ All paths below are relative to repository root. Codex did NOT execute these scr
 Rollback 005 is NOT an installation step; separate operator approval/backup is required. It checks TAPortalSys and refuses to drop populated memberships.
 
 Tenant switching preserves original IssuedUtc/ExpiresUtc and cannot extend the two-hour session. Account/dashboard/profile pages send Cache-Control: no-store.
+
+## Checkpoint 3 ? operator handoff
+Operator reports migration 008 manually applied; database verification PASS_WITH_WARNINGS (4 Users, 10 Customers, 0 Memberships). Treat as VERIFIED_WITH_WARNINGS, operator-reported, not a new Codex SQL audit. Do not rerun migration 008. Customer account provisioning and functional acceptance remain pending.
+
+IIS preflight on 2026-10-28: W3SVC/WAS running; applicationHost.config access denied; appcmd list vdir fails reading redirection.config due to insufficient permissions. Target does not yet exist. Publish is BLOCKED until an operator verifies all effective IIS physical paths (including overlap/aliases) and confirms target is not served, or grants read access for a new preflight. No automatic elevation or IIS edits.
+
+Before deployment, confirm dedicated site/application name, dedicated No Managed Code app pool/identity, HTTPS hostname/port/certificate, installed .NET 8 Hosting Bundle, Production environment, external secret configuration for Database__ConnectionString to TAPortalSys, external persistent DataProtection__KeyPath, least-privilege ACLs, log destination/retention, backup and rollback ownership. Operator sets these outside Git. Confirm trusted proxy IPs if applicable, secure cookies/HTTPS redirect and login throttling/WAF. After separately authorized IIS deployment, perform browser login/provisioning, tenant isolation, password/session revocation and Admin regression acceptance. No site creation, binding changes, pool recycle/start or secrets changes in Checkpoint 3.

@@ -26,3 +26,10 @@ Intake -> Plan -> Implement -> Build/Test -> SQL handoff (KHÔNG execute) -> Pub
 Mỗi thay đổi có một `Change ID` duy nhất; một `Feature ID` có nhiều changes. History ghi bằng Markdown và JSON, commit vào Git. Không lưu mật khẩu, connection string có password hoặc dữ liệu cá nhân vào history.
 
 **Lưu ý:** Các guard trong skill là hướng dẫn tác nghiệp, không phải sandbox bảo mật. Giới hạn quyền SQL/IIS của tài khoản chạy Codex vẫn cần được áp dụng.
+
+## Publish convention ? Checkpoint 3 (2026-10-28)
+- Every web project publishes only to `<WORKSPACE_ROOT>\publish\deployed-<PROJECT_NAME>`; PROJECT_NAME is the .csproj filename without extension. Paths are fixed, never timestamped, renamed or moved; never publish into source.
+- Creating exactly that conventional folder is authorized. Before any write, inspect existing files, write permissions and all IIS site/application/virtual-directory physical paths (including parent/child overlap and path aliases). An unreadable IIS configuration is an unresolved safety preflight: STOP publish until the operator supplies verified mappings or access. Do not elevate automatically.
+- No automatic publish to a live IIS directory. Stop for separate approval before overwriting any served folder; never clean it blindly. Back up existing artifacts/configuration before approved replacement.
+- Publishing artifacts does not authorize IIS site/binding/app-pool changes, starts or recycles. Report PUBLISHED separately from NOT_DEPLOYED, with source commit SHA and artifact SHA256.
+- This checkpoint authorizes only TACustomerPortal.Web. TAPortal.Web follows the same path convention for future authorized work, but is not published now.

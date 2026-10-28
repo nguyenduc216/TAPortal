@@ -25,12 +25,12 @@ description: Workflow quản lý phát triển TAPortal với Feature ID, Change
 - Chỉ người dùng/DBA thực thi migration; Codex không tự thực thi dù người dùng yêu cầu publish sau build. Nếu muốn đổi quy tắc này phải sửa policy có phê duyệt rõ.
 - Test DB integration: chỉ được dùng DB test cô lập đã được người dùng cho phép; không tự tạo database mới trên server hiện tại.
 
-## 3. Publish / Deploy
-- `deploy.targets` phải có đường dẫn chính xác, tuyệt đối và do người dùng xác nhận cho từng project. Nếu thiếu -> STOP, hỏi đường dẫn; không tự đặt folder thay thế.
-- Phân biệt `dotnet publish` (tạo artifact) với deploy vào IIS. Chỉ dùng đường dẫn đã cho, không tạo folder đích khác. Nếu đích chưa tồn tại -> STOP và yêu cầu operator tạo/cho phép.
-- Không xóa sạch hoặc ghi đè mù quáng: preflight kiểm tra path, quyền, project mapping, backup/rollback, IIS site/app pool tương ứng. Không đụng production IIS ngoài scope đã duyệt.
-- Chỉ publish/deploy sau approval nếu policy yêu cầu. Nếu migration đang `NOT_EXECUTED` và code phụ thuộc schema mới -> STOP deploy hoặc dùng feature flag bảo đảm tương thích.
-- Báo: target path, app/site, commit SHA, artifact SHA256, thời điểm, lệnh thực tế, kết quả smoke test, trạng thái `PUBLISHED`/`DEPLOYED`/`BLOCKED`.
+## Publish convention ? Checkpoint 3 (2026-10-28)
+- Every web project publishes only to `<WORKSPACE_ROOT>\publish\deployed-<PROJECT_NAME>`; PROJECT_NAME is the .csproj filename without extension. Paths are fixed, never timestamped, renamed or moved; never publish into source.
+- Creating exactly that conventional folder is authorized. Before any write, inspect existing files, write permissions and all IIS site/application/virtual-directory physical paths (including parent/child overlap and path aliases). An unreadable IIS configuration is an unresolved safety preflight: STOP publish until the operator supplies verified mappings or access. Do not elevate automatically.
+- No automatic publish to a live IIS directory. Stop for separate approval before overwriting any served folder; never clean it blindly. Back up existing artifacts/configuration before approved replacement.
+- Publishing artifacts does not authorize IIS site/binding/app-pool changes, starts or recycles. Report PUBLISHED separately from NOT_DEPLOYED, with source commit SHA and artifact SHA256.
+- This checkpoint authorizes only TACustomerPortal.Web. TAPortal.Web follows the same path convention for future authorized work, but is not published now.
 
 ## 4. Sau mỗi change
 - Build/test phù hợp, ghi kết quả trung thực (không chạy thì ghi NOT_RUN).
@@ -49,6 +49,6 @@ description: Workflow quản lý phát triển TAPortal với Feature ID, Change
 - CHANGE_ID format: FEATURE-ID-CHG-YYYYMMDDTHHMMSSZ-XXXXXX (UTC, unique). Preserve previous changes/reports/history entries; append new records, update only the current change record.
 - SQL Server: `WIN-HSHL54Q184K\MSSQLSERVER2014`; ONLY database: `TAPortalSys`. No DEV/UAT/TEST or other databases, including integration-test databases. No automatic migration, DDL, DML, seed or rollback via any channel. Only author SQL files; operator runs them manually with DBeaver or SSMS.
 - Before authoring migrations, check existing scripts to avoid duplicates. Every mutating migration must check `DB_NAME() = 'TAPortalSys'` and abort on mismatch. Document exact path, execution order, purpose, preconditions and verification instructions.
-- Publish targets remain empty with status `PENDING_CONFIGURATION` until operator confirms exact fixed paths. Continue source/test work while configuration is pending; stop before publish/deploy. Never invent/create/rename/move a destination. Approval is required before overwriting a live IIS site. Report source commit SHA separately from published artifact SHA256.
+- Publish targets use the fixed convention below, explicitly authorized in Checkpoint 3. Separate approval remains required for live IIS overwrite.
 - Reuse the current feature branch; create a branch only for independent new features or substantial work. Never reset/delete uncommitted work, force push, or merge main without user acceptance and approval. Record merge SHA after approved merge.
 - Record objective, scope, technical decisions, changed files, migrations, build/test, publish, source commit SHA, merge SHA and remaining work in feature history/change/report. Never store secrets or PII.
