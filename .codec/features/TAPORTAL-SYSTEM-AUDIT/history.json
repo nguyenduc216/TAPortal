@@ -1,0 +1,115 @@
+[
+  {
+    "change_id": "TAPORTAL-SYSTEM-AUDIT-CHG-20261028T163541Z-822BA2",
+    "created_at": "2026-10-28T16:35:41.928408+00:00",
+    "title": "Full system audit, Admin Users/Customers edit, Customer Portal account UI, dual publish",
+    "status": "LOCAL_ARTIFACTS_PUBLISHED_UAT_PENDING",
+    "agent": "Claude Code (claude-opus-5-5)",
+    "depends_on": [
+      "CUSTOMER-PORTAL-FOUNDATION"
+    ],
+    "starting_sha": "24d9f586831d9fafa52866b5b927472aa3c62f80",
+    "commit_sha": "336ab7c80552e733a5df9e6c4612aeb163037007",
+    "commit_note": "Application source SHA built and published; delivery metadata commit reported separately to avoid self-reference.",
+    "migration_status": "NONE_REQUIRED",
+    "publish_status": "PUBLISHED",
+    "merge_status": "PENDING_APPROVAL",
+    "objective": "Audit Admin, Customer Portal and Shared; fix safe CRUD/UI/navigation defects; unify the operating contract for all AI agents; publish both local artifacts",
+    "scope": "Admin Users/Customers/CustomerPortalAccounts/layout/JS, Codec policy/validator/tests, safe tests, runbook; Customer Portal and Shared source unchanged",
+    "technical_decisions": [
+      "Edit never touches Username, PasswordHash, Status or roles; IsActive only",
+      "Customer Code immutable after creation",
+      "No delete actions to avoid data loss",
+      "Role change after creation left OPEN pending business rules",
+      "Manifest ordering pinned to ordinal relative POSIX path",
+      "Customer artifact backed up before replacement"
+    ],
+    "files_changed": [
+      "AGENTS.md",
+      ".gitattributes",
+      ".agents/skills/codec/SKILL.md",
+      ".codec/README.md",
+      ".codec/config.json",
+      ".codec/tools/codec.py",
+      ".codec/tools/test_codec.py",
+      "docs/customer-portal-runbook.md",
+      "docs/audits/taportal-system-audit-TAPORTAL-SYSTEM-AUDIT-CHG-20261028T163541Z-822BA2.md",
+      "src/TAPortal.Web/Controllers/CustomerPortalAccountsController.cs",
+      "src/TAPortal.Web/Controllers/PortalControllers.cs",
+      "src/TAPortal.Web/Models/PortalModels.cs",
+      "src/TAPortal.Web/Services/PortalDb.cs",
+      "src/TAPortal.Web/Views/CustomerPortalAccounts/Index.cshtml",
+      "src/TAPortal.Web/Views/Customers/Index.cshtml",
+      "src/TAPortal.Web/Views/Customers/Edit.cshtml",
+      "src/TAPortal.Web/Views/Users/Index.cshtml",
+      "src/TAPortal.Web/Views/Users/Edit.cshtml",
+      "src/TAPortal.Web/Views/Shared/_Layout.cshtml",
+      "src/TAPortal.Web/wwwroot/js/ta-portal.js",
+      "tests/TACustomerPortal.Tests/SafeAdminCrudTests.cs",
+      ".codec/features/TAPORTAL-SYSTEM-AUDIT/README.md",
+      ".codec/features/TAPORTAL-SYSTEM-AUDIT/history.json",
+      ".codec/changes/TAPORTAL-SYSTEM-AUDIT-CHG-20261028T163541Z-822BA2.md",
+      ".codec/reports/TAPORTAL-SYSTEM-AUDIT-CHG-20261028T163541Z-822BA2.md",
+      ".codec/reports/TAPORTAL-SYSTEM-AUDIT-CHG-20261028T163541Z-822BA2-TAPortal.Web.sha256",
+      ".codec/reports/TAPORTAL-SYSTEM-AUDIT-CHG-20261028T163541Z-822BA2-TACustomerPortal.Web.sha256"
+    ],
+    "migrations": [],
+    "database_status": "NOT_VERIFIED_NOT_ACCESSED",
+    "findings": {
+      "total": 19,
+      "critical": 0,
+      "high": 2,
+      "medium": 8,
+      "low": 9,
+      "fixed": 12,
+      "open": 7
+    },
+    "build_result": "PASS: Release 0 warnings / 0 errors",
+    "test_result": {
+      "safe_passed": 65,
+      "safe_failed": 0,
+      "safe_skipped": 0,
+      "codec_passed": 4,
+      "codec_validate": "PASS",
+      "legacy_sql_tests": "NOT_SELECTED",
+      "smoke_admin": "13/13 PASS",
+      "smoke_customer": "10/10 PASS"
+    },
+    "artifacts": {
+      "TAPortal.Web": {
+        "target": "D:\\T.A\\TAPortal\\TAPortal\\publish\\deployed-TAPortal.Web",
+        "status": "PUBLISHED",
+        "exit_code": 0,
+        "published_utc": "2026-10-28T16:44:41Z",
+        "file_count": 57,
+        "artifact_sha256": "4b308e3bfbfddf80cffaf1fd099981d07b597128af1d5ab03e31ebca8b05ea35",
+        "dll_sha256": "07b3f9bdccc5ec475caf43a83593ce3bdb8e6c3034d4c7320e38388417a6a9fb",
+        "manifest": ".codec/reports/TAPORTAL-SYSTEM-AUDIT-CHG-20261028T163541Z-822BA2-TAPortal.Web.sha256",
+        "previous": "none (first Admin artifact)"
+      },
+      "TACustomerPortal.Web": {
+        "target": "D:\\T.A\\TAPortal\\TAPortal\\publish\\deployed-TACustomerPortal.Web",
+        "status": "PUBLISHED",
+        "exit_code": 0,
+        "published_utc": "2026-10-28T16:44:43Z",
+        "file_count": 54,
+        "artifact_sha256": "ea77b3be501ea28fe80ce54665a805b6798b502137347ce11f7d356547f8ac34",
+        "dll_sha256": "d0023b90c41c0aeea4d92063be7e8cc5d106cab58bc8f7b8e80e848d02684a63",
+        "manifest": ".codec/reports/TAPORTAL-SYSTEM-AUDIT-CHG-20261028T163541Z-822BA2-TACustomerPortal.Web.sha256",
+        "previous": "40442b0023252bc9032f75036a477dfff0dff8e458c735cbd64a738e02bdcb66 (legacy order) = f76b421a30d2f86e7fe7bc78c82d7a9632ac7f28bff24d5a700db34e72004aa2 (ordinal); backup publish/rollback/TAPORTAL-SYSTEM-AUDIT-CHG-20261028T163541Z-822BA2/deployed-TACustomerPortal.Web"
+      }
+    },
+    "manifest_method": "SHA256_UTF8_LF_SORTED_RELATIVE_POSIX (ordinal)",
+    "iis_status": "NOT_CHECKED",
+    "deploy_status": "NOT_DEPLOYED",
+    "pr_url": "https://github.com/nguyenduc216/TAPortal/pull/7",
+    "merge_sha": null,
+    "remaining_work": [
+      "Operator UAT of Admin edit/create SQL write paths and authenticated rendering",
+      "Customer Portal UAT-01..09",
+      "AUD-12 role management business rules (PENDING_APPROVAL)",
+      "AUD-13/AUD-14 Admin login throttle and no-store",
+      "Separately approved live deployment"
+    ]
+  }
+]

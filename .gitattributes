@@ -1,0 +1,2 @@
+# Artifact SHA256 manifests are hashed byte-for-byte; never convert their line endings.
+*.sha256 -text
