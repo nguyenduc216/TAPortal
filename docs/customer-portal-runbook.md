@@ -29,8 +29,10 @@ Khách hàng vào `/account/login`. Một membership được tự chọn; nhi�
 ```powershell
 dotnet restore TAPortal.sln
 dotnet build TAPortal.sln -c Release --no-restore
-dotnet test tests/TACustomerPortal.Tests/TACustomerPortal.Tests.csproj -c Release --no-build --filter FullyQualifiedName~SafePortalTests
+dotnet test tests/TACustomerPortal.Tests/TACustomerPortal.Tests.csproj -c Release --no-build --filter "FullyQualifiedName~SafePortalTests|FullyQualifiedName~SafeAdminCrudTests"
 ```
+
+SafeAdminCrudTests (TAPORTAL-SYSTEM-AUDIT) cover Admin authorization, CSRF, overposting and validation for user/customer edit without SQL. Authenticated Admin page rendering and SQL writes remain operator UAT.
 
 Checkpoint 1 uses SafePortalTests: real HTTP/cookie/CSRF/views with an in-memory ICustomerStore and invalid SQL configuration. No SQL connection. Legacy PortalTests are explicitly skipped and initialization is blocked because they create/drop LocalDB databases. Historical LocalDB results are not current evidence. CI performs restore/build/safe tests only, without LocalDB or publish. SQL CRUD/constraints/transactions still require operator verification.
 
@@ -43,12 +45,12 @@ Checkpoint 1 uses SafePortalTests: real HTTP/cookie/CSRF/views with an in-memory
 - Only TAPortalSys read queries using read-only permissions are allowed. Without read access, record NOT_VERIFIED and continue independent work.
 - Author migration SQL files for operator review and manual execution only. SQL verification defaults to TEXT messages via PRINT; SELECT details only when diagnosing failures.
 
-## Local publish policy ? Checkpoint 3
+## Local publish policy — Checkpoint 3
 - Publish every web project only to `<WORKSPACE_ROOT>\publish\deployed-<PROJECT_NAME>`; PROJECT_NAME is the csproj filename without extension. Never rename, move or timestamp the target, or publish into source.
 - This is a local artifact directory, not an assumed IIS deployment. Do not inspect IIS before local publish; unreadable IIS configuration does not block local artifacts.
 - Check project, Git, build/safe tests, target contents and write permission. Creating the exact conventional folder is authorized. Reject path aliases/reparse points escaping the target; never delete or overwrite data outside it.
 - Local artifact publishing does not authorize server/IIS configuration or deployment. Report PUBLISHED separately from NOT_DEPLOYED, source commit SHA separately from artifact SHA256.
-- Checkpoint 3 authorizes TACustomerPortal.Web only; TAPortal.Web is not published. Any future live deployment requires separate approval and operator-managed backup/replacement.
+- Historical: Checkpoint 3 authorized TACustomerPortal.Web only. Superseded by the MULTI-AGENT CONTRACT below: which web projects are published is decided per task by impact analysis plus the operator's request. Any live deployment requires separate approval and operator-managed backup/replacement.
 
 
 Thiết lập riêng từng app: `ASPNETCORE_ENVIRONMENT=Production`, `Database__ConnectionString`, `DataProtection__KeyPath` là đường dẫn bền vững nằm ngoài web root, cùng logging destination. Cấp ACL key folder chỉ cho đúng application pool identity; bật Load User Profile. Trên Windows key ring dùng DPAPI theo identity. Backup key ring theo chính sách vận hành. Các deployment nhiều máy cần cơ chế key encryption/certificate dùng chung trong từng ứng dụng, không chia key giữa hai ứng dụng. Mỗi site dùng thư mục log/thu thập stdout hoặc central logging riêng; mặc định application log đi qua ASP.NET logging providers. Không bật stdout vô hạn mà không có retention.

@@ -83,6 +83,10 @@
         if (icon) icon.className = show ? 'ti ti-eye-off' : 'ti ti-eye';
     };
 
+    // Reopen a modal re-rendered by the server after a validation error (keeps the entered values).
+    document.querySelectorAll('.modal[data-ta-open="true"]').forEach((element) => {
+        if (window.bootstrap?.Modal) window.bootstrap.Modal.getOrCreateInstance(element).show();
+    });
     document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach((element) => {
         if (window.bootstrap?.Tooltip) window.bootstrap.Tooltip.getOrCreateInstance(element);
     });

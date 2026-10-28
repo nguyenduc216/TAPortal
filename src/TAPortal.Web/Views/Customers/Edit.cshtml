@@ -1,0 +1,24 @@
+@model CustomerEditVm
+@{
+    var isNew = Model.Id == Guid.Empty;
+    ViewData["Title"] = isNew ? "Thêm khách hàng" : "Sửa khách hàng";
+}
+<div class="page-header"><div class="row align-items-center"><div class="col"><div class="page-pretitle"><a asp-action="Index">Khách hàng</a> / @(isNew ? "Thêm mới" : "Chỉnh sửa")</div><h2 class="page-title">@(isNew ? "Thêm khách hàng" : "Sửa khách hàng: " + Model.Code)</h2></div></div></div>
+<div class="row mt-3"><div class="col-lg-8"><div class="card"><form asp-action="@(isNew ? "Create" : "Edit")" asp-route-id="@(isNew ? null : Model.Id)" method="post" novalidate>
+<div class="card-body">
+<div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+<div class="row">
+<div class="col-sm-4"><div class="mb-3"><label asp-for="Code" class="form-label @(isNew ? "required" : "")">Mã khách hàng</label>@if (isNew) {<input asp-for="Code" class="form-control text-uppercase" maxlength="50" autocomplete="off" required />} else {<input class="form-control" value="@Model.Code" readonly disabled />}<span asp-validation-for="Code" class="invalid-feedback d-block"></span>@if (!isNew) {<div class="form-hint">Mã khách hàng không thể thay đổi.</div>}</div></div>
+<div class="col-sm-8"><div class="mb-3"><label asp-for="Name" class="form-label required">Tên khách hàng</label><input asp-for="Name" class="form-control" maxlength="250" required /><span asp-validation-for="Name" class="invalid-feedback d-block"></span></div></div>
+</div>
+<div class="row">
+<div class="col-sm-4"><div class="mb-3"><label asp-for="TaxCode" class="form-label">Mã số thuế</label><input asp-for="TaxCode" class="form-control" maxlength="50" /><span asp-validation-for="TaxCode" class="invalid-feedback d-block"></span></div></div>
+<div class="col-sm-4"><div class="mb-3"><label asp-for="Email" class="form-label">Email</label><input asp-for="Email" class="form-control" type="email" maxlength="256" /><span asp-validation-for="Email" class="invalid-feedback d-block"></span></div></div>
+<div class="col-sm-4"><div class="mb-3"><label asp-for="Phone" class="form-label">Điện thoại</label><input asp-for="Phone" class="form-control" maxlength="50" /><span asp-validation-for="Phone" class="invalid-feedback d-block"></span></div></div>
+</div>
+<div class="mb-3"><label asp-for="Address" class="form-label">Địa chỉ</label><textarea asp-for="Address" class="form-control" rows="2" maxlength="1000"></textarea><span asp-validation-for="Address" class="invalid-feedback d-block"></span></div>
+<div class="mb-2"><label class="form-check form-switch"><input asp-for="IsActive" class="form-check-input" type="checkbox" /><span class="form-check-label">Đang hoạt động</span></label><div class="form-hint">Tắt sẽ chặn mọi tài khoản Customer Portal truy cập doanh nghiệp này; dữ liệu và membership được giữ nguyên.</div></div>
+@if (!isNew) {<div class="text-secondary small">Trạng thái hệ thống: <code>@Model.Status</code></div>}
+</div>
+<div class="card-footer d-flex gap-2"><a asp-action="Index" class="btn"><i class="ti ti-arrow-left" aria-hidden="true"></i>Quay lại</a><button type="submit" class="btn btn-primary ms-auto" data-ta-loading data-ta-loading-text="Đang lưu..."><i class="ti ti-device-floppy" aria-hidden="true"></i><span>@(isNew ? "Tạo khách hàng" : "Lưu thay đổi")</span></button></div>
+</form></div></div></div>

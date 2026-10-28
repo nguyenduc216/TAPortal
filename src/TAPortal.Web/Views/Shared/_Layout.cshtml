@@ -1,3 +1,6 @@
+@functions {
+    private bool HasPermission(string code) => User.Claims.Any(c => c.Type == "permission" && string.Equals(c.Value, code, StringComparison.OrdinalIgnoreCase));
+}
 <!doctype html>
 <html lang="vi">
 <head>
@@ -33,12 +36,19 @@
                         {
                         <li class="nav-item"><a class="nav-link" asp-controller="Home" asp-action="Index"><span class="nav-link-icon"><i class="ti ti-layout-dashboard"></i></span><span class="nav-link-title">Tổng quan</span></a></li>
                         <li class="nav-item"><a class="nav-link" asp-controller="Customers" asp-action="Index"><span class="nav-link-icon"><i class="ti ti-building-store"></i></span><span class="nav-link-title">Khách hàng</span></a></li>
+                        <li class="nav-item"><a class="nav-link" asp-controller="CustomerPortalAccounts" asp-action="Index"><span class="nav-link-icon"><i class="ti ti-user-shield"></i></span><span class="nav-link-title">Tài khoản Customer Portal</span></a></li>
                         <li class="nav-item"><a class="nav-link" asp-controller="Users" asp-action="Index"><span class="nav-link-icon"><i class="ti ti-users"></i></span><span class="nav-link-title">Người dùng</span></a></li>
                         }
+                        @if (User.IsInRole("SYS_ADMIN") || HasPermission("AUTH.ROLES.VIEW"))
+                        {
                         <li class="nav-item"><a class="nav-link" asp-controller="Roles" asp-action="Index"><span class="nav-link-icon"><i class="ti ti-shield-lock"></i></span><span class="nav-link-title">Vai trò &amp; phân quyền</span></a></li>
+                        }
+                        @if (User.IsInRole("SYS_ADMIN") || HasPermission("SYSTEM.MENUS.MANAGE"))
+                        {
                         <li class="nav-item"><a class="nav-link" asp-controller="Menus" asp-action="Index"><span class="nav-link-icon"><i class="ti ti-list-details"></i></span><span class="nav-link-title">Quản lý menu</span></a></li>
-                        <li class="nav-item"><a class="nav-link" href="#"><span class="nav-link-icon"><i class="ti ti-settings"></i></span><span class="nav-link-title">Cấu hình hệ thống</span></a></li>
-                        <li class="nav-item"><a class="nav-link" href="#"><span class="nav-link-icon"><i class="ti ti-history"></i></span><span class="nav-link-title">Nhật ký hoạt động</span></a></li>
+                        }
+                        <li class="nav-item"><span class="nav-link disabled" aria-disabled="true" title="Chức năng chưa triển khai"><span class="nav-link-icon"><i class="ti ti-settings"></i></span><span class="nav-link-title">Cấu hình hệ thống</span><span class="badge bg-secondary-lt ms-auto">Sắp có</span></span></li>
+                        <li class="nav-item"><span class="nav-link disabled" aria-disabled="true" title="Chức năng chưa triển khai"><span class="nav-link-icon"><i class="ti ti-history"></i></span><span class="nav-link-title">Nhật ký hoạt động</span><span class="badge bg-secondary-lt ms-auto">Sắp có</span></span></li>
                     </ul>
                 </div>
             </div>

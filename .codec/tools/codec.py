@@ -66,6 +66,14 @@ def validate():
             for directory in ('changes','reports'):
                 if not (META/directory/f'{change}.md').is_file(): errors.append('Missing '+directory+': '+change)
         if not (history.parent/'README.md').is_file(): errors.append('Missing feature README')
+    agents=cfg.get('agents',{})
+    if agents.get('applies_to')!='ALL_AI_AGENTS' or agents.get('contract_file')!='AGENTS.md' or agents.get('preserve_foreign_uncommitted_changes') is not True or agents.get('switch_or_create_branch_requires_approval') is not True: errors.append('Multi-agent contract policy invalid')
+    if cfg['deploy'].get('republish_changed_projects') is not True or cfg['deploy'].get('artifact_manifest_method')!='SHA256_UTF8_LF_SORTED_RELATIVE_POSIX' or cfg['deploy'].get('artifact_manifest_dir')!='.codec/reports': errors.append('Artifact republish/manifest policy invalid')
+    if cfg['deploy'].get('shared_project')!='TAPortal.Shared' or sorted(cfg['deploy'].get('shared_dependents') or [])!=sorted(cfg['deploy']['targets']): errors.append('Shared dependents must cover every web project target')
+    report=cfg.get('report',{})
+    if [s.split('.')[0] for s in report.get('required_sections',[])]!=list('ABCDEFGHIJKL') or report.get('finding_statuses')!=['FIXED','VERIFIED','OPEN','BLOCKED','PENDING_OPERATOR'] or report.get('separate_source_and_delivery_sha') is not True: errors.append('Unified report structure invalid')
+    contract=ROOT/'AGENTS.md'
+    if not contract.is_file() or '## MULTI-AGENT CONTRACT' not in contract.read_text(encoding='utf-8'): errors.append('AGENTS.md lacks MULTI-AGENT CONTRACT section')
     missing=[k for k,v in cfg['deploy']['targets'].items() if not v]
     if missing and cfg['deploy'].get('status') != 'PENDING_CONFIGURATION': errors.append('Missing publish paths must remain PENDING_CONFIGURATION')
     for value in cfg['deploy']['targets'].values():

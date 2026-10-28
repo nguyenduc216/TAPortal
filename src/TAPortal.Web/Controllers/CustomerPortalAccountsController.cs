@@ -12,6 +12,7 @@ public sealed class CustomerPortalAccountsController(MembershipAdminStore store,
     {
         ViewBag.Customers = await db.GetCustomersAsync();
         ViewBag.Users = await db.GetUsersAsync();
+        ViewBag.CustomerId = customerId;
         try
         {
             return View(await store.List(Actor, customerId));
@@ -42,7 +43,7 @@ public sealed class CustomerPortalAccountsController(MembershipAdminStore store,
         if (!ModelState.IsValid)
         {
             TempData["Error"] = string.Join(" ", ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage));
-            return RedirectToAction(nameof(Index));
+            return RedirectToAction(nameof(Index), new { customerId = NullIfEmpty(input.CustomerId) });
         }
 
         try
@@ -59,7 +60,7 @@ public sealed class CustomerPortalAccountsController(MembershipAdminStore store,
             TempData["Error"] = "Thông tin trùng lặp hoặc tài khoản/doanh nghiệp không hợp lệ.";
         }
 
-        return RedirectToAction(nameof(Index));
+        return RedirectToAction(nameof(Index), new { customerId = NullIfEmpty(input.CustomerId) });
     }
 
     [HttpPost, ValidateAntiForgeryToken]
@@ -68,14 +69,16 @@ public sealed class CustomerPortalAccountsController(MembershipAdminStore store,
         try
         {
             await store.SetActive(userId, customerId, active, Actor);
+            TempData["Success"] = active ? "Đã kích hoạt lại quyền truy cập Customer Portal." : "Đã thu hồi quyền truy cập Customer Portal của doanh nghiệp này.";
         }
         catch (UnauthorizedAccessException)
         {
             return Forbid();
         }
 
-        return RedirectToAction(nameof(Index));
+        return RedirectToAction(nameof(Index), new { customerId = NullIfEmpty(customerId) });
     }
 
+    private static Guid? NullIfEmpty(Guid id) => id == Guid.Empty ? null : id;
     private Guid Actor => Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 }

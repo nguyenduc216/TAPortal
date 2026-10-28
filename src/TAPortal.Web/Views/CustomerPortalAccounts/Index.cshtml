@@ -1,17 +1,38 @@
 @model List<TAPortal.Shared.MembershipAdminRow>
-@{ ViewData["Title"]="Tài khoản Customer Portal"; }
-<h1>Tài khoản Customer Portal</h1>
-<form asp-action="Save" method="post" class="card card-body mb-4">
-<h2>Tạo / gán tài khoản</h2>
-<label>Doanh nghiệp<select name="CustomerId" class="form-select" required><option value="">Chọn doanh nghiệp</option>@foreach(var c in (List<TAPortal.Web.Models.CustomerRow>)ViewBag.Customers){<option value="@c.Id">@c.Name</option>}</select></label>
-<label>Tài khoản hiện có<select name="UserId" class="form-select"><option value="">Tạo tài khoản mới</option>@foreach(var u in (List<TAPortal.Web.Models.PortalUser>)ViewBag.Users){<option value="@u.Id">@u.Username ? @u.DisplayName</option>}</select></label>
-<label>Username (tài khoản mới)<input class="form-control" name="Username" maxlength="100" autocomplete="off" /></label>
-<label>Họ tên<input class="form-control" name="DisplayName" maxlength="200" /></label>
-<label>Email<input class="form-control" name="Email" type="email" maxlength="256" /></label>
-<label>Mật khẩu ban đầu<input class="form-control" name="Password" type="password" maxlength="256" autocomplete="new-password" /></label>
-<label>Vai trò<select name="PortalRole" class="form-select"><option>VIEWER</option><option>ADMIN</option><option>OWNER</option></select></label>
-<button class="btn btn-primary mt-3">Lưu và kích hoạt</button>
-</form>
-<div class="table-responsive"><table class="table card-table"><thead><tr><th>Họ tên / Username</th><th>Email</th><th>Doanh nghiệp</th><th>Vai trò</th><th>Trạng thái</th><th>Đăng nhập gần nhất (UTC)</th><th>Thao tác</th></tr></thead><tbody>
-@foreach(var r in Model){<tr><td>@r.DisplayName<br/>@r.Username</td><td>@r.Email</td><td>@r.CustomerName</td><td><form asp-action="Save" method="post"><input type="hidden" name="UserId" value="@r.UserId"/><input type="hidden" name="CustomerId" value="@r.CustomerId"/><select name="PortalRole" class="form-select" aria-label="Vai trò">@foreach(var role in new[]{"OWNER","ADMIN","VIEWER"}){<option selected="@(r.Role==role)" value="@role">@role</option>}</select><button class="btn btn-sm">Đổi vai trò / kích hoạt</button></form></td><td>@r.Status / @(r.Active?"Đang cấp quyền":"Đã thu hồi")</td><td>@r.LastLogin</td><td><form asp-action="SetActive" method="post"><input type="hidden" name="userId" value="@r.UserId"/><input type="hidden" name="customerId" value="@r.CustomerId"/><input type="hidden" name="active" value="@((!r.Active).ToString())"/><button class="btn btn-outline-primary">@(r.Active?"Khóa quyền truy cập":"Kích hoạt lại")</button></form></td></tr>}
-</tbody></table></div>
+@{
+    ViewData["Title"]="Tài khoản Customer Portal";
+    var customers = (List<CustomerRow>)ViewBag.Customers;
+    var users = (List<PortalUser>)ViewBag.Users;
+    var selected = ViewBag.CustomerId as Guid?;
+}
+<div class="page-header"><div class="row align-items-center g-2"><div class="col"><div class="page-pretitle"><a asp-controller="Customers" asp-action="Index">Khách hàng</a> / Customer Portal</div><h2 class="page-title">Tài khoản Customer Portal</h2><div class="text-secondary">Cấp quyền truy cập Customer Portal theo từng doanh nghiệp. Vai trò OWNER/ADMIN/VIEWER chỉ có hiệu lực trong Customer Portal, không cấp quyền quản trị TAPortal.</div></div></div></div>
+<div class="row row-cards mt-1">
+<div class="col-lg-4"><div class="card"><div class="card-header"><h3 class="card-title"><i class="ti ti-user-plus me-1" aria-hidden="true"></i>Tạo / gán tài khoản</h3></div>
+<form asp-action="Save" method="post"><div class="card-body">
+<div class="mb-3"><label class="form-label required" for="cpCustomer">Doanh nghiệp</label><select id="cpCustomer" name="CustomerId" class="form-select" required><option value="">-- Chọn doanh nghiệp --</option>@foreach(var c in customers){var ok = c.IsActive && c.Status == "ACTIVE";<option value="@c.Id" selected="@(selected == c.Id)" disabled="@(!ok)">@c.Code — @c.Name@(ok ? "" : " (ngừng hoạt động)")</option>}</select></div>
+<div class="mb-3"><label class="form-label" for="cpUser">Tài khoản</label><select id="cpUser" name="UserId" class="form-select" onchange="document.getElementById('cpNewUser').hidden = this.value !== ''"><option value="">+ Tạo tài khoản mới</option><optgroup label="Tài khoản hiện có">@foreach(var u in users){var ok = u.IsActive && u.Status == "ACTIVE";<option value="@u.Id" disabled="@(!ok)">@u.Username — @u.DisplayName@(ok ? "" : " (ngừng)")</option>}</optgroup></select><div class="form-hint">Một tài khoản có thể được gán cho nhiều doanh nghiệp.</div></div>
+<fieldset id="cpNewUser" class="border rounded p-3 mb-3"><legend class="form-label fs-5 float-none w-auto px-1 mb-0">Thông tin tài khoản mới</legend>
+<div class="mb-2"><label class="form-label required" for="cpUsername">Tên đăng nhập</label><input id="cpUsername" class="form-control" name="Username" maxlength="100" autocomplete="off" /></div>
+<div class="mb-2"><label class="form-label required" for="cpDisplay">Họ tên</label><input id="cpDisplay" class="form-control" name="DisplayName" maxlength="200" /></div>
+<div class="mb-2"><label class="form-label" for="cpEmail">Email</label><input id="cpEmail" class="form-control" name="Email" type="email" maxlength="256" /></div>
+<div class="mb-1"><label class="form-label required" for="cpPassword">Mật khẩu ban đầu</label><input id="cpPassword" class="form-control" name="Password" type="password" maxlength="256" autocomplete="new-password" oninput="taCheckPassword(this.value,'cpRules')" /></div>
+<ul id="cpRules" class="password-rules ps-3 mb-0"><li data-rule="len">Ít nhất 8 ký tự</li><li data-rule="letter">Có chữ cái</li><li data-rule="digit">Có chữ số</li><li data-rule="special">Có ký tự đặc biệt</li></ul>
+</fieldset>
+<div class="mb-1"><label class="form-label" for="cpRole">Vai trò trong doanh nghiệp</label><select id="cpRole" name="PortalRole" class="form-select"><option value="VIEWER">VIEWER — chỉ xem</option><option value="ADMIN">ADMIN — quản trị doanh nghiệp</option><option value="OWNER">OWNER — chủ sở hữu</option></select></div>
+</div><div class="card-footer"><button type="submit" class="btn btn-primary w-100" data-ta-loading data-ta-loading-text="Đang lưu..."><i class="ti ti-device-floppy" aria-hidden="true"></i><span>Lưu và kích hoạt</span></button></div></form></div></div>
+<div class="col-lg-8"><div class="card ta-table-card"><div class="card-header flex-wrap gap-2">
+<form method="get" asp-action="Index" class="d-flex gap-2 flex-wrap"><label class="visually-hidden" for="cpFilter">Lọc theo doanh nghiệp</label><select id="cpFilter" name="customerId" class="form-select" onchange="this.form.submit()"><option value="">Tất cả doanh nghiệp</option>@foreach(var c in customers){<option value="@c.Id" selected="@(selected == c.Id)">@c.Code — @c.Name</option>}</select><noscript><button class="btn" type="submit">Lọc</button></noscript></form>
+<div class="input-icon ms-auto"><span class="input-icon-addon"><i class="ti ti-search" aria-hidden="true"></i></span><input class="form-control" type="search" aria-label="Tìm tài khoản" placeholder="Tìm tài khoản..." oninput="taFilterRows(this.value,'membershipTable')" /></div></div>
+<div class="table-responsive"><table class="table table-vcenter card-table" id="membershipTable"><thead><tr><th>Tài khoản</th><th>Doanh nghiệp</th><th>Vai trò</th><th>Quyền truy cập</th><th>Đăng nhập gần nhất (UTC)</th><th class="w-1">Thu hồi</th></tr></thead><tbody>
+@foreach(var r in Model){
+<tr data-ta-row>
+<td><div class="fw-medium">@r.DisplayName</div><div class="text-secondary small">@r.Username</div>@if(!string.IsNullOrEmpty(r.Email)){<div class="text-secondary small text-break">@r.Email</div>}</td>
+<td class="text-break">@r.CustomerName</td>
+<td><form asp-action="Save" method="post" class="d-flex gap-1"><input type="hidden" name="UserId" value="@r.UserId"/><input type="hidden" name="CustomerId" value="@r.CustomerId"/><select name="PortalRole" class="form-select form-select-sm" aria-label="Vai trò của @r.Username">@foreach(var role in new[]{"OWNER","ADMIN","VIEWER"}){<option selected="@(r.Role==role)" value="@role">@role</option>}</select><button type="submit" class="btn btn-sm" title="Lưu vai trò (đồng thời kích hoạt quyền truy cập)" aria-label="Lưu vai trò"><i class="ti ti-check" aria-hidden="true"></i></button></form></td>
+<td><span class="badge @(r.Active ? "badge-ta-active" : "bg-secondary-lt")">@(r.Active ? "Đang cấp quyền" : "Đã thu hồi")</span>@if(r.Status != "ACTIVE"){<div class="small text-danger mt-1">Tài khoản: @r.Status</div>}</td>
+<td class="text-nowrap">@(r.LastLogin?.ToString("dd/MM/yyyy HH:mm") ?? "—")</td>
+<td><form asp-action="SetActive" method="post"><input type="hidden" name="userId" value="@r.UserId"/><input type="hidden" name="customerId" value="@r.CustomerId"/><input type="hidden" name="active" value="@((!r.Active).ToString())"/><button type="submit" class="btn btn-sm @(r.Active ? "btn-outline-danger" : "btn-outline-primary") text-nowrap">@(r.Active ? "Thu hồi" : "Kích hoạt lại")</button></form></td>
+</tr>}
+</tbody></table></div>@if(Model.Count == 0){<div class="ta-table-empty"><i class="ti ti-user-shield" aria-hidden="true"></i>Chưa có tài khoản Customer Portal@(selected.HasValue ? " cho doanh nghiệp này" : "").</div>}<div class="ta-table-empty d-none" data-ta-no-results><i class="ti ti-search-off" aria-hidden="true"></i>Không tìm thấy kết quả phù hợp.</div>
+<div class="card-footer text-secondary small">"Thu hồi" chỉ gỡ quyền truy cập doanh nghiệp tương ứng, không khóa tài khoản dùng chung. Để khóa tài khoản, dùng màn hình Người dùng.</div></div></div>
+</div>

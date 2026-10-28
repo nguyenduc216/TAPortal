@@ -41,7 +41,45 @@
       "build_safe_tests",
       "target_contents",
       "write_permission"
-    ]
+    ],
+    "republish_changed_projects": true,
+    "shared_project": "TAPortal.Shared",
+    "shared_dependents": [
+      "TAPortal.Web",
+      "TACustomerPortal.Web"
+    ],
+    "artifact_manifest_method": "SHA256_UTF8_LF_SORTED_RELATIVE_POSIX",
+    "artifact_manifest_dir": ".codec/reports"
+  },
+  "agents": {
+    "applies_to": "ALL_AI_AGENTS",
+    "contract_file": "AGENTS.md",
+    "preserve_foreign_uncommitted_changes": true,
+    "switch_or_create_branch_requires_approval": true
+  },
+  "report": {
+    "required_sections": [
+      "A. Identification",
+      "B. Audit Summary",
+      "C. Customer Portal Account Management",
+      "D. Admin CRUD",
+      "E. Changed Files",
+      "F. Database",
+      "G. Build & Tests",
+      "H. Admin Publish",
+      "I. Customer Publish",
+      "J. Security and Acceptance",
+      "K. Git Delivery",
+      "L. Operator Handoff"
+    ],
+    "finding_statuses": [
+      "FIXED",
+      "VERIFIED",
+      "OPEN",
+      "BLOCKED",
+      "PENDING_OPERATOR"
+    ],
+    "separate_source_and_delivery_sha": true
   },
   "git": {
     "main_branch": "main",
