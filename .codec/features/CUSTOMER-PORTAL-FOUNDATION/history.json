@@ -168,5 +168,70 @@
       "Operator membership provisioning and functional acceptance",
       "Separately approved future live deployment"
     ]
+  },
+  {
+    "change_id": "CUSTOMER-PORTAL-FOUNDATION-CHG-20261028T075636Z-260F08",
+    "created_at": "2026-10-28T07:56:36.214632+00:00",
+    "title": "Checkpoint 4 local smoke and manual functional acceptance",
+    "status": "LOCAL_SMOKE_PASS_UAT_PENDING",
+    "commit_sha": "531409707fc26f0d216e11270d601f2a91ec49dc",
+    "migration_status": "NOT_EXECUTED",
+    "publish_status": "EXISTING_ARTIFACT_VERIFIED_NOT_REPUBLISHED",
+    "merge_status": "PENDING_APPROVAL",
+    "commit_note": "Verified starting HEAD; documentation delivery commit reported separately.",
+    "objective": "Checkpoint 4 local artifact smoke and manual functional acceptance",
+    "scope": "Read-only artifact verification, isolated anonymous HTTP GET, manual UAT documentation",
+    "technical_decisions": [
+      "Invalid SQL configuration and no login for smoke",
+      "Temporary external Data Protection keys",
+      "Existing artifact unchanged; no republish",
+      "Manual acceptance requires operator evidence"
+    ],
+    "files_changed": [
+      "docs/customer-portal-checkpoint4-uat.md",
+      "docs/customer-portal-runbook.md",
+      ".codec/features/CUSTOMER-PORTAL-FOUNDATION/README.md",
+      ".codec/features/CUSTOMER-PORTAL-FOUNDATION/history.json",
+      ".codec/changes/CUSTOMER-PORTAL-FOUNDATION-CHG-20261028T075636Z-260F08.md",
+      ".codec/reports/CUSTOMER-PORTAL-FOUNDATION-CHG-20261028T075636Z-260F08.md",
+      ".codec/reports/CUSTOMER-PORTAL-FOUNDATION-CHG-20261028T075636Z-260F08-smoke.json"
+    ],
+    "migrations": [],
+    "publish_target": "D:\\T.A\\TAPortal\\TAPortal\\publish\\deployed-TACustomerPortal.Web",
+    "artifact_sha256": "40442b0023252bc9032f75036a477dfff0dff8e458c735cbd64a738e02bdcb66",
+    "artifact_source_sha": "ff965efc17b2e0aefde8b603df7269a8d29fbcfb",
+    "build_result": "PASS: Release 0 warnings / 0 errors",
+    "test_result": {
+      "safe_passed": 34,
+      "codec_passed": 3,
+      "http_get_passed": 10,
+      "failed": 0,
+      "legacy_sql_tests": "NOT_SELECTED"
+    },
+    "checkpoint_4a": "PASS",
+    "checkpoint_4b": "PENDING_OPERATOR",
+    "customer_portal_mvp01": "NOT_YET_ACCEPTED",
+    "startup_status": "PASS_PROCESS_STOPPED",
+    "local_url": "http://127.0.0.1:5187",
+    "database_status": "NOT_VERIFIED_NOT_ACCESSED",
+    "iis_status": "NOT_CHECKED",
+    "deploy_status": "NOT_DEPLOYED",
+    "manual_uat": {
+      "UAT-01": "NOT_RUN",
+      "UAT-02": "NOT_RUN",
+      "UAT-03": "NOT_RUN",
+      "UAT-04": "NOT_RUN",
+      "UAT-05": "NOT_RUN",
+      "UAT-06": "NOT_RUN",
+      "UAT-07": "NOT_RUN",
+      "UAT-08": "NOT_RUN",
+      "UAT-09": "NOT_RUN"
+    },
+    "merge_sha": null,
+    "remaining_work": [
+      "Operator test setup and UAT-01 through UAT-09 with evidence",
+      "HTTPS/browser/CDN and authenticated cache verification",
+      "Operator acceptance decision"
+    ]
   }
 ]

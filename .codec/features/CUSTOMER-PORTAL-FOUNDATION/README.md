@@ -26,3 +26,7 @@ Release build and 34 selected safe tests PASS; 3 Codec tests PASS. Conventional 
 
 ## Current DEV/TEST checkpoint ? supersedes earlier publish blocker
 Local Customer Portal artifact PUBLISHED to the conventional target. Release build 0 warnings/errors; 34 safe tests and 3 Codec tests PASS. Database VERIFIED_WITH_WARNINGS by operator; no SQL run. IIS NOT_CHECKED / NOT_DEPLOYED; no server access required or permitted. See latest report and SHA256 manifest for evidence. Earlier checkpoint descriptions are historical.
+| `CUSTOMER-PORTAL-FOUNDATION-CHG-20261028T075636Z-260F08` | 2026-10-28 | Checkpoint 4 local smoke and manual functional acceptance | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |
+
+## Checkpoint 4 - current status
+CHECKPOINT_4A: PASS (existing artifact integrity, isolated localhost startup and 10 anonymous GET checks). CHECKPOINT_4B: PENDING_OPERATOR; UAT-01 through UAT-09 NOT_RUN. CUSTOMER_PORTAL_MVP01: NOT_YET_ACCEPTED. Runtime process stopped, artifact unchanged, no republish or SQL access; database NOT_VERIFIED for this checkpoint. No application source changes. See latest report and docs/customer-portal-checkpoint4-uat.md. Prior entries remain historical.
