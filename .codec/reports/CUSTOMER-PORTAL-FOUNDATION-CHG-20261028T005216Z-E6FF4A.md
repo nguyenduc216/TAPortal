@@ -1,58 +1,42 @@
-# Customer Portal MVP01 ? Publish Checkpoint 3
+# Customer Portal MVP01 — Publish Checkpoint 3
 
 FEATURE_ID: CUSTOMER-PORTAL-FOUNDATION
 CHANGE_ID: CUSTOMER-PORTAL-FOUNDATION-CHG-20261028T005216Z-E6FF4A
 Branch: feature/customer-portal-mvp01
 Source commit SHA: 383db10a00343c71e3e08fbd963ef09bcea743dd
-Publish: BLOCKED
-IIS: NOT_DEPLOYED
-Database: VERIFIED_WITH_WARNINGS (operator-reported)
-Artifact SHA256: N/A ? no publish command executed.
-Publish time: N/A. Preflight/test date: 2026-10-28, Asia/Saigon.
-Target: `D:\T.A\TAPortal\TAPortal\publish\deployed-TACustomerPortal.Web`
+Policy/report commit: a0a9fab339fdc03cc97220f67e200993f4fa5d77 (PUSHED).
+Publish: BLOCKED. IIS: NOT_DEPLOYED. Merge: PENDING_APPROVAL, merge SHA: none.
+Database: VERIFIED_WITH_WARNINGS (operator-reported).
+Artifact SHA256: N/A. Publish time/exit code: N/A; publish command NOT_RUN.
+Target: D:\T.A\TAPortal\TAPortal\publish\deployed-TACustomerPortal.Web
+Preflight/build/test: 2026-10-28, Asia/Saigon.
 
-## M?c ti?u v? ph?m vi
-Publish ri?ng Customer Portal t?i ???ng d?n c? ??nh sau preflight/build/safe tests; c?p nh?t quy t?c cho c?c web project v? sau. Kh?ng publish Admin, kh?ng ch?y SQL, kh?ng s?a IIS, kh?ng merge main. ?? ??c AGENTS, skill/config, README/history v? change/report li?n quan tr??c source.
+## Mục tiêu và phạm vi
+Publish riêng Customer Portal sau kiểm tra an toàn; cập nhật quy tắc publish cố định cho các web project. Đã đọc AGENTS, skill/config, feature README/history và change/report liên quan trước source. Không đổi production source, không publish Admin, không chạy SQL, không sửa IIS, không merge main.
 
-## Preflight v? l? do BLOCKED
-- Branch ??ng; HEAD source nh? tr?n. .NET SDK 8.0.422 v? 10.0.301 c? s?n; project net8.0 t?n t?i.
-- Working tree ban ??u c? `database/scripts/004-verify-customer-portal.sql` ?? s?a t? tr??c. Gi? nguy?n, kh?ng stage/commit file n?y. Kh?ng d?ng n? ?? ch?y SQL.
-- ??ch publish ch?a t?n t?i. Kh?ng t?o th? m?c ho?c ghi artifact khi ch?a qua IIS preflight; quy?n ghi ??ch ch?a ki?m tra th?c t? v? gate IIS ?? ch?n.
-- W3SVC v? WAS ?ang Running. ??c applicationHost.config b? Access denied. appcmd list vdir /text:physicalPath tr? l?i kh?ng ??c ???c redirection.config do thi?u quy?n.
-- V? v?y KH?NG k?t lu?n IIS kh?ng s? d?ng ??ch. D?ng IIS_CONFIG_ABSENT t? l?n ki?m tra ??u l? nh?nh Test-Path sau l?i quy?n, kh?ng ph?i b?ng ch?ng IIS kh?ng c?i/c?u h?nh v?ng m?t.
-- Kh?ng t? n?ng quy?n. Ch?a x?c minh physical paths/overlap/aliases; d?ng tr??c publish. Kh?ng thay site, pool, binding, secret hay kh?i ??ng/recycle IIS.
+## Preflight và lý do chặn
+Branch đúng yêu cầu; project net8.0 tồn tại; SDK 8.0.422 và 10.0.301 có sẵn. Working tree ban đầu có database/scripts/004-verify-customer-portal.sql đã sửa từ trước: giữ nguyên, không stage/commit hoặc thực thi.
+Đích publish chưa tồn tại. Chưa tạo folder/kiểm tra ghi thực tế vì gate IIS chưa đạt. W3SVC và WAS đang Running. Đọc applicationHost.config bị Access denied; appcmd list vdir /text:physicalPath thất bại vì không đọc được redirection.config do thiếu quyền. Không tự nâng quyền.
+Dòng IIS_CONFIG_ABSENT ban đầu là nhánh Test-Path sau lỗi quyền, không phải bằng chứng IIS không tồn tại. Chưa xác minh effective physical paths, overlap hoặc alias nên không kết luận đích không được IIS sử dụng. Dừng trước mọi ghi artifact; không sửa site, pool, binding, secret hoặc recycle/start IIS.
 
-## Thay ??i v? quy?t ??nh
-Quy t?c c? ??nh `<WORKSPACE_ROOT>\publish\deployed-<PROJECT_NAME>` l?y PROJECT_NAME t? t?n csproj. Config ghi ??ng ??ch Customer v? Admin theo quy ??c; ch? Customer ???c ph?p publish trong y?u c?u n?y. Cho t?o ??ng folder sau preflight, c?m ??ch thay th? v? ghi ?? live IIS khi ch?a c? approval ri?ng. Validator ki?m tra ???ng d?n v? c?c guard IIS; regression tests c?p nh?t theo config m?i. Kh?ng ??i production source.
-Rollback: revert ri?ng commit checkpoint n?y sau review n?u c?n; kh?ng x?a l?ch s? v? kh?ng reset thay ??i ng??i d?ng. Kh?ng c? artifact/IIS/SQL mutation ?? rollback.
+## Thay đổi
+AGENTS.md, .agents/skills/codec/SKILL.md, .codec/README.md, .codec/config.json: quy tắc cố định <WORKSPACE_ROOT>\publish\deployed-<PROJECT_NAME>, tên lấy từ csproj; cho tạo đúng folder sau preflight. Đã cấu hình đường dẫn Customer và Admin theo quy ước, nhưng chỉ Customer được phép publish trong checkpoint này. Ghi đè live IIS vẫn cần approval riêng.
+.codec/tools/codec.py và test_codec.py: kiểm tra đường dẫn cố định cùng các guard IIS; tests chỉ ghi metadata trong thư mục tạm.
+docs/customer-portal-runbook.md: cập nhật preflight, trạng thái DB do operator cung cấp và handoff IIS.
+.codec/features/CUSTOMER-PORTAL-FOUNDATION/README.md, history.json và change/report hiện tại: bổ sung checkpoint, giữ nguyên bản ghi cũ.
+Rollback source: revert riêng commit checkpoint sau review; không reset thay đổi của người dùng. Không có publish/IIS/SQL mutation cần rollback.
 
-## Build/test
-- `dotnet restore TAPortal.sln`: PASS.
-- `dotnet build TAPortal.sln -c Release --no-restore`: PASS, 0 warnings, 0 errors.
-- `dotnet test tests/TACustomerPortal.Tests/TACustomerPortal.Tests.csproj -c Release --no-build --filter FullyQualifiedName~SafePortalTests --logger trx --results-directory TestResults`: PASS, 34 passed, 0 failed, 0 skipped. Legacy SQL tests kh?ng ???c ch?n.
+## Kiểm chứng
+- dotnet restore TAPortal.sln: PASS.
+- dotnet build TAPortal.sln -c Release --no-restore: PASS, 0 warnings, 0 errors.
+- dotnet test tests/TACustomerPortal.Tests/TACustomerPortal.Tests.csproj -c Release --no-build --filter FullyQualifiedName~SafePortalTests --logger trx --results-directory TestResults: PASS, 34 passed, 0 failed, 0 skipped. Legacy SQL tests không được chọn.
 - TRX ignored: TestResults/PC_DESKTOP-LF41200_2026-10-28_07_53_06_net8.0.trx.
-- `python -m unittest discover -s .codec/tools -p test_codec.py`: PASS, 3 tests (metadata-only).
-- `python .codec/tools/codec.py validate`: POLICY PASS.
-- `git diff --check`: PASS.
-- Publish command: NOT_RUN; exit code N/A. DLL/deps/runtimeconfig/web.config/wwwroot/dependency/source matching: NOT_VERIFIED for publish artifacts. Build output kh?ng ph?i publish artifact; kh?ng d?ng hash build DLL thay th?.
+- python -m unittest discover -s .codec/tools -p test_codec.py: PASS, 3 tests.
+- python .codec/tools/codec.py validate và git diff --check: PASS.
+DLL/deps/runtimeconfig/web.config/wwwroot/dependency/source matching của publish artifact: NOT_VERIFIED vì chưa publish. Không dùng hash build DLL thay thế artifact SHA256.
 
-## Database v? operator handoff
-Theo x?c nh?n trong y?u c?u: migration 008 ?? ???c operator ch?y th? c?ng, verification PASS_WITH_WARNINGS, 4 Users / 10 Customers / 0 Memberships. C?nh b?o ch?a c?p t?i kho?n kh?ch h?ng. Codex kh?ng audit DB l?i, kh?ng ch?y migration/seed/rollback ho?c SQL kh?c; kh?ng t?o DB. Kh?ng ch?y l?i 008.
-
-Operator c?n cung c?p inventory effective IIS site/application/virtual-directory physical paths ho?c quy?n ??c ?? ki?m tra l?i; x?c nh?n ??ch kh?ng ???c IIS ph?c v? (k? c? overlap/alias). N?u l? live directory, c?n ph? duy?t ghi ?? ri?ng v? backup/rollback tr??c. Sau gate n?y m?i publish ??ng l?nh/??ch ?? y?u c?u, ki?m tra ?? artifact v? SHA256 DLL.
-Tr??c b??c IIS ri?ng: x?c nh?n site/application name, dedicated No Managed Code pool/identity, HTTPS hostname/port/certificate, .NET 8 Hosting Bundle, Production, connection secret tr? TAPortalSys, DataProtection key path ngo?i web root, ACL, logging retention v? backup/rollback. X?c nh?n proxy IP tin c?y n?u d?ng, cookie/HTTPS/login throttle/WAF. Operator c?p membership v? nghi?m thu browser/tenant isolation/revocation/Admin regression. Chi ti?t trong runbook; kh?ng t? c?u h?nh trong checkpoint n?y.
-
-## Git v? file
-Commit/push checkpoint metadata ???c th?c hi?n sau checks; delivery commit SHA b?o ri?ng v? kh?ng th? ghi SHA c?a ch?nh commit v?o n?i dung commit ??. Source SHA ? tr?n l? production source ???c build/test. Merge PENDING_APPROVAL; merge SHA none. PR hi?n c?: https://github.com/nguyenduc216/TAPortal/pull/7 (kh?ng s?a tr?ng th?i PR).
-Files changed:
-- AGENTS.md
-- .agents/skills/codec/SKILL.md
-- .codec/README.md
-- .codec/config.json
-- .codec/tools/codec.py
-- .codec/tools/test_codec.py
-- docs/customer-portal-runbook.md
-- .codec/features/CUSTOMER-PORTAL-FOUNDATION/README.md
-- .codec/features/CUSTOMER-PORTAL-FOUNDATION/history.json
-- .codec/changes/CUSTOMER-PORTAL-FOUNDATION-CHG-20261028T005216Z-E6FF4A.md
-- .codec/reports/CUSTOMER-PORTAL-FOUNDATION-CHG-20261028T005216Z-E6FF4A.md
+## Database và bước tiếp theo
+Operator xác nhận migration 008 đã chạy thủ công; verification PASS_WITH_WARNINGS, 4 Users / 10 Customers / 0 Memberships. Cảnh báo chưa cấp tài khoản khách hàng. Đây là xác nhận do operator cung cấp, không phải audit SQL mới của Codex. Không chạy lại migration 008; không thực thi SQL/seed/rollback, không tạo DB.
+Operator cần cung cấp inventory effective IIS physical paths (kể cả overlap/alias) hoặc quyền đọc để kiểm tra lại, xác nhận đích không được IIS phục vụ. Nếu là live directory, cần approval ghi đè riêng cùng backup/rollback. Khi gate đạt mới publish đúng đích, kiểm tra artifact và tính SHA256 DLL.
+Trước bước IIS riêng, xác nhận tên site/application, pool riêng No Managed Code và identity, HTTPS hostname/port/certificate, .NET 8 Hosting Bundle, Production, secret kết nối TAPortalSys, DataProtection key path ngoài web root, ACL, log/retention và backup/rollback. Xác nhận trusted proxy IP nếu dùng, HTTPS/cookie/login throttle/WAF. Operator cấp membership và nghiệm thu browser, tenant isolation, session/password revocation và Admin regression. Không cấu hình hoặc deploy IIS trong checkpoint này.
+PR hiện có: https://github.com/nguyenduc216/TAPortal/pull/7; không sửa trạng thái PR. Delivery HEAD báo riêng để tránh tự tham chiếu SHA trong chính commit.
