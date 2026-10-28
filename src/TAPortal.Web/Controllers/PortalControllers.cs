@@ -23,7 +23,7 @@ public sealed class HomeController(PortalDb db) : Controller
 }
 
 [Authorize(Policy = "SystemAdminOnly")]
-public sealed class UsersController(PortalDb db, PasswordService passwords, IUserRoleStore roleStore, ILogger<UsersController> logger) : Controller
+public sealed class UsersController(PortalDb db, PasswordService passwords, IUserRoleStore roleStore, IUserAccountStore accounts, ILogger<UsersController> logger) : Controller
 {
     public async Task<IActionResult> Index() => View(await db.GetUsersAsync());
 
@@ -60,10 +60,10 @@ public sealed class UsersController(PortalDb db, PasswordService passwords, IUse
     [Authorize(Policy = PermissionPolicies.Prefix + "AUTH.USERS.UPDATE")]
     public async Task<IActionResult> Edit(Guid id)
     {
-        var vm = await db.GetUserForEditAsync(id);
-        if (vm is null) return NotFound();
-        ViewBag.Roles = await db.GetUserRoleNamesAsync(id);
-        return View(vm);
+        var account = await accounts.GetAsync(id);
+        if (account is null) return NotFound();
+        ViewBag.Account = account;
+        return View(new UserEditVm { Id = account.Id, Username = account.Username, DisplayName = account.DisplayName, Email = account.Email, Phone = account.Phone, Status = account.Status, IsActive = account.IsActive, Stamp = account.Stamp });
     }
 
     [HttpPost]
@@ -71,28 +71,83 @@ public sealed class UsersController(PortalDb db, PasswordService passwords, IUse
     [Authorize(Policy = PermissionPolicies.Prefix + "AUTH.USERS.UPDATE")]
     public async Task<IActionResult> Edit(Guid id, UserEditVm vm)
     {
-        var current = await db.GetUserForEditAsync(id);
-        if (current is null) return NotFound();
+        if (ActorId(User) is not Guid actor) return Forbid();
         vm.Id = id;
-        vm.Username = current.Username;
-        vm.Status = current.Status;
-        if (id == ActorId(User) && !vm.IsActive) ModelState.AddModelError(nameof(vm.IsActive), "Không thể tự vô hiệu hóa tài khoản đang đăng nhập.");
-        if (ModelState.IsValid && await db.EmailInUseAsync(vm.Email, id)) ModelState.AddModelError(nameof(vm.Email), "Email đã được sử dụng bởi tài khoản khác.");
         if (ModelState.IsValid)
         {
-            try
+            var result = await accounts.UpdateAsync(actor, vm, vm.Stamp, HttpContext.Connection.RemoteIpAddress?.ToString());
+            switch (result.Outcome)
             {
-                if (!await db.UpdateUserAsync(vm, ActorId(User))) return NotFound();
-                TempData["Success"] = "Đã cập nhật thông tin người dùng.";
-                return RedirectToAction(nameof(Index));
-            }
-            catch (SqlException ex) when (ex.Number is 2601 or 2627)
-            {
-                ModelState.AddModelError(nameof(vm.Email), "Email đã được sử dụng bởi tài khoản khác.");
+                case AccountChangeOutcome.Updated:
+                    LogAudit("updated", actor, id, result.AuditPersisted);
+                    TempData["Success"] = "Đã cập nhật thông tin người dùng." + AuditNotice(result.AuditPersisted);
+                    return RedirectToAction(nameof(Index));
+                case AccountChangeOutcome.NotFound: return NotFound();
+                case AccountChangeOutcome.Forbidden: return Forbid();
+                case AccountChangeOutcome.DuplicateEmail: ModelState.AddModelError(nameof(vm.Email), "Email đã được sử dụng bởi tài khoản khác."); break;
+                case AccountChangeOutcome.SelfDeactivation: ModelState.AddModelError(nameof(vm.IsActive), "Không thể tự vô hiệu hóa tài khoản đang đăng nhập."); break;
+                default: ModelState.AddModelError(string.Empty, AccountMessage(result.Outcome)); break;
             }
         }
-        ViewBag.Roles = await db.GetUserRoleNamesAsync(id);
+        // Reload the authoritative state; a stale stamp is replaced so the next save compares against current data.
+        var account = await accounts.GetAsync(id);
+        if (account is null) return NotFound();
+        ViewBag.Account = account;
+        vm.Username = account.Username;
+        vm.Status = account.Status;
+        vm.Stamp = account.Stamp;
+        Response.StatusCode = StatusCodes.Status400BadRequest;
         return View(vm);
+    }
+
+    [HttpGet]
+    [Authorize(Policy = PermissionPolicies.Prefix + "AUTH.USERS.DELETE")]
+    public async Task<IActionResult> Delete(Guid id)
+    {
+        var account = await accounts.GetAsync(id);
+        return account is null ? NotFound() : View(account);
+    }
+
+    // Soft delete only. Binds just the concurrency stamp.
+    [HttpPost, ActionName("Delete")]
+    [ValidateAntiForgeryToken]
+    [Authorize(Policy = PermissionPolicies.Prefix + "AUTH.USERS.DELETE")]
+    public async Task<IActionResult> DeleteConfirmed(Guid id, [FromForm] string? stamp)
+    {
+        if (ActorId(User) is not Guid actor) return Forbid();
+        var result = await accounts.SoftDeleteAsync(actor, id, stamp, HttpContext.Connection.RemoteIpAddress?.ToString());
+        switch (result.Outcome)
+        {
+            case AccountChangeOutcome.Updated:
+                LogAudit("soft-deleted", actor, id, result.AuditPersisted);
+                TempData["Success"] = "Đã xóa (mềm) người dùng. Tài khoản không thể đăng nhập; dữ liệu lịch sử được giữ nguyên." + AuditNotice(result.AuditPersisted);
+                return RedirectToAction(nameof(Index));
+            case AccountChangeOutcome.NotFound: return NotFound();
+            case AccountChangeOutcome.Forbidden: return Forbid();
+        }
+        var account = await accounts.GetAsync(id);
+        if (account is null) return NotFound();
+        ModelState.AddModelError(string.Empty, AccountMessage(result.Outcome));
+        Response.StatusCode = StatusCodes.Status400BadRequest;
+        return View(nameof(Delete), account);
+    }
+
+    private static string AccountMessage(AccountChangeOutcome outcome) => outcome switch
+    {
+        AccountChangeOutcome.SelfDeletion => "Không thể tự xóa tài khoản đang đăng nhập.",
+        AccountChangeOutcome.SelfDeactivation => "Không thể tự vô hiệu hóa tài khoản đang đăng nhập.",
+        AccountChangeOutcome.LastSystemAdmin => "Không thể vô hiệu hóa hoặc xóa quản trị viên hệ thống (SYS_ADMIN) hoạt động cuối cùng.",
+        AccountChangeOutcome.AuditUnavailable => "Không thể ghi nhật ký audit (dbo.AuditLogs) nên thay đổi đã bị hủy. Liên hệ quản trị cơ sở dữ liệu.",
+        AccountChangeOutcome.DuplicateEmail => "Email đã được sử dụng bởi tài khoản khác.",
+        _ => "Người dùng vừa được thay đổi bởi thao tác khác. Đã tải lại dữ liệu mới nhất, vui lòng kiểm tra và thực hiện lại."
+    };
+
+    private static string AuditNotice(bool persisted) => persisted ? "" : " Lưu ý: chưa ghi được nhật ký audit vào cơ sở dữ liệu (bảng AuditLogs chưa sẵn sàng).";
+
+    private void LogAudit(string action, Guid actor, Guid target, bool persisted)
+    {
+        logger.LogInformation("User {Action}. Actor {ActorId}, target {UserId}, audit persisted {AuditPersisted}.", action, actor, target, persisted);
+        if (!persisted) logger.LogWarning("dbo.AuditLogs unavailable; user change for {UserId} recorded only in application logs.", target);
     }
 
     [HttpGet]
@@ -132,6 +187,8 @@ public sealed class UsersController(PortalDb db, PasswordService passwords, IUse
                 return await RolesError(id, "Vai trò không hợp lệ hoặc đã ngừng hoạt động.");
             case RoleChangeOutcome.LastSystemAdmin:
                 return await RolesError(id, "Không thể thu hồi vai trò Quản trị hệ thống (SYS_ADMIN) của quản trị viên hoạt động cuối cùng.");
+            case RoleChangeOutcome.AuditUnavailable:
+                return await RolesError(id, "Không thể ghi nhật ký audit (dbo.AuditLogs) nên thay đổi vai trò đã bị hủy. Liên hệ quản trị cơ sở dữ liệu.");
             default:
                 return await RolesError(id, "Vai trò của người dùng vừa được thay đổi bởi thao tác khác. Đã tải lại dữ liệu mới nhất, vui lòng kiểm tra và lưu lại.");
         }
@@ -157,7 +214,7 @@ public sealed class RolesController(PortalDb db) : Controller
 }
 
 [Authorize(Policy = "SystemAdminOnly")]
-public sealed class CustomersController(PortalDb db) : Controller
+public sealed class CustomersController(PortalDb db, ICustomerAdminStore customers) : Controller
 {
     public async Task<IActionResult> Index() => View(await db.GetCustomersAsync());
 
@@ -171,20 +228,13 @@ public sealed class CustomersController(PortalDb db) : Controller
     public async Task<IActionResult> Create(CustomerEditVm vm)
     {
         vm.Id = Guid.Empty;
-        if (ModelState.IsValid && await db.CustomerCodeExistsAsync(vm.Code)) ModelState.AddModelError(nameof(vm.Code), "Mã khách hàng đã tồn tại.");
-        if (ModelState.IsValid)
+        if (ModelState.IsValid && Apply(await customers.CreateAsync(vm, UsersController.ActorId(User)), vm))
         {
-            try
-            {
-                await db.CreateCustomerAsync(vm, UsersController.ActorId(User));
-                TempData["Success"] = "Đã tạo khách hàng mới.";
-                return RedirectToAction(nameof(Index));
-            }
-            catch (SqlException ex) when (ex.Number is 2601 or 2627)
-            {
-                ModelState.AddModelError(nameof(vm.Code), "Mã khách hàng đã tồn tại.");
-            }
+            TempData["Success"] = "Đã tạo khách hàng mới.";
+            return RedirectToAction(nameof(Index));
         }
+        vm.Id = Guid.Empty;
+        Response.StatusCode = StatusCodes.Status400BadRequest;
         return View("Edit", vm);
     }
 
@@ -192,7 +242,7 @@ public sealed class CustomersController(PortalDb db) : Controller
     [Authorize(Policy = PermissionPolicies.Prefix + "CRM.CUSTOMERS.UPDATE")]
     public async Task<IActionResult> Edit(Guid id)
     {
-        var vm = await db.GetCustomerForEditAsync(id);
+        var vm = await customers.GetAsync(id);
         return vm is null ? NotFound() : View(vm);
     }
 
@@ -201,7 +251,7 @@ public sealed class CustomersController(PortalDb db) : Controller
     [Authorize(Policy = PermissionPolicies.Prefix + "CRM.CUSTOMERS.UPDATE")]
     public async Task<IActionResult> Edit(Guid id, CustomerEditVm vm)
     {
-        var current = await db.GetCustomerForEditAsync(id);
+        var current = await customers.GetAsync(id);
         if (current is null) return NotFound();
         vm.Id = id;
         vm.Code = current.Code;
@@ -209,11 +259,29 @@ public sealed class CustomersController(PortalDb db) : Controller
         ModelState.Remove(nameof(vm.Code));
         if (ModelState.IsValid)
         {
-            if (!await db.UpdateCustomerAsync(vm, UsersController.ActorId(User))) return NotFound();
-            TempData["Success"] = "Đã cập nhật thông tin khách hàng.";
-            return RedirectToAction(nameof(Index));
+            var result = await customers.UpdateAsync(vm, UsersController.ActorId(User));
+            if (result.Outcome == CustomerChangeOutcome.NotFound) return NotFound();
+            if (Apply(result, vm))
+            {
+                TempData["Success"] = "Đã cập nhật thông tin khách hàng.";
+                return RedirectToAction(nameof(Index));
+            }
         }
+        Response.StatusCode = StatusCodes.Status400BadRequest;
         return View(vm);
+    }
+
+    private bool Apply(CustomerChangeResult result, CustomerEditVm vm)
+    {
+        switch (result.Outcome)
+        {
+            case CustomerChangeOutcome.Saved: return true;
+            case CustomerChangeOutcome.DuplicateCode: ModelState.AddModelError(nameof(vm.Code), "Mã khách hàng đã tồn tại."); break;
+            case CustomerChangeOutcome.InvalidTaxCode: ModelState.AddModelError(nameof(vm.TaxCode), "Mã số thuế phải gồm 10 chữ số, hoặc 10 chữ số + \"-\" + 3 chữ số đối với đơn vị phụ thuộc/chi nhánh (ví dụ 0101234567-001)."); break;
+            case CustomerChangeOutcome.DuplicateTaxCode: ModelState.AddModelError(nameof(vm.TaxCode), "Mã số thuế đã được sử dụng bởi khách hàng khác" + (result.ConflictingCustomerCode is null ? "." : $" (mã KH {result.ConflictingCustomerCode}).")); break;
+            default: ModelState.AddModelError(string.Empty, "Không thể lưu khách hàng."); break;
+        }
+        return false;
     }
 }
 

@@ -51,6 +51,8 @@ public sealed class UserEditVm
     [StringLength(50, ErrorMessage = "Số điện thoại tối đa 50 ký tự.")] public string? Phone { get; set; }
     [ValidateNever] public string Status { get; set; } = "ACTIVE";
     public bool IsActive { get; set; } = true;
+    // Optimistic concurrency token of the state the form was rendered from (not a security secret).
+    [ValidateNever] public string? Stamp { get; set; }
 }
 
 // Used for both create and edit; Code is only accepted on create (immutable afterwards).

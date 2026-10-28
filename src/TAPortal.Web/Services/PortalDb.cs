@@ -161,25 +161,6 @@ VALUES(@id,@username,@nu,@email,@ne,@phone,@name,@hash,'ACTIVE',1,@createdBy);
         await cmd.ExecuteNonQueryAsync();
     }
 
-    // Profile edit never touches Username, PasswordHash, Status or roles. Returns false when the row no longer exists.
-    public async Task<bool> UpdateUserAsync(UserEditVm vm, Guid? updatedBy)
-    {
-        await using var cn = Open(); await cn.OpenAsync();
-        const string sql = """
-UPDATE dbo.Users SET DisplayName=@name,Email=@email,NormalizedEmail=@ne,Phone=@phone,IsActive=@active,UpdatedAt=SYSUTCDATETIME(),UpdatedBy=@by
-WHERE Id=@id AND IsDeleted=0;
-""";
-        await using var cmd = new SqlCommand(sql, cn);
-        cmd.Parameters.AddWithValue("@id", vm.Id);
-        cmd.Parameters.AddWithValue("@name", vm.DisplayName.Trim());
-        cmd.Parameters.AddWithValue("@email", Nullable(vm.Email));
-        cmd.Parameters.AddWithValue("@ne", string.IsNullOrWhiteSpace(vm.Email) ? DBNull.Value : vm.Email.Trim().ToUpperInvariant());
-        cmd.Parameters.AddWithValue("@phone", Nullable(vm.Phone));
-        cmd.Parameters.AddWithValue("@active", vm.IsActive);
-        cmd.Parameters.AddWithValue("@by", (object?)updatedBy ?? DBNull.Value);
-        return await cmd.ExecuteNonQueryAsync() == 1;
-    }
-
     public async Task<bool> EmailInUseAsync(string? email, Guid? exceptUserId)
     {
         if (string.IsNullOrWhiteSpace(email)) return false;
@@ -188,27 +169,6 @@ WHERE Id=@id AND IsDeleted=0;
         cmd.Parameters.AddWithValue("@e", email.Trim().ToUpperInvariant());
         cmd.Parameters.Add("@id", System.Data.SqlDbType.UniqueIdentifier).Value = (object?)exceptUserId ?? DBNull.Value;
         return Convert.ToInt32(await cmd.ExecuteScalarAsync()) > 0;
-    }
-
-    public async Task<UserEditVm?> GetUserForEditAsync(Guid userId)
-    {
-        await using var cn = Open(); await cn.OpenAsync();
-        await using var cmd = new SqlCommand("SELECT Id,Username,DisplayName,Email,Phone,Status,IsActive FROM dbo.Users WHERE Id=@id AND IsDeleted=0", cn);
-        cmd.Parameters.AddWithValue("@id", userId);
-        await using var rd = await cmd.ExecuteReaderAsync();
-        if (!await rd.ReadAsync()) return null;
-        return new UserEditVm { Id = rd.GetGuid(0), Username = rd.GetString(1), DisplayName = rd.GetString(2), Email = rd.IsDBNull(3) ? null : rd.GetString(3), Phone = rd.IsDBNull(4) ? null : rd.GetString(4), Status = rd.GetString(5), IsActive = rd.GetBoolean(6) };
-    }
-
-    public async Task<List<string>> GetUserRoleNamesAsync(Guid userId)
-    {
-        var list = new List<string>();
-        await using var cn = Open(); await cn.OpenAsync();
-        await using var cmd = new SqlCommand("SELECT r.Name FROM dbo.UserRoles ur JOIN dbo.Roles r ON r.Id=ur.RoleId WHERE ur.UserId=@id AND r.IsDeleted=0 ORDER BY r.Name", cn);
-        cmd.Parameters.AddWithValue("@id", userId);
-        await using var rd = await cmd.ExecuteReaderAsync();
-        while (await rd.ReadAsync()) list.Add(rd.GetString(0));
-        return list;
     }
 
     public async Task<Dictionary<Guid, List<string>>> GetUserRoleMapAsync()
@@ -224,69 +184,6 @@ WHERE Id=@id AND IsDeleted=0;
         }
         return map;
     }
-
-    public async Task<bool> CustomerCodeExistsAsync(string code)
-    {
-        await using var cn = Open(); await cn.OpenAsync();
-        await using var cmd = new SqlCommand("SELECT COUNT(1) FROM dbo.Customers WHERE Code=@c AND IsDeleted=0", cn);
-        cmd.Parameters.AddWithValue("@c", code.Trim().ToUpperInvariant());
-        return Convert.ToInt32(await cmd.ExecuteScalarAsync()) > 0;
-    }
-
-    public async Task<Guid> CreateCustomerAsync(CustomerEditVm vm, Guid? createdBy)
-    {
-        await using var cn = Open(); await cn.OpenAsync();
-        var id = Guid.NewGuid();
-        const string sql = """
-INSERT dbo.Customers(Id,Code,Name,TaxCode,Email,Phone,Address,Status,IsActive,CreatedBy)
-VALUES(@id,@code,@name,@tax,@email,@phone,@address,'ACTIVE',@active,@by);
-""";
-        await using var cmd = new SqlCommand(sql, cn);
-        cmd.Parameters.AddWithValue("@id", id);
-        cmd.Parameters.AddWithValue("@code", vm.Code.Trim().ToUpperInvariant());
-        AddCustomerFields(cmd, vm);
-        cmd.Parameters.AddWithValue("@by", (object?)createdBy ?? DBNull.Value);
-        await cmd.ExecuteNonQueryAsync();
-        return id;
-    }
-
-    // Code is the business key referenced elsewhere; it is immutable after creation. Status is left unchanged.
-    public async Task<bool> UpdateCustomerAsync(CustomerEditVm vm, Guid? updatedBy)
-    {
-        await using var cn = Open(); await cn.OpenAsync();
-        const string sql = """
-UPDATE dbo.Customers SET Name=@name,TaxCode=@tax,Email=@email,Phone=@phone,Address=@address,IsActive=@active,UpdatedAt=SYSUTCDATETIME(),UpdatedBy=@by
-WHERE Id=@id AND IsDeleted=0;
-""";
-        await using var cmd = new SqlCommand(sql, cn);
-        cmd.Parameters.AddWithValue("@id", vm.Id);
-        AddCustomerFields(cmd, vm);
-        cmd.Parameters.AddWithValue("@by", (object?)updatedBy ?? DBNull.Value);
-        return await cmd.ExecuteNonQueryAsync() == 1;
-    }
-
-    private static void AddCustomerFields(SqlCommand cmd, CustomerEditVm vm)
-    {
-        cmd.Parameters.AddWithValue("@name", vm.Name.Trim());
-        cmd.Parameters.AddWithValue("@tax", Nullable(vm.TaxCode));
-        cmd.Parameters.AddWithValue("@email", Nullable(vm.Email));
-        cmd.Parameters.AddWithValue("@phone", Nullable(vm.Phone));
-        cmd.Parameters.AddWithValue("@address", Nullable(vm.Address));
-        cmd.Parameters.AddWithValue("@active", vm.IsActive);
-    }
-
-    public async Task<CustomerEditVm?> GetCustomerForEditAsync(Guid customerId)
-    {
-        await using var cn = Open(); await cn.OpenAsync();
-        await using var cmd = new SqlCommand("SELECT Id,Code,Name,TaxCode,Email,Phone,Address,Status,IsActive FROM dbo.Customers WHERE Id=@id AND IsDeleted=0", cn);
-        cmd.Parameters.AddWithValue("@id", customerId);
-        await using var rd = await cmd.ExecuteReaderAsync();
-        if (!await rd.ReadAsync()) return null;
-        string? Text(int i) => rd.IsDBNull(i) ? null : rd.GetString(i);
-        return new CustomerEditVm { Id = rd.GetGuid(0), Code = rd.GetString(1), Name = rd.GetString(2), TaxCode = Text(3), Email = Text(4), Phone = Text(5), Address = Text(6), Status = rd.GetString(7), IsActive = rd.GetBoolean(8) };
-    }
-
-    private static object Nullable(string? value) => string.IsNullOrWhiteSpace(value) ? DBNull.Value : value.Trim();
 
     public async Task<List<PortalUser>> GetUsersAsync()
     {

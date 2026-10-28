@@ -1,0 +1,22 @@
+@model UserAccountSnapshot
+@{
+    ViewData["Title"] = "Xóa người dùng";
+    var isSelf = string.Equals(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value, Model.Id.ToString(), StringComparison.OrdinalIgnoreCase);
+    var isLastAdmin = Model.SystemAdminIds.Contains(Model.Id) && Model.SystemAdminIds.Count == 1;
+}
+<div class="page-header"><div class="row align-items-center"><div class="col"><div class="page-pretitle"><a asp-action="Index">Người dùng</a> / Xóa</div><h2 class="page-title">Xóa người dùng: @Model.DisplayName <span class="text-secondary fs-4">(@Model.Username)</span></h2></div></div></div>
+<div class="row mt-3"><div class="col-lg-8"><div class="card border-danger"><form asp-action="Delete" asp-route-id="@Model.Id" method="post">
+<input type="hidden" name="stamp" value="@Model.Stamp" />
+<div class="card-body">
+<div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+<p>Thao tác này là <strong>xóa mềm</strong>: tài khoản bị đánh dấu đã xóa và không thể đăng nhập TAPortal lẫn Customer Portal; phiên đang mở bị từ chối ở request kế tiếp. Dữ liệu, vai trò, membership và lịch sử được giữ nguyên để tra cứu. Chưa có chức năng khôi phục.</p>
+<dl class="row mb-0">
+<dt class="col-sm-4">Trạng thái</dt><dd class="col-sm-8">@AccountStatusPolicy.Describe(Model.IsActive, Model.Status, false)</dd>
+<dt class="col-sm-4">Vai trò</dt><dd class="col-sm-8">@(Model.RoleNames.Count == 0 ? "—" : string.Join(", ", Model.RoleNames))</dd>
+<dt class="col-sm-4">Doanh nghiệp đang truy cập</dt><dd class="col-sm-8">@Model.ActiveMembershipCount</dd>
+</dl>
+@if (isSelf) {<div class="alert alert-warning mt-3 mb-0">Không thể tự xóa tài khoản đang đăng nhập.</div>}
+else if (isLastAdmin) {<div class="alert alert-warning mt-3 mb-0">Đây là quản trị viên hệ thống (SYS_ADMIN) hoạt động cuối cùng nên không thể xóa.</div>}
+</div>
+<div class="card-footer d-flex gap-2"><a asp-action="Edit" asp-route-id="@Model.Id" class="btn"><i class="ti ti-arrow-left" aria-hidden="true"></i>Hủy</a><button type="submit" class="btn btn-danger ms-auto" disabled="@(isSelf || isLastAdmin)" data-ta-loading data-ta-loading-text="Đang xóa..."><i class="ti ti-trash" aria-hidden="true"></i><span>Xác nhận xóa</span></button></div>
+</form></div></div></div>

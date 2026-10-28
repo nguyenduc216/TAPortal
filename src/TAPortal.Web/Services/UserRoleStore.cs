@@ -15,7 +15,7 @@ public sealed record UserRoleSnapshot(
     public string Stamp => RoleChangePolicy.Stamp(AssignedRoleIds);
 }
 
-public enum RoleChangeOutcome { Updated, NoChange, NotFound, Forbidden, InvalidRole, LastSystemAdmin, Conflict }
+public enum RoleChangeOutcome { Updated, NoChange, NotFound, Forbidden, InvalidRole, LastSystemAdmin, Conflict, AuditUnavailable }
 
 public sealed record RoleChangeResult(RoleChangeOutcome Outcome, bool AuditPersisted = false, IReadOnlyList<string>? Added = null, IReadOnlyList<string>? Removed = null);
 
@@ -90,7 +90,7 @@ ELSE SELECT CAST(0 AS bit);
 """;
 }
 
-public sealed class SqlUserRoleStore(IConfiguration configuration) : IUserRoleStore
+public sealed class SqlUserRoleStore(IConfiguration configuration, AdminAuditOptions auditOptions) : IUserRoleStore
 {
     private SqlConnection Connection() => new(configuration["Database:ConnectionString"]);
 
@@ -133,6 +133,8 @@ public sealed class SqlUserRoleStore(IConfiguration configuration) : IUserRoleSt
             audit.Parameters.AddWithValue("@new", "{\"roles\":\"" + Codes(plan.Final) + "\"}");
             audit.Parameters.AddWithValue("@ip", (object?)ipAddress ?? DBNull.Value);
             var persisted = (bool)(await audit.ExecuteScalarAsync())!;
+            if (!persisted && auditOptions.RequireDurableAudit)
+                return new(RoleChangeOutcome.AuditUnavailable); // transaction rolls back on dispose
             await tx.CommitAsync();
             return new(RoleChangeOutcome.Updated, persisted, plan.Add.Select(id => Codes([id])).ToList(), plan.Remove.Select(id => Codes([id])).ToList());
         }

@@ -57,6 +57,14 @@ builder.Services.AddSingleton<PasswordService>();
 builder.Services.AddScoped<PortalDb>();
 builder.Services.AddScoped<MembershipAdminStore>();
 builder.Services.AddScoped<IUserRoleStore, SqlUserRoleStore>();
+builder.Services.AddScoped<IUserAccountStore, SqlUserAccountStore>();
+builder.Services.AddScoped<ICustomerAdminStore, SqlCustomerAdminStore>();
+builder.Services.AddSingleton(sp =>
+{
+    var options = new AdminAuditOptions();
+    builder.Configuration.GetSection("Security:Audit").Bind(options);
+    return options;
+});
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton(sp =>
 {

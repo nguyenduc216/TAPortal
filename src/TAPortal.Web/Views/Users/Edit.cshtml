@@ -1,19 +1,26 @@
 @model UserEditVm
 @{
     ViewData["Title"]="Sửa người dùng";
-    var roles = ViewBag.Roles as List<string> ?? new();
+    var account = (UserAccountSnapshot)ViewBag.Account;
+    var eligible = account.LoginEligible;
 }
 <div class="page-header"><div class="row align-items-center"><div class="col"><div class="page-pretitle"><a asp-action="Index">Người dùng</a> / Chỉnh sửa</div><h2 class="page-title">Sửa người dùng: @Model.Username</h2></div></div></div>
 <div class="row mt-3"><div class="col-lg-8"><div class="card"><form asp-action="Edit" asp-route-id="@Model.Id" method="post" novalidate>
+<input type="hidden" asp-for="Stamp" />
 <div class="card-body">
 <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+<div class="mb-3">Trạng thái đăng nhập hiện tại: <span class="badge @(eligible ? "badge-ta-active" : "bg-secondary-lt")">@AccountStatusPolicy.Describe(account.IsActive, account.Status, false)</span></div>
+@if (account.Status != AccountStatusPolicy.ActiveStatus)
+{
+    <div class="alert alert-warning" role="note">Trạng thái hệ thống của tài khoản là <code>@account.Status</code>: tài khoản không thể đăng nhập dù bật "Cho phép đăng nhập". Thay đổi trạng thái hệ thống chưa được hỗ trợ (chờ phê duyệt quy tắc).</div>
+}
 <div class="mb-3"><label class="form-label">Tên đăng nhập</label><input class="form-control" value="@Model.Username" readonly disabled /><div class="form-hint">Tên đăng nhập không thể thay đổi.</div></div>
 <div class="mb-3"><label asp-for="DisplayName" class="form-label required">Họ và tên</label><input asp-for="DisplayName" class="form-control" maxlength="200" required /><span asp-validation-for="DisplayName" class="invalid-feedback d-block"></span></div>
 <div class="row"><div class="col-sm"><div class="mb-3"><label asp-for="Email" class="form-label">Email</label><input asp-for="Email" class="form-control" type="email" maxlength="256" /><span asp-validation-for="Email" class="invalid-feedback d-block"></span></div></div>
 <div class="col-sm"><div class="mb-3"><label asp-for="Phone" class="form-label">Điện thoại</label><input asp-for="Phone" class="form-control" maxlength="50" /><span asp-validation-for="Phone" class="invalid-feedback d-block"></span></div></div></div>
-<div class="mb-3"><label class="form-check form-switch"><input asp-for="IsActive" class="form-check-input" type="checkbox" /><span class="form-check-label">Cho phép đăng nhập (hoạt động)</span></label><span asp-validation-for="IsActive" class="invalid-feedback d-block"></span><div class="form-hint">Tắt sẽ chặn đăng nhập ở cả TAPortal và Customer Portal; phiên hiện tại bị từ chối ở request kế tiếp.</div></div>
-<dl class="row mb-0"><dt class="col-sm-4">Trạng thái hệ thống</dt><dd class="col-sm-8"><code>@Model.Status</code></dd><dt class="col-sm-4">Vai trò</dt><dd class="col-sm-8">@(roles.Count == 0 ? "—" : string.Join(", ", roles)) <a asp-action="Roles" asp-route-id="@Model.Id" class="ms-2"><i class="ti ti-shield-lock" aria-hidden="true"></i>Quản lý vai trò</a></dd></dl>
+<div class="mb-3"><label class="form-check form-switch"><input asp-for="IsActive" class="form-check-input" type="checkbox" /><span class="form-check-label">Cho phép đăng nhập</span></label><span asp-validation-for="IsActive" class="invalid-feedback d-block"></span><div class="form-hint">Tắt sẽ chặn đăng nhập ở cả TAPortal và Customer Portal; phiên hiện tại bị từ chối ở request kế tiếp. Không ảnh hưởng quyền theo từng doanh nghiệp (membership).</div></div>
+<dl class="row mb-0"><dt class="col-sm-4">Trạng thái hệ thống</dt><dd class="col-sm-8"><code>@account.Status</code></dd><dt class="col-sm-4">Vai trò</dt><dd class="col-sm-8">@(account.RoleNames.Count == 0 ? "—" : string.Join(", ", account.RoleNames)) <a asp-action="Roles" asp-route-id="@Model.Id" class="ms-2"><i class="ti ti-shield-lock" aria-hidden="true"></i>Quản lý vai trò</a></dd><dt class="col-sm-4">Doanh nghiệp đang truy cập</dt><dd class="col-sm-8">@account.ActiveMembershipCount</dd></dl>
 <div class="form-hint">Chỉnh sửa hồ sơ không thay đổi mật khẩu hay vai trò.</div>
 </div>
-<div class="card-footer d-flex gap-2"><a asp-action="Index" class="btn"><i class="ti ti-arrow-left" aria-hidden="true"></i>Quay lại</a><button type="submit" class="btn btn-primary ms-auto" data-ta-loading data-ta-loading-text="Đang lưu..."><i class="ti ti-device-floppy" aria-hidden="true"></i><span>Lưu thay đổi</span></button></div>
+<div class="card-footer d-flex flex-wrap gap-2"><a asp-action="Index" class="btn"><i class="ti ti-arrow-left" aria-hidden="true"></i>Quay lại</a><a asp-action="Delete" asp-route-id="@Model.Id" class="btn btn-outline-danger"><i class="ti ti-trash" aria-hidden="true"></i>Xóa người dùng</a><button type="submit" class="btn btn-primary ms-auto" data-ta-loading data-ta-loading-text="Đang lưu..."><i class="ti ti-device-floppy" aria-hidden="true"></i><span>Lưu thay đổi</span></button></div>
 </form></div></div></div>
