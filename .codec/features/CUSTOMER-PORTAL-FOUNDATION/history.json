@@ -114,5 +114,59 @@
       "Publish and verify artifacts after gate",
       "Separate IIS configuration authorization and customer membership/UAT"
     ]
+  },
+  {
+    "change_id": "CUSTOMER-PORTAL-FOUNDATION-CHG-20261028T074006Z-654653",
+    "created_at": "2026-10-28T07:40:06.948942+00:00",
+    "title": "DEV TEST machine policy and Customer Portal local publish",
+    "status": "LOCAL_ARTIFACT_PUBLISHED",
+    "commit_sha": "ff965efc17b2e0aefde8b603df7269a8d29fbcfb",
+    "migration_status": "OPERATOR_REPORTED_APPLIED_008_NOT_RERUN",
+    "publish_status": "PUBLISHED",
+    "merge_status": "PENDING_APPROVAL",
+    "commit_note": "Application source SHA; delivery policy/report commit reported separately.",
+    "objective": "DEV/TEST policy and Customer Portal local artifact publish",
+    "scope": "Policy/config/validator/runbook/history/report; application source unchanged",
+    "technical_decisions": [
+      "No IIS preflight for local artifacts",
+      "No SQL execution",
+      "Read-only DB access only",
+      "PRINT TEXT verification default",
+      "Hash complete artifact manifest and DLL separately"
+    ],
+    "files_changed": [
+      "AGENTS.md",
+      ".agents/skills/codec/SKILL.md",
+      ".codec/README.md",
+      ".codec/config.json",
+      ".codec/tools/codec.py",
+      ".codec/tools/test_codec.py",
+      "docs/customer-portal-runbook.md",
+      ".codec/features/CUSTOMER-PORTAL-FOUNDATION/README.md",
+      ".codec/features/CUSTOMER-PORTAL-FOUNDATION/history.json",
+      ".codec/changes/CUSTOMER-PORTAL-FOUNDATION-CHG-20261028T074006Z-654653.md",
+      ".codec/reports/CUSTOMER-PORTAL-FOUNDATION-CHG-20261028T074006Z-654653.md",
+      ".codec/reports/CUSTOMER-PORTAL-FOUNDATION-CHG-20261028T074006Z-654653.sha256"
+    ],
+    "migrations": [],
+    "database_status": "VERIFIED_WITH_WARNINGS",
+    "build_result": "PASS: Release 0 warnings / 0 errors",
+    "test_result": {
+      "safe_passed": 34,
+      "codec_tests_passed": 3,
+      "failed": 0,
+      "legacy_sql_tests": "NOT_SELECTED"
+    },
+    "publish_target": "D:\\T.A\\TAPortal\\TAPortal\\publish\\deployed-TACustomerPortal.Web",
+    "artifact_sha256": "40442b0023252bc9032f75036a477dfff0dff8e458c735cbd64a738e02bdcb66",
+    "artifact_hash_method": "SHA256 of UTF-8 LF sorted relative-file SHA256 manifest",
+    "artifact_file_count": 54,
+    "iis_status": "NOT_CHECKED",
+    "deploy_status": "NOT_DEPLOYED",
+    "merge_sha": null,
+    "remaining_work": [
+      "Operator membership provisioning and functional acceptance",
+      "Separately approved future live deployment"
+    ]
   }
 ]

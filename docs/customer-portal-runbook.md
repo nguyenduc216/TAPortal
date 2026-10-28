@@ -29,14 +29,27 @@ Khách hàng vào `/account/login`. Một membership được tự chọn; nhi�
 ```powershell
 dotnet restore TAPortal.sln
 dotnet build TAPortal.sln -c Release --no-restore
-dotnet test TAPortal.sln -c Release --no-build
+dotnet test tests/TACustomerPortal.Tests/TACustomerPortal.Tests.csproj -c Release --no-build --filter FullyQualifiedName~SafePortalTests
 ```
 
 Checkpoint 1 uses SafePortalTests: real HTTP/cookie/CSRF/views with an in-memory ICustomerStore and invalid SQL configuration. No SQL connection. Legacy PortalTests are explicitly skipped and initialization is blocked because they create/drop LocalDB databases. Historical LocalDB results are not current evidence. CI performs restore/build/safe tests only, without LocalDB or publish. SQL CRUD/constraints/transactions still require operator verification.
 
 ## IIS độc lập
 
-Checkpoint 3 authorizes artifact publishing only to `D:\T.A\TAPortal\TAPortal\publish\deployed-TACustomerPortal.Web`. All web projects follow `publish/deployed-<csproj filename without extension>`. Creating this exact folder is allowed after safety preflight. Admin publishing and IIS changes are outside this checkpoint. Inspect IIS mappings, existing artifacts and write permissions first; unreadable mappings block publishing. A live IIS target requires separate overwrite approval.
+## DEV/TEST MACHINE POLICY (2026-10-28)
+- This machine is for development and testing, not a production deployment server.
+- Codex must not inspect IIS, websites, application pools, bindings or physical paths; connect to or probe server configuration; request Administrator access; deploy or change IIS websites.
+- Never run migrations, seed, rollback, mutating SQL or data-writing integration tests; never create databases or execute stored procedures with write effects.
+- Only TAPortalSys read queries using read-only permissions are allowed. Without read access, record NOT_VERIFIED and continue independent work.
+- Author migration SQL files for operator review and manual execution only. SQL verification defaults to TEXT messages via PRINT; SELECT details only when diagnosing failures.
+
+## Local publish policy ? Checkpoint 3
+- Publish every web project only to `<WORKSPACE_ROOT>\publish\deployed-<PROJECT_NAME>`; PROJECT_NAME is the csproj filename without extension. Never rename, move or timestamp the target, or publish into source.
+- This is a local artifact directory, not an assumed IIS deployment. Do not inspect IIS before local publish; unreadable IIS configuration does not block local artifacts.
+- Check project, Git, build/safe tests, target contents and write permission. Creating the exact conventional folder is authorized. Reject path aliases/reparse points escaping the target; never delete or overwrite data outside it.
+- Local artifact publishing does not authorize server/IIS configuration or deployment. Report PUBLISHED separately from NOT_DEPLOYED, source commit SHA separately from artifact SHA256.
+- Checkpoint 3 authorizes TACustomerPortal.Web only; TAPortal.Web is not published. Any future live deployment requires separate approval and operator-managed backup/replacement.
+
 
 Thiết lập riêng từng app: `ASPNETCORE_ENVIRONMENT=Production`, `Database__ConnectionString`, `DataProtection__KeyPath` là đường dẫn bền vững nằm ngoài web root, cùng logging destination. Cấp ACL key folder chỉ cho đúng application pool identity; bật Load User Profile. Trên Windows key ring dùng DPAPI theo identity. Backup key ring theo chính sách vận hành. Các deployment nhiều máy cần cơ chế key encryption/certificate dùng chung trong từng ứng dụng, không chia key giữa hai ứng dụng. Mỗi site dùng thư mục log/thu thập stdout hoặc central logging riêng; mặc định application log đi qua ASP.NET logging providers. Không bật stdout vô hạn mà không có retention.
 
@@ -72,6 +85,6 @@ Tenant switching preserves original IssuedUtc/ExpiresUtc and cannot extend the t
 ## Checkpoint 3 ? operator handoff
 Operator reports migration 008 manually applied; database verification PASS_WITH_WARNINGS (4 Users, 10 Customers, 0 Memberships). Treat as VERIFIED_WITH_WARNINGS, operator-reported, not a new Codex SQL audit. Do not rerun migration 008. Customer account provisioning and functional acceptance remain pending.
 
-IIS preflight on 2026-10-28: W3SVC/WAS running; applicationHost.config access denied; appcmd list vdir fails reading redirection.config due to insufficient permissions. Target does not yet exist. Publish is BLOCKED until an operator verifies all effective IIS physical paths (including overlap/aliases) and confirms target is not served, or grants read access for a new preflight. No automatic elevation or IIS edits.
+The earlier IIS preflight blocker is superseded by DEV/TEST MACHINE POLICY. Do not inspect IIS or request server access. Local publish checks only project, Git, build/safe tests, target contents and write permissions. No SQL is run; migration 008 must not be rerun.
 
 Before deployment, confirm dedicated site/application name, dedicated No Managed Code app pool/identity, HTTPS hostname/port/certificate, installed .NET 8 Hosting Bundle, Production environment, external secret configuration for Database__ConnectionString to TAPortalSys, external persistent DataProtection__KeyPath, least-privilege ACLs, log destination/retention, backup and rollback ownership. Operator sets these outside Git. Confirm trusted proxy IPs if applicable, secure cookies/HTTPS redirect and login throttling/WAF. After separately authorized IIS deployment, perform browser login/provisioning, tenant isolation, password/session revocation and Admin regression acceptance. No site creation, binding changes, pool recycle/start or secrets changes in Checkpoint 3.

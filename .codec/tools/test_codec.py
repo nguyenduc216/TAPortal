@@ -57,7 +57,7 @@ class CodecTests(unittest.TestCase):
     def test_rejects_policy_regressions(self):
         path = codec.META / 'config.json'
         original = json.loads(path.read_text())
-        mutations = [('database', 'name', 'OtherDB'), ('database', 'execute_mutating_sql_allowed', True), ('deploy', 'require_approval', False), ('deploy', 'require_iis_preflight', False), ('deploy', 'live_iis_overwrite_requires_separate_approval', False), ('deploy', 'targets', {'TACustomerPortal.Web': r'C:\wrong'}), ('git', 'force_push_allowed', True), ('history', 'append_only', False)]
+        mutations = [('database', 'name', 'OtherDB'), ('database', 'execute_mutating_sql_allowed', True), ('deploy', 'require_approval', False), ('deploy', 'require_iis_preflight', True), ('deploy', 'local_artifact_only', False), ('machine', 'inspect_iis_allowed', True), ('machine', 'probe_server_configuration_allowed', True), ('machine', 'request_administrator_allowed', True), ('machine', 'deploy_iis_allowed', True), ('database', 'read_only_queries_only', False), ('database', 'execute_writing_stored_procedures_allowed', True), ('database', 'mutating_integration_tests_allowed', True), ('database', 'verification_output_default', 'SELECT'), ('database', 'unavailable_read_status', 'PASS'), ('deploy', 'live_iis_overwrite_requires_separate_approval', False), ('deploy', 'targets', {'TACustomerPortal.Web': r'C:\wrong'}), ('git', 'force_push_allowed', True), ('history', 'append_only', False)]
         for section, key, value in mutations:
             with self.subTest(key=key), contextlib.redirect_stdout(io.StringIO()):
                 cfg = json.loads(json.dumps(original))

@@ -22,3 +22,7 @@ Status: SOURCE_AND_SAFE_TESTS_COMPLETE. SQL CRUD/real Admin regression, schema a
 
 ## Checkpoint 3 current state
 Release build and 34 selected safe tests PASS; 3 Codec tests PASS. Conventional publish paths configured; Customer-only artifact publishing authorized. BLOCKED before publish: IIS services running but effective mappings unreadable due to permissions. No target folder created, no publish/hash, no IIS/SQL changes. Operator reports DB VERIFIED_WITH_WARNINGS and 0 memberships; do not rerun migration 008. See current report/runbook for handoff. Prior checkpoint statements above are historical.
+| `CUSTOMER-PORTAL-FOUNDATION-CHG-20261028T074006Z-654653` | 2026-10-28 | DEV TEST machine policy and Customer Portal local publish | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |
+
+## Current DEV/TEST checkpoint ? supersedes earlier publish blocker
+Local Customer Portal artifact PUBLISHED to the conventional target. Release build 0 warnings/errors; 34 safe tests and 3 Codec tests PASS. Database VERIFIED_WITH_WARNINGS by operator; no SQL run. IIS NOT_CHECKED / NOT_DEPLOYED; no server access required or permitted. See latest report and SHA256 manifest for evidence. Earlier checkpoint descriptions are historical.

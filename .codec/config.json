@@ -12,7 +12,12 @@
     ],
     "migration_execution": "MANUAL_DBEAVER_OR_SSMS",
     "required_migration_guard": "DB_NAME() = 'TAPortalSys'",
-    "duplicate_migrations_allowed": false
+    "duplicate_migrations_allowed": false,
+    "read_only_queries_only": true,
+    "execute_writing_stored_procedures_allowed": false,
+    "mutating_integration_tests_allowed": false,
+    "verification_output_default": "PRINT_TEXT",
+    "unavailable_read_status": "NOT_VERIFIED"
   },
   "deploy": {
     "targets": {
@@ -27,8 +32,16 @@
     "rename_or_move_target_allowed": false,
     "separate_source_sha_and_artifact_sha256": true,
     "target_pattern": "<WORKSPACE_ROOT>\\publish\\deployed-<PROJECT_NAME>",
-    "require_iis_preflight": true,
-    "live_iis_overwrite_requires_separate_approval": true
+    "require_iis_preflight": false,
+    "live_iis_overwrite_requires_separate_approval": true,
+    "local_artifact_only": true,
+    "local_preflight": [
+      "project",
+      "git",
+      "build_safe_tests",
+      "target_contents",
+      "write_permission"
+    ]
   },
   "git": {
     "main_branch": "main",
@@ -43,5 +56,12 @@
     "append_only": true,
     "change_id_format": "FEATURE-ID-CHG-YYYYMMDDTHHMMSSZ-XXXXXX",
     "read_before_source": true
+  },
+  "machine": {
+    "role": "DEV_TEST",
+    "inspect_iis_allowed": false,
+    "probe_server_configuration_allowed": false,
+    "request_administrator_allowed": false,
+    "deploy_iis_allowed": false
   }
 }
