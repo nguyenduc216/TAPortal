@@ -200,5 +200,93 @@
       "Gateway/WAF shared login limit for production or multi-instance hosting (AUD-24)",
       "AUD-12 remains out of scope"
     ]
+  },
+  {
+    "change_id": "TAPORTAL-SYSTEM-AUDIT-CHG-20261028T172500Z-CE30E8",
+    "created_at": "2026-10-28T17:25:00.264522+00:00",
+    "title": "Checkpoint 6 user role management (AUD-12)",
+    "status": "ADMIN_ARTIFACT_PUBLISHED_UAT_PENDING",
+    "agent": "Claude Code (claude-opus-5-5)",
+    "checkpoint": "CHECKPOINT-06-ROLE-MANAGEMENT",
+    "operator_decision": "No server deploy or global UAT until the final checkpoint; no main merge",
+    "starting_sha": "900db91ecb1671c072a958cd240ee12064cc76cb",
+    "commit_sha": "36db1038ebe071ebab4f588538e118d79fb416e9",
+    "commit_note": "Application source SHA built and published; delivery metadata commit reported separately to avoid self-reference.",
+    "migration_status": "NONE_REQUIRED",
+    "publish_status": "PUBLISHED_ADMIN_ONLY",
+    "merge_status": "PENDING_APPROVAL",
+    "objective": "AUD-12: SYS_ADMIN-only management of existing user roles with last SYS_ADMIN protection, concurrency guard and audit when available",
+    "scope": "TAPortal.Web UsersController Roles actions, UserRoleStore/RoleChangePolicy, Users views, PortalDb role map; safe tests. Shared and Customer Portal unchanged",
+    "findings": {
+      "AUD-12": "FIXED (role assignment); permission matrix, role creation and direct UserPermissions management PENDING_APPROVAL",
+      "AUD-25": "PENDING_OPERATOR (MEDIUM: dbo.AuditLogs presence/INSERT permission in TAPortalSys not verified; without it role changes are only in application logs)",
+      "AUD-26": "OPEN (LOW: direct UserPermissions ALLOW/DENY overrides are not visible on the role screen)"
+    },
+    "technical_decisions": [
+      "Reuse Roles/UserRoles; no new tables, no role creation, no RolePermissions editing",
+      "Only SYS_ADMIN; actor re-verified from the database inside the transaction",
+      "Only active catalog roles may be assigned; inactive assignments preserved",
+      "Last active SYS_ADMIN cannot lose the role, including self-removal",
+      "Optimistic stamp of assigned role ids plus serializable transaction with UPDLOCK on target roles and all SYS_ADMIN assignments",
+      "Audit row in dbo.AuditLogs inside the same transaction when the table and columns exist; otherwise application log warning and UI notice",
+      "Granting SYS_ADMIN to another user remains allowed for SYS_ADMIN (unchanged from user creation)"
+    ],
+    "files_changed": [
+      "src/TAPortal.Web/Services/UserRoleStore.cs",
+      "src/TAPortal.Web/Services/PortalDb.cs",
+      "src/TAPortal.Web/Controllers/PortalControllers.cs",
+      "src/TAPortal.Web/Program.cs",
+      "src/TAPortal.Web/Views/Users/Roles.cshtml",
+      "src/TAPortal.Web/Views/Users/Index.cshtml",
+      "src/TAPortal.Web/Views/Users/Edit.cshtml",
+      "tests/TACustomerPortal.Tests/SafeAdminRoleTests.cs",
+      "docs/audits/taportal-checkpoint6-role-management-TAPORTAL-SYSTEM-AUDIT-CHG-20261028T172500Z-CE30E8.md",
+      ".codec/features/TAPORTAL-SYSTEM-AUDIT/README.md",
+      ".codec/features/TAPORTAL-SYSTEM-AUDIT/history.json",
+      ".codec/changes/TAPORTAL-SYSTEM-AUDIT-CHG-20261028T172500Z-CE30E8.md",
+      ".codec/reports/TAPORTAL-SYSTEM-AUDIT-CHG-20261028T172500Z-CE30E8.md",
+      ".codec/reports/TAPORTAL-SYSTEM-AUDIT-CHG-20261028T172500Z-CE30E8-TAPortal.Web.sha256"
+    ],
+    "migrations": [],
+    "database_status": "DATABASE_NOT_VERIFIED (read-only MCP taportal-db returned errors for db_ping and db_list_tables)",
+    "build_result": "PASS: Release 0 warnings / 0 errors",
+    "test_result": {
+      "safe_passed": 104,
+      "safe_failed": 0,
+      "safe_skipped": 0,
+      "new_role_tests": 20,
+      "codec_passed": 4,
+      "codec_validate": "PASS",
+      "legacy_sql_tests": "NOT_SELECTED",
+      "smoke_admin": "12/12 PASS",
+      "sql_transaction_concurrency": "NOT_VERIFIED (in-memory serial model only)"
+    },
+    "artifacts": {
+      "TAPortal.Web": {
+        "target": "D:\\T.A\\TAPortal\\TAPortal\\publish\\deployed-TAPortal.Web",
+        "status": "PUBLISHED",
+        "exit_code": 0,
+        "published_utc": "2026-10-28T17:29:13Z",
+        "file_count": 57,
+        "artifact_sha256": "5adf697b9fab26d521761cdb81d667121eb49147939bb1a3bfe9326c3c4afd36",
+        "dll_sha256": "34e0e997fcf1a8523f60147225b0054f091a0ced4255fbd0efbddb099cd3a72d",
+        "manifest": ".codec/reports/TAPORTAL-SYSTEM-AUDIT-CHG-20261028T172500Z-CE30E8-TAPortal.Web.sha256",
+        "previous": "42d6a7334a744094e4a8135463801a477b93fe86dd5e811c93cedf311e119cb4; backup publish/rollback/TAPORTAL-SYSTEM-AUDIT-CHG-20261028T172500Z-CE30E8/deployed-TAPortal.Web"
+      },
+      "TACustomerPortal.Web": {
+        "status": "NOT_REQUIRED",
+        "reason": "No change under src/TACustomerPortal.Web or src/TAPortal.Shared",
+        "artifact_sha256_unchanged": "ea77b3be501ea28fe80ce54665a805b6798b502137347ce11f7d356547f8ac34"
+      }
+    },
+    "iis_status": "NOT_CHECKED",
+    "deploy_status": "NOT_DEPLOYED",
+    "pr_url": "https://github.com/nguyenduc216/TAPortal/pull/7",
+    "merge_sha": null,
+    "remaining_work": [
+      "Final consolidated deploy/UAT after the last checkpoint (operator decision)",
+      "Operator: confirm dbo.AuditLogs and INSERT permission in TAPortalSys (AUD-25)",
+      "Approval needed before permission-matrix editing, role creation or direct UserPermissions management"
+    ]
   }
 ]

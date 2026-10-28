@@ -20,3 +20,7 @@
 
 ## Checkpoint 5 — current status
 AUD-13 and AUD-14 FIXED; new findings AUD-20/21/22 FIXED, AUD-23/24 OPEN. Release build 0/0; 84 safe tests + 4 Codec tests PASS; validate PASS; Admin smoke 11/11. Admin artifact `42d6a733…19cb4` (57 files); Customer NOT_REQUIRED (unchanged `ea77b3be…ac34`). Database not accessed. Prior status lines above are historical.
+| `TAPORTAL-SYSTEM-AUDIT-CHG-20261028T172500Z-CE30E8` | 2026-10-28 | Checkpoint 6 user role management (AUD-12) | 36db1038ebe071ebab4f588538e118d79fb416e9 | NONE_REQUIRED | PUBLISHED (local, Admin only) / NOT_DEPLOYED | PENDING_APPROVAL |
+
+## Checkpoint 6 — current status
+AUD-12 FIXED for role assignment (SYS_ADMIN-only, last SYS_ADMIN protected, stale-page conflicts rejected); permission matrix/role creation/direct UserPermissions PENDING_APPROVAL; AUD-25 (AuditLogs in TAPortalSys unverified) PENDING_OPERATOR; AUD-26 OPEN. Release build 0/0; 104 safe tests + 4 Codec tests PASS; validate PASS; Admin smoke 12/12. Admin artifact `5adf697b…afd36` (57 files); Customer NOT_REQUIRED (unchanged `ea77b3be…ac34`). Database NOT_VERIFIED. Operator decision: no deploy/global UAT until the final checkpoint. Prior status lines above are historical.
