@@ -1,9 +1,50 @@
-@model DashboardVm
-@{ ViewData["Title"] = "Tổng quan"; }
-<div class="page-header d-print-none"><div class="row align-items-center"><div class="col"><div class="page-pretitle">T.A Portal</div><h2 class="page-title">Tổng quan hệ thống</h2></div></div></div>
-<div class="row row-deck row-cards mt-1">
-@foreach (var item in new[]{("Khách hàng",Model.CustomerCount,"ti-building-store"),("Người dùng",Model.UserCount,"ti-users"),("Đang hoạt động",Model.ActiveUserCount,"ti-user-check"),("Vai trò",Model.RoleCount,"ti-shield-lock")}) {
-<div class="col-sm-6 col-lg-3"><div class="card ta-stat-card"><div class="card-body"><div class="d-flex align-items-center"><div class="ta-stat-icon me-3"><i class="ti @item.Item3" aria-hidden="true"></i></div><div><div class="ta-stat-label">@item.Item1</div><div class="ta-stat-value">@item.Item2</div></div></div></div></div></div>}
-<div class="col-lg-7"><div class="card"><div class="card-header"><h3 class="card-title">Hoạt động gần đây</h3></div><div class="card-body"><div class="empty"><div class="empty-img"><i class="ti ti-history fs-1"></i></div><p class="empty-title">Nhật ký hoạt động</p><p class="empty-subtitle text-secondary">Module audit sẽ hiển thị các thao tác gần nhất tại đây.</p></div></div></div></div>
-<div class="col-lg-5"><div class="card"><div class="card-header"><h3 class="card-title">Trạng thái hệ thống</h3></div><div class="list-group list-group-flush"><div class="list-group-item d-flex justify-content-between"><span>Ứng dụng</span><span class="badge badge-ta-active">Hoạt động</span></div><div class="list-group-item d-flex justify-content-between"><span>Cơ sở dữ liệu</span><span class="badge badge-ta-active">Kết nối</span></div><div class="list-group-item d-flex justify-content-between"><span>Phân quyền</span><span class="badge badge-ta-active">RBAC</span></div></div></div></div>
+@model DashboardPageVm
+@{
+    ViewData["Title"] = "Tổng quan";
+    var vi = System.Globalization.CultureInfo.GetCultureInfo("vi-VN");
+    string N(int value) => value.ToString("N0", vi);
+    var d = Model.Data;
+    string ActionLabel(string action) => action switch
+    {
+        "USER_ROLES_UPDATED" => "Cập nhật vai trò người dùng",
+        "USER_UPDATED" => "Cập nhật thông tin người dùng",
+        "USER_SOFT_DELETED" => "Xóa mềm người dùng",
+        _ => action
+    };
+}
+<div class="page-header d-print-none"><div class="row align-items-center"><div class="col"><div class="page-pretitle">T.A Portal</div><h2 class="page-title">Tổng quan hệ thống</h2>@if (d is not null) {<div class="text-secondary small">Số liệu đọc trực tiếp từ cơ sở dữ liệu lúc @d.LoadedAtUtc.ToString("HH:mm:ss dd/MM/yyyy", vi) (UTC).</div>}</div></div></div>
+
+@if (d is null)
+{
+    <div class="alert alert-danger mt-3" role="alert" data-ta-dashboard-error><i class="ti ti-database-off" aria-hidden="true"></i><span>Không tải được số liệu từ cơ sở dữ liệu. Chi tiết đã được ghi vào nhật ký ứng dụng; vui lòng thử lại hoặc liên hệ quản trị hệ thống.</span></div>
+}
+else
+{
+<section class="row row-deck row-cards mt-1" aria-label="Chỉ số chính">
+    <div class="col-sm-6 col-lg-3"><a class="card card-link ta-stat-card" asp-controller="Users" asp-action="Index" data-ta-kpi="users"><div class="card-body"><div class="d-flex align-items-center"><div class="ta-stat-icon me-3"><i class="ti ti-users" aria-hidden="true"></i></div><div><div class="ta-stat-label">Người dùng hiện hành</div><div class="ta-stat-value">@N(d.Users.CurrentTotal)</div></div></div>
+        <ul class="list-unstyled small text-secondary mt-2 mb-0"><li>Được đăng nhập: <strong>@N(d.Users.Active)</strong></li><li>Đã vô hiệu hóa: <strong>@N(d.Users.Disabled)</strong></li><li>Bị khóa theo trạng thái: <strong>@N(d.Users.Locked)</strong></li></ul></div></a></div>
+    <div class="col-sm-6 col-lg-3"><a class="card card-link ta-stat-card" asp-controller="Customers" asp-action="Index" data-ta-kpi="customers"><div class="card-body"><div class="d-flex align-items-center"><div class="ta-stat-icon me-3"><i class="ti ti-building-store" aria-hidden="true"></i></div><div><div class="ta-stat-label">Khách hàng hiện hành</div><div class="ta-stat-value">@N(d.Customers.CurrentTotal)</div></div></div>
+        <ul class="list-unstyled small text-secondary mt-2 mb-0"><li>Đang hoạt động: <strong>@N(d.Customers.Active)</strong></li><li>Ngừng hoạt động: <strong>@N(d.Customers.Inactive)</strong></li></ul></div></a></div>
+    <div class="col-sm-6 col-lg-3"><a class="card card-link ta-stat-card" asp-controller="CustomerPortalAccounts" asp-action="Index" data-ta-kpi="memberships"><div class="card-body"><div class="d-flex align-items-center"><div class="ta-stat-icon me-3"><i class="ti ti-user-shield" aria-hidden="true"></i></div><div><div class="ta-stat-label">Quyền Customer Portal có hiệu lực</div><div class="ta-stat-value">@(d.Memberships is null ? "—" : N(d.Memberships.EffectiveMemberships))</div></div></div>
+        @if (d.Memberships is null) {<div class="small text-secondary mt-2">Chưa có dữ liệu (bảng membership chưa sẵn sàng).</div>}
+        else {<ul class="list-unstyled small text-secondary mt-2 mb-0"><li>Tài khoản có quyền: <strong>@N(d.Memberships.UsersWithAccess)</strong></li><li>Đã thu hồi / không hiệu lực: <strong>@N(d.Memberships.RevokedOrIneffective)</strong></li></ul>}</div></a></div>
+    <div class="col-sm-6 col-lg-3"><a class="card card-link ta-stat-card" asp-controller="Roles" asp-action="Index" data-ta-kpi="roles"><div class="card-body"><div class="d-flex align-items-center"><div class="ta-stat-icon me-3"><i class="ti ti-shield-lock" aria-hidden="true"></i></div><div><div class="ta-stat-label">Vai trò đang hoạt động</div><div class="ta-stat-value">@N(d.ActiveRoles)</div></div></div>
+        <div class="small text-secondary mt-2">Tài khoản đã xóa mềm (lịch sử): <strong>@N(d.Users.SoftDeleted)</strong></div></div></a></div>
+</section>
+}
+
+<div class="row row-cards mt-1">
+    <div class="col-lg-7"><section class="card" aria-labelledby="recentTitle"><div class="card-header"><h3 class="card-title" id="recentTitle">Thay đổi quản trị gần đây</h3></div>
+        @if (d is null) {<div class="card-body text-secondary">Không có dữ liệu do không tải được cơ sở dữ liệu.</div>}
+        else if (!d.AuditTableVisible) {<div class="card-body"><div class="empty"><div class="empty-img"><i class="ti ti-history fs-1" aria-hidden="true"></i></div><p class="empty-title">Nhật ký audit chưa sẵn sàng</p><p class="empty-subtitle text-secondary">Không tìm thấy bảng dbo.AuditLogs. Operator cần chạy script kiểm tra database/scripts/007-verify-audit-logs.sql.</p></div></div>}
+        else if (d.RecentAudit is null) {<div class="card-body text-secondary">Không đọc được nhật ký audit (tài khoản ứng dụng chỉ có quyền ghi). Thay đổi vẫn được ghi nhận.</div>}
+        else if (d.RecentAudit.Count == 0) {<div class="card-body text-secondary">Chưa có thay đổi nào được ghi nhận.</div>}
+        else {<ul class="list-group list-group-flush">@foreach (var a in d.RecentAudit) {<li class="list-group-item d-flex flex-wrap justify-content-between gap-2"><span><strong>@ActionLabel(a.Action)</strong><span class="text-secondary"> — @(a.ActorName ?? "không xác định")</span></span><time class="text-secondary small" datetime="@a.CreatedAtUtc.ToString("o")">@a.CreatedAtUtc.ToString("HH:mm dd/MM/yyyy", vi) UTC</time></li>}</ul>}
+    </section></div>
+    <div class="col-lg-5"><section class="card" aria-labelledby="statusTitle"><div class="card-header"><h3 class="card-title" id="statusTitle">Trạng thái hệ thống</h3></div><div class="list-group list-group-flush">
+        <div class="list-group-item d-flex justify-content-between gap-2"><span>Cơ sở dữ liệu</span>@if (d is null) {<span class="badge bg-red-lt" data-ta-db-status="down"><i class="ti ti-x" aria-hidden="true"></i> Không đọc được</span>} else {<span class="badge badge-ta-active" data-ta-db-status="up"><i class="ti ti-check" aria-hidden="true"></i> Đọc được dữ liệu</span>}</div>
+        <div class="list-group-item d-flex justify-content-between gap-2"><span>Bảng nhật ký audit</span>@if (d is null) {<span class="badge bg-secondary-lt">Không xác định</span>} else if (d.AuditTableVisible) {<span class="badge badge-ta-active"><i class="ti ti-check" aria-hidden="true"></i> Có</span>} else {<span class="badge bg-yellow-lt"><i class="ti ti-alert-triangle" aria-hidden="true"></i> Chưa có</span>}</div>
+        <div class="list-group-item d-flex justify-content-between gap-2"><span>Bắt buộc audit bền vững</span><span class="badge @(Model.RequireDurableAudit ? "badge-ta-active" : "bg-yellow-lt")">@(Model.RequireDurableAudit ? "Bật" : "Tắt (chờ xác minh)")</span></div>
+        <div class="list-group-item d-flex justify-content-between gap-2"><span>Giới hạn đăng nhập</span><span class="text-secondary small">@Model.LoginAccountLimit lần/tài khoản, @Model.LoginIpLimit lần/IP mỗi @Model.LoginWindow.TotalMinutes.ToString("0", vi) phút</span></div>
+    </div></section></div>
 </div>

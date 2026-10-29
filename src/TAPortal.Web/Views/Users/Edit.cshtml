@@ -3,6 +3,7 @@
     ViewData["Title"]="Sửa người dùng";
     var account = (UserAccountSnapshot)ViewBag.Account;
     var eligible = account.LoginEligible;
+    var isSelf = string.Equals(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value, Model.Id.ToString(), StringComparison.OrdinalIgnoreCase);
 }
 <div class="page-header"><div class="row align-items-center"><div class="col"><div class="page-pretitle"><a asp-action="Index">Người dùng</a> / Chỉnh sửa</div><h2 class="page-title">Sửa người dùng: @Model.Username</h2></div></div></div>
 <div class="row mt-3"><div class="col-lg-8"><div class="card"><form asp-action="Edit" asp-route-id="@Model.Id" method="post" novalidate>
@@ -22,5 +23,5 @@
 <dl class="row mb-0"><dt class="col-sm-4">Trạng thái hệ thống</dt><dd class="col-sm-8"><code>@account.Status</code></dd><dt class="col-sm-4">Vai trò</dt><dd class="col-sm-8">@(account.RoleNames.Count == 0 ? "—" : string.Join(", ", account.RoleNames)) <a asp-action="Roles" asp-route-id="@Model.Id" class="ms-2"><i class="ti ti-shield-lock" aria-hidden="true"></i>Quản lý vai trò</a></dd><dt class="col-sm-4">Doanh nghiệp đang truy cập</dt><dd class="col-sm-8">@account.ActiveMembershipCount</dd></dl>
 <div class="form-hint">Chỉnh sửa hồ sơ không thay đổi mật khẩu hay vai trò.</div>
 </div>
-<div class="card-footer d-flex flex-wrap gap-2"><a asp-action="Index" class="btn"><i class="ti ti-arrow-left" aria-hidden="true"></i>Quay lại</a><a asp-action="Delete" asp-route-id="@Model.Id" class="btn btn-outline-danger"><i class="ti ti-trash" aria-hidden="true"></i>Xóa người dùng</a><button type="submit" class="btn btn-primary ms-auto" data-ta-loading data-ta-loading-text="Đang lưu..."><i class="ti ti-device-floppy" aria-hidden="true"></i><span>Lưu thay đổi</span></button></div>
+<div class="card-footer d-flex flex-wrap gap-2"><a asp-action="Index" class="btn"><i class="ti ti-arrow-left" aria-hidden="true"></i>Quay lại</a>@if (!isSelf) {<a asp-action="Delete" asp-route-id="@Model.Id" class="btn btn-outline-danger" data-ta-delete-link><i class="ti ti-trash" aria-hidden="true"></i>Xóa người dùng</a>}<button type="submit" class="btn btn-primary ms-auto" data-ta-loading data-ta-loading-text="Đang lưu..."><i class="ti ti-device-floppy" aria-hidden="true"></i><span>Lưu thay đổi</span></button></div>
 </form></div></div></div>

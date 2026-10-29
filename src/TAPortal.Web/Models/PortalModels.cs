@@ -74,5 +74,5 @@ public sealed record PortalUser(Guid Id, string Username, string DisplayName, st
 public sealed record PortalRole(Guid Id, string Code, string Name, string? Description, bool IsSystem, bool IsActive);
 public sealed record PortalMenu(Guid Id, Guid? ParentId, string Code, string Name, string? Icon, string? Route, int SortOrder, bool IsVisible, bool IsActive);
 public sealed record CustomerRow(Guid Id, string Code, string Name, string? TaxCode, string? Email, string? Phone, string Status, bool IsActive = true);
-public sealed record DashboardVm(int CustomerCount, int UserCount, int ActiveUserCount, int RoleCount);
+public sealed record DashboardPageVm(TAPortal.Web.Services.DashboardSnapshot? Data, bool RequireDurableAudit, int LoginAccountLimit, int LoginIpLimit, TimeSpan LoginWindow);
 public sealed record ErrorVm(string? RequestId);

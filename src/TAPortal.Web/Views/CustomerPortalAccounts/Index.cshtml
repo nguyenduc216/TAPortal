@@ -29,7 +29,8 @@
 <td><div class="fw-medium">@r.DisplayName</div><div class="text-secondary small">@r.Username</div>@if(!string.IsNullOrEmpty(r.Email)){<div class="text-secondary small text-break">@r.Email</div>}</td>
 <td class="text-break">@r.CustomerName</td>
 <td><form asp-action="Save" method="post" class="d-flex gap-1"><input type="hidden" name="UserId" value="@r.UserId"/><input type="hidden" name="CustomerId" value="@r.CustomerId"/><select name="PortalRole" class="form-select form-select-sm" aria-label="Vai trò của @r.Username">@foreach(var role in new[]{"OWNER","ADMIN","VIEWER"}){<option selected="@(r.Role==role)" value="@role">@role</option>}</select><button type="submit" class="btn btn-sm" title="Lưu vai trò (đồng thời kích hoạt quyền truy cập)" aria-label="Lưu vai trò"><i class="ti ti-check" aria-hidden="true"></i></button></form></td>
-<td><span class="badge @(r.Active ? "badge-ta-active" : "bg-secondary-lt")">@(r.Active ? "Đang cấp quyền" : "Đã thu hồi")</span>@if(r.Status != "ACTIVE"){<div class="small text-danger mt-1">Tài khoản: @r.Status</div>}</td>
+@{ var effect = TAPortal.Web.Services.MembershipDisplay.Evaluate(r.Active, r.Status, customers.FirstOrDefault(c => c.Id == r.CustomerId)); }
+<td><span class="badge @(effect.Effective ? "badge-ta-active" : r.Active ? "bg-yellow-lt" : "bg-secondary-lt")">@effect.Label</span>@if(effect.Reason is not null){<div class="small text-danger mt-1">Lý do: @effect.Reason</div>}</td>
 <td class="text-nowrap">@(r.LastLogin?.ToString("dd/MM/yyyy HH:mm") ?? "—")</td>
 <td><form asp-action="SetActive" method="post"><input type="hidden" name="userId" value="@r.UserId"/><input type="hidden" name="customerId" value="@r.CustomerId"/><input type="hidden" name="active" value="@((!r.Active).ToString())"/><button type="submit" class="btn btn-sm @(r.Active ? "btn-outline-danger" : "btn-outline-primary") text-nowrap">@(r.Active ? "Thu hồi" : "Kích hoạt lại")</button></form></td>
 </tr>}

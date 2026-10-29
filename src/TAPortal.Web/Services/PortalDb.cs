@@ -225,22 +225,6 @@ VALUES(@id,@username,@nu,@email,@ne,@phone,@name,@hash,'ACTIVE',1,@createdBy);
         return list;
     }
 
-    public async Task<DashboardVm> GetDashboardAsync()
-    {
-        await using var cn = Open(); await cn.OpenAsync();
-        const string sql = """
-SELECT
- (SELECT COUNT(1) FROM dbo.Customers WHERE IsDeleted=0),
- (SELECT COUNT(1) FROM dbo.Users WHERE IsDeleted=0),
- (SELECT COUNT(1) FROM dbo.Users WHERE IsDeleted=0 AND IsActive=1 AND Status='ACTIVE'),
- (SELECT COUNT(1) FROM dbo.Roles WHERE IsDeleted=0);
-""";
-        await using var cmd = new SqlCommand(sql, cn);
-        await using var rd = await cmd.ExecuteReaderAsync();
-        await rd.ReadAsync();
-        return new(rd.GetInt32(0), rd.GetInt32(1), rd.GetInt32(2), rd.GetInt32(3));
-    }
-
     public async Task EnsureAdminAsync(string passwordHash)
     {
         await using var cn = Open(); await cn.OpenAsync();

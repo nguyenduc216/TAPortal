@@ -10,9 +10,22 @@ using TAPortal.Web.Services;
 namespace TAPortal.Web.Controllers;
 
 [Authorize(Policy = "SystemAdminOnly")]
-public sealed class HomeController(PortalDb db) : Controller
+public sealed class HomeController(IDashboardStore dashboard, AdminAuditOptions audit, AdminLoginThrottleOptions throttle, ILogger<HomeController> logger) : Controller
 {
-    public async Task<IActionResult> Index() => View(await db.GetDashboardAsync());
+    public async Task<IActionResult> Index()
+    {
+        DashboardSnapshot? data = null;
+        try
+        {
+            data = await dashboard.LoadAsync();
+        }
+        catch (Exception ex) when (ex is SqlException or InvalidOperationException or ArgumentException)
+        {
+            // Never show exception details; the page renders an explicit "data unavailable" state instead of zeros.
+            logger.LogError(ex, "Dashboard data could not be loaded.");
+        }
+        return View(new DashboardPageVm(data, audit.RequireDurableAudit, throttle.AccountPermitLimit, throttle.IpPermitLimit, throttle.Window));
+    }
 
     [AllowAnonymous]
     public IActionResult Error()

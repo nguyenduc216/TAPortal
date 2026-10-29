@@ -7,11 +7,16 @@ namespace TAPortal.Web.Services;
 
 public sealed record RoleOption(Guid Id, string Code, string Name, bool IsActive);
 
+// Direct per-user override from dbo.UserPermissions (read-only here; DENY removes a permission granted by roles).
+public sealed record DirectPermission(string Code, string Name, string Effect);
+
 // State read inside the update transaction. SystemAdminIds = active users currently holding the active SYS_ADMIN role.
 public sealed record UserRoleSnapshot(
     Guid UserId, string Username, string DisplayName, bool UserActive, string Status,
-    IReadOnlyList<RoleOption> Roles, IReadOnlySet<Guid> AssignedRoleIds, IReadOnlySet<Guid> SystemAdminIds)
+    IReadOnlyList<RoleOption> Roles, IReadOnlySet<Guid> AssignedRoleIds, IReadOnlySet<Guid> SystemAdminIds,
+    IReadOnlyList<DirectPermission>? DirectPermissions = null)
 {
+    public bool IsLastSystemAdmin => SystemAdminIds.Count == 1 && SystemAdminIds.Contains(UserId);
     public string Stamp => RoleChangePolicy.Stamp(AssignedRoleIds);
 }
 
@@ -75,6 +80,7 @@ SELECT DISTINCT u.Id FROM dbo.UserRoles ur WITH (UPDLOCK, HOLDLOCK)
 JOIN dbo.Roles r ON r.Id=ur.RoleId JOIN dbo.Users u ON u.Id=ur.UserId
 WHERE r.Code='SYS_ADMIN' AND r.IsActive=1 AND r.IsDeleted=0 AND u.IsActive=1 AND u.IsDeleted=0 AND u.Status='ACTIVE';
 """;
+    public const string DirectPermissions = "SELECT p.Code,p.Name,up.Effect FROM dbo.UserPermissions up JOIN dbo.Permissions p ON p.Id=up.PermissionId WHERE up.UserId=@u AND p.IsDeleted=0 ORDER BY up.Effect,p.Code;";
     public const string Remove = "DELETE FROM dbo.UserRoles WHERE UserId=@u AND RoleId=@r;";
     public const string Add = "INSERT dbo.UserRoles(UserId,RoleId,CreatedBy) VALUES(@u,@r,@by);";
     // Writes only when dbo.AuditLogs exists with the expected columns (TAPortalSys schema not verified by this change).
@@ -161,7 +167,14 @@ public sealed class SqlUserRoleStore(IConfiguration configuration, AdminAuditOpt
             while (await r.ReadAsync()) roles.Add(new(r.GetGuid(0), r.GetString(1), r.GetString(2), r.GetBoolean(3)));
         var assigned = await Ids(cn, tx, UserRoleSql.Assigned, userId);
         var admins = await Ids(cn, tx, UserRoleSql.SystemAdmins, null);
-        return new(id, username, display, active, status, roles, assigned, admins);
+        var direct = new List<DirectPermission>();
+        await using (var cmd = new SqlCommand(UserRoleSql.DirectPermissions, cn, tx))
+        {
+            cmd.Parameters.AddWithValue("@u", userId);
+            await using var r = await cmd.ExecuteReaderAsync();
+            while (await r.ReadAsync()) direct.Add(new(r.GetString(0), r.GetString(1), r.GetString(2)));
+        }
+        return new(id, username, display, active, status, roles, assigned, admins, direct);
     }
 
     private static async Task<HashSet<Guid>> Ids(SqlConnection cn, SqlTransaction tx, string sql, Guid? userId)

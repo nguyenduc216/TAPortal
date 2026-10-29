@@ -97,7 +97,10 @@
     const currentPath = window.location.pathname.toLowerCase().replace(/\/$/, '') || '/';
     document.querySelectorAll('.ta-sidebar .nav-link[href]').forEach((link) => {
         const path = new URL(link.href, window.location.href).pathname.toLowerCase().replace(/\/$/, '') || '/';
-        if (path === currentPath) link.classList.add('active');
+        if (path === currentPath) {
+            link.classList.add('active');
+            link.setAttribute('aria-current', 'page');
+        }
     });
     window.addEventListener('pageshow', () => {
         document.querySelectorAll('form[data-ta-submitting="true"]').forEach((form) => delete form.dataset.taSubmitting);

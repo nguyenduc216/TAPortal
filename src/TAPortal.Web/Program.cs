@@ -59,6 +59,7 @@ builder.Services.AddScoped<MembershipAdminStore>();
 builder.Services.AddScoped<IUserRoleStore, SqlUserRoleStore>();
 builder.Services.AddScoped<IUserAccountStore, SqlUserAccountStore>();
 builder.Services.AddScoped<ICustomerAdminStore, SqlCustomerAdminStore>();
+builder.Services.AddScoped<IDashboardStore, SqlDashboardStore>();
 builder.Services.AddSingleton(sp =>
 {
     var options = new AdminAuditOptions();
