@@ -93,17 +93,17 @@ public sealed class SafeUiDesignSystemTests
     }
 
     [Fact]
-    public void CustomerPortalHasItsOwnGreenAndGoldDesign()
+    public void CustomerPortalHasItsOwnGoldSidebarAndBlueDesign()
     {
         var css = File.ReadAllText(Path.Combine(CustomerWww, "css", "customer.css"));
-        Assert.Matches(@"--cp-green-700:\s*#146C3F;", css);
-        Assert.Matches(@"--cp-gold-500:\s*#F2B705;", css);
+        Assert.Matches(@"--cp-blue-600:\s*#2563EB;", css);              // primary
+        Assert.Matches(@"--cp-gold-700:\s*#A16207;", css);              // deep-gold sidebar
         Assert.DoesNotContain("--ta-navy", css);
         Assert.False(File.Exists(Path.Combine(CustomerWww, "css", "ta-design.css")));
         Assert.False(Directory.Exists(Path.Combine(CustomerWww, "lib", "tabler")));
         var layout = File.ReadAllText(Path.Combine(Root, "src", "TACustomerPortal.Web", "Views", "Shared", "_Layout.cshtml"));
-        Assert.DoesNotContain("ta-sidebar", layout);                   // top navigation + phone tab bar instead of the Admin sidebar
-        Assert.Contains("cp-tabbar", layout);
+        Assert.Contains("class=\"cp-sidebar\" id=\"taSidebar\"", layout);   // own sidebar, drawer behaviour from ta-shell.js
+        Assert.DoesNotContain("class=\"ta-sidebar\"", layout);              // not the Admin sidebar
         Assert.Contains("data-ta-swap", layout);                       // soft navigation container
     }
 

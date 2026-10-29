@@ -107,11 +107,11 @@ public sealed class VisualSnapshotTests
         {
             using var scope = f.Services.CreateScope();
             var sp = scope.ServiceProvider;
-            var user = Principal(("display_name", "Trần Thị B"));
+            var user = Principal(("display_name", "Trần Thị B"), ("customer_id", SampleCompany.CustomerId.ToString()));
             var wwwroot = Path.Combine(root, "src", "TACustomerPortal.Web", "wwwroot");
             async Task Save(string name, string controller, string action, string view, object? model, ClaimsPrincipal? principal = null)
                 => await File.WriteAllTextAsync(Path.Combine(output, $"customer-{name}.html"), Localize(await Render(sp, controller, action, view, model, principal ?? user, null), wwwroot));
-            var company = new CustomerMembership(Guid.NewGuid(), "KH0004", "Công ty Cổ phần Ánh Dương", "0312345674", "hello@anhduong.example", "02838201004", "12 Nguyễn Huệ, Quận 1, TP. Hồ Chí Minh", "OWNER");
+            var company = SampleCompany;
             await Save("login", "Account", "Login", "Login", new CustomerModels.LoginVm(), new ClaimsPrincipal(new ClaimsIdentity()));
             await Save("select-customer", "Account", "SelectCustomer", "SelectCustomer", new List<CustomerMembership> { company, company with { CustomerId = Guid.NewGuid(), Code = "KH0008", Name = "Công ty Cổ phần Bình Minh", Role = "VIEWER" } });
             await Save("dashboard", "Dashboard", "Index", "Index", company);
@@ -137,6 +137,7 @@ public sealed class VisualSnapshotTests
         http.Request.Host = new HostString("localhost");
         http.Request.Path = $"/{controller}/{action}";
         http.SetEndpoint(new Endpoint(_ => Task.CompletedTask, new EndpointMetadataCollection(), "visual"));
+        if (sp.GetService<IHttpContextAccessor>() is { } accessor) accessor.HttpContext = http;   // layouts that read the request context
         var route = new RouteData();
         route.Values["controller"] = controller;
         route.Values["action"] = action;
@@ -171,8 +172,20 @@ public sealed class VisualSnapshotTests
             .ConfigureAppConfiguration((_, c) => c.AddInMemoryCollection(new Dictionary<string, string?> { ["Database:ConnectionString"] = "INVALID: visual snapshots never use SQL", ["DataProtection:KeyPath"] = "" }))
             .ConfigureTestServices(s => s.AddDataProtection().UseEphemeralDataProtectionProvider()));
 
+    private static readonly CustomerMembership SampleCompany = new(Guid.Parse("aaaaaaaa-bbbb-cccc-dddd-000000000004"), "KH0004", "Công ty Cổ phần Ánh Dương", "0312345674", "hello@anhduong.example", "02838201004", "12 Nguyễn Huệ, Quận 1, TP. Hồ Chí Minh", "OWNER");
+
+    // Sample data for the layout's workspace switcher (screenshots only).
+    private sealed class SampleCustomerStore : ICustomerStore
+    {
+        public Task<CustomerUser?> FindUser(string username) => Task.FromResult<CustomerUser?>(null);
+        public Task<CustomerUser?> FindUser(Guid id) => Task.FromResult<CustomerUser?>(null);
+        public Task<IReadOnlyList<CustomerMembership>> Memberships(Guid userId) => Task.FromResult<IReadOnlyList<CustomerMembership>>([SampleCompany]);
+        public Task<bool> ChangePassword(Guid id, string oldHash, string newHash) => Task.FromResult(false);
+        public Task TouchLogin(Guid id) => Task.CompletedTask;
+    }
+
     private static WebApplicationFactory<Program> CustomerFactory() =>
         new WebApplicationFactory<Program>().WithWebHostBuilder(b => b.UseEnvironment("Development")
             .ConfigureAppConfiguration((_, c) => c.AddInMemoryCollection(new Dictionary<string, string?> { ["Database:ConnectionString"] = "INVALID: visual snapshots never use SQL", ["DataProtection:KeyPath"] = "" }))
-            .ConfigureTestServices(s => s.AddDataProtection().UseEphemeralDataProtectionProvider()));
+            .ConfigureTestServices(s => { s.AddDataProtection().UseEphemeralDataProtectionProvider(); s.RemoveAll<ICustomerStore>(); s.AddSingleton<ICustomerStore>(new SampleCustomerStore()); }));
 }

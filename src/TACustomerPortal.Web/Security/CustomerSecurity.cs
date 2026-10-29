@@ -60,9 +60,14 @@ public interface ICurrentCustomerContext
     Task<CustomerMembership?> Get();
 }
 
+// Scoped: the result is reused within one request (controller + layout workspace switcher share a single query).
 public sealed class CurrentCustomerContext(IHttpContextAccessor accessor, ICustomerStore store) : ICurrentCustomerContext
 {
-    public async Task<CustomerMembership?> Get()
+    private Task<CustomerMembership?>? current;
+
+    public Task<CustomerMembership?> Get() => current ??= Load();
+
+    private async Task<CustomerMembership?> Load()
     {
         var user = accessor.HttpContext?.User;
         if (!Guid.TryParse(user?.FindFirstValue(ClaimTypes.NameIdentifier), out var id) || !Guid.TryParse(user.FindFirstValue("customer_id"), out var customer))
