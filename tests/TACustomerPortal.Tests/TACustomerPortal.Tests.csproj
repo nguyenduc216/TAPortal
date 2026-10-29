@@ -22,4 +22,8 @@
   <ItemGroup>
     <ProjectReference Include="../../src/TAPortal.Web/TAPortal.Web.csproj" Aliases="admin" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/TAPortal.Integrations/TAPortal.Integrations.csproj" />
+    <ProjectReference Include="../../src/TAPortal.Webhooks/TAPortal.Webhooks.csproj" Aliases="webhooks" />
+  </ItemGroup>
 </Project>
