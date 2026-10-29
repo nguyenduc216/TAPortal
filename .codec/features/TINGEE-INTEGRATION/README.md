@@ -24,3 +24,7 @@
 | Change ID | Ngày UTC | Nội dung | Commit SHA | Migration | Publish | Merge |
 |---|---|---|---|---|---|---|
 | `TINGEE-INTEGRATION-CHG-20261029T200714Z-B90483` | 2026-10-29 | Scaffold TAPortal.Integrations and TAPortal.Webhooks projects | f7979e10a7ce69174332db638c5ef1fec95369b4 | NONE_REQUIRED | NOT_RUN (no configured target) | PENDING_APPROVAL |
+| `TINGEE-INTEGRATION-CHG-20261029T203104Z-1FE09C` | 2026-10-29 | Tingee merchant mapping (Admin); bank accounts, contacts and QR orders (Customer); webhook inbox | 91e36178531a9d8b525f857b68f36dc88798371e | NOT_EXECUTED (011) | PUBLISHED (local ×3) / NOT_DEPLOYED | PENDING_APPROVAL |
+
+## Current status (2026-10-30)
+Admin: tab Thanh toán Tingee. Customer: ngân hàng, khách hàng, đơn hàng QR, cài đặt thanh toán. Webhooks: inbox SQL. Migration 011 NOT_EXECUTED; Tingee chưa có key (NOT_VERIFIED). Tiếp theo: worker xử lý inbox + đối soát, phân quyền linh hoạt, Zalo, hóa đơn.

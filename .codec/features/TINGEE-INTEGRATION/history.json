@@ -16,5 +16,50 @@
       "codec_validate": "PASS"
     },
     "iis": "NOT_CHECKED"
+  },
+  {
+    "change_id": "TINGEE-INTEGRATION-CHG-20261029T203104Z-1FE09C",
+    "created_at": "2026-10-29T20:31:04.411490+00:00",
+    "title": "Tingee merchant mapping (Admin); bank accounts, contacts and QR orders (Customer); webhook inbox",
+    "status": "IMPLEMENTED / BUILD_VERIFIED / LOCAL_PUBLISH_COMPLETE / MIGRATION_NOT_EXECUTED / TINGEE_NOT_VERIFIED / VISUAL_NOT_VERIFIED / PRODUCTION_NOT_DEPLOYED",
+    "commit_sha": "91e36178531a9d8b525f857b68f36dc88798371e",
+    "migration_status": "NOT_EXECUTED (011-tingee-payments-foundation.sql)",
+    "publish_status": "PUBLISHED (local: Admin, Customer, Webhooks) / NOT_DEPLOYED",
+    "merge_status": "PENDING_APPROVAL",
+    "agent": "Claude Code (claude-opus-5-5)",
+    "base_sha": "04eabd9f76cbe30cca985d8ee54828acc37f7fe5",
+    "build": {
+      "release_build": "0 warnings / 0 errors",
+      "safe_tests": "303 passed / 0 failed / 0 skipped",
+      "codec_validate": "PASS"
+    },
+    "artifacts": {
+      "TAPortal.Web": {
+        "exit_code": 0,
+        "started_utc": "2026-10-29T20:51:05Z",
+        "finished_utc": "2026-10-29T20:51:06Z",
+        "files": 65,
+        "sha256": "9f9fa64103b37c0bcd127ae27bb4f475df6073bc8d2cdf17f2bfe21be79cd244",
+        "previous_sha256": "cc224fd32f4470a870b5d97dcb9278b3eba8044a64ac47d8b6757d8dd331ddfa"
+      },
+      "TACustomerPortal.Web": {
+        "exit_code": 0,
+        "started_utc": "2026-10-29T20:51:15Z",
+        "finished_utc": "2026-10-29T20:51:16Z",
+        "files": 58,
+        "sha256": "d932771b21c577fbe5359d848f035dddb40ae107a6c57a5e1e6fd489986c95e8",
+        "previous_sha256": "45728db69dd6302831edf5f8613fc5e45b57dec069a0e46b6095c39449dc0ddc"
+      },
+      "TAPortal.Webhooks": {
+        "exit_code": 0,
+        "started_utc": "2026-10-29T20:51:20Z",
+        "finished_utc": "2026-10-29T20:51:22Z",
+        "files": 53,
+        "sha256": "a51d29acdf543b7e30105c2a60c4430dc9cb3c1366a0a2a93d44bc9c2f1ad9c5",
+        "previous_sha256": null
+      }
+    },
+    "backup": "publish\\rollback\\TINGEE-INTEGRATION-CHG-20261029T203104Z-1FE09C",
+    "iis": "NOT_CHECKED"
   }
 ]

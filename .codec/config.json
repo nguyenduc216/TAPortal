@@ -22,7 +22,8 @@
   "deploy": {
     "targets": {
       "TAPortal.Web": "D:\\T.A\\TAPortal\\TAPortal\\publish\\deployed-TAPortal.Web",
-      "TACustomerPortal.Web": "D:\\T.A\\TAPortal\\TAPortal\\publish\\deployed-TACustomerPortal.Web"
+      "TACustomerPortal.Web": "D:\\T.A\\TAPortal\\TAPortal\\publish\\deployed-TACustomerPortal.Web",
+      "TAPortal.Webhooks": "D:\\T.A\\TAPortal\\TAPortal\\publish\\deployed-TAPortal.Webhooks"
     },
     "allow_alternate_target": false,
     "create_target_directory": true,
@@ -46,7 +47,8 @@
     "shared_project": "TAPortal.Shared",
     "shared_dependents": [
       "TAPortal.Web",
-      "TACustomerPortal.Web"
+      "TACustomerPortal.Web",
+      "TAPortal.Webhooks"
     ],
     "artifact_manifest_method": "SHA256_UTF8_LF_SORTED_RELATIVE_POSIX",
     "artifact_manifest_dir": ".codec/reports"
