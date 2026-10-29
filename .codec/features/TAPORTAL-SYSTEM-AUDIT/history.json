@@ -1043,5 +1043,54 @@
     },
     "backup": "publish\\rollback\\TAPORTAL-SYSTEM-AUDIT-CHG-20261029T170242Z-4FCD90\\",
     "iis": "NOT_CHECKED"
+  },
+  {
+    "change_id": "TAPORTAL-SYSTEM-AUDIT-CHG-20261029T174605Z-279950",
+    "created_at": "2026-10-29T17:46:05.470621+00:00",
+    "title": "Customer Portal login and feature audit: data-unavailable handling, redirects, error diagnostics",
+    "status": "FIXED_IN_CODE / BUILD_VERIFIED / LOCAL_PUBLISH_COMPLETE (Customer) / ROOT_CAUSE NOT_VERIFIED / PRODUCTION_NOT_DEPLOYED",
+    "commit_sha": "3cd60409165d1163bcfccbec94acf7397700df92",
+    "migration_status": "NONE_REQUIRED / NO_SQL_EXECUTED",
+    "publish_status": "PUBLISHED (local, Customer only) / NOT_DEPLOYED",
+    "merge_status": "PENDING_APPROVAL",
+    "agent": "Claude Code (claude-opus-5-5)",
+    "base_sha": "8fd3a16656160a03816a1d757f0114db7b504c98",
+    "findings": [
+      "CL-01 HIGH login data failure -> generic error page",
+      "CL-02 MEDIUM LastLoginAt write failure undid sign-in",
+      "CL-03 MEDIUM hard-coded redirects break under virtual directory",
+      "CL-04 LOW blank 429",
+      "CL-05 LOW Personal null model",
+      "CL-06 LOW no error reference",
+      "CL-07 LOW no startup signal for missing connection string",
+      "CL-08 LOW empty company switcher"
+    ],
+    "root_cause_hypotheses": [
+      "Database__ConnectionString missing for Customer site",
+      "Customer SQL principal lacks SELECT/UPDATE grants",
+      "SQL Server unreachable from Customer app pool"
+    ],
+    "build": {
+      "release_build": "0 warnings / 0 errors",
+      "safe_tests": "260 passed / 0 failed / 0 skipped",
+      "codec_validate": "PASS"
+    },
+    "artifacts": {
+      "TACustomerPortal.Web": {
+        "exit_code": 0,
+        "started_utc": "2026-10-29T17:48:30Z",
+        "finished_utc": "2026-10-29T17:48:33Z",
+        "files": 55,
+        "sha256": "d70a3736abaa9c0058d879496f40243a1323cb0156ef0ecf62af58a13afb95c9",
+        "previous_sha256": "ac27314e0a4b9db55b0f80dbe8f429d072a9a6dfe7b3839bff072ccf4b355e79"
+      },
+      "TAPortal.Web": {
+        "status": "NOT_REQUIRED",
+        "sha256": "cc224fd32f4470a870b5d97dcb9278b3eba8044a64ac47d8b6757d8dd331ddfa"
+      }
+    },
+    "backup": "publish\\rollback\\TAPORTAL-SYSTEM-AUDIT-CHG-20261029T174605Z-279950\\TACustomerPortal.Web",
+    "iis": "NOT_CHECKED",
+    "database": "NOT_VERIFIED (MCP unreachable)"
   }
 ]

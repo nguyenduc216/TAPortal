@@ -64,3 +64,7 @@ Customer Portal role names, password UX and company search; shared modal/animati
 
 ## Customer Portal redesign + navigation — current status
 Customer Portal has its own green/gold design (customer.css, no Tabler); Customers module has tabs 'Danh sách khách hàng' | 'Tài khoản Portal' (legacy page retired, GET redirects kept); TA staff excluded from Portal grants; client-side pagination and soft navigation in both apps. Safe tests 254/254; E2E navigation/pagination PASS. Admin `cc224fd3…ddfa` (62), Customer `ac27314e…5e79` (55). NOT_DEPLOYED. Prior status lines above are historical.
+| `TAPORTAL-SYSTEM-AUDIT-CHG-20261029T174605Z-279950` | 2026-10-29 | Customer Portal login and feature audit: data-unavailable handling, redirects, error diagnostics | 3cd60409165d1163bcfccbec94acf7397700df92 | NONE_REQUIRED | PUBLISHED (local, Customer only) / NOT_DEPLOYED | PENDING_APPROVAL |
+
+## Customer login audit — current status
+Sign-in survives data-layer failures with a message and incident reference; CL-01..08 fixed in code. Production root cause NOT_VERIFIED (check Database__ConnectionString, SQL grants, connectivity; Event Viewer). Safe tests 260/260. Customer `d70a3736…95c9` (55). NOT_DEPLOYED. Prior status lines above are historical.
