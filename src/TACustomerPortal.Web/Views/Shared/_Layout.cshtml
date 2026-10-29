@@ -1,2 +1,99 @@
-<!doctype html><html lang="vi"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><link rel="icon" type="image/png" href="~/images/favicon-32x32.png"/><title>@ViewData["Title"] · T.A Customer Portal</title><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@@tabler/core@1.0.0-beta21/dist/css/tabler.min.css"/><link rel="stylesheet" href="~/css/customer.css" asp-append-version="true"/></head>
-<body>@if(User.Identity?.IsAuthenticated==true){<div class="portal"><aside class="sidebar"><a class="brand" href="/">T.A <span>Customer Portal</span></a><p class="menu-label">TỔNG QUAN</p><a href="/">Dashboard</a><p class="menu-label">TÀI KHOẢN</p><a href="/profile/company">Hồ sơ doanh nghiệp</a><a href="/profile/personal">Thông tin cá nhân</a><a href="/account/change-password">Đổi mật khẩu</a><a href="/account/select-customer">Chuyển doanh nghiệp</a><p class="menu-label">HỆ THỐNG</p><form method="post" asp-controller="Account" asp-action="Logout"><button>Đăng xuất</button></form><div class="sidebar-foot">Kết nối doanh nghiệp<br/>Đồng hành cùng T.A</div></aside><div class="content"><header><span>CỔNG THÔNG TIN KHÁCH HÀNG</span><strong>@User.FindFirst("display_name")?.Value</strong></header><main>@RenderBody()</main><footer>T.A Customer Portal · MVP 01</footer></div></div>}else{<main class="auth-shell">@RenderBody()</main>}<script src="~/js/customer.js" asp-append-version="true"></script></body></html>
+@functions {
+    private bool IsCurrent(string controller, string action) =>
+        string.Equals(ViewContext.RouteData.Values["controller"]?.ToString(), controller, StringComparison.OrdinalIgnoreCase)
+        && string.Equals(ViewContext.RouteData.Values["action"]?.ToString(), action, StringComparison.OrdinalIgnoreCase);
+
+    private static string Initials(string? name)
+    {
+        var last = (name ?? "").Split(' ', StringSplitOptions.RemoveEmptyEntries).LastOrDefault();
+        return string.IsNullOrEmpty(last) ? "TA" : last[..1].ToUpperInvariant();
+    }
+}
+@{
+    var displayName = User.FindFirst("display_name")?.Value ?? User.Identity?.Name;
+    var heading = ViewData["Heading"] as string ?? ViewData["Title"] as string;
+    var hideHeader = ViewData["HideHeader"] is true;
+}
+<!doctype html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" type="image/png" href="~/images/favicon-32x32.png" />
+    <meta name="theme-color" content="#082746" />
+    <title>@ViewData["Title"] · T.A Customer Portal</title>
+    <link rel="stylesheet" href="~/lib/tabler/tabler.min.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/ta-design.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/customer.css" asp-append-version="true" />
+</head>
+<body>
+@if (User.Identity?.IsAuthenticated == true)
+{
+    <a class="ta-skip-link" href="#taMain">Bỏ qua đến nội dung chính</a>
+    <aside class="ta-sidebar" id="taSidebar" aria-label="Điều hướng chính">
+        <div class="ta-sidebar__brand">
+            <a class="ta-brand" asp-controller="Dashboard" asp-action="Index" title="T.A Customer Portal">
+                <span class="ta-brand__mark" aria-hidden="true">T<span>A</span></span>
+                <span class="ta-brand__text">T.A Portal<span class="ta-brand__sub">Customer Portal</span></span>
+            </a>
+            <button type="button" class="ta-sidebar__close" data-ta-drawer-close aria-label="Đóng menu">@UiIcon.Render("x")</button>
+        </div>
+        <nav class="ta-nav" aria-label="Menu khách hàng">
+            <div class="ta-nav__group">
+                <ul class="ta-nav__list">
+                    <li><a class="ta-nav__link" asp-controller="Dashboard" asp-action="Index" title="Tổng quan" aria-current="@(IsCurrent("Dashboard", "Index") ? "page" : null)"><span class="ta-nav__icon">@UiIcon.Render("layout-dashboard")</span><span class="ta-nav__label">Tổng quan</span></a></li>
+                </ul>
+            </div>
+            <div class="ta-nav__group">
+                <p class="ta-nav__section">Doanh nghiệp</p>
+                <ul class="ta-nav__list">
+                    <li><a class="ta-nav__link" asp-controller="Profile" asp-action="Company" title="Hồ sơ doanh nghiệp" aria-current="@(IsCurrent("Profile", "Company") ? "page" : null)"><span class="ta-nav__icon">@UiIcon.Render("building")</span><span class="ta-nav__label">Hồ sơ doanh nghiệp</span></a></li>
+                    <li><a class="ta-nav__link" asp-controller="Account" asp-action="SelectCustomer" title="Chuyển doanh nghiệp" aria-current="@(IsCurrent("Account", "SelectCustomer") ? "page" : null)"><span class="ta-nav__icon">@UiIcon.Render("switch-horizontal")</span><span class="ta-nav__label">Chuyển doanh nghiệp</span></a></li>
+                </ul>
+            </div>
+            <div class="ta-nav__group">
+                <p class="ta-nav__section">Tài khoản</p>
+                <ul class="ta-nav__list">
+                    <li><a class="ta-nav__link" asp-controller="Profile" asp-action="Personal" title="Thông tin cá nhân" aria-current="@(IsCurrent("Profile", "Personal") ? "page" : null)"><span class="ta-nav__icon">@UiIcon.Render("id")</span><span class="ta-nav__label">Thông tin cá nhân</span></a></li>
+                    <li><a class="ta-nav__link" asp-controller="Account" asp-action="ChangePassword" title="Đổi mật khẩu" aria-current="@(IsCurrent("Account", "ChangePassword") ? "page" : null)"><span class="ta-nav__icon">@UiIcon.Render("key")</span><span class="ta-nav__label">Đổi mật khẩu</span></a></li>
+                </ul>
+            </div>
+        </nav>
+        <div class="ta-nav__footer">
+            <form method="post" asp-controller="Account" asp-action="Logout"><button type="submit" class="ta-nav__link ta-nav__link--danger" title="Đăng xuất"><span class="ta-nav__icon">@UiIcon.Render("logout")</span><span class="ta-nav__label">Đăng xuất</span></button></form>
+        </div>
+    </aside>
+    <div class="ta-overlay" data-ta-drawer-close hidden></div>
+    <div class="ta-main">
+        <header class="ta-topbar">
+            <button type="button" class="ta-icon-btn" data-ta-sidebar-toggle aria-controls="taSidebar" aria-expanded="true" aria-label="Thu gọn/mở rộng menu">@UiIcon.Render("menu-2")</button>
+            <span class="ta-topbar__title">Cổng thông tin khách hàng</span>
+            <div class="ta-user ms-auto" aria-label="Đang đăng nhập: @displayName">
+                <span class="ta-avatar" aria-hidden="true">@Initials(displayName)</span>
+                <span class="ta-user__text"><span class="ta-user__name d-block">@displayName</span><span class="ta-user__role d-block">@User.Identity?.Name</span></span>
+            </div>
+        </header>
+        <main id="taMain" class="ta-content ta-page-enter" tabindex="-1">
+            @if (!hideHeader)
+            {
+                <div class="ta-page-head">
+                    @if (ViewData["PageIcon"] is string pageIcon) {<div class="ta-page-head__icon" aria-hidden="true">@UiIcon.Render(pageIcon)</div>}
+                    <div class="ta-page-head__text">
+                        <h1 class="ta-page-title">@heading</h1>
+                        @if (ViewData["Subtitle"] is string subtitle) {<p class="ta-page-sub">@subtitle</p>}
+                    </div>
+                </div>
+            }
+            @RenderBody()
+        </main>
+        <footer class="ta-footer">T.A Customer Portal · MVP 01</footer>
+    </div>
+}
+else
+{
+    <main class="ta-auth-shell">@RenderBody()</main>
+}
+<script src="~/js/ta-shell.js" asp-append-version="true"></script>
+<script src="~/js/customer.js" asp-append-version="true"></script>
+</body>
+</html>

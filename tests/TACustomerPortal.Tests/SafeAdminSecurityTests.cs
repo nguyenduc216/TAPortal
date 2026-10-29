@@ -179,7 +179,7 @@ public sealed class SafeAdminSecurityTests
     {
         using var f = Factory(null, new FakeTime());
         using var c = Client(f);
-        foreach (var path in new[] { "/css/ta-portal.css", "/js/ta-portal.js", "/images/favicon-32x32.png" })
+        foreach (var path in new[] { "/css/ta-design.css", "/js/ta-portal.js", "/images/favicon-32x32.png" })
         {
             var response = await c.GetAsync(path);
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);

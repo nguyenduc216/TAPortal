@@ -38,7 +38,16 @@ public sealed class HomeController(IDashboardStore dashboard, AdminAuditOptions 
 [Authorize(Policy = "SystemAdminOnly")]
 public sealed class UsersController(PortalDb db, PasswordService passwords, IUserRoleStore roleStore, IUserAccountStore accounts, ILogger<UsersController> logger) : Controller
 {
-    public async Task<IActionResult> Index() => View(await db.GetUsersAsync());
+    public async Task<IActionResult> Index() => await IndexView();
+
+    // The list view needs the role catalogue (create modal) and each user's role names; loaded here instead of in the view.
+    private async Task<IActionResult> IndexView()
+    {
+        var users = await db.GetUsersAsync();
+        ViewData["Roles"] = await db.GetRolesAsync();
+        ViewData["RoleMap"] = await db.GetUserRoleMapAsync();
+        return View(nameof(Index), users);
+    }
 
     [HttpPost]
     [ValidateAntiForgeryToken]
@@ -70,7 +79,7 @@ public sealed class UsersController(PortalDb db, PasswordService passwords, IUse
         Response.StatusCode = StatusCodes.Status400BadRequest;
         ViewData["CreateUser"] = vm;
         ViewData["CreateUserErrors"] = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage).ToList();
-        return View(nameof(Index), await db.GetUsersAsync());
+        return await IndexView();
     }
 
     [HttpGet]

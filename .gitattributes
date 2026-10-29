@@ -1,2 +1,4 @@
 # Artifact SHA256 manifests are hashed byte-for-byte; never convert their line endings.
 *.sha256 -text
+# Third-party bundles: keep the exact upstream bytes (integrity-verified npm files), no EOL conversion.
+src/*/wwwroot/lib/** -text

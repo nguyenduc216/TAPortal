@@ -1,16 +1,16 @@
 @model ErrorVm
 @{
     ViewData["Title"] = "Lỗi hệ thống";
+    ViewData["HideHeader"] = true;
 }
-
-<div class="empty">
-    <div class="empty-img"><i class="ti ti-alert-triangle fs-1 text-danger"></i></div>
-    <p class="empty-title">Không thể xử lý yêu cầu</p>
-    <p class="empty-subtitle text-secondary">
-        Hệ thống đã ghi nhận lỗi. Vui lòng thử lại sau hoặc liên hệ quản trị viên.
-    </p>
-    @if (!string.IsNullOrWhiteSpace(Model.RequestId))
-    {
-        <p class="text-secondary small mb-0">Mã yêu cầu: <code>@Model.RequestId</code></p>
-    }
-</div>
+<section class="card mx-auto" style="max-width:560px">
+    <div class="ta-empty">
+        <span class="ta-empty__icon" style="background:var(--ta-danger-soft);color:var(--ta-danger-text)">@UiIcon.Render("alert-triangle")</span>
+        <h1 class="ta-empty__title">Không thể xử lý yêu cầu</h1>
+        <p class="ta-empty__text">Hệ thống đã ghi nhận lỗi. Vui lòng thử lại sau hoặc liên hệ quản trị viên.</p>
+        @if (!string.IsNullOrWhiteSpace(Model.RequestId))
+        {
+            <p class="ta-empty__text small">Mã yêu cầu: <span class="ta-code">@Model.RequestId</span></p>
+        }
+    </div>
+</section>

@@ -63,7 +63,10 @@
             row.hidden = !matches;
             if (matches) visible += 1;
         });
-        table.closest('.ta-table-card')?.querySelector('[data-ta-no-results]')?.classList.toggle('d-none', visible !== 0 || value === '');
+        const card = table.closest('.ta-table-card');
+        card?.querySelector('[data-ta-no-results]')?.classList.toggle('d-none', visible !== 0 || value === '');
+        const counter = card?.querySelector('[data-ta-visible-count]');
+        if (counter) counter.textContent = visible.toLocaleString('vi-VN');
     };
 
     window.taCheckPassword = (value, rulesId) => {
@@ -73,34 +76,12 @@
         Object.entries(rules).forEach(([name, valid]) => box.querySelector(`[data-rule="${name}"]`)?.classList.toggle('ok', valid));
     };
 
-    window.taTogglePassword = (inputId, button) => {
-        const input = document.getElementById(inputId);
-        if (!input) return;
-        const show = input.type === 'password';
-        input.type = show ? 'text' : 'password';
-        button.setAttribute('aria-label', show ? 'Ẩn mật khẩu' : 'Hiện mật khẩu');
-        const icon = button.querySelector('i');
-        if (icon) icon.className = show ? 'ti ti-eye-off' : 'ti ti-eye';
-    };
-
     // Reopen a modal re-rendered by the server after a validation error (keeps the entered values).
     document.querySelectorAll('.modal[data-ta-open="true"]').forEach((element) => {
         if (window.bootstrap?.Modal) window.bootstrap.Modal.getOrCreateInstance(element).show();
     });
     document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach((element) => {
         if (window.bootstrap?.Tooltip) window.bootstrap.Tooltip.getOrCreateInstance(element);
-    });
-    document.querySelectorAll('.ta-field input').forEach((input) => {
-        input.addEventListener('focus', () => input.closest('.ta-field')?.classList.add('is-focused'));
-        input.addEventListener('blur', () => input.closest('.ta-field')?.classList.remove('is-focused'));
-    });
-    const currentPath = window.location.pathname.toLowerCase().replace(/\/$/, '') || '/';
-    document.querySelectorAll('.ta-sidebar .nav-link[href]').forEach((link) => {
-        const path = new URL(link.href, window.location.href).pathname.toLowerCase().replace(/\/$/, '') || '/';
-        if (path === currentPath) {
-            link.classList.add('active');
-            link.setAttribute('aria-current', 'page');
-        }
     });
     window.addEventListener('pageshow', () => {
         document.querySelectorAll('form[data-ta-submitting="true"]').forEach((form) => delete form.dataset.taSubmitting);

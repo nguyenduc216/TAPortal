@@ -1,2 +1,14 @@
-@{ ViewData["Title"]="Không có quyền truy cập"; var isAdmin = User.IsInRole("SYS_ADMIN"); }
-<div class="container-tight py-5"><div class="empty"><div class="empty-header">403</div><p class="empty-title">Bạn không có quyền truy cập chức năng này.</p><p class="empty-subtitle text-secondary">Vui lòng liên hệ quản trị hệ thống nếu bạn cần thêm quyền.</p><div class="empty-action">@if (isAdmin) {<a asp-controller="Home" asp-action="Index" class="btn btn-primary"><i class="ti ti-arrow-left" aria-hidden="true"></i>Về tổng quan</a>} else if (User.Identity?.IsAuthenticated == true) {<a asp-controller="Account" asp-action="Profile" class="btn btn-primary"><i class="ti ti-user-circle" aria-hidden="true"></i>Về hồ sơ cá nhân</a>} else {<a asp-controller="Account" asp-action="Login" class="btn btn-primary"><i class="ti ti-login-2" aria-hidden="true"></i>Đăng nhập</a>}</div></div></div>
+@{
+    ViewData["Title"] = "Không có quyền truy cập";
+    ViewData["HideHeader"] = true;
+    var isAdmin = User.IsInRole("SYS_ADMIN");
+}
+<section class="card mx-auto" style="max-width:560px">
+    <div class="ta-empty">
+        <span class="ta-empty__icon" style="background:var(--ta-danger-soft);color:var(--ta-danger-text)">@UiIcon.Render("lock")</span>
+        <div class="ta-error-code">403</div>
+        <h1 class="ta-empty__title">Bạn không có quyền truy cập chức năng này.</h1>
+        <p class="ta-empty__text">Vui lòng liên hệ quản trị hệ thống nếu bạn cần thêm quyền.</p>
+        <div class="mt-2">@if (isAdmin) {<a asp-controller="Home" asp-action="Index" class="btn btn-primary">@UiIcon.Render("arrow-left")<span>Về tổng quan</span></a>} else if (User.Identity?.IsAuthenticated == true) {<a asp-controller="Account" asp-action="Profile" class="btn btn-primary">@UiIcon.Render("user-circle")<span>Về hồ sơ cá nhân</span></a>} else {<a asp-controller="Account" asp-action="Login" class="btn btn-primary">@UiIcon.Render("login-2")<span>Đăng nhập</span></a>}</div>
+    </div>
+</section>

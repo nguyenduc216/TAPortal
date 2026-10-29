@@ -1,43 +1,68 @@
 @model UserRoleSnapshot
 @{
     ViewData["Title"] = "Vai trò người dùng";
+    ViewData["Heading"] = "Vai trò: " + Model.DisplayName;
+    ViewData["Subtitle"] = "Tài khoản " + Model.Username + " — vai trò quản trị TAPortal.";
+    ViewData["PageIcon"] = "shield-lock";
+    ViewData["ParentTitle"] = "Người dùng";
+    ViewData["ParentController"] = "Users";
     var actorId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
     var isSelf = string.Equals(actorId, Model.UserId.ToString(), StringComparison.OrdinalIgnoreCase);
     var adminCount = Model.SystemAdminIds.Count;
     var active = Model.UserActive && Model.Status == "ACTIVE";
 }
-<div class="page-header"><div class="row align-items-center"><div class="col"><div class="page-pretitle"><a asp-action="Index">Người dùng</a> / Vai trò</div><h2 class="page-title">Vai trò: @Model.DisplayName <span class="text-secondary fs-4">(@Model.Username)</span></h2></div></div></div>
-<div class="row mt-3"><div class="col-lg-8"><div class="card"><form asp-action="Roles" asp-route-id="@Model.UserId" method="post">
-<input type="hidden" name="stamp" value="@Model.Stamp" />
-<div class="card-body">
-<div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
-<div class="mb-3">Trạng thái tài khoản: <span class="badge @(active ? "badge-ta-active" : "bg-secondary-lt")">@(active ? "Hoạt động" : "Ngừng")</span>@if (isSelf) {<span class="badge bg-yellow-lt ms-2">Tài khoản của bạn</span>}</div>
-<fieldset><legend class="form-label">Vai trò quản trị TAPortal</legend>
-@foreach (var role in Model.Roles)
-{
-    var assigned = Model.AssignedRoleIds.Contains(role.Id);
-    if (!role.IsActive)
-    {
-        if (assigned) {<div class="form-check"><input class="form-check-input" type="checkbox" checked disabled id="role-@role.Id" /><label class="form-check-label text-secondary" for="role-@role.Id">@role.Name <code>@role.Code</code> — vai trò đã ngừng hoạt động, được giữ nguyên</label></div>}
-        continue;
-    }
-    <div class="form-check">
-        <input class="form-check-input" type="checkbox" name="roleIds" value="@role.Id" id="role-@role.Id" checked="@assigned" />
-        <label class="form-check-label" for="role-@role.Id">@role.Name <code>@role.Code</code>@if (role.Code == RoleChangePolicy.SystemAdminCode) {<span class="badge bg-red-lt ms-1">Toàn quyền hệ thống</span>}</label>
+<div class="row g-4">
+<div class="col-xl-7">
+<form class="card" asp-action="Roles" asp-route-id="@Model.UserId" method="post">
+    <input type="hidden" name="stamp" value="@Model.Stamp" />
+    <div class="card-header"><h2 class="card-title">@UiIcon.Render("shield-check")Vai trò quản trị TAPortal</h2><span class="ms-auto d-flex gap-2"><span class="ta-badge @(active ? "ta-badge--success" : "ta-badge--danger")">@(active ? "Hoạt động" : "Ngừng")</span>@if (isSelf) {<span class="ta-badge ta-badge--warning ta-badge--plain">Tài khoản của bạn</span>}</span></div>
+    <div class="card-body">
+        <div asp-validation-summary="ModelOnly" class="ta-alert ta-alert--danger" role="alert"></div>
+        <fieldset>
+            <legend class="ta-visually-hidden">Vai trò quản trị TAPortal</legend>
+            <div class="ta-check-list">
+            @foreach (var role in Model.Roles)
+            {
+                var assigned = Model.AssignedRoleIds.Contains(role.Id);
+                if (!role.IsActive)
+                {
+                    if (assigned) {<label class="ta-check-card" for="role-@role.Id"><input class="form-check-input" type="checkbox" checked disabled id="role-@role.Id" /><span><span class="text-secondary">@role.Name</span> <span class="ta-code">@role.Code</span><span class="d-block form-hint mt-1">Vai trò đã ngừng hoạt động, được giữ nguyên</span></span></label>}
+                    continue;
+                }
+                <label class="ta-check-card" for="role-@role.Id">
+                    <input class="form-check-input" type="checkbox" name="roleIds" value="@role.Id" id="role-@role.Id" checked="@assigned" />
+                    <span><span class="fw-semibold">@role.Name</span> <span class="ta-code">@role.Code</span>@if (role.Code == RoleChangePolicy.SystemAdminCode) {<span class="ta-badge ta-badge--danger ta-badge--plain ms-2">Toàn quyền hệ thống</span>}</span>
+                </label>
+            }
+            </div>
+        </fieldset>
+        <div class="form-hint mt-3">
+            Chỉ SYS_ADMIN được thay đổi vai trò. Không thể gỡ SYS_ADMIN khỏi quản trị viên hoạt động cuối cùng (hiện có @adminCount quản trị viên hoạt động).
+            Thay đổi có hiệu lực từ request kế tiếp của người dùng; mật khẩu, tên đăng nhập và quyền Customer Portal (OWNER/ADMIN/VIEWER) không bị ảnh hưởng.
+        </div>
+        @if (Model.IsLastSystemAdmin) {<div class="ta-alert ta-alert--info mt-3 mb-0" role="note" data-ta-last-admin>@UiIcon.Render("info-circle")<div class="ta-alert__body">Đây là quản trị viên hệ thống (SYS_ADMIN) hoạt động cuối cùng: không thể gỡ vai trò SYS_ADMIN của tài khoản này.</div></div>}
+        @if (isSelf) {<div class="ta-alert ta-alert--warning mt-3 mb-0" role="note">@UiIcon.Render("alert-triangle")<div class="ta-alert__body">Bạn đang sửa vai trò của chính mình. Gỡ SYS_ADMIN sẽ làm bạn mất quyền quản trị ngay ở request kế tiếp.</div></div>}
     </div>
-}
-</fieldset>
-<div class="form-hint mt-3">
-    Chỉ SYS_ADMIN được thay đổi vai trò. Không thể gỡ SYS_ADMIN khỏi quản trị viên hoạt động cuối cùng (hiện có @adminCount quản trị viên hoạt động).
-    Thay đổi có hiệu lực từ request kế tiếp của người dùng; mật khẩu, tên đăng nhập và quyền Customer Portal (OWNER/ADMIN/VIEWER) không bị ảnh hưởng.
+    <div class="card-footer ta-form-actions">
+        <a asp-action="Index" class="btn">@UiIcon.Render("arrow-left")<span>Quay lại</span></a>
+        <button type="submit" class="btn btn-primary ms-auto" data-ta-loading data-ta-loading-text="Đang lưu...">@UiIcon.Render("device-floppy")<span>Lưu vai trò</span></button>
+    </div>
+</form>
 </div>
-@if (Model.IsLastSystemAdmin) {<div class="alert alert-info mt-3 mb-0" role="note" data-ta-last-admin>Đây là quản trị viên hệ thống (SYS_ADMIN) hoạt động cuối cùng: không thể gỡ vai trò SYS_ADMIN của tài khoản này.</div>}
-@if (isSelf) {<div class="alert alert-warning mt-3 mb-0" role="note">Bạn đang sửa vai trò của chính mình. Gỡ SYS_ADMIN sẽ làm bạn mất quyền quản trị ngay ở request kế tiếp.</div>}
+<div class="col-xl-5">
+<section class="card ta-table-card" aria-labelledby="directPermTitle" data-ta-direct-permissions>
+    <div class="card-header"><h2 class="card-title" id="directPermTitle">@UiIcon.Render("key")Quyền gán trực tiếp (chỉ xem)</h2></div>
+    @if (Model.DirectPermissions is not { Count: > 0 }) {<div class="ta-empty"><span class="ta-empty__icon">@UiIcon.Render("key")</span><p class="ta-empty__text">Không có quyền gán trực tiếp; quyền của người dùng đến từ vai trò.</p></div>}
+    else
+    {
+        <div class="ta-table-wrap"><table class="ta-table ta-table-stack"><thead><tr><th scope="col">Mã quyền</th><th scope="col">Tên quyền</th><th scope="col">Hiệu lực</th></tr></thead><tbody>
+        @foreach (var p in Model.DirectPermissions)
+        {
+            <tr><td data-label="Mã quyền"><span class="ta-code">@p.Code</span></td><td data-label="Tên quyền">@p.Name</td><td data-label="Hiệu lực">@if (p.Effect == "DENY") {<span class="ta-badge ta-badge--danger">@UiIcon.Render("ban") Từ chối (ghi đè vai trò)</span>} else {<span class="ta-badge ta-badge--success">@UiIcon.Render("check") Cho phép</span>}</td></tr>
+        }
+        </tbody></table></div>
+    }
+    <div class="card-footer text-secondary small">Quyền gán trực tiếp không chỉnh sửa được tại đây (chờ phê duyệt chính sách phân quyền). Lưu ý: SYS_ADMIN luôn có mọi quyền.</div>
+</section>
 </div>
-<div class="card-footer d-flex gap-2"><a asp-action="Index" class="btn"><i class="ti ti-arrow-left" aria-hidden="true"></i>Quay lại</a><button type="submit" class="btn btn-primary ms-auto" data-ta-loading data-ta-loading-text="Đang lưu..."><i class="ti ti-device-floppy" aria-hidden="true"></i><span>Lưu vai trò</span></button></div>
-</form></div>
-<section class="card mt-3" aria-labelledby="directPermTitle" data-ta-direct-permissions><div class="card-header"><h3 class="card-title" id="directPermTitle">Quyền gán trực tiếp (chỉ xem)</h3></div>
-@if (Model.DirectPermissions is not { Count: > 0 }) {<div class="card-body text-secondary">Không có quyền gán trực tiếp; quyền của người dùng đến từ vai trò.</div>}
-else {<div class="table-responsive"><table class="table table-vcenter card-table"><thead><tr><th scope="col">Mã quyền</th><th scope="col">Tên quyền</th><th scope="col">Hiệu lực</th></tr></thead><tbody>@foreach (var p in Model.DirectPermissions) {<tr><td><code>@p.Code</code></td><td>@p.Name</td><td>@if (p.Effect == "DENY") {<span class="badge bg-red-lt"><i class="ti ti-ban" aria-hidden="true"></i> Từ chối (ghi đè vai trò)</span>} else {<span class="badge bg-green-lt"><i class="ti ti-check" aria-hidden="true"></i> Cho phép</span>}</td></tr>}</tbody></table></div>}
-<div class="card-footer text-secondary small">Quyền gán trực tiếp không chỉnh sửa được tại đây (chờ phê duyệt chính sách phân quyền). Lưu ý: SYS_ADMIN luôn có mọi quyền.</div></section>
-</div></div>
+</div>

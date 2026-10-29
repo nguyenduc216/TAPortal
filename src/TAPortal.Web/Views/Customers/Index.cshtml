@@ -1,4 +1,51 @@
 @model IReadOnlyList<CustomerRow>
-@{ ViewData["Title"]="Khách hàng"; }
-<div class="page-header"><div class="row align-items-center g-2"><div class="col"><h2 class="page-title">Danh sách khách hàng</h2><div class="text-secondary">Quản lý hồ sơ khách hàng T.A.</div></div><div class="col-auto ms-auto d-flex flex-wrap gap-2"><a class="btn btn-outline-primary" asp-controller="CustomerPortalAccounts" asp-action="Index"><i class="ti ti-user-shield me-1" aria-hidden="true"></i>Tài khoản Customer Portal</a><a class="btn btn-ta-gold" asp-action="Create"><i class="ti ti-plus me-1" aria-hidden="true"></i>Thêm khách hàng</a></div></div></div>
-<div class="card ta-table-card mt-3"><div class="card-header"><div class="input-icon"><span class="input-icon-addon"><i class="ti ti-search" aria-hidden="true"></i></span><input class="form-control" type="search" aria-label="Tìm khách hàng" placeholder="Tìm khách hàng..." oninput="taFilterRows(this.value,'customersTable')" /></div></div><div class="table-responsive"><table class="table table-vcenter card-table" id="customersTable"><thead><tr><th>Mã KH</th><th>Tên khách hàng</th><th>MST</th><th>Email</th><th>Điện thoại</th><th>Trạng thái</th><th class="w-1">Thao tác</th></tr></thead><tbody>@foreach(var x in Model){var active = x.IsActive && x.Status == "ACTIVE";<tr data-ta-row><td><code>@x.Code</code></td><td class="fw-medium text-break">@x.Name</td><td>@x.TaxCode</td><td class="text-break">@x.Email</td><td>@x.Phone</td><td><span class="badge @(active?"badge-ta-active":"bg-secondary-lt")">@(active?"Hoạt động":"Ngừng")</span></td><td class="text-nowrap"><a class="btn btn-sm btn-outline-primary" asp-action="Edit" asp-route-id="@x.Id" aria-label="Sửa @x.Code"><i class="ti ti-edit" aria-hidden="true"></i>Sửa</a> <a class="btn btn-sm" asp-controller="CustomerPortalAccounts" asp-action="Index" asp-route-customerId="@x.Id" aria-label="Tài khoản portal của @x.Code"><i class="ti ti-users" aria-hidden="true"></i>Tài khoản</a></td></tr>}</tbody></table></div>@if(Model.Count == 0){<div class="ta-table-empty"><i class="ti ti-building-store" aria-hidden="true"></i>Chưa có khách hàng.</div>}<div class="ta-table-empty d-none" data-ta-no-results><i class="ti ti-search-off" aria-hidden="true"></i>Không tìm thấy kết quả phù hợp.</div></div>
+@{
+    ViewData["Title"] = "Khách hàng";
+    ViewData["Heading"] = "Danh sách khách hàng";
+    ViewData["Subtitle"] = "Quản lý hồ sơ khách hàng T.A.";
+    ViewData["PageIcon"] = "building";
+    var vi = System.Globalization.CultureInfo.GetCultureInfo("vi-VN");
+}
+@section PageActions {
+    <a class="btn btn-outline-primary" asp-controller="CustomerPortalAccounts" asp-action="Index">@UiIcon.Render("users-group")<span>Tài khoản Customer Portal</span></a>
+    <a class="btn btn-ta-gold" asp-action="Create">@UiIcon.Render("plus")<span>Thêm khách hàng</span></a>
+}
+<section class="card ta-table-card" aria-label="Danh sách khách hàng">
+    <div class="ta-table-toolbar">
+        <div class="ta-search">@UiIcon.Render("search")<input class="form-control" type="search" aria-label="Tìm khách hàng" placeholder="Tìm theo mã KH, tên, MST, email, điện thoại..." oninput="taFilterRows(this.value,'customersTable')" /></div>
+    </div>
+    @if (Model.Count == 0)
+    {
+        <div class="ta-empty"><span class="ta-empty__icon">@UiIcon.Render("building")</span><p class="ta-empty__title">Chưa có khách hàng</p><p class="ta-empty__text">Bấm "Thêm khách hàng" để tạo hồ sơ đầu tiên.</p></div>
+    }
+    else
+    {
+        <div class="ta-table-wrap">
+            <table class="ta-table ta-table-stack" id="customersTable">
+                <thead><tr><th scope="col">Mã KH</th><th scope="col">Tên khách hàng</th><th scope="col">MST</th><th scope="col">Email</th><th scope="col">Điện thoại</th><th scope="col">Trạng thái</th><th scope="col" class="ta-col-actions">Thao tác</th></tr></thead>
+                <tbody>
+                @foreach (var x in Model)
+                {
+                    var active = x.IsActive && x.Status == "ACTIVE";
+                    <tr data-ta-row>
+                        <td data-label="Mã KH"><span class="ta-code">@x.Code</span></td>
+                        <td class="ta-cell-strong">@x.Name</td>
+                        <td class="ta-nowrap" data-label="MST">@x.TaxCode</td>
+                        <td class="ta-nowrap" data-label="Email">@x.Email</td>
+                        <td class="ta-nowrap" data-label="Điện thoại">@x.Phone</td>
+                        <td data-label="Trạng thái"><span class="ta-badge @(active ? "ta-badge--success" : "ta-badge--danger")">@(active ? "Hoạt động" : "Ngừng hoạt động")</span></td>
+                        <td class="ta-col-actions">
+                            <div class="ta-actions">
+                                <a class="btn btn-sm btn-soft-primary" asp-action="Edit" asp-route-id="@x.Id" aria-label="Sửa @x.Code">@UiIcon.Render("pencil")<span>Sửa</span></a>
+                                <a class="btn btn-sm" asp-controller="CustomerPortalAccounts" asp-action="Index" asp-route-customerId="@x.Id" aria-label="Tài khoản portal của @x.Code">@UiIcon.Render("user-cog")<span>Tài khoản</span></a>
+                            </div>
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+        <div class="ta-empty d-none" data-ta-no-results><span class="ta-empty__icon">@UiIcon.Render("search-off")</span><p class="ta-empty__title">Không tìm thấy kết quả phù hợp</p></div>
+        <div class="ta-table-footer"><span>Hiển thị <strong data-ta-visible-count>@Model.Count.ToString("N0", vi)</strong> / @Model.Count.ToString("N0", vi) khách hàng</span></div>
+    }
+</section>

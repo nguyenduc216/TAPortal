@@ -1,5 +1,27 @@
 @model CustomerMembership
-@{ViewData["Title"]="Dashboard";}
-<p class="eyebrow">TỔNG QUAN DOANH NGHIỆP</p><h1>Dashboard</h1><div class="hero"><p>Xin chào, @User.FindFirst("display_name")?.Value</p><h2>@Model.Name</h2><p>@Model.Code · Mã số thuế: @(Model.TaxCode??"Chưa cập nhật")</p><span class="badge-active">Customer Portal đã kích hoạt</span></div>
-<div class="grid"><section class="panel"><h3>VAI TRÒ DOANH NGHIỆP</h3><div class="value">@Model.Role</div><p class="muted">Quyền trong doanh nghiệp hiện tại</p></section><section class="panel"><h3>TÀI KHOẢN</h3><div class="value">Đang hoạt động</div><p class="muted">@User.Identity?.Name</p></section><section class="panel"><h3>DOANH NGHIỆP</h3><div class="value">@Model.Code</div><a href="/profile/company">Xem hồ sơ doanh nghiệp →</a></section></div>
-<h2>Dịch vụ tài chính</h2><div class="grid">@foreach(var label in new[]{"Tài khoản ngân hàng","QR thanh toán","Giao dịch","Công nợ","Đối soát","Báo cáo"}){<section class="panel"><h3>@label</h3><div class="value muted">Chưa kích hoạt</div><p class="muted">Chưa có dữ liệu</p></section>}</div>
+@{
+    ViewData["Title"] = "Tổng quan";
+    ViewData["Heading"] = "Tổng quan doanh nghiệp";
+    ViewData["PageIcon"] = "layout-dashboard";
+}
+<section class="ta-hero" aria-label="Doanh nghiệp đang truy cập">
+    <span class="ta-hero__icon" aria-hidden="true">@UiIcon.Render("building")</span>
+    <div class="ta-hero__body">
+        <p class="ta-hero__greet">Xin chào, @User.FindFirst("display_name")?.Value</p>
+        <h2 class="ta-hero__name">@Model.Name</h2>
+        <div class="ta-hero__meta"><span>@UiIcon.Render("hash")@Model.Code</span><span>@UiIcon.Render("receipt-tax")Mã số thuế: @(Model.TaxCode ?? "Chưa cập nhật")</span></div>
+    </div>
+    <span class="ta-badge ta-badge--success">Customer Portal đã kích hoạt</span>
+</section>
+<div class="ta-kpi-grid ta-kpi-grid--3">
+    <section class="card ta-stat-card"><div class="ta-stat-head"><span class="ta-stat-icon">@UiIcon.Render("shield-check")</span><div><div class="ta-stat-label">Vai trò doanh nghiệp</div><div class="ta-stat-value">@Model.Role</div></div></div><div class="ta-stat-list">Quyền trong doanh nghiệp hiện tại</div></section>
+    <section class="card ta-stat-card"><div class="ta-stat-head"><span class="ta-stat-icon ta-stat-icon--green">@UiIcon.Render("user-circle")</span><div><div class="ta-stat-label">Tài khoản</div><div class="ta-stat-value ta-stat-value--text">Đang hoạt động</div></div></div><div class="ta-stat-list">@User.Identity?.Name</div></section>
+    <section class="card ta-stat-card"><div class="ta-stat-head"><span class="ta-stat-icon ta-stat-icon--gold">@UiIcon.Render("building")</span><div><div class="ta-stat-label">Doanh nghiệp</div><div class="ta-stat-value">@Model.Code</div></div></div><div class="ta-stat-list"><a asp-controller="Profile" asp-action="Company">Xem hồ sơ doanh nghiệp →</a></div></section>
+</div>
+<h2 class="ta-section-title ta-section-gap">Dịch vụ tài chính</h2>
+<div class="ta-service-grid">
+@foreach (var (label, icon) in new[] { ("Tài khoản ngân hàng", "building-bank"), ("QR thanh toán", "qrcode"), ("Giao dịch", "arrows-exchange"), ("Công nợ", "file-invoice"), ("Đối soát", "checks"), ("Báo cáo", "chart-bar") })
+{
+    <section class="card ta-service"><span class="ta-stat-icon" aria-hidden="true">@UiIcon.Render(icon)</span><div><h3 class="ta-service__name">@label</h3><p class="ta-service__state"><span class="ta-badge ta-badge--neutral">Chưa kích hoạt</span></p><p class="ta-service__state mt-1">Chưa có dữ liệu</p></div></section>
+}
+</div>

@@ -1,1 +1,9 @@
-<div class="panel"><h1>Không có quyền truy cập</h1><p>Vui lòng liên hệ quản trị viên để kiểm tra quyền doanh nghiệp.</p><a href="/account/login">Đăng nhập</a></div>
+@{ ViewData["Title"] = "Không có quyền truy cập"; ViewData["HideHeader"] = true; }
+<section class="card mx-auto" style="max-width:560px">
+    <div class="ta-empty">
+        <span class="ta-empty__icon" style="background:var(--ta-danger-soft);color:var(--ta-danger-text)">@UiIcon.Render("lock")</span>
+        <h1 class="ta-empty__title">Không có quyền truy cập</h1>
+        <p class="ta-empty__text">Vui lòng liên hệ quản trị viên để kiểm tra quyền doanh nghiệp.</p>
+        <a class="btn btn-primary mt-2" asp-controller="Account" asp-action="Login">@UiIcon.Render("login-2")<span>Đăng nhập</span></a>
+    </div>
+</section>

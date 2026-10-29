@@ -1,4 +1,27 @@
 @model IReadOnlyList<PortalMenu>
-@{ ViewData["Title"]="Quản lý menu"; }
-<div class="page-header"><div class="row align-items-center"><div class="col"><h2 class="page-title">Quản lý Menu hệ thống</h2><div class="text-secondary">Menu được lưu trong database và gắn với permission.</div></div></div></div>
-<div class="card ta-table-card mt-3"><div class="table-responsive"><table class="table table-vcenter card-table"><thead><tr><th>Mã menu</th><th>Tên menu</th><th>Route</th><th>Icon</th><th>Thứ tự</th><th>Hiển thị</th><th>Trạng thái</th></tr></thead><tbody>@foreach(var x in Model){<tr><td><code>@x.Code</code></td><td class="fw-medium">@x.Name</td><td>@x.Route</td><td>@x.Icon</td><td>@x.SortOrder</td><td>@(x.IsVisible?"Có":"Không")</td><td><span class="badge @(x.IsActive?"badge-ta-active":"bg-secondary-lt")">@(x.IsActive?"Hoạt động":"Ngừng")</span></td></tr>}</tbody></table></div>@if(Model.Count == 0){<div class="ta-table-empty"><i class="ti ti-list-details" aria-hidden="true"></i>Chưa có menu.</div>}</div>
+@{
+    ViewData["Title"] = "Quản lý menu";
+    ViewData["Heading"] = "Quản lý menu hệ thống";
+    ViewData["Subtitle"] = "Menu được lưu trong database và gắn với permission.";
+    ViewData["PageIcon"] = "list-tree";
+}
+<section class="card ta-table-card" aria-label="Danh sách menu">
+    @if (Model.Count == 0)
+    {
+        <div class="ta-empty"><span class="ta-empty__icon">@UiIcon.Render("list-tree")</span><p class="ta-empty__title">Chưa có menu</p></div>
+    }
+    else
+    {
+        <div class="ta-table-wrap">
+            <table class="ta-table ta-table-stack">
+                <thead><tr><th scope="col">Mã menu</th><th scope="col">Tên menu</th><th scope="col">Route</th><th scope="col">Icon</th><th scope="col">Thứ tự</th><th scope="col">Hiển thị</th><th scope="col">Trạng thái</th></tr></thead>
+                <tbody>
+                @foreach (var x in Model)
+                {
+                    <tr><td data-label="Mã menu"><span class="ta-code">@x.Code</span></td><td class="ta-cell-strong">@x.Name</td><td class="ta-nowrap" data-label="Route">@x.Route</td><td data-label="Icon">@x.Icon</td><td data-label="Thứ tự">@x.SortOrder</td><td data-label="Hiển thị">@(x.IsVisible ? "Có" : "Không")</td><td data-label="Trạng thái"><span class="ta-badge @(x.IsActive ? "ta-badge--success" : "ta-badge--neutral")">@(x.IsActive ? "Hoạt động" : "Ngừng")</span></td></tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    }
+</section>

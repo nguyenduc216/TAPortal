@@ -45,7 +45,7 @@ public sealed class SafeReleaseRegressionTests
     [InlineData("/account/login", HttpStatusCode.OK)]
     [InlineData("/users", HttpStatusCode.Redirect)]
     [InlineData("/account/accessdenied", HttpStatusCode.OK)]
-    [InlineData("/css/ta-portal.css", HttpStatusCode.OK)]
+    [InlineData("/css/ta-design.css", HttpStatusCode.OK)]
     [InlineData("/does-not-exist", HttpStatusCode.NotFound)]
     public async Task AdminSendsSecurityHeadersOnEveryResponseType(string path, HttpStatusCode expected)
     {
@@ -74,7 +74,7 @@ public sealed class SafeReleaseRegressionTests
         using var f = Admin();
         using var c = Client(f);
         Assert.True((await c.GetAsync("/account/login")).Headers.CacheControl!.NoStore);
-        Assert.False((await c.GetAsync("/css/ta-portal.css")).Headers.CacheControl?.NoStore ?? false);
+        Assert.False((await c.GetAsync("/css/ta-design.css")).Headers.CacheControl?.NoStore ?? false);
     }
 
     // Every MVC action must require authentication/authorization unless it is on the reviewed anonymous list.

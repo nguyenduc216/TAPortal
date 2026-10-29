@@ -1,3 +1,14 @@
 @model CustomerMembership
-@{ViewData["Title"]="Hồ sơ doanh nghiệp";}
-<h1>Hồ sơ doanh nghiệp</h1><div class="panel"><h2>@Model.Name</h2><dl><dt>Mã khách hàng</dt><dd>@Model.Code</dd><dt>Mã số thuế</dt><dd>@Model.TaxCode</dd><dt>Email</dt><dd>@Model.Email</dd><dt>Điện thoại</dt><dd>@Model.Phone</dd><dt>Địa chỉ</dt><dd>@Model.Address</dd><dt>Vai trò của bạn</dt><dd>@Model.Role</dd></dl></div>
+@{
+    ViewData["Title"] = "Hồ sơ doanh nghiệp";
+    ViewData["Subtitle"] = "Thông tin doanh nghiệp đang truy cập (chỉ xem).";
+    ViewData["PageIcon"] = "building";
+}
+<div class="row"><div class="col-xl-8">
+<section class="card">
+    <div class="card-header"><h2 class="card-title">@Model.Name</h2></div>
+    <div class="card-body">
+        <dl class="ta-dl"><dt>Mã khách hàng</dt><dd><span class="ta-code">@Model.Code</span></dd><dt>Mã số thuế</dt><dd>@(Model.TaxCode ?? "—")</dd><dt>Email</dt><dd>@(Model.Email ?? "—")</dd><dt>Điện thoại</dt><dd>@(Model.Phone ?? "—")</dd><dt>Địa chỉ</dt><dd>@(Model.Address ?? "—")</dd><dt>Vai trò của bạn</dt><dd><span class="ta-badge ta-badge--info ta-badge--plain">@Model.Role</span></dd></dl>
+    </div>
+</section>
+</div></div>

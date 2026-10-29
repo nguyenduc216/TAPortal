@@ -1,3 +1,20 @@
 @model LoginVm
-@{ViewData["Title"]="Đăng nhập";}
-<div class="auth-card"><p class="eyebrow">T.A CUSTOMER PORTAL</p><h1>Chào mừng trở lại</h1><p class="muted">Đăng nhập để truy cập doanh nghiệp của bạn.</p><form method="post" asp-action="Login"><div asp-validation-summary="All"></div><label>Tên đăng nhập<input asp-for="Username" class="form-control" autocomplete="username" required maxlength="100"/></label><label>Mật khẩu<input asp-for="Password" type="password" class="form-control" autocomplete="current-password" required maxlength="256"/></label><button class="btn btn-primary w-100">Đăng nhập</button></form><p class="muted mt-4">Liên hệ quản trị viên T.A để được cấp tài khoản.</p></div>
+@{ ViewData["Title"] = "Đăng nhập"; }
+<div class="ta-auth-card">
+    <div class="ta-auth-card__brand"><span class="ta-brand__mark" aria-hidden="true">T<span>A</span></span><p class="ta-eyebrow">T.A Customer Portal</p></div>
+    <h1>Chào mừng trở lại</h1>
+    <p class="ta-auth-lead">Đăng nhập để truy cập doanh nghiệp của bạn.</p>
+    <form method="post" asp-action="Login">
+        <div asp-validation-summary="All" class="ta-alert ta-alert--danger" role="alert"></div>
+        <div class="mb-3">
+            <label asp-for="Username" class="form-label">Tên đăng nhập</label>
+            <div class="ta-input-icon">@UiIcon.Render("user")<input asp-for="Username" class="form-control" autocomplete="username" required maxlength="100" placeholder="Nhập tên đăng nhập" /></div>
+        </div>
+        <div class="mb-4">
+            <label asp-for="Password" class="form-label">Mật khẩu</label>
+            <div class="ta-input-icon">@UiIcon.Render("lock")<input asp-for="Password" id="password" type="password" class="form-control" autocomplete="current-password" required maxlength="256" placeholder="Nhập mật khẩu" /><button class="ta-password-toggle" type="button" onclick="taTogglePassword('password',this)" aria-label="Hiện mật khẩu" aria-pressed="false">@UiIcon.Render("eye", "ta-icon-show")@UiIcon.Render("eye-off", "ta-icon-hide")</button></div>
+        </div>
+        <button type="submit" class="btn btn-primary btn-lg w-100">@UiIcon.Render("login-2")<span>Đăng nhập</span></button>
+    </form>
+    <p class="ta-auth-note">Liên hệ quản trị viên T.A để được cấp tài khoản.</p>
+</div>
