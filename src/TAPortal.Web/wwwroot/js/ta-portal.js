@@ -69,21 +69,6 @@
         if (counter) counter.textContent = visible.toLocaleString('vi-VN');
     };
 
-    // Live password rules, mirroring TAPortal.Shared.PasswordPolicy (char.IsLetter / IsDigit / !IsLetterOrDigit, so
-    // Vietnamese letters such as "đ" count as letters, not special characters). Empty input: neutral; otherwise each
-    // rule turns green (passed) or red (violated).
-    window.taCheckPassword = (value, rulesId) => {
-        const box = document.getElementById(rulesId);
-        if (!box) return;
-        const rules = { len: value.length >= 8, letter: /\p{L}/u.test(value), digit: /\p{Nd}/u.test(value), special: /[^\p{L}\p{Nd}]/u.test(value) };
-        Object.entries(rules).forEach(([name, valid]) => {
-            const item = box.querySelector(`[data-rule="${name}"]`);
-            if (!item) return;
-            item.classList.toggle('ok', value !== '' && valid);
-            item.classList.toggle('fail', value !== '' && !valid);
-        });
-    };
-
     // Bootstrap modals live at <body> level so no ancestor stacking context (page transition, sticky shell) can put
     // the modal under its own backdrop.
     document.querySelectorAll('.ta-content .modal').forEach((modal) => document.body.appendChild(modal));

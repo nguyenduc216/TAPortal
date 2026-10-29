@@ -1,4 +1,4 @@
-namespace TAPortal.Web.Services;
+namespace TAPortal.Shared;
 
 // Display names for Customer Portal membership roles. The stored/posted values stay OWNER/ADMIN/VIEWER (MembershipInput
 // accepts only these); screens show the Vietnamese name only.

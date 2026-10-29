@@ -19,8 +19,7 @@
     var canRoles = isAdmin || HasPermission("AUTH.ROLES.VIEW");
     var canMenus = isAdmin || HasPermission("SYSTEM.MENUS.MANAGE");
     var displayName = User.FindFirst("display_name")?.Value ?? User.Identity?.Name;
-    var roleCodes = User.Claims.Where(x => x.Type == System.Security.Claims.ClaimTypes.Role).Select(x => x.Value).ToList();
-    var roleLabel = isAdmin ? "Quản trị hệ thống" : roleCodes.Count > 0 ? string.Join(", ", roleCodes) : "Người dùng";
+    var roleLabel = isAdmin ? "Quản trị hệ thống" : "Người dùng TAPortal";   // role codes are never shown
     var heading = ViewData["Heading"] as string ?? ViewData["Title"] as string;
     var parentTitle = ViewData["ParentTitle"] as string;
     var parentController = ViewData["ParentController"] as string;

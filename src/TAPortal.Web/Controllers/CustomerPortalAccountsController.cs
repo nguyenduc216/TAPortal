@@ -6,7 +6,7 @@ using TAPortal.Web.Services;
 
 namespace TAPortal.Web.Controllers;
 [Authorize(Policy = "SystemAdminOnly")]
-public sealed class CustomerPortalAccountsController(MembershipAdminStore store, PortalDb db, PasswordService passwords) : Controller
+public sealed class CustomerPortalAccountsController(MembershipAdminStore store, PortalDb db, PasswordService passwords, ICustomerAdminStore customers) : Controller
 {
     // Compatibility: no longer in the sidebar. A per-customer link keeps its context and opens that customer's workspace tab;
     // the cross-customer overview stays reachable for old bookmarks and the dashboard KPI.
@@ -74,6 +74,11 @@ public sealed class CustomerPortalAccountsController(MembershipAdminStore store,
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> SetActive(Guid userId, Guid customerId, bool active)
     {
+        if (active && await customers.GetAsync(customerId) is not { IsActive: true, Status: "ACTIVE" })
+        {
+            TempData["Error"] = CustomersController.InactiveCustomerMessage;
+            return RedirectToAction(nameof(Index), new { customerId = NullIfEmpty(customerId) });
+        }
         try
         {
             await store.SetActive(userId, customerId, active, Actor);

@@ -100,6 +100,9 @@ public sealed class AccountController(PortalDb db, IAdminAuthStore auth, Passwor
     public async Task<IActionResult> Profile()
     {
         var user = await db.GetAuthUserAsync(User.Identity!.Name!);
+        // Show role names, never role codes.
+        if (user is not null)
+            ViewBag.RoleNames = (await db.GetRolesAsync()).Where(r => user.Roles.Contains(r.Code, StringComparer.OrdinalIgnoreCase)).Select(r => r.Name).ToList();
         return View(user);
     }
 

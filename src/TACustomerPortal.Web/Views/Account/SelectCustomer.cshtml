@@ -4,15 +4,17 @@
     ViewData["Subtitle"] = "Truy cập doanh nghiệp bạn được cấp quyền quản lý.";
     ViewData["PageIcon"] = "switch-horizontal";
 }
-<div class="ta-company-list">
+<div class="ta-company-list" id="companyList">
+    <div class="ta-search" style="max-width:none">@UiIcon.Render("search")<input class="form-control" type="search" aria-label="Tìm doanh nghiệp" placeholder="Tìm theo tên hoặc mã doanh nghiệp..." oninput="taFilterCompanies(this.value)" /></div>
 @foreach (var c in Model)
 {
-    <form method="post" asp-action="SelectCustomer"><input type="hidden" name="customerId" value="@c.CustomerId" />
+    <form method="post" asp-action="SelectCustomer" data-ta-company><input type="hidden" name="customerId" value="@c.CustomerId" />
         <button type="submit" class="ta-company-option">
             <span class="ta-stat-icon" aria-hidden="true">@UiIcon.Render("building")</span>
-            <span class="ta-company-option__body"><span class="ta-company-option__name">@c.Name</span><span class="ta-company-option__meta">@c.Code · Vai trò: @c.Role</span></span>
+            <span class="ta-company-option__body"><span class="ta-company-option__name">@c.Name</span><span class="ta-company-option__meta">@c.Code · Vai trò: @PortalRoleText.Label(c.Role)</span></span>
             @UiIcon.Render("chevron-right", "text-secondary")
         </button>
     </form>
 }
+    <p class="text-secondary d-none" data-ta-no-company>Không tìm thấy doanh nghiệp phù hợp.</p>
 </div>

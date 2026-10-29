@@ -5,6 +5,9 @@
     ViewData["PageIcon"] = "shield-check";
 }
 <section class="card ta-table-card" aria-label="Danh sách vai trò">
+    <div class="ta-table-toolbar">
+        <div class="ta-search">@UiIcon.Render("search")<input class="form-control" type="search" aria-label="Tìm vai trò" placeholder="Tìm theo mã, tên hoặc mô tả vai trò..." oninput="taFilterRows(this.value,'rolesTable')" /></div>
+    </div>
     @if (Model.Count == 0)
     {
         <div class="ta-empty"><span class="ta-empty__icon">@UiIcon.Render("shield-check")</span><p class="ta-empty__title">Chưa có vai trò</p></div>
@@ -12,15 +15,17 @@
     else
     {
         <div class="ta-table-wrap">
-            <table class="ta-table ta-table-stack">
+            <table class="ta-table ta-table-stack" id="rolesTable">
                 <thead><tr><th scope="col">Mã vai trò</th><th scope="col">Tên vai trò</th><th scope="col">Mô tả</th><th scope="col">Loại</th><th scope="col">Trạng thái</th></tr></thead>
                 <tbody>
                 @foreach (var x in Model)
                 {
-                    <tr><td data-label="Mã vai trò"><span class="ta-code">@x.Code</span></td><td class="ta-cell-strong">@x.Name</td><td data-label="Mô tả">@x.Description</td><td data-label="Loại"><span class="ta-badge ta-badge--plain @(x.IsSystem ? "ta-badge--info" : "ta-badge--neutral")">@(x.IsSystem ? "Hệ thống" : "Tùy chỉnh")</span></td><td data-label="Trạng thái"><span class="ta-badge @(x.IsActive ? "ta-badge--success" : "ta-badge--neutral")">@(x.IsActive ? "Hoạt động" : "Ngừng")</span></td></tr>
+                    <tr data-ta-row><td data-label="Mã vai trò"><span class="ta-code">@x.Code</span></td><td class="ta-cell-strong">@x.Name</td><td data-label="Mô tả">@x.Description</td><td data-label="Loại"><span class="ta-badge ta-badge--plain @(x.IsSystem ? "ta-badge--info" : "ta-badge--neutral")">@(x.IsSystem ? "Hệ thống" : "Tùy chỉnh")</span></td><td data-label="Trạng thái"><span class="ta-badge @(x.IsActive ? "ta-badge--success" : "ta-badge--neutral")">@(x.IsActive ? "Hoạt động" : "Ngừng")</span></td></tr>
                 }
                 </tbody>
             </table>
         </div>
+        <div class="ta-empty d-none" data-ta-no-results><span class="ta-empty__icon">@UiIcon.Render("search-off")</span><p class="ta-empty__title">Không tìm thấy kết quả phù hợp</p></div>
+        <div class="ta-table-footer"><span>Hiển thị <strong data-ta-visible-count>@Model.Count</strong> / @Model.Count vai trò</span></div>
     }
 </section>

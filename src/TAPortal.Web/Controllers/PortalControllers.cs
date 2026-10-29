@@ -331,8 +331,16 @@ public sealed class CustomersController(PortalDb db, ICustomerAdminStore custome
     public async Task<IActionResult> SetPortalAccountActive(Guid id, [FromForm] Guid userId, [FromForm] bool active, [FromForm] Guid? customerId)
     {
         if (customerId is { } posted && posted != id) return BadRequest();
-        if (await customers.GetAsync(id) is null) return NotFound();
+        var customer = await customers.GetAsync(id);
+        if (customer is null) return NotFound();
         if (ActorOrNull() is not Guid actor) return Forbid();
+        // Granting access (Save) already requires an active customer in SQL; reactivation must follow the same rule.
+        // Revoking is always allowed.
+        if (active && !CustomerWorkspaceHeader.From(customer, CustomerWorkspace.Portal).Operational)
+        {
+            TempData["Error"] = InactiveCustomerMessage;
+            return RedirectToAction(nameof(PortalAccounts), new { id });
+        }
         try
         {
             // Only memberships listed for this customer can be changed from its workspace.
@@ -350,6 +358,8 @@ public sealed class CustomersController(PortalDb db, ICustomerAdminStore custome
     }
 
     private const string AuditUnavailableMessage = "Không thể ghi nhật ký audit (dbo.AuditLogs) nên thay đổi đã bị hủy. Liên hệ quản trị cơ sở dữ liệu.";
+
+    internal const string InactiveCustomerMessage = "Khách hàng đang ngừng hoạt động: không thể kích hoạt lại quyền truy cập Customer Portal.";
 
     private Guid? ActorOrNull() => UsersController.ActorId(User);
 

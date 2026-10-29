@@ -79,6 +79,8 @@ public sealed class SafePortalTests : IDisposable
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
             Assert.Contains("Company Alpha", html);
             Assert.DoesNotContain("Company Beta", html);
+            Assert.Contains("Chủ sở hữu", WebUtility.HtmlDecode(html));   // membership role shown by name
+            Assert.DoesNotContain(">OWNER<", html);
             Assert.True(response.Headers.CacheControl!.NoStore);
         }
         Assert.Contains("Customer Person", WebUtility.HtmlDecode(await client.GetStringAsync("/profile/personal")));

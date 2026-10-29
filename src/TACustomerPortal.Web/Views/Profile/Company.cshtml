@@ -8,7 +8,7 @@
 <section class="card">
     <div class="card-header"><h2 class="card-title">@Model.Name</h2></div>
     <div class="card-body">
-        <dl class="ta-dl"><dt>Mã khách hàng</dt><dd><span class="ta-code">@Model.Code</span></dd><dt>Mã số thuế</dt><dd>@(Model.TaxCode ?? "—")</dd><dt>Email</dt><dd>@(Model.Email ?? "—")</dd><dt>Điện thoại</dt><dd>@(Model.Phone ?? "—")</dd><dt>Địa chỉ</dt><dd>@(Model.Address ?? "—")</dd><dt>Vai trò của bạn</dt><dd><span class="ta-badge ta-badge--info ta-badge--plain">@Model.Role</span></dd></dl>
+        <dl class="ta-dl"><dt>Mã khách hàng</dt><dd><span class="ta-code">@Model.Code</span></dd><dt>Mã số thuế</dt><dd>@(Model.TaxCode ?? "—")</dd><dt>Email</dt><dd>@(Model.Email ?? "—")</dd><dt>Điện thoại</dt><dd>@(Model.Phone ?? "—")</dd><dt>Địa chỉ</dt><dd>@(Model.Address ?? "—")</dd><dt>Vai trò của bạn</dt><dd><span class="ta-badge ta-badge--info ta-badge--plain">@PortalRoleText.Label(Model.Role)</span></dd></dl>
     </div>
 </section>
 </div></div>

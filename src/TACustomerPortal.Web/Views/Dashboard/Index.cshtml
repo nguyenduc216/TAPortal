@@ -14,7 +14,7 @@
     <span class="ta-badge ta-badge--success">Customer Portal đã kích hoạt</span>
 </section>
 <div class="ta-kpi-grid ta-kpi-grid--3">
-    <section class="card ta-stat-card"><div class="ta-stat-head"><span class="ta-stat-icon">@UiIcon.Render("shield-check")</span><div><div class="ta-stat-label">Vai trò doanh nghiệp</div><div class="ta-stat-value">@Model.Role</div></div></div><div class="ta-stat-list">Quyền trong doanh nghiệp hiện tại</div></section>
+    <section class="card ta-stat-card"><div class="ta-stat-head"><span class="ta-stat-icon">@UiIcon.Render("shield-check")</span><div><div class="ta-stat-label">Vai trò doanh nghiệp</div><div class="ta-stat-value ta-stat-value--text">@PortalRoleText.Label(Model.Role)</div></div></div><div class="ta-stat-list">Quyền trong doanh nghiệp hiện tại</div></section>
     <section class="card ta-stat-card"><div class="ta-stat-head"><span class="ta-stat-icon ta-stat-icon--green">@UiIcon.Render("user-circle")</span><div><div class="ta-stat-label">Tài khoản</div><div class="ta-stat-value ta-stat-value--text">Đang hoạt động</div></div></div><div class="ta-stat-list">@User.Identity?.Name</div></section>
     <section class="card ta-stat-card"><div class="ta-stat-head"><span class="ta-stat-icon ta-stat-icon--gold">@UiIcon.Render("building")</span><div><div class="ta-stat-label">Doanh nghiệp</div><div class="ta-stat-value">@Model.Code</div></div></div><div class="ta-stat-list"><a asp-controller="Profile" asp-action="Company">Xem hồ sơ doanh nghiệp →</a></div></section>
 </div>

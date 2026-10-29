@@ -36,19 +36,6 @@
     .ta-tabs__link { padding: 10px var(--ta-sp-3); }
 }
 
-/* The page-enter animation must not leave a transform behind: a transformed ancestor becomes the containing block of
-   fixed elements and a separate stacking context, which put Bootstrap modals under their backdrop (grey mask) and
-   would misplace the dropdown popups. */
-.ta-content.ta-page-enter { animation-fill-mode: backwards; }
-
-/* Text fields with a left icon: textarea keeps the icon on the first line */
-.ta-input-icon--top > .ta-icon { top: 11px; transform: none; }
-
-/* Password rules: neutral until typing, then green (passed) or red (violated) */
-.password-rules li.ok::before { content: "✓"; width: auto; height: auto; border: 0; background: none; font-weight: 700; }
-.password-rules li.fail { color: var(--ta-danger-text); }
-.password-rules li.fail::before { content: "✕"; width: auto; height: auto; border: 0; background: none; font-weight: 700; }
-
 /* Searchable dropdown (ta-portal.js): visible trigger + popup; the native select stays hidden in the form */
 .ta-select { position: relative; min-width: 0; }
 .ta-select--sm { display: inline-block; min-width: 170px; }

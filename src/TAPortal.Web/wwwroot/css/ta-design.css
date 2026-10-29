@@ -176,7 +176,9 @@ button.ta-nav__link { width: 100%; border: 0; background: transparent; font: inh
 
 /* 4. Content + page header ------------------------------------------------------------------------ */
 .ta-content { flex: 1 1 auto; width: 100%; max-width: 1600px; margin: 0 auto; padding: var(--ta-sp-5) var(--ta-sp-5) var(--ta-sp-6); }
-.ta-page-enter { animation: ta-page-enter .22s ease-out both; }
+/* fill-mode backwards: no transform remains after the animation (a transformed ancestor would trap modals under their
+   backdrop and break position: fixed popups). */
+.ta-page-enter { animation: ta-page-enter .22s ease-out backwards; }
 .ta-page-head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--ta-sp-4); margin-bottom: var(--ta-sp-5); }
 .ta-page-head__icon { width: 52px; height: 52px; flex: 0 0 52px; display: grid; place-items: center; border-radius: var(--ta-radius-card); background: var(--ta-blue-soft); color: var(--ta-blue-strong); }
 .ta-page-head__icon .ta-icon { width: 26px; height: 26px; }
@@ -316,7 +318,9 @@ button.ta-nav__link { width: 100%; border: 0; background: transparent; font: inh
 .password-rules li { display: flex; align-items: center; gap: 6px; transition: color var(--ta-transition); }
 .password-rules li::before { content: ""; width: 8px; height: 8px; border-radius: 50%; border: 1.5px solid currentColor; }
 .password-rules li.ok { color: var(--ta-success-text); }
-.password-rules li.ok::before { background: currentColor; }
+.password-rules li.ok::before { content: "✓"; width: auto; height: auto; border: 0; border-radius: 0; background: none; font-weight: 700; }
+.password-rules li.fail { color: var(--ta-danger-text); }
+.password-rules li.fail::before { content: "✕"; width: auto; height: auto; border: 0; border-radius: 0; background: none; font-weight: 700; }
 .ta-password-toggle { cursor: pointer; }
 .ta-password-toggle .ta-icon-hide, .ta-password-toggle.is-shown .ta-icon-show { display: none; }
 .ta-password-toggle.is-shown .ta-icon-hide { display: inline; }
@@ -403,6 +407,7 @@ ul.ta-stat-list { display: grid; gap: 4px; }
 .ta-input-icon { position: relative; }
 .ta-input-icon > .ta-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); width: 18px; height: 18px; color: var(--ta-text-2); pointer-events: none; }
 .ta-input-icon > .form-control { padding-left: 40px; }
+.ta-input-icon--top > .ta-icon { top: 11px; transform: none; }
 .ta-input-icon > .ta-password-toggle { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); width: 36px; height: 36px; display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: var(--ta-radius-sm); background: transparent; color: var(--ta-text-2); }
 .ta-input-icon > .ta-password-toggle:hover { background: var(--ta-surface-2); color: var(--ta-text); }
 .ta-input-icon > .ta-password-toggle + .form-control, .ta-input-icon > .form-control:has(+ .ta-password-toggle) { padding-right: 44px; }

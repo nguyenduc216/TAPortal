@@ -89,11 +89,11 @@ public sealed class SafeCustomerWorkspaceTests
     }
 
     [Fact]
-    public void EveryAdminTextFieldHasALeftIcon()
+    public void EveryTextFieldInBothAppsHasALeftIcon()
     {
-        var views = Path.Combine(AppContext.BaseDirectory[..AppContext.BaseDirectory.IndexOf($"{Path.DirectorySeparatorChar}tests{Path.DirectorySeparatorChar}", StringComparison.Ordinal)], "src", "TAPortal.Web", "Views");
+        var src = Path.Combine(AppContext.BaseDirectory[..AppContext.BaseDirectory.IndexOf($"{Path.DirectorySeparatorChar}tests{Path.DirectorySeparatorChar}", StringComparison.Ordinal)], "src");
         var missing = new List<string>();
-        foreach (var file in Directory.EnumerateFiles(views, "*.cshtml", SearchOption.AllDirectories))
+        foreach (var file in new[] { "TAPortal.Web", "TACustomerPortal.Web" }.SelectMany(app => Directory.EnumerateFiles(Path.Combine(src, app, "Views"), "*.cshtml", SearchOption.AllDirectories)))
         {
             var text = File.ReadAllText(file);
             foreach (Match m in Regex.Matches(text, "<(input|textarea)\\b[^>]*class=\"form-control[^\"]*\"[^>]*>"))
@@ -210,6 +210,21 @@ public sealed class SafeCustomerWorkspaceTests
         var response = await c.PostAsync($"/customers/setportalaccountactive/{A}", new FormUrlEncodedContent(new Dictionary<string, string> { ["userId"] = UserA.ToString(), ["active"] = "false" }));
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         Assert.Empty(portal.Toggled);
+    }
+
+    [Fact]
+    public async Task ReactivationIsRefusedForAnInactiveCustomerButRevokeIsNotBlockedByStatus()
+    {
+        using var f = Factory("SYS_ADMIN", out var portal);
+        var c = Client(f);
+        var token = await Token(c, $"/customers/portalaccounts/{Inactive}");
+        var response = await Post(c, $"/customers/setportalaccountactive/{Inactive}", token, new() { ["userId"] = UserA.ToString(), ["active"] = "true" });
+        Assert.Equal($"/Customers/PortalAccounts/{Inactive}", response.Headers.Location!.OriginalString);
+        Assert.Empty(portal.Toggled);
+        Assert.Empty(portal.Listed.Where(id => id != Inactive));
+        var revoke = await Post(c, $"/customers/setportalaccountactive/{A}", token, new() { ["userId"] = UserA.ToString(), ["active"] = "false" });
+        Assert.Equal(HttpStatusCode.Redirect, revoke.StatusCode);
+        Assert.Equal([(UserA, A, false)], portal.Toggled);
     }
 
     [Fact]
