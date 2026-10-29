@@ -28,3 +28,7 @@ AUD-12 FIXED for role assignment (SYS_ADMIN-only, last SYS_ADMIN protected, stal
 
 ## Checkpoint 7 — current status
 AUD-15 FIXED (application); AUD-16 PARTIAL (application check FIXED, DB unique index migration 009 NOT_EXECUTED); AUD-17 PARTIAL (user soft delete FIXED, customer soft delete PENDING_APPROVAL); AUD-25 PARTIAL (verify script 007 + conditional migration 010 + grant template, PENDING_OPERATOR); new AUD-27/28 FIXED, AUD-29 OPEN. Release build 0/0; 136 safe tests + 4 Codec tests PASS; validate PASS; Admin smoke 15/15. Admin artifact `fc042e76…a727` (57 files); Customer NOT_REQUIRED (`ea77b3be…ac34`). Database NOT_VERIFIED. No deploy/UAT/merge per operator decision. Prior status lines above are historical.
+| `TAPORTAL-SYSTEM-AUDIT-CHG-20261029T042622Z-036AA1` | 2026-10-29 | Checkpoint 8 dashboard data (AUD-18), admin UX consistency, direct permissions view (AUD-26) | 2013ea2a10be1f4f618a65c9733adabfda1cc873 | NONE_REQUIRED | PUBLISHED (local, Admin only) / NOT_DEPLOYED | PENDING_APPROVAL |
+
+## Checkpoint 8 — current status
+AUD-18 FIXED (defined KPIs from SQL, real DB/audit status, explicit error/empty states); AUD-26 FIXED read-only; AUD-30..34 FIXED (UX/accessibility, BROWSER_NOT_VERIFIED). Release build 0/0; 160 safe tests + 4 Codec tests PASS; validate PASS; Admin smoke 15/15. Admin artifact `a6aca5d0…c5ff` (57 files); Customer NOT_REQUIRED (`ea77b3be…ac34`). Database NOT_VERIFIED. Backlog for Checkpoint 9/operator: AUD-23/24/25/29. Prior status lines above are historical.
