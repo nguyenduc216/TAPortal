@@ -660,7 +660,14 @@
       "AUD-41": "PENDING_OPERATOR (MEDIUM, operations): scripts/001-002 target legacy database TAPortal; read-only MCP unreachable",
       "AUD-42": "PENDING_APPROVAL (LOW): Customer Portal password change not audited"
     },
-    "findings_summary": { "total": 42, "critical": 0, "closed": 21, "fixed_in_code": 15, "pending_operator": 4, "pending_approval": 2 },
+    "findings_summary": {
+      "total": 42,
+      "critical": 0,
+      "closed": 21,
+      "fixed_in_code": 15,
+      "pending_operator": 4,
+      "pending_approval": 2
+    },
     "release_decision": {
       "code_release_candidate": "READY",
       "deployment_readiness": "CONDITIONAL_GO",
@@ -694,7 +701,13 @@
       "legacy_sql_tests": "NOT_SELECTED",
       "smoke_admin": "16/16 PASS",
       "smoke_customer": "10/10 PASS",
-      "not_verified": ["DATABASE_NOT_VERIFIED", "BROWSER_NOT_VERIFIED", "PROXY_NOT_VERIFIED", "IIS_NOT_VERIFIED", "TIMING_NOT_VERIFIED"]
+      "not_verified": [
+        "DATABASE_NOT_VERIFIED",
+        "BROWSER_NOT_VERIFIED",
+        "PROXY_NOT_VERIFIED",
+        "IIS_NOT_VERIFIED",
+        "TIMING_NOT_VERIFIED"
+      ]
     },
     "artifacts": {
       "TAPortal.Web": {
@@ -731,6 +744,54 @@
       "Deployment Phase B and UAT Phase C (C1-C20 + UAT-01..09) by operator",
       "Approvals: shared throttle/gateway, permission matrix, customer soft delete, Users.Status semantics, Customer Portal password audit",
       "PR #7 merge only after UAT acceptance and explicit approval"
+    ]
+  },
+  {
+    "change_id": "TAPORTAL-SYSTEM-AUDIT-CHG-20261029T141835Z-D2DFFD",
+    "created_at": "2026-10-29T14:18:35.835562+00:00",
+    "title": "Dual project local publish for production UAT preparation (RC 95e64ce)",
+    "status": "LOCAL_PUBLISH_COMPLETE",
+    "commit_sha": "cd5ccc0403b21e54d35f021575ded7c434d21df8",
+    "migration_status": "NONE_REQUIRED / NO_SQL_EXECUTED",
+    "publish_status": "PUBLISHED (local, Admin + Customer) / NOT_DEPLOYED",
+    "merge_status": "PENDING_APPROVAL",
+    "agent": "Claude Code (claude-opus-5-5)",
+    "source_note": "src/tests/TAPortal.sln tree hashes identical to RC 95e64cedb14479850bc3f32d28ec0aa6c36f7d02; only embedded InformationalVersion differs",
+    "database_state": "OPERATOR_REPORTED (Users 4, Customers 10, CustomerPortalMemberships 0; verify 003/004/007/008 no FAIL); agent NOT_VERIFIED",
+    "build": {
+      "restore": "exit 0",
+      "release_build": "0 warnings / 0 errors",
+      "safe_tests": "NOT_RUN (operator instruction)",
+      "browser_uat": "NOT_RUN (operator instruction)"
+    },
+    "artifacts": {
+      "TAPortal.Web": {
+        "path": "D:\\T.A\\TAPortal\\TAPortal\\publish\\deployed-TAPortal.Web",
+        "exit_code": 0,
+        "started_utc": "2026-10-29T14:19:18Z",
+        "finished_utc": "2026-10-29T14:19:19Z",
+        "files": 57,
+        "sha256": "f97e0bcbf198703b539d96fdc87f57450fb1d3ac76d120c51b12caaa71fcf10e",
+        "previous_sha256": "6cfdc285c736386f8e1b6a94303286a07cc0bbf0c912d685aa4db122e5edfe69"
+      },
+      "TACustomerPortal.Web": {
+        "path": "D:\\T.A\\TAPortal\\TAPortal\\publish\\deployed-TACustomerPortal.Web",
+        "exit_code": 0,
+        "started_utc": "2026-10-29T14:19:19Z",
+        "finished_utc": "2026-10-29T14:19:21Z",
+        "files": 54,
+        "sha256": "564e037dd1bc21c827c7097ac88c68fbcb208a4ef24ea2d35af84852b627944b",
+        "previous_sha256": "cb152b0567270cb4fe64d8b2aa01dd20007fac1c30ec4b7c7b4403c35cfe3efc"
+      },
+      "shared_dll_sha256": "1dc9333b2f1badf7f82507d2a636120ab0c6b7877ed2649fa762b4bf9a4fdd74"
+    },
+    "backup": "publish\\rollback\\TAPORTAL-SYSTEM-AUDIT-CHG-20261029T141835Z-D2DFFD\\ (verified identical to pre-publish manifests)",
+    "iis": "NOT_CHECKED",
+    "pr": "https://github.com/nguyenduc216/TAPortal/pull/7 (draft)",
+    "remaining": [
+      "Production prerequisites NOT_VERIFIED: connection string, SQL permissions, AuditLogs + INSERT grant, Data Protection, HTTPS, AllowedHosts, KnownProxies, RequireDurableAudit, DB/website backup, IIS mapping",
+      "Operator deploys via runbook Phase B and runs UAT Phase C",
+      "PR #7 merge only after acceptance and approval"
     ]
   }
 ]

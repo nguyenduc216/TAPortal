@@ -40,3 +40,7 @@ AUD-23 FIXED (app; TIMING_NOT_VERIFIED); AUD-24 PARTIAL (memory bound, proxy all
 
 ## Checkpoint 10 — release candidate status (current)
 42 findings: 0 CRITICAL; CLOSED 21, FIXED_IN_CODE 15, PENDING_OPERATOR 4, PENDING_APPROVAL 2; migration 008 NOT_VERIFIED; UAT not run. New AUD-39/40 CLOSED, AUD-41 PENDING_OPERATOR, AUD-42 PENDING_APPROVAL. Release build 0/0; 215 safe tests + 4 Codec tests PASS; smoke Admin 16/16, Customer 10/10. RC pair from 95e64ce: Admin `6cfdc285…fe69` (57), Customer `cb152b05…3efc` (54), same Shared DLL. Decision: code RC READY; deployment CONDITIONAL GO (Phase A of docs/operations/final-deployment-uat-runbook.md); production NOT READY. Final report: docs/audits/taportal-system-audit-final-TAPORTAL-SYSTEM-AUDIT-CHG-20261029T052755Z-8ECA9D.md. Prior status lines above are historical.
+| `TAPORTAL-SYSTEM-AUDIT-CHG-20261029T141835Z-D2DFFD` | 2026-10-29 | Dual project local publish for production UAT preparation (RC 95e64ce) | cd5ccc0403b21e54d35f021575ded7c434d21df8 | NONE_REQUIRED | PUBLISHED (local, Admin + Customer) / NOT_DEPLOYED | PENDING_APPROVAL |
+
+## Production UAT preparation publish — current status
+LOCAL_PUBLISH_COMPLETE from cd5ccc0 (source tree identical to RC 95e64ce): Admin `f97e0bcb…f10e` (57), Customer `564e037d…944b` (54), Shared DLL `1dc9333b…dd74` in both. Backup of RC pair in publish\rollback\TAPORTAL-SYSTEM-AUDIT-CHG-20261029T141835Z-D2DFFD\. NOT_DEPLOYED; IIS NOT_CHECKED; no SQL executed; production prerequisites NOT_VERIFIED. Prior status lines above are historical.
