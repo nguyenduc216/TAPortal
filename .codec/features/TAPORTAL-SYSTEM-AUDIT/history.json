@@ -857,5 +857,71 @@
       "Stricter CSP script-src/style-src 'self' after removing inline handlers (PENDING_APPROVAL)",
       "Razor Class Library for shared static assets instead of byte-identical copies (PENDING_APPROVAL)"
     ]
+  },
+  {
+    "change_id": "TAPORTAL-SYSTEM-AUDIT-CHG-20261029T160850Z-4CCB3B",
+    "created_at": "2026-10-29T16:08:50.677638+00:00",
+    "title": "Unified Customer Workspace: per-customer Portal accounts, remove standalone sidebar menu",
+    "status": "IMPLEMENTED / BUILD_VERIFIED / LOCAL_PUBLISH_COMPLETE (Admin) / VISUAL_NOT_VERIFIED / PRODUCTION_NOT_DEPLOYED",
+    "commit_sha": "eb8d0e656654a16c8f78930977bc8ad63e6f4a53",
+    "migration_status": "NONE_REQUIRED / NO_SQL_EXECUTED",
+    "publish_status": "PUBLISHED (local, Admin only) / NOT_DEPLOYED",
+    "merge_status": "PENDING_APPROVAL",
+    "agent": "Claude Code (claude-opus-5-5)",
+    "base_sha": "2e5099ba144792a2d466ca3ba7572b527b1bcb35",
+    "routes": {
+      "new": [
+        "GET /Customers/Details/{id}",
+        "GET /Customers/PortalAccounts/{id}",
+        "POST /Customers/SavePortalAccount/{id} (mode=assign|create)",
+        "POST /Customers/SetPortalAccountActive/{id}"
+      ],
+      "changed": [
+        "GET/POST /Customers/Edit/{id} renders inside workspace; save redirects to Edit/{id}",
+        "POST /Customers/Create redirects to Details/{newId}",
+        "GET /CustomerPortalAccounts?customerId=X redirects to /Customers/PortalAccounts/X"
+      ],
+      "kept": [
+        "GET /CustomerPortalAccounts (cross-customer overview, no sidebar link)",
+        "POST /CustomerPortalAccounts/Save, /SetActive"
+      ]
+    },
+    "isolation": "customer id from route; posted CustomerId/customerId differing from route -> 400; revoke only for memberships listed for the route customer; MembershipAdminStore SYS_ADMIN re-check, audit and duplicate handling unchanged",
+    "build": {
+      "restore": "OK",
+      "release_build": "0 warnings / 0 errors",
+      "safe_tests": "250 passed / 0 failed / 0 skipped (15 new)",
+      "codec_tests": "OK",
+      "codec_validate": "PASS",
+      "diff_check": "PASS",
+      "visual": "13 headless workspace screenshots; VISUAL_NOT_VERIFIED on real browser/data/IIS"
+    },
+    "artifacts": {
+      "TAPortal.Web": {
+        "path": "D:\\T.A\\TAPortal\\TAPortal\\publish\\deployed-TAPortal.Web",
+        "exit_code": 0,
+        "started_utc": "2026-10-29T16:15:48Z",
+        "finished_utc": "2026-10-29T16:15:50Z",
+        "files": 62,
+        "sha256": "f609696d3ead90bca8b464902bcde63277a70cfcf06b409aa44dba8df710e607",
+        "previous_sha256": "ddb59cce55fad80178b14cbbedba69731936f4e625bfefd0a85ceaf80b8398e2",
+        "shared_dll_sha256": "dc682cabe48f6dfd73deed12abb63bc3c487174ebfe7ac23a21e26ce97892b63"
+      },
+      "TACustomerPortal.Web": {
+        "status": "NOT_REQUIRED (Customer and Shared source unchanged)",
+        "sha256": "b39bb31c86eeb817b200d34e43df0c85a350a069aac051f937d7b9aa6477dc0e",
+        "shared_dll_sha256": "4af267cc9cfa7831d55e7e273612ce720280f7314ad1251d962aafa0d94b626a"
+      },
+      "shared_note": "Shared DLL hashes differ only by embedded InformationalVersion; src/TAPortal.Shared tree 065cf67e identical in 70917eb and eb8d0e6"
+    },
+    "backup": "publish\\rollback\\TAPORTAL-SYSTEM-AUDIT-CHG-20261029T160850Z-4CCB3B\\TAPortal.Web (verified identical)",
+    "iis": "NOT_CHECKED",
+    "pr": "https://github.com/nguyenduc216/TAPortal/pull/7 (draft)",
+    "operator_decisions": [
+      "Retire the legacy cross-customer /CustomerPortalAccounts page and repoint the dashboard KPI?",
+      "Backend SetActive(reactivate) does not check customer status (existing behaviour); UI blocks it for inactive customers",
+      "Existing-user list includes TA staff accounts (existing behaviour); filter?",
+      "Future workspace tabs (services, documents, tasks, reports, module settings) need their own data design"
+    ]
   }
 ]

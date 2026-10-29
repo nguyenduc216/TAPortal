@@ -48,3 +48,7 @@ LOCAL_PUBLISH_COMPLETE from cd5ccc0 (source tree identical to RC 95e64ce): Admin
 
 ## UI/UX redesign — current status
 UI_IMPLEMENTED, BUILD_VERIFIED, LOCAL_PUBLISH_COMPLETE; VISUAL_NOT_VERIFIED on real browser/data/IIS; PRODUCTION_NOT_DEPLOYED. Shared design system (css/ta-design.css + js/ta-shell.js identical in both apps), Tabler bundled locally (no CDN), inline SVG icons (TAPortal.Shared.UiIcon). UI-01..09 FIXED. Safe tests 235/235. Admin `ddb59cce…98e2` (61), Customer `b39bb31c…dc0e` (58), Shared DLL `4af267cc…626a`. Report: docs/audits/ui-redesign-TAPORTAL-SYSTEM-AUDIT-CHG-20261029T151702Z-ABDD41.md. Prior status lines above are historical.
+| `TAPORTAL-SYSTEM-AUDIT-CHG-20261029T160850Z-4CCB3B` | 2026-10-29 | Unified Customer Workspace: per-customer Portal accounts, remove standalone sidebar menu | eb8d0e656654a16c8f78930977bc8ad63e6f4a53 | NONE_REQUIRED | PUBLISHED (local, Admin only) / NOT_DEPLOYED | PENDING_APPROVAL |
+
+## Customer Workspace — current status
+Sidebar no longer lists 'Tài khoản Customer Portal'; each customer has a workspace (/Customers/Details|Edit|PortalAccounts/{id}) with per-customer membership management (assign existing / create new, role, revoke/reactivate) scoped to the route customer. Legacy /CustomerPortalAccounts kept for compatibility. Safe tests 250/250. Admin `f609696d…e607` (62); Customer unchanged `b39bb31c…dc0e`. NOT_DEPLOYED. Prior status lines above are historical.
