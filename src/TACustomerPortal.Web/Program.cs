@@ -57,6 +57,7 @@ builder.Services.AddOptions<ForwardedHeadersOptions>().Configure<IConfiguration>
 });
 var app = builder.Build();
 app.UseForwardedHeaders();
+app.UseTaSecurityHeaders();
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/account/error");

@@ -93,6 +93,7 @@ var app = builder.Build();
 if (!app.Services.GetRequiredService<AdminAuditOptions>().RequireDurableAudit)
     app.Logger.LogWarning("DURABLE_AUDIT_NOT_ENFORCED: Security:Audit:RequireDurableAudit=false; administrative changes may commit without a dbo.AuditLogs row. Enable after database/scripts/007-verify-audit-logs.sql reports PASS.");
 app.UseForwardedHeaders();
+app.UseTaSecurityHeaders();
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/home/error");
