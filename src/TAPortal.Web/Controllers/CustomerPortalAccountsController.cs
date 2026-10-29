@@ -8,8 +8,12 @@ namespace TAPortal.Web.Controllers;
 [Authorize(Policy = "SystemAdminOnly")]
 public sealed class CustomerPortalAccountsController(MembershipAdminStore store, PortalDb db, PasswordService passwords) : Controller
 {
+    // Compatibility: no longer in the sidebar. A per-customer link keeps its context and opens that customer's workspace tab;
+    // the cross-customer overview stays reachable for old bookmarks and the dashboard KPI.
     public async Task<IActionResult> Index(Guid? customerId)
     {
+        if (customerId is { } id && id != Guid.Empty)
+            return RedirectToAction("PortalAccounts", "Customers", new { id });
         ViewBag.Customers = await db.GetCustomersAsync();
         ViewBag.Users = await db.GetUsersAsync();
         ViewBag.CustomerId = customerId;

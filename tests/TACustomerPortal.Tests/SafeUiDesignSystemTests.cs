@@ -137,10 +137,11 @@ public sealed class SafeUiDesignSystemTests
         using var f = AdminFactory(new Identity("SYS_ADMIN", []));
         var html = await Client(f).GetStringAsync("/");
         var nav = Sidebar(html);
-        foreach (var href in new[] { "href=\"/\"", "href=\"/Customers\"", "href=\"/CustomerPortalAccounts\"", "href=\"/Users\"", "href=\"/Roles\"", "href=\"/Menus\"" })
+        foreach (var href in new[] { "href=\"/\"", "href=\"/Customers\"", "href=\"/Users\"", "href=\"/Roles\"", "href=\"/Menus\"" })
             Assert.Contains(href, nav);
         Assert.Matches("<a class=\"ta-nav__link\"[^>]*aria-current=\"page\"[^>]*href=\"/\">", nav);   // the anchor tag helper writes href last
         Assert.Single(Regex.Matches(nav, "aria-current=\"page\""));
+        Assert.DoesNotContain("href=\"/CustomerPortalAccounts\"", nav);  // managed inside each customer workspace
         foreach (Match link in Regex.Matches(nav, "<(a|span) class=\"ta-nav__link[^\"]*\"[^>]*>.*?</(a|span)></li>", RegexOptions.Singleline))
             Assert.Contains("<svg class=\"ta-icon\"", link.Value);       // no menu item without an icon
         Assert.Equal(2, Regex.Matches(nav, "aria-disabled=\"true\"").Count); // unimplemented modules stay visibly disabled

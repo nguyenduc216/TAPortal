@@ -39,6 +39,7 @@
     <meta name="theme-color" content="#082746" />
     <link rel="stylesheet" href="~/lib/tabler/tabler.min.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/ta-design.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/ta-admin.css" asp-append-version="true" />
 </head>
 <body>
 <div class="ta-global-progress" data-ta-progress role="progressbar" aria-label="Đang tải trang" aria-hidden="true"><span></span></div>
@@ -64,8 +65,8 @@
                 <div class="ta-nav__group">
                     <p class="ta-nav__section">Quản lý khách hàng</p>
                     <ul class="ta-nav__list">
-                        <li><a class="ta-nav__link" asp-controller="Customers" asp-action="Index" title="Khách hàng" aria-current="@(IsCurrent("Customers") ? "page" : null)"><span class="ta-nav__icon">@UiIcon.Render("building")</span><span class="ta-nav__label">Khách hàng</span></a></li>
-                        <li><a class="ta-nav__link" asp-controller="CustomerPortalAccounts" asp-action="Index" title="Tài khoản Customer Portal" aria-current="@(IsCurrent("CustomerPortalAccounts") ? "page" : null)"><span class="ta-nav__icon">@UiIcon.Render("users-group")</span><span class="ta-nav__label">Tài khoản Customer Portal</span></a></li>
+                        @* Customer Portal accounts are managed inside each customer's workspace (tab "Tài khoản Portal"). *@
+                        <li><a class="ta-nav__link" asp-controller="Customers" asp-action="Index" title="Khách hàng" aria-current="@(IsCurrent("Customers") || IsCurrent("CustomerPortalAccounts") ? "page" : null)"><span class="ta-nav__icon">@UiIcon.Render("building")</span><span class="ta-nav__label">Khách hàng</span></a></li>
                     </ul>
                 </div>
             }

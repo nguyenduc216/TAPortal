@@ -1,26 +1,37 @@
 @model CustomerEditVm
 @{
     var isNew = Model.Id == Guid.Empty;
-    ViewData["Title"] = isNew ? "Thêm khách hàng" : "Sửa khách hàng";
-    ViewData["Heading"] = isNew ? "Thêm khách hàng" : "Sửa khách hàng: " + Model.Code;
-    ViewData["Subtitle"] = isNew ? "Tạo hồ sơ khách hàng mới." : "Cập nhật thông tin hồ sơ khách hàng.";
-    ViewData["PageIcon"] = isNew ? "plus" : "pencil";
+    var ws = ViewData["Workspace"] as CustomerWorkspaceHeader;
     ViewData["ParentTitle"] = "Khách hàng";
     ViewData["ParentController"] = "Customers";
+    if (isNew || ws is null)
+    {
+        ViewData["Title"] = "Thêm khách hàng";
+        ViewData["Subtitle"] = "Tạo hồ sơ khách hàng mới.";
+        ViewData["PageIcon"] = "plus";
+    }
+    else
+    {
+        ViewData["Title"] = ws.Code;
+        ViewData["HideHeader"] = true;
+    }
 }
-<div class="row"><div class="col-xl-9 col-xxl-8">
+@if (!isNew && ws is not null)
+{
+    <partial name="_Workspace" model="ws" />
+}
 <form class="card" asp-action="@(isNew ? "Create" : "Edit")" asp-route-id="@(isNew ? null : Model.Id)" method="post" novalidate>
     <div class="card-header"><h2 class="card-title">@UiIcon.Render("building")Thông tin khách hàng</h2></div>
     <div class="card-body">
         <div asp-validation-summary="ModelOnly" class="ta-alert ta-alert--danger" role="alert"></div>
-        <div class="ta-form-grid">
+        <div class="ta-form-grid ta-form-grid--3">
             <div>
                 <label asp-for="Code" class="form-label @(isNew ? "required" : "")">Mã khách hàng</label>
                 @if (isNew) {<input asp-for="Code" class="form-control text-uppercase" maxlength="50" autocomplete="off" required />} else {<input class="form-control" value="@Model.Code" readonly disabled />}
                 <span asp-validation-for="Code" class="invalid-feedback d-block"></span>
                 @if (!isNew) {<div class="form-hint">Mã khách hàng không thể thay đổi.</div>}
             </div>
-            <div>
+            <div class="ta-ws-span-2">
                 <label asp-for="Name" class="form-label required">Tên khách hàng</label>
                 <input asp-for="Name" class="form-control" maxlength="250" required placeholder="Nhập tên khách hàng" />
                 <span asp-validation-for="Name" class="invalid-feedback d-block"></span>
@@ -41,6 +52,11 @@
                 <input asp-for="Phone" class="form-control" maxlength="50" inputmode="tel" />
                 <span asp-validation-for="Phone" class="invalid-feedback d-block"></span>
             </div>
+            <div class="ta-ws-span-2">
+                <label asp-for="Address" class="form-label">Địa chỉ</label>
+                <textarea asp-for="Address" class="form-control" rows="3" maxlength="1000" placeholder="Số nhà, đường, phường/xã, quận/huyện, tỉnh/thành phố"></textarea>
+                <span asp-validation-for="Address" class="invalid-feedback d-block"></span>
+            </div>
             <div>
                 <span class="form-label d-block">Trạng thái</span>
                 <div class="ta-switch-row">
@@ -49,16 +65,11 @@
                 <div class="form-hint">Tắt sẽ chặn mọi tài khoản Customer Portal truy cập doanh nghiệp này; dữ liệu và membership được giữ nguyên.</div>
                 @if (!isNew) {<div class="form-hint">Trạng thái hệ thống: <span class="ta-code">@Model.Status</span></div>}
             </div>
-            <div class="ta-span-2">
-                <label asp-for="Address" class="form-label">Địa chỉ</label>
-                <textarea asp-for="Address" class="form-control" rows="3" maxlength="1000" placeholder="Số nhà, đường, phường/xã, quận/huyện, tỉnh/thành phố"></textarea>
-                <span asp-validation-for="Address" class="invalid-feedback d-block"></span>
-            </div>
         </div>
     </div>
     <div class="card-footer ta-form-actions">
-        <a asp-action="Index" class="btn">@UiIcon.Render("arrow-left")<span>Quay lại</span></a>
+        @if (isNew) {<a asp-action="Index" class="btn">@UiIcon.Render("arrow-left")<span>Quay lại</span></a>}
+        else {<a asp-action="Details" asp-route-id="@Model.Id" class="btn">@UiIcon.Render("x")<span>Hủy</span></a>}
         <button type="submit" class="btn btn-primary ms-auto" data-ta-loading data-ta-loading-text="Đang lưu...">@UiIcon.Render("device-floppy")<span>@(isNew ? "Tạo khách hàng" : "Lưu thay đổi")</span></button>
     </div>
 </form>
-</div></div>

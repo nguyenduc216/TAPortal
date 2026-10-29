@@ -10,6 +10,7 @@
     var selected = ViewBag.CustomerId as Guid?;
     var vi = System.Globalization.CultureInfo.GetCultureInfo("vi-VN");
 }
+<div class="ta-alert ta-alert--info" role="note" data-ta-legacy-overview>@UiIcon.Render("info-circle")<div class="ta-alert__body"><span class="ta-alert__title">Trang tổng hợp (tương thích)</span>Tài khoản Customer Portal nay được quản lý trong hồ sơ từng khách hàng: <a asp-controller="Customers" asp-action="Index">Khách hàng</a> → mở hồ sơ → tab "Tài khoản Portal". Chọn doanh nghiệp bên dưới sẽ mở thẳng tab đó.</div></div>
 <div class="row g-4">
 <div class="col-12">
 <form class="card" asp-action="Save" method="post">
@@ -36,7 +37,7 @@
 <div class="col-12">
 <section class="card ta-table-card" aria-label="Danh sách quyền truy cập Customer Portal">
     <div class="ta-table-toolbar">
-        <form method="get" asp-action="Index" class="d-flex gap-2 flex-wrap flex-grow-1" style="max-width:360px"><label class="ta-visually-hidden" for="cpFilter">Lọc theo doanh nghiệp</label><select id="cpFilter" name="customerId" class="form-select" onchange="this.form.submit()"><option value="">Tất cả doanh nghiệp</option>@foreach (var c in customers) {<option value="@c.Id" selected="@(selected == c.Id)">@c.Code — @c.Name</option>}</select><noscript><button class="btn" type="submit">Lọc</button></noscript></form>
+        <form method="get" asp-action="Index" class="d-flex gap-2 flex-wrap flex-grow-1" style="max-width:360px"><label class="ta-visually-hidden" for="cpFilter">Lọc theo doanh nghiệp</label><select id="cpFilter" name="customerId" class="form-select" onchange="this.form.submit()"><option value="">Tất cả doanh nghiệp (chọn để mở hồ sơ)</option>@foreach (var c in customers) {<option value="@c.Id" selected="@(selected == c.Id)">@c.Code — @c.Name</option>}</select><noscript><button class="btn" type="submit">Lọc</button></noscript></form>
         <div class="ta-search">@UiIcon.Render("search")<input class="form-control" type="search" aria-label="Tìm tài khoản" placeholder="Tìm tài khoản, doanh nghiệp..." oninput="taFilterRows(this.value,'membershipTable')" /></div>
     </div>
     @if (Model.Count == 0)

@@ -240,9 +240,120 @@ public sealed class RolesController(PortalDb db) : Controller
 }
 
 [Authorize(Policy = "SystemAdminOnly")]
-public sealed class CustomersController(PortalDb db, ICustomerAdminStore customers) : Controller
+public sealed class CustomersController(PortalDb db, ICustomerAdminStore customers, ICustomerPortalAccounts portal, PasswordService passwords, ILogger<CustomersController> logger) : Controller
 {
     public async Task<IActionResult> Index() => View(await db.GetCustomersAsync());
+
+    // ---- Customer Workspace ------------------------------------------------------------------------------
+    // Every workspace action takes the customer from the route id; posted customer ids must match it (or be absent),
+    // so one customer's page can never act on another customer's memberships.
+
+    [HttpGet]
+    public async Task<IActionResult> Details(Guid id)
+    {
+        var customer = await customers.GetAsync(id);
+        if (customer is null) return NotFound();
+        if (ActorOrNull() is not Guid actor) return Forbid();
+        PortalAccountSummary? summary = null;
+        try
+        {
+            var rows = await portal.ListAsync(actor, id);
+            var effective = rows.Count(r => MembershipDisplay.Evaluate(r.Active, r.Status, Row(customer)).Effective);
+            summary = new(rows.Count, effective, rows.Count(r => !r.Active));
+        }
+        catch (UnauthorizedAccessException) { return Forbid(); }
+        catch (SqlException ex) { logger.LogWarning(ex, "Customer portal accounts unavailable for customer {CustomerId}.", id); }
+        ViewData["Workspace"] = CustomerWorkspaceHeader.From(customer, CustomerWorkspace.Overview);
+        return View(new CustomerOverviewVm(customer, summary));
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> PortalAccounts(Guid id)
+    {
+        var customer = await customers.GetAsync(id);
+        if (customer is null) return NotFound();
+        if (ActorOrNull() is not Guid actor) return Forbid();
+        List<MembershipAdminRow>? rows = null;
+        try { rows = await portal.ListAsync(actor, id); }
+        catch (UnauthorizedAccessException) { return Forbid(); }
+        catch (SqlException ex) { logger.LogWarning(ex, "Customer portal accounts unavailable for customer {CustomerId}.", id); }
+        ViewData["Workspace"] = CustomerWorkspaceHeader.From(customer, CustomerWorkspace.Portal);
+        return View(new CustomerPortalAccountsVm(customer, rows?.Where(r => r.CustomerId == id).ToList(), rows is null ? [] : await portal.UsersAsync()));
+    }
+
+    // mode "assign": grant/update an existing user (UserId required). mode "create": create a new user (no TAPortal
+    // admin role) and grant it. Creating a membership never silently creates a user.
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> SavePortalAccount(Guid id, [FromForm] string? mode, MembershipInput input)
+    {
+        if (input.CustomerId != Guid.Empty && input.CustomerId != id) return BadRequest();
+        if (await customers.GetAsync(id) is null) return NotFound();
+        if (ActorOrNull() is not Guid actor) return Forbid();
+        input.CustomerId = id;
+        string? hash = null;
+        if (mode == "assign")
+        {
+            if (input.UserId is not { } userId || userId == Guid.Empty) ModelState.AddModelError("", "Vui lòng chọn tài khoản cần cấp quyền.");
+        }
+        else if (mode == "create")
+        {
+            if (input.UserId.HasValue) return BadRequest();
+            if (string.IsNullOrWhiteSpace(input.Username) || string.IsNullOrWhiteSpace(input.DisplayName))
+                ModelState.AddModelError("", "Vui lòng nhập tên đăng nhập và họ tên.");
+            var policy = PasswordPolicy.Validate(input.Password);
+            if (!policy.IsValid) ModelState.AddModelError("", policy.Error);
+            else if (ModelState.IsValid) hash = passwords.Hash(input.Password!);
+        }
+        else return BadRequest();
+
+        if (!ModelState.IsValid)
+        {
+            TempData["Error"] = string.Join(" ", ModelState.Values.SelectMany(v => v.Errors).Select(e => string.IsNullOrEmpty(e.ErrorMessage) ? "Dữ liệu không hợp lệ." : e.ErrorMessage).Distinct());
+            return RedirectToAction(nameof(PortalAccounts), new { id });
+        }
+        try
+        {
+            await portal.SaveAsync(input, actor, hash);
+            TempData["Success"] = mode == "create" ? "Đã tạo tài khoản và cấp quyền truy cập Customer Portal cho khách hàng này." : "Đã cập nhật quyền truy cập Customer Portal.";
+        }
+        catch (UnauthorizedAccessException) { return Forbid(); }
+        catch (SqlException ex) when (ex.Number is 2601 or 2627 or 547 or 51000)
+        {
+            TempData["Error"] = "Thông tin trùng lặp, hoặc tài khoản/khách hàng không hợp lệ hay đã ngừng hoạt động.";
+        }
+        catch (AuditUnavailableException) { TempData["Error"] = AuditUnavailableMessage; }
+        return RedirectToAction(nameof(PortalAccounts), new { id });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> SetPortalAccountActive(Guid id, [FromForm] Guid userId, [FromForm] bool active, [FromForm] Guid? customerId)
+    {
+        if (customerId is { } posted && posted != id) return BadRequest();
+        if (await customers.GetAsync(id) is null) return NotFound();
+        if (ActorOrNull() is not Guid actor) return Forbid();
+        try
+        {
+            // Only memberships listed for this customer can be changed from its workspace.
+            if (!(await portal.ListAsync(actor, id)).Any(r => r.UserId == userId && r.CustomerId == id))
+            {
+                TempData["Error"] = "Tài khoản này không có quyền truy cập khách hàng hiện tại.";
+                return RedirectToAction(nameof(PortalAccounts), new { id });
+            }
+            await portal.SetActiveAsync(userId, id, active, actor);
+            TempData["Success"] = active ? "Đã kích hoạt lại quyền truy cập Customer Portal." : "Đã thu hồi quyền truy cập Customer Portal của khách hàng này. Tài khoản dùng chung không bị khóa.";
+        }
+        catch (UnauthorizedAccessException) { return Forbid(); }
+        catch (AuditUnavailableException) { TempData["Error"] = AuditUnavailableMessage; }
+        return RedirectToAction(nameof(PortalAccounts), new { id });
+    }
+
+    private const string AuditUnavailableMessage = "Không thể ghi nhật ký audit (dbo.AuditLogs) nên thay đổi đã bị hủy. Liên hệ quản trị cơ sở dữ liệu.";
+
+    private Guid? ActorOrNull() => UsersController.ActorId(User);
+
+    private static CustomerRow Row(CustomerEditVm c) => new(c.Id, c.Code, c.Name, c.TaxCode, c.Email, c.Phone, c.Status, c.IsActive);
 
     [HttpGet]
     [Authorize(Policy = PermissionPolicies.Prefix + "CRM.CUSTOMERS.CREATE")]
@@ -257,7 +368,7 @@ public sealed class CustomersController(PortalDb db, ICustomerAdminStore custome
         if (ModelState.IsValid && Apply(await customers.CreateAsync(vm, UsersController.ActorId(User)), vm))
         {
             TempData["Success"] = "Đã tạo khách hàng mới.";
-            return RedirectToAction(nameof(Index));
+            return vm.Id == Guid.Empty ? RedirectToAction(nameof(Index)) : RedirectToAction(nameof(Details), new { id = vm.Id });
         }
         vm.Id = Guid.Empty;
         Response.StatusCode = StatusCodes.Status400BadRequest;
@@ -269,7 +380,9 @@ public sealed class CustomersController(PortalDb db, ICustomerAdminStore custome
     public async Task<IActionResult> Edit(Guid id)
     {
         var vm = await customers.GetAsync(id);
-        return vm is null ? NotFound() : View(vm);
+        if (vm is null) return NotFound();
+        ViewData["Workspace"] = CustomerWorkspaceHeader.From(vm, CustomerWorkspace.Info);
+        return View(vm);
     }
 
     [HttpPost]
@@ -279,6 +392,7 @@ public sealed class CustomersController(PortalDb db, ICustomerAdminStore custome
     {
         var current = await customers.GetAsync(id);
         if (current is null) return NotFound();
+        ViewData["Workspace"] = CustomerWorkspaceHeader.From(current, CustomerWorkspace.Info);
         vm.Id = id;
         vm.Code = current.Code;
         vm.Status = current.Status;
@@ -290,7 +404,7 @@ public sealed class CustomersController(PortalDb db, ICustomerAdminStore custome
             if (Apply(result, vm))
             {
                 TempData["Success"] = "Đã cập nhật thông tin khách hàng.";
-                return RedirectToAction(nameof(Index));
+                return RedirectToAction(nameof(Edit), new { id });
             }
         }
         Response.StatusCode = StatusCodes.Status400BadRequest;

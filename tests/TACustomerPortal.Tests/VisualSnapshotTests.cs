@@ -88,6 +88,13 @@ public sealed class VisualSnapshotTests
                 new(users[3].Id, customers[9].Id, "Phạm Thị D", "phamthid", "d.pham@ta.example", customers[9].Name, "ADMIN", false, "ACTIVE", new DateTime(2026, 9, 2, 14, 0, 0)),
             };
             await Save("cp-accounts", "CustomerPortalAccounts", "Index", "Index", memberships, data: v => { v["Customers"] = customers; v["Users"] = users; v["CustomerId"] = null; });
+            var ws = new AdminModels.CustomerEditVm { Id = customers[0].Id, Code = customers[0].Code, Name = customers[0].Name, TaxCode = customers[0].TaxCode, Email = customers[0].Email, Phone = customers[0].Phone, Address = "12 Nguyễn Huệ, Quận 1, TP. Hồ Chí Minh", Status = "ACTIVE", IsActive = true };
+            var wsRows = memberships.Take(2).Select(m => m with { CustomerId = ws.Id, CustomerName = ws.Name }).Append(memberships[2] with { CustomerId = ws.Id, CustomerName = ws.Name }).ToList();
+            await Save("ws-overview", "Customers", "Details", "Details", new AdminModels.CustomerOverviewVm(ws, new(3, 2, 1)), data: v => v["Workspace"] = AdminModels.CustomerWorkspaceHeader.From(ws, AdminModels.CustomerWorkspace.Overview));
+            await Save("ws-info", "Customers", "Edit", "Edit", ws, data: v => v["Workspace"] = AdminModels.CustomerWorkspaceHeader.From(ws, AdminModels.CustomerWorkspace.Info));
+            await Save("ws-portal", "Customers", "PortalAccounts", "PortalAccounts", new AdminModels.CustomerPortalAccountsVm(ws, wsRows, users), data: v => v["Workspace"] = AdminModels.CustomerWorkspaceHeader.From(ws, AdminModels.CustomerWorkspace.Portal));
+            var inactiveWs = new AdminModels.CustomerEditVm { Id = customers[9].Id, Code = customers[9].Code, Name = customers[9].Name, Status = "ACTIVE", IsActive = false };
+            await Save("ws-portal-empty", "Customers", "PortalAccounts", "PortalAccounts", new AdminModels.CustomerPortalAccountsVm(inactiveWs, [], users), data: v => v["Workspace"] = AdminModels.CustomerWorkspaceHeader.From(inactiveWs, AdminModels.CustomerWorkspace.Portal));
             await Save("roles", "Roles", "Index", "Index", roles);
             await Save("menus", "Menus", "Index", "Index", new List<AdminModels.PortalMenu> { new(Guid.NewGuid(), null, "CUSTOMERS", "Khách hàng", "building", "/Customers", 10, true, true), new(Guid.NewGuid(), null, "USERS", "Người dùng", "users", "/Users", 20, true, true) });
             await Save("profile", "Account", "Profile", "Profile", new AdminServices.AuthUserSnapshot(Actor, "nguyenvana", "Nguyễn Văn A", "a.nguyen@ta.example", "0901000001", "", ["SYS_ADMIN"], []));

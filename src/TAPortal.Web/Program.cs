@@ -56,6 +56,7 @@ builder.Services.AddScoped<IAuthorizationHandler, PermissionHandler>();
 builder.Services.AddSingleton<PasswordService>();
 builder.Services.AddScoped<PortalDb>();
 builder.Services.AddScoped<MembershipAdminStore>();
+builder.Services.AddScoped<ICustomerPortalAccounts, SqlCustomerPortalAccounts>();
 builder.Services.AddScoped<IUserRoleStore, SqlUserRoleStore>();
 builder.Services.AddScoped<IUserAccountStore, SqlUserAccountStore>();
 builder.Services.AddScoped<ICustomerAdminStore, SqlCustomerAdminStore>();

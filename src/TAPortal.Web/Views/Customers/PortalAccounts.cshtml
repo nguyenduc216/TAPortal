@@ -1,0 +1,101 @@
+@model CustomerPortalAccountsVm
+@{
+    var ws = (CustomerWorkspaceHeader)ViewData["Workspace"]!;
+    ViewData["Title"] = ws.Code;
+    ViewData["ParentTitle"] = "Khách hàng";
+    ViewData["ParentController"] = "Customers";
+    ViewData["HideHeader"] = true;
+    var c = Model.Customer;
+    var row = new CustomerRow(c.Id, c.Code, c.Name, c.TaxCode, c.Email, c.Phone, c.Status, c.IsActive);
+    var accounts = Model.Accounts;
+    var memberIds = accounts?.Select(a => a.UserId).ToHashSet() ?? [];
+    var canGrant = ws.Operational && accounts is not null;
+    var vi = System.Globalization.CultureInfo.GetCultureInfo("vi-VN");
+}
+<partial name="_Workspace" model="ws" />
+<section class="card ta-table-card" aria-label="Tài khoản Customer Portal của @c.Code">
+    <div class="ta-table-toolbar">
+        <div class="ta-search">@UiIcon.Render("search")<input class="form-control" type="search" aria-label="Tìm tài khoản" placeholder="Tìm theo họ tên, tên đăng nhập, email..." oninput="taFilterRows(this.value,'portalAccountsTable')" /></div>
+        <div class="d-flex flex-wrap gap-2 ms-auto">
+            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#assignAccount" disabled="@(!canGrant)">@UiIcon.Render("user-plus")<span>Cấp quyền cho tài khoản có sẵn</span></button>
+            <button type="button" class="btn" data-bs-toggle="modal" data-bs-target="#createAccount" disabled="@(!canGrant)">@UiIcon.Render("plus")<span>Tạo tài khoản mới</span></button>
+        </div>
+    </div>
+    @if (accounts is null)
+    {
+        <div class="ta-empty"><span class="ta-empty__icon">@UiIcon.Render("database-off")</span><p class="ta-empty__title">Không tải được danh sách tài khoản Portal</p><p class="ta-empty__text">Chi tiết đã được ghi vào nhật ký ứng dụng; vui lòng thử lại hoặc liên hệ quản trị hệ thống.</p></div>
+    }
+    else if (accounts.Count == 0)
+    {
+        <div class="ta-empty" data-ta-portal-empty><span class="ta-empty__icon">@UiIcon.Render("users-group")</span><p class="ta-empty__title">Khách hàng chưa có tài khoản Customer Portal</p><p class="ta-empty__text">Cấp quyền cho một tài khoản có sẵn, hoặc tạo tài khoản mới dành cho người dùng của khách hàng này.</p></div>
+    }
+    else
+    {
+        <div class="ta-table-wrap">
+            <table class="ta-table ta-table-stack" id="portalAccountsTable">
+                <thead><tr><th scope="col">Tài khoản</th><th scope="col">Vai trò trong doanh nghiệp</th><th scope="col">Quyền truy cập</th><th scope="col">Đăng nhập gần nhất (UTC)</th><th scope="col" class="ta-col-actions">Thao tác</th></tr></thead>
+                <tbody>
+                @foreach (var r in accounts)
+                {
+                    var effect = TAPortal.Web.Services.MembershipDisplay.Evaluate(r.Active, r.Status, row);
+                    <tr data-ta-row data-ta-user="@r.UserId">
+                        <td class="ta-cell-strong"><div>@r.DisplayName</div><div class="ta-cell-sub">@r.Username</div>@if (!string.IsNullOrEmpty(r.Email)) {<div class="ta-cell-sub">@r.Email</div>}</td>
+                        <td data-label="Vai trò">
+                            <form asp-action="SavePortalAccount" asp-route-id="@c.Id" method="post" class="d-flex gap-1 justify-content-end justify-content-md-start">
+                                <input type="hidden" name="mode" value="assign" /><input type="hidden" name="UserId" value="@r.UserId" />
+                                <select name="PortalRole" class="form-select form-select-sm" style="width:auto" aria-label="Vai trò của @r.Username" disabled="@(!ws.Operational)">@foreach (var role in new[] { "OWNER", "ADMIN", "VIEWER" }) {<option selected="@(r.Role == role)" value="@role">@role</option>}</select>
+                                <button type="submit" class="btn btn-sm ta-btn-icon" title="Lưu vai trò (đồng thời kích hoạt quyền truy cập)" aria-label="Lưu vai trò của @r.Username" disabled="@(!ws.Operational)">@UiIcon.Render("check")</button>
+                            </form>
+                        </td>
+                        <td data-label="Quyền truy cập"><span class="ta-badge @(effect.Effective ? "ta-badge--success" : r.Active ? "ta-badge--warning" : "ta-badge--neutral")">@effect.Label</span>@if (effect.Reason is not null) {<div class="small mt-1" style="color:var(--ta-danger-text)">Lý do: @effect.Reason</div>}</td>
+                        <td class="ta-nowrap" data-label="Đăng nhập gần nhất">@(r.LastLogin?.ToString("dd/MM/yyyy HH:mm") ?? "—")</td>
+                        <td class="ta-col-actions">
+                            <form asp-action="SetPortalAccountActive" asp-route-id="@c.Id" method="post">
+                                <input type="hidden" name="userId" value="@r.UserId" /><input type="hidden" name="active" value="@((!r.Active).ToString())" />
+                                <button type="submit" class="btn btn-sm @(r.Active ? "btn-outline-danger" : "btn-outline-primary")" disabled="@(!r.Active && !ws.Operational)">@UiIcon.Render(r.Active ? "lock" : "lock-open")<span>@(r.Active ? "Thu hồi" : "Kích hoạt lại")</span></button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+        <div class="ta-empty d-none" data-ta-no-results><span class="ta-empty__icon">@UiIcon.Render("search-off")</span><p class="ta-empty__title">Không tìm thấy kết quả phù hợp</p></div>
+        <div class="ta-table-footer"><span>Hiển thị <strong data-ta-visible-count>@accounts.Count.ToString("N0", vi)</strong> / @accounts.Count.ToString("N0", vi) tài khoản</span></div>
+    }
+    <div class="card-footer text-secondary small">Vai trò OWNER/ADMIN/VIEWER chỉ có hiệu lực trong Customer Portal của khách hàng này, không cấp quyền quản trị TAPortal. "Thu hồi" chỉ gỡ quyền truy cập khách hàng này, không khóa tài khoản dùng chung; để khóa tài khoản, dùng màn hình Người dùng.</div>
+</section>
+
+@if (canGrant)
+{
+<div class="modal modal-blur fade" id="assignAccount" tabindex="-1" aria-labelledby="assignAccountTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered"><div class="modal-content"><form asp-action="SavePortalAccount" asp-route-id="@c.Id" method="post">
+        <input type="hidden" name="mode" value="assign" />
+        <div class="modal-header"><h2 class="modal-title" id="assignAccountTitle">@UiIcon.Render("user-plus")Cấp quyền cho tài khoản có sẵn</h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button></div>
+        <div class="modal-body">
+            <p class="text-secondary">Khách hàng: <strong>@c.Code — @c.Name</strong>. Không tạo tài khoản mới; tài khoản giữ nguyên mật khẩu và vai trò TAPortal hiện có.</p>
+            <div class="mb-3"><label class="form-label required" for="assignUser">Tài khoản</label><select id="assignUser" name="UserId" class="form-select" required><option value="">-- Chọn tài khoản --</option>@foreach (var u in Model.Users) {var ok = u.IsActive && u.Status == "ACTIVE"; var member = memberIds.Contains(u.Id);<option value="@u.Id" disabled="@(!ok || member)">@u.Username — @u.DisplayName@(member ? " (đã có quyền)" : ok ? "" : " (ngừng)")</option>}</select><div class="form-hint">Tài khoản đã có quyền với khách hàng này: đổi vai trò hoặc kích hoạt lại ngay trong bảng.</div></div>
+            <div><label class="form-label" for="assignRole">Vai trò trong doanh nghiệp</label><select id="assignRole" name="PortalRole" class="form-select"><option value="VIEWER">VIEWER — chỉ xem</option><option value="ADMIN">ADMIN — quản trị doanh nghiệp</option><option value="OWNER">OWNER — chủ sở hữu</option></select></div>
+        </div>
+        <div class="modal-footer"><button type="button" class="btn me-auto" data-bs-dismiss="modal">@UiIcon.Render("x")<span>Hủy</span></button><button class="btn btn-primary" type="submit" data-ta-loading data-ta-loading-text="Đang lưu...">@UiIcon.Render("device-floppy")<span>Cấp quyền</span></button></div>
+    </form></div></div>
+</div>
+<div class="modal modal-blur fade" id="createAccount" tabindex="-1" aria-labelledby="createAccountTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered"><div class="modal-content"><form asp-action="SavePortalAccount" asp-route-id="@c.Id" method="post">
+        <input type="hidden" name="mode" value="create" />
+        <div class="modal-header"><h2 class="modal-title" id="createAccountTitle">@UiIcon.Render("plus")Tạo tài khoản mới và cấp quyền</h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button></div>
+        <div class="modal-body">
+            <p class="text-secondary">Tạo người dùng mới <strong>không có vai trò quản trị TAPortal</strong> và cấp quyền truy cập Customer Portal cho <strong>@c.Code</strong>.</p>
+            <div class="ta-form-grid">
+                <div><label class="form-label required" for="newPortalUsername">Tên đăng nhập</label><input id="newPortalUsername" class="form-control" name="Username" maxlength="100" autocomplete="off" required /></div>
+                <div><label class="form-label required" for="newPortalDisplay">Họ tên</label><input id="newPortalDisplay" class="form-control" name="DisplayName" maxlength="200" required /></div>
+                <div><label class="form-label" for="newPortalEmail">Email</label><input id="newPortalEmail" class="form-control" name="Email" type="email" maxlength="256" /></div>
+                <div><label class="form-label" for="newPortalRole">Vai trò trong doanh nghiệp</label><select id="newPortalRole" name="PortalRole" class="form-select"><option value="VIEWER">VIEWER — chỉ xem</option><option value="ADMIN">ADMIN — quản trị doanh nghiệp</option><option value="OWNER">OWNER — chủ sở hữu</option></select></div>
+                <div class="ta-span-2"><label class="form-label required" for="newPortalPassword">Mật khẩu ban đầu</label><input id="newPortalPassword" class="form-control" name="Password" type="password" maxlength="256" autocomplete="new-password" required oninput="taCheckPassword(this.value,'newPortalRules')" />
+                    <ul id="newPortalRules" class="password-rules"><li data-rule="len">Ít nhất 8 ký tự</li><li data-rule="letter">Có chữ cái</li><li data-rule="digit">Có chữ số</li><li data-rule="special">Có ký tự đặc biệt</li></ul></div>
+            </div>
+        </div>
+        <div class="modal-footer"><button type="button" class="btn me-auto" data-bs-dismiss="modal">@UiIcon.Render("x")<span>Hủy</span></button><button class="btn btn-primary" type="submit" data-ta-loading data-ta-loading-text="Đang tạo...">@UiIcon.Render("device-floppy")<span>Tạo và cấp quyền</span></button></div>
+    </form></div></div>
+</div>
+}
