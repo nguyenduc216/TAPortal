@@ -68,3 +68,7 @@ Customer Portal has its own green/gold design (customer.css, no Tabler); Custome
 
 ## Customer login audit — current status
 Sign-in survives data-layer failures with a message and incident reference; CL-01..08 fixed in code. Production root cause NOT_VERIFIED (check Database__ConnectionString, SQL grants, connectivity; Event Viewer). Safe tests 260/260. Customer `d70a3736…95c9` (55). NOT_DEPLOYED. Prior status lines above are historical.
+| `TAPORTAL-SYSTEM-AUDIT-CHG-20261029T180352Z-C996C9` | 2026-10-29 | Customer Portal redesign v2: gold sidebar, blue primary, compact SaaS layout | c06f198c2a4987e305956b70e250f95f63d5d117 | NONE_REQUIRED | PUBLISHED (local, Customer only) / NOT_DEPLOYED | PENDING_APPROVAL |
+
+## Customer Portal UI v2 — current status
+Deep-gold left sidebar, blue primary, compact 13px type, auto-fit grids; collapsible rail on desktop and drawer below 1200px. Safe tests 260/260; E2E PASS. Customer `45728db6…0ddc` (55). NOT_DEPLOYED. Prior status lines above are historical.
