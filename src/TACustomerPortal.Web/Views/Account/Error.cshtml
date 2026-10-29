@@ -1,8 +1,8 @@
 @{ ViewData["Title"] = "Lỗi hệ thống"; ViewData["HideHeader"] = true; }
-<section class="card mx-auto" style="max-width:560px">
-    <div class="ta-empty">
-        <span class="ta-empty__icon" style="background:var(--ta-danger-soft);color:var(--ta-danger-text)">@UiIcon.Render("alert-triangle")</span>
-        <h1 class="ta-empty__title">Không thể xử lý yêu cầu</h1>
-        <p class="ta-empty__text">Vui lòng thử lại sau hoặc liên hệ quản trị viên.</p>
-    </div>
-</section>
+<div class="cp-center" style="@(User.Identity?.IsAuthenticated == true ? "" : "min-height:100vh")">
+    <section class="cp-card cp-state">
+        <span class="cp-blob cp-blob--gold">@UiIcon.Render("alert-triangle")</span>
+        <h1>Không thể xử lý yêu cầu</h1>
+        <p>Vui lòng thử lại sau hoặc liên hệ quản trị viên T.A.</p>
+    </section>
+</div>

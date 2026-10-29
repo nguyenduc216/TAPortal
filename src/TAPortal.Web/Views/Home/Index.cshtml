@@ -30,7 +30,7 @@ else
         <div class="ta-stat-head"><span class="ta-stat-icon ta-stat-icon--gold">@UiIcon.Render("building")</span><div><div class="ta-stat-label">Khách hàng hiện hành</div><div class="ta-stat-value">@N(d.Customers.CurrentTotal)</div></div></div>
         <ul class="ta-stat-list"><li>Đang hoạt động: <strong>@N(d.Customers.Active)</strong></li><li>Ngừng hoạt động: <strong>@N(d.Customers.Inactive)</strong></li></ul>
     </a>
-    <a class="card ta-stat-card" asp-controller="CustomerPortalAccounts" asp-action="Index" data-ta-kpi="memberships">
+    <a class="card ta-stat-card" asp-controller="Customers" asp-action="Accounts" data-ta-kpi="memberships">
         <div class="ta-stat-head"><span class="ta-stat-icon ta-stat-icon--green">@UiIcon.Render("users-group")</span><div><div class="ta-stat-label">Quyền Customer Portal có hiệu lực</div><div class="ta-stat-value">@(d.Memberships is null ? "—" : N(d.Memberships.EffectiveMemberships))</div></div></div>
         @if (d.Memberships is null) {<div class="ta-stat-list">Chưa có dữ liệu (bảng membership chưa sẵn sàng).</div>}
         else {<ul class="ta-stat-list"><li>Tài khoản có quyền: <strong>@N(d.Memberships.UsersWithAccess)</strong></li><li>Đã thu hồi / không hiệu lực: <strong>@N(d.Memberships.RevokedOrIneffective)</strong></li></ul>}

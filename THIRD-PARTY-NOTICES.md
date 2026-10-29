@@ -1,10 +1,10 @@
 # Third-party notices
 
-Assets bundled locally so TAPortal Admin and Customer Portal render without a CDN.
+Assets bundled locally so TAPortal Admin and Customer Portal render without a CDN. Inline SVG icons are used by both apps.
 
 | Component | Version | License | Used in | Source (npm, integrity verified) |
 |---|---|---|---|---|
-| Tabler core (CSS, JS bundle incl. Bootstrap 5) | 1.0.0-beta21 | MIT | `src/TAPortal.Web/wwwroot/lib/tabler/` (css + js), `src/TACustomerPortal.Web/wwwroot/lib/tabler/` (css) | `@tabler/core@1.0.0-beta21` |
+| Tabler core (CSS, JS bundle incl. Bootstrap 5) | 1.0.0-beta21 | MIT | `src/TAPortal.Web/wwwroot/lib/tabler/` (css + js); the Customer Portal has its own stylesheet and does not ship Tabler | `@tabler/core@1.0.0-beta21` |
 | Tabler Icons (outline path data) | 3.19.0 | MIT | `src/TAPortal.Shared/UiIcon.cs` | `@tabler/icons@3.19.0` |
 
 ## Tabler core

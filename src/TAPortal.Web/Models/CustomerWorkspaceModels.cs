@@ -34,3 +34,6 @@ public sealed record PortalAccountSummary(int Total, int Effective, int Revoked)
 public sealed record CustomerOverviewVm(CustomerEditVm Customer, PortalAccountSummary? PortalAccounts);
 
 public sealed record CustomerPortalAccountsVm(CustomerEditVm Customer, IReadOnlyList<MembershipAdminRow>? Accounts, IReadOnlyList<PortalUser> Users);
+
+// Customers → "Tài khoản Portal" tab; Accounts is null when the membership list could not be read.
+public sealed record CustomerAccountsOverviewVm(IReadOnlyList<MembershipAdminRow>? Accounts, IReadOnlyList<CustomerRow> Customers);

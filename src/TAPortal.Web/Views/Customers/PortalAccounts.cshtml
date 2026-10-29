@@ -32,7 +32,7 @@
     else
     {
         <div class="ta-table-wrap">
-            <table class="ta-table ta-table-stack" id="portalAccountsTable">
+            <table class="ta-table ta-table-stack" id="portalAccountsTable" data-ta-pager="10">
                 <thead><tr><th scope="col">Tài khoản</th><th scope="col">Vai trò trong doanh nghiệp</th><th scope="col">Quyền truy cập</th><th scope="col">Đăng nhập gần nhất (UTC)</th><th scope="col" class="ta-col-actions">Thao tác</th></tr></thead>
                 <tbody>
                 @foreach (var r in accounts)
@@ -61,7 +61,7 @@
             </table>
         </div>
         <div class="ta-empty d-none" data-ta-no-results><span class="ta-empty__icon">@UiIcon.Render("search-off")</span><p class="ta-empty__title">Không tìm thấy kết quả phù hợp</p></div>
-        <div class="ta-table-footer"><span>Hiển thị <strong data-ta-visible-count>@accounts.Count.ToString("N0", vi)</strong> / @accounts.Count.ToString("N0", vi) tài khoản</span></div>
+        <div class="ta-table-footer" data-ta-pager-for="portalAccountsTable" data-ta-unit="tài khoản"></div>
     }
     <div class="card-footer text-secondary small">Vai trò Chủ sở hữu / Quản trị doanh nghiệp / Chỉ xem chỉ có hiệu lực trong Customer Portal của khách hàng này, không cấp quyền quản trị TAPortal. "Thu hồi" chỉ gỡ quyền truy cập khách hàng này, không khóa tài khoản dùng chung; để khóa tài khoản, dùng màn hình Người dùng.</div>
 </section>

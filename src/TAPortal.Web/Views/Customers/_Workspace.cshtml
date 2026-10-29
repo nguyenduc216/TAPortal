@@ -19,7 +19,7 @@
     <ul class="ta-tabs">
         @foreach (var tab in CustomerWorkspace.Tabs)
         {
-            <li><a class="ta-tabs__link" asp-action="@tab.Action" asp-route-id="@Model.Id" aria-current="@(tab.Key == Model.ActiveTab ? "page" : null)" data-ta-tab="@tab.Key">@UiIcon.Render(tab.Icon)<span>@tab.Label</span></a></li>
+            <li><a class="ta-tabs__link" data-ta-keep-scroll asp-action="@tab.Action" asp-route-id="@Model.Id" aria-current="@(tab.Key == Model.ActiveTab ? "page" : null)" data-ta-tab="@tab.Key">@UiIcon.Render(tab.Icon)<span>@tab.Label</span></a></li>
         }
     </ul>
 </nav>

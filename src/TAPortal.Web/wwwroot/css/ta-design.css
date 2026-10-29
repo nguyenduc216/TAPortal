@@ -1,6 +1,5 @@
-/* T.A design system — shared by TAPortal Admin and T.A Customer Portal, on top of the locally bundled Tabler/Bootstrap
-   (wwwroot/lib/tabler). Both apps ship an identical copy of this file; SafeUiDesignSystemTests fails if they differ.
-   Edit one copy and copy it to the other: src/TAPortal.Web/wwwroot/css/ta-design.css, src/TACustomerPortal.Web/wwwroot/css/ta-design.css. */
+/* T.A design system — TAPortal Admin (internal staff app), on top of the locally bundled Tabler/Bootstrap (wwwroot/lib/tabler).
+   T.A Customer Portal has its own, deliberately different design (TACustomerPortal.Web/wwwroot/css/customer.css). */
 
 /* ta-tokens:start */
 :root {
@@ -466,3 +465,29 @@ ul.ta-stat-list { display: grid; gap: 4px; }
 @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
 }
+
+/* 19. Soft navigation (ta-shell.js): only the content area cross-fades; sidebar and top bar stay still ------------- */
+@supports (view-transition-name: none) {
+    main[data-ta-swap] { view-transition-name: ta-main; }
+    .ta-page-enter { animation: none; }
+}
+::view-transition-old(root), ::view-transition-new(root) { animation-duration: .12s; }
+::view-transition-old(ta-main) { animation: ta-vt-out .12s ease both; }
+::view-transition-new(ta-main) { animation: ta-vt-in .2s cubic-bezier(.2, .7, .2, 1) both; }
+@keyframes ta-vt-out { to { opacity: 0; transform: translateY(-3px); } }
+@keyframes ta-vt-in { from { opacity: 0; transform: translateY(6px); } }
+.is-busy { opacity: .72; cursor: progress; }
+
+/* 20. Pagination (client-side, ta-shell.js) ---------------------------------------------------------------------- */
+.ta-table-footer.ta-pager { padding: var(--ta-sp-3) var(--ta-sp-5); }
+.ta-pager { display: flex; flex-wrap: wrap; align-items: center; gap: var(--ta-sp-3) var(--ta-sp-4); width: 100%; }
+.ta-pager__info { margin-right: auto; }
+.ta-pager__sizes, .ta-pager__pages { display: inline-flex; align-items: center; gap: 4px; }
+.ta-pager button { min-width: 32px; height: 32px; padding: 0 8px; border: 1px solid var(--ta-border); border-radius: var(--ta-radius-btn); background: var(--ta-surface); color: var(--ta-text); font-size: var(--ta-fs-label); font-weight: 600; }
+.ta-pager button:hover:not(:disabled) { border-color: var(--ta-blue); color: var(--ta-blue-strong); }
+.ta-pager button[aria-current="page"], .ta-pager button[aria-pressed="true"] { background: var(--ta-blue-strong); border-color: var(--ta-blue-strong); color: #fff; }
+.ta-pager button:disabled { opacity: .45; cursor: not-allowed; }
+.ta-pager__gap { color: var(--ta-text-2); padding: 0 2px; }
+.ta-list-turn tbody, .ta-list-turn > [data-ta-row] { animation: ta-turn .18s ease both; }
+@keyframes ta-turn { from { opacity: .35; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; } }

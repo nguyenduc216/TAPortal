@@ -33,6 +33,7 @@ public sealed class SafeCustomerWorkspaceTests
     private static readonly Guid UserB = Guid.Parse("bbbbbbbb-1111-0000-0000-000000000002");
     private static readonly Guid FreeUser = Guid.Parse("dddddddd-1111-0000-0000-000000000004");
     private static readonly Guid RevokedUser = Guid.Parse("eeeeeeee-1111-0000-0000-000000000005");
+    private static readonly Guid StaffUser = Guid.Parse("ffffffff-1111-0000-0000-000000000006");
 
     [Fact]
     public async Task SidebarNoLongerOffersStandalonePortalAccountsMenu()
@@ -96,11 +97,11 @@ public sealed class SafeCustomerWorkspaceTests
         foreach (var file in new[] { "TAPortal.Web", "TACustomerPortal.Web" }.SelectMany(app => Directory.EnumerateFiles(Path.Combine(src, app, "Views"), "*.cshtml", SearchOption.AllDirectories)))
         {
             var text = File.ReadAllText(file);
-            foreach (Match m in Regex.Matches(text, "<(input|textarea)\\b[^>]*class=\"form-control[^\"]*\"[^>]*>"))
+            foreach (Match m in Regex.Matches(text, "<(input|textarea)\\b[^>]*class=\"(form-control|cp-input)[^\"]*\"[^>]*>"))
             {
                 if (Regex.IsMatch(m.Value, "type=\"(hidden|search|checkbox)\"")) continue;
                 var before = text[Math.Max(0, m.Index - 120)..m.Index];
-                if (!Regex.IsMatch(before, "<div class=\"ta-input-icon[^\"]*\">\\s*@UiIcon\\.Render\\(\"[a-z0-9-]+\"\\)\\s*$")) missing.Add($"{Path.GetFileName(file)}: {m.Value[..Math.Min(80, m.Value.Length)]}");
+                if (!Regex.IsMatch(before, "<div class=\"(ta-input-icon|cp-input-wrap|cp-search)[^\"]*\">\\s*@UiIcon\\.Render\\(\"[a-z0-9-]+\"\\)\\s*$")) missing.Add($"{Path.GetFileName(file)}: {m.Value[..Math.Min(80, m.Value.Length)]}");
             }
         }
         Assert.Empty(missing);
@@ -228,12 +229,55 @@ public sealed class SafeCustomerWorkspaceTests
     }
 
     [Fact]
-    public async Task LegacyRouteKeepsCustomerContextAndOverviewStaysReachable()
+    public async Task LegacyRouteKeepsCustomerContextAndOverviewMovedToCustomersTab()
     {
         using var f = Factory("SYS_ADMIN", out _);
         var response = await Client(f).GetAsync($"/CustomerPortalAccounts?customerId={A}");
         Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
         Assert.Equal($"/Customers/PortalAccounts/{A}", response.Headers.Location!.OriginalString);
+        var overview = await Client(f).GetAsync("/CustomerPortalAccounts");
+        Assert.Equal("/Customers/Accounts", overview.Headers.Location!.OriginalString);
+        // The old cross-customer write endpoints are gone (management happens only in the customer workspace).
+        Assert.Equal(HttpStatusCode.NotFound, (await Client(f).PostAsync("/CustomerPortalAccounts/Save", new FormUrlEncodedContent(new Dictionary<string, string>()))).StatusCode);
+    }
+
+    [Fact]
+    public async Task CustomersAccountsTabListsEveryCustomersAccountsWithLinksToTheirWorkspace()
+    {
+        using var f = Factory("SYS_ADMIN", out var portal);
+        var html = WebUtility.HtmlDecode(await Client(f).GetStringAsync("/customers/accounts"));
+        Assert.Matches("aria-current=\"page\"[^>]*>.*?Tài khoản Portal|data-ta-tab=\"accounts\" aria-current=\"page\"", html);
+        Assert.Contains("User A", html);
+        Assert.Contains("User B", html);                              // cross-customer overview
+        Assert.Contains($"href=\"/Customers/PortalAccounts/{B}\"", html);
+        Assert.Contains("data-ta-pager=\"10\"", html);
+        Assert.Contains("Chủ sở hữu", html);
+        Assert.DoesNotContain("<form", html[html.IndexOf("allAccountsTable", StringComparison.Ordinal)..].Split("</table>")[0]);   // read-only
+        Assert.True(portal.ListedAll);
+    }
+
+    [Fact]
+    public void StaffDefinitionIsAnyTaPortalRole()
+    {
+        var users = new List<AdminModels.PortalUser> { new(UserA, "portal", "Portal", null, null, "ACTIVE", true), new(StaffUser, "staff.ta", "Staff", null, null, "ACTIVE", true), new(FreeUser, "norole", "No role", null, null, "ACTIVE", true) };
+        var map = new Dictionary<Guid, List<string>> { [StaffUser] = ["Biên tập viên"], [FreeUser] = [] };
+        Assert.Equal([UserA, FreeUser], AdminServices.PortalCandidates.Filter(users, map).Select(u => u.Id));
+    }
+
+    [Fact]
+    public async Task StaffAccountsAreNotOfferedAndCannotBeGrantedButExistingMembershipsStayManageable()
+    {
+        using var f = Factory("SYS_ADMIN", out var portal);
+        var c = Client(f);
+        var page = WebUtility.HtmlDecode(await c.GetStringAsync($"/customers/portalaccounts/{A}"));
+        Assert.DoesNotContain("staff.ta", page);                       // TA staff account not in the "existing account" list
+        var token = await Token(c, $"/customers/portalaccounts/{A}");
+        var staff = await Post(c, $"/customers/saveportalaccount/{A}", token, new() { ["mode"] = "assign", ["UserId"] = StaffUser.ToString(), ["PortalRole"] = "VIEWER" });
+        Assert.Equal(HttpStatusCode.Redirect, staff.StatusCode);
+        Assert.Empty(portal.Saved);
+        var member = await Post(c, $"/customers/saveportalaccount/{A}", token, new() { ["mode"] = "assign", ["UserId"] = RevokedUser.ToString(), ["PortalRole"] = "ADMIN" });
+        Assert.Equal(HttpStatusCode.Redirect, member.StatusCode);
+        Assert.Single(portal.Saved);                                   // role change of an existing membership still works
     }
 
     [Fact]
@@ -313,6 +357,7 @@ public sealed class SafeCustomerWorkspaceTests
             new(UserB, B, "User B", "user.b", null, "Công ty B", "ADMIN", true, "ACTIVE", null),
         ];
         public List<Guid> Listed { get; } = [];
+        public bool ListedAll { get; private set; }
         public List<(MembershipInput Input, string? Hash)> Saved { get; } = [];
         public List<(Guid User, Guid Customer, bool Active)> Toggled { get; } = [];
 
@@ -321,9 +366,15 @@ public sealed class SafeCustomerWorkspaceTests
             Listed.Add(customerId);
             return Task.FromResult(rows.Where(r => r.CustomerId == customerId).ToList());
         }
+        public Task<List<MembershipAdminRow>> ListAllAsync(Guid actor) { ListedAll = true; return Task.FromResult(rows.ToList()); }
+        public Task<List<AdminModels.CustomerRow>> CustomersAsync() => Task.FromResult(new List<AdminModels.CustomerRow>
+        {
+            new(A, "KH-A", "Công ty A", null, null, null, "ACTIVE", true), new(B, "KH-B", "Công ty B", null, null, null, "ACTIVE", true),
+        });
         public Task SaveAsync(MembershipInput input, Guid actor, string? passwordHash) { Saved.Add((input, passwordHash)); return Task.CompletedTask; }
         public Task SetActiveAsync(Guid userId, Guid customerId, bool active, Guid actor) { Toggled.Add((userId, customerId, active)); return Task.CompletedTask; }
-        public Task<List<AdminModels.PortalUser>> UsersAsync() => Task.FromResult(new List<AdminModels.PortalUser>
+        // Candidates exclude TA staff (StaffUser holds a TAPortal role in the real store).
+        public Task<List<AdminModels.PortalUser>> CandidateUsersAsync() => Task.FromResult(new List<AdminModels.PortalUser>
         {
             new(UserA, "user.a", "User A", null, null, "ACTIVE", true),
             new(FreeUser, "free", "Free User", null, null, "ACTIVE", true),

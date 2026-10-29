@@ -16,7 +16,7 @@
     else
     {
         <div class="ta-table-wrap">
-            <table class="ta-table ta-table-stack" id="menusTable">
+            <table class="ta-table ta-table-stack" id="menusTable" data-ta-pager="10">
                 <thead><tr><th scope="col">Mã menu</th><th scope="col">Tên menu</th><th scope="col">Route</th><th scope="col">Icon</th><th scope="col">Thứ tự</th><th scope="col">Hiển thị</th><th scope="col">Trạng thái</th></tr></thead>
                 <tbody>
                 @foreach (var x in Model)
@@ -27,6 +27,6 @@
             </table>
         </div>
         <div class="ta-empty d-none" data-ta-no-results><span class="ta-empty__icon">@UiIcon.Render("search-off")</span><p class="ta-empty__title">Không tìm thấy kết quả phù hợp</p></div>
-        <div class="ta-table-footer"><span>Hiển thị <strong data-ta-visible-count>@Model.Count</strong> / @Model.Count menu</span></div>
+        <div class="ta-table-footer" data-ta-pager-for="menusTable" data-ta-unit="menu"></div>
     }
 </section>

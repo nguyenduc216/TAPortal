@@ -244,6 +244,24 @@ public sealed class CustomersController(PortalDb db, ICustomerAdminStore custome
 {
     public async Task<IActionResult> Index() => View(await db.GetCustomersAsync());
 
+    // Customers → tab "Tài khoản Portal": every membership of every customer (replaces the old standalone page).
+    // Read-only overview; each row opens the customer's workspace tab where the membership is managed.
+    [HttpGet]
+    public async Task<IActionResult> Accounts()
+    {
+        if (ActorOrNull() is not Guid actor) return Forbid();
+        List<MembershipAdminRow>? rows = null;
+        List<CustomerRow> customerRows = [];
+        try
+        {
+            rows = await portal.ListAllAsync(actor);
+            customerRows = await portal.CustomersAsync();
+        }
+        catch (UnauthorizedAccessException) { return Forbid(); }
+        catch (SqlException ex) { logger.LogWarning(ex, "Customer portal account overview unavailable."); rows = null; }
+        return View(new CustomerAccountsOverviewVm(rows, customerRows));
+    }
+
     // ---- Customer Workspace ------------------------------------------------------------------------------
     // Every workspace action takes the customer from the route id; posted customer ids must match it (or be absent),
     // so one customer's page can never act on another customer's memberships.
@@ -278,7 +296,7 @@ public sealed class CustomersController(PortalDb db, ICustomerAdminStore custome
         catch (UnauthorizedAccessException) { return Forbid(); }
         catch (SqlException ex) { logger.LogWarning(ex, "Customer portal accounts unavailable for customer {CustomerId}.", id); }
         ViewData["Workspace"] = CustomerWorkspaceHeader.From(customer, CustomerWorkspace.Portal);
-        return View(new CustomerPortalAccountsVm(customer, rows?.Where(r => r.CustomerId == id).ToList(), rows is null ? [] : await portal.UsersAsync()));
+        return View(new CustomerPortalAccountsVm(customer, rows?.Where(r => r.CustomerId == id).ToList(), rows is null ? [] : await portal.CandidateUsersAsync()));
     }
 
     // mode "assign": grant/update an existing user (UserId required). mode "create": create a new user (no TAPortal
@@ -295,6 +313,17 @@ public sealed class CustomersController(PortalDb db, ICustomerAdminStore custome
         if (mode == "assign")
         {
             if (input.UserId is not { } userId || userId == Guid.Empty) ModelState.AddModelError("", "Vui lòng chọn tài khoản cần cấp quyền.");
+            else
+            {
+                // New grants only for non-staff accounts; an existing membership of this customer can still be updated.
+                try
+                {
+                    var isMember = (await portal.ListAsync(actor, id)).Any(m => m.UserId == userId);
+                    if (!isMember && !(await portal.CandidateUsersAsync()).Any(u => u.Id == userId))
+                        ModelState.AddModelError("", StaffAccountMessage);
+                }
+                catch (UnauthorizedAccessException) { return Forbid(); }
+            }
         }
         else if (mode == "create")
         {
@@ -359,6 +388,7 @@ public sealed class CustomersController(PortalDb db, ICustomerAdminStore custome
 
     private const string AuditUnavailableMessage = "Không thể ghi nhật ký audit (dbo.AuditLogs) nên thay đổi đã bị hủy. Liên hệ quản trị cơ sở dữ liệu.";
 
+    internal const string StaffAccountMessage = "Tài khoản nhân viên TA (có vai trò TAPortal) không được cấp quyền truy cập Customer Portal.";
     internal const string InactiveCustomerMessage = "Khách hàng đang ngừng hoạt động: không thể kích hoạt lại quyền truy cập Customer Portal.";
 
     private Guid? ActorOrNull() => UsersController.ActorId(User);

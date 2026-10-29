@@ -1,7 +1,7 @@
 "use strict";
-// Prevent accidental duplicate POSTs while the server processes a form.
+// Full-page submits only (sign-in, sign-out): forms inside the portal shell are sent in the background by ta-shell.js.
 document.addEventListener("submit", event => {
-    if (!(event.target instanceof HTMLFormElement)) return;
+    if (!(event.target instanceof HTMLFormElement) || event.defaultPrevented) return;
     event.target.setAttribute("aria-busy", "true");
     event.target.querySelectorAll("button[type=submit], button:not([type])").forEach(button => {
         button.disabled = true;
@@ -15,15 +15,8 @@ window.addEventListener("pageshow", () => {
     });
     document.querySelectorAll("form[aria-busy]").forEach(form => form.removeAttribute("aria-busy"));
 });
-// "Chọn doanh nghiệp": live, diacritic-insensitive filter by company name or code.
-window.taFilterCompanies = query => {
-    const fold = text => text.normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/đ/g, "d").replace(/Đ/g, "D").toLocaleLowerCase("vi");
-    const value = fold(query.trim());
-    let visible = 0;
-    document.querySelectorAll("[data-ta-company]").forEach(form => {
-        const match = fold(form.textContent).includes(value);
-        form.hidden = !match;
-        if (match) visible += 1;
-    });
-    document.querySelector("[data-ta-no-company]")?.classList.toggle("d-none", visible !== 0);
-};
+// Account menu (<details>): close after navigation, on outside click and on Escape.
+const closeMenus = except => document.querySelectorAll("details[data-cp-menu][open]").forEach(menu => { if (menu !== except) menu.open = false; });
+document.addEventListener("ta:load", () => closeMenus(null));
+document.addEventListener("click", event => closeMenus(event.target.closest("details[data-cp-menu]")));
+document.addEventListener("keydown", event => { if (event.key === "Escape") closeMenus(null); });

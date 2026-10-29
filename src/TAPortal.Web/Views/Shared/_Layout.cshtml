@@ -41,7 +41,6 @@
     <link rel="stylesheet" href="~/css/ta-admin.css" asp-append-version="true" />
 </head>
 <body>
-<div class="ta-global-progress" data-ta-progress role="progressbar" aria-label="Đang tải trang" aria-hidden="true"><span></span></div>
 @if (User.Identity?.IsAuthenticated == true)
 {
     <a class="ta-skip-link" href="#taMain">Bỏ qua đến nội dung chính</a>
@@ -53,7 +52,7 @@
             </a>
             <button type="button" class="ta-sidebar__close" data-ta-drawer-close aria-label="Đóng menu">@UiIcon.Render("x")</button>
         </div>
-        <nav class="ta-nav" aria-label="Menu quản trị">
+        <nav class="ta-nav" aria-label="Menu quản trị" id="taNav" data-ta-swap>
             @if (isAdmin)
             {
                 <div class="ta-nav__group">
@@ -94,7 +93,7 @@
     <div class="ta-main">
         <header class="ta-topbar">
             <button type="button" class="ta-icon-btn" data-ta-sidebar-toggle aria-controls="taSidebar" aria-expanded="true" aria-label="Thu gọn/mở rộng menu">@UiIcon.Render("menu-2")</button>
-            <nav class="ta-breadcrumb" aria-label="Breadcrumb">
+            <nav class="ta-breadcrumb" aria-label="Breadcrumb" id="taCrumbs" data-ta-swap>
                 <ol>
                     <li>@if (isAdmin) {<a asp-controller="Home" asp-action="Index" aria-label="Tổng quan">@UiIcon.Render("home")</a>} else {@UiIcon.Render("home")}</li>
                     @if (parentTitle is not null && parentController is not null) {<li><a asp-controller="@parentController" asp-action="Index">@parentTitle</a></li>}
@@ -116,7 +115,7 @@
                 </div>
             </div>
         </header>
-        <main id="taMain" class="ta-content ta-page-enter" tabindex="-1">
+        <main id="taMain" class="ta-content ta-page-enter" tabindex="-1" data-ta-swap>
             @if (!hideHeader)
             {
                 <div class="ta-page-head">

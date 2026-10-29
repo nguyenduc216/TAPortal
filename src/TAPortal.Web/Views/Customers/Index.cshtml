@@ -1,7 +1,7 @@
 @model IReadOnlyList<CustomerRow>
 @{
     ViewData["Title"] = "Khách hàng";
-    ViewData["Heading"] = "Danh sách khách hàng";
+    ViewData["Heading"] = "Quản lý khách hàng";
     ViewData["Subtitle"] = "Quản lý hồ sơ khách hàng T.A.";
     ViewData["PageIcon"] = "building";
     var vi = System.Globalization.CultureInfo.GetCultureInfo("vi-VN");
@@ -9,6 +9,7 @@
 @section PageActions {
     <a class="btn btn-ta-gold" asp-action="Create">@UiIcon.Render("plus")<span>Thêm khách hàng</span></a>
 }
+<partial name="_CustomersTabs" model="@("list")" />
 <section class="card ta-table-card" aria-label="Danh sách khách hàng">
     <div class="ta-table-toolbar">
         <div class="ta-search">@UiIcon.Render("search")<input class="form-control" type="search" aria-label="Tìm khách hàng" placeholder="Tìm theo mã KH, tên, MST, email, điện thoại..." oninput="taFilterRows(this.value,'customersTable')" /></div>
@@ -20,7 +21,7 @@
     else
     {
         <div class="ta-table-wrap">
-            <table class="ta-table ta-table-stack" id="customersTable">
+            <table class="ta-table ta-table-stack" id="customersTable" data-ta-pager="10">
                 <thead><tr><th scope="col">Mã KH</th><th scope="col">Tên khách hàng</th><th scope="col">MST</th><th scope="col">Email</th><th scope="col">Điện thoại</th><th scope="col">Trạng thái</th><th scope="col" class="ta-col-actions">Thao tác</th></tr></thead>
                 <tbody>
                 @foreach (var x in Model)
@@ -45,6 +46,6 @@
             </table>
         </div>
         <div class="ta-empty d-none" data-ta-no-results><span class="ta-empty__icon">@UiIcon.Render("search-off")</span><p class="ta-empty__title">Không tìm thấy kết quả phù hợp</p></div>
-        <div class="ta-table-footer"><span>Hiển thị <strong data-ta-visible-count>@Model.Count.ToString("N0", vi)</strong> / @Model.Count.ToString("N0", vi) khách hàng</span></div>
+        <div class="ta-table-footer" data-ta-pager-for="customersTable" data-ta-unit="khách hàng"></div>
     }
 </section>

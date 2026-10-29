@@ -29,11 +29,9 @@ public sealed class SafeUiDesignSystemTests
     private static readonly string AdminWww = Path.Combine(Root, "src", "TAPortal.Web", "wwwroot");
     private static readonly string CustomerWww = Path.Combine(Root, "src", "TACustomerPortal.Web", "wwwroot");
 
+    // Only the behaviour script is shared; the Customer Portal has its own visual design (customer.css).
     [Theory]
-    [InlineData("css/ta-design.css")]
     [InlineData("js/ta-shell.js")]
-    [InlineData("lib/tabler/tabler.min.css")]
-    [InlineData("lib/tabler/LICENSE")]
     public void SharedDesignAssetsAreIdenticalInBothApps(string path)
     {
         var adminFile = Path.Combine(AdminWww, path);
@@ -62,14 +60,19 @@ public sealed class SafeUiDesignSystemTests
     {
         using var adminFactory = AdminFactory(null);
         using var customerFactory = CustomerFactory();
-        foreach (var html in new[] { await Client(adminFactory).GetStringAsync("/account/login"), await Client(customerFactory).GetStringAsync("/account/login") })
+        var adminHtml = await Client(adminFactory).GetStringAsync("/account/login");
+        var customerHtml = await Client(customerFactory).GetStringAsync("/account/login");
+        foreach (var html in new[] { adminHtml, customerHtml })
         {
             Assert.DoesNotContain("cdn.jsdelivr", html);
             Assert.DoesNotMatch("<(link|script)[^>]+(href|src)=\"(https?:)?//", html);
-            Assert.Contains("/lib/tabler/tabler.min.css", html);
-            Assert.Contains("/css/ta-design.css", html);
             Assert.Contains("/js/ta-shell.js", html);
         }
+        Assert.Contains("/lib/tabler/tabler.min.css", adminHtml);
+        Assert.Contains("/css/ta-design.css", adminHtml);
+        Assert.Contains("/css/customer.css", customerHtml);
+        Assert.DoesNotContain("tabler", customerHtml);                 // own design, not the Admin theme
+        Assert.DoesNotContain("ta-design.css", customerHtml);
     }
 
     [Theory]
@@ -78,9 +81,8 @@ public sealed class SafeUiDesignSystemTests
     [InlineData(true, "/css/ta-design.css")]
     [InlineData(true, "/js/ta-shell.js")]
     [InlineData(true, "/js/ta-portal.js")]
-    [InlineData(false, "/lib/tabler/tabler.min.css")]
-    [InlineData(false, "/css/ta-design.css")]
     [InlineData(false, "/css/customer.css")]
+    [InlineData(false, "/js/customer.js")]
     [InlineData(false, "/js/ta-shell.js")]
     public async Task VendoredAndSharedAssetsAreServed(bool adminApp, string path)
     {
@@ -88,6 +90,30 @@ public sealed class SafeUiDesignSystemTests
         using var customerFactory = CustomerFactory();
         var response = await (adminApp ? Client(adminFactory) : Client(customerFactory)).GetAsync(path);
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
+    public void CustomerPortalHasItsOwnGreenAndGoldDesign()
+    {
+        var css = File.ReadAllText(Path.Combine(CustomerWww, "css", "customer.css"));
+        Assert.Matches(@"--cp-green-700:\s*#146C3F;", css);
+        Assert.Matches(@"--cp-gold-500:\s*#F2B705;", css);
+        Assert.DoesNotContain("--ta-navy", css);
+        Assert.False(File.Exists(Path.Combine(CustomerWww, "css", "ta-design.css")));
+        Assert.False(Directory.Exists(Path.Combine(CustomerWww, "lib", "tabler")));
+        var layout = File.ReadAllText(Path.Combine(Root, "src", "TACustomerPortal.Web", "Views", "Shared", "_Layout.cshtml"));
+        Assert.DoesNotContain("ta-sidebar", layout);                   // top navigation + phone tab bar instead of the Admin sidebar
+        Assert.Contains("cp-tabbar", layout);
+        Assert.Contains("data-ta-swap", layout);                       // soft navigation container
+    }
+
+    [Fact]
+    public void AdminShellMarksSoftNavigationRegionsAndHasNoLoadingBar()
+    {
+        var layout = File.ReadAllText(Path.Combine(Root, "src", "TAPortal.Web", "Views", "Shared", "_Layout.cshtml"));
+        foreach (var id in new[] { "taNav", "taCrumbs", "taMain" })
+            Assert.Matches($"id=\"{id}\"[^>]*data-ta-swap", layout);
+        Assert.DoesNotContain("data-ta-progress", layout);
     }
 
     [Fact]

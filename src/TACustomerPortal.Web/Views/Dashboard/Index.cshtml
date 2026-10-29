@@ -1,27 +1,46 @@
 @model CustomerMembership
 @{
     ViewData["Title"] = "Tổng quan";
-    ViewData["Heading"] = "Tổng quan doanh nghiệp";
-    ViewData["PageIcon"] = "layout-dashboard";
+    ViewData["HideHeader"] = true;
 }
-<section class="ta-hero" aria-label="Doanh nghiệp đang truy cập">
-    <span class="ta-hero__icon" aria-hidden="true">@UiIcon.Render("building")</span>
-    <div class="ta-hero__body">
-        <p class="ta-hero__greet">Xin chào, @User.FindFirst("display_name")?.Value</p>
-        <h2 class="ta-hero__name">@Model.Name</h2>
-        <div class="ta-hero__meta"><span>@UiIcon.Render("hash")@Model.Code</span><span>@UiIcon.Render("receipt-tax")Mã số thuế: @(Model.TaxCode ?? "Chưa cập nhật")</span></div>
+<section class="cp-hero" aria-label="Doanh nghiệp đang truy cập">
+    <div>
+        <p class="cp-hero__greet">Xin chào, @User.FindFirst("display_name")?.Value</p>
+        <h1 class="cp-hero__name">@Model.Name</h1>
+        <div class="cp-hero__chips">
+            <span class="cp-glass">@UiIcon.Render("hash")@Model.Code</span>
+            <span class="cp-glass">@UiIcon.Render("receipt-tax")MST: @(Model.TaxCode ?? "Chưa cập nhật")</span>
+        </div>
     </div>
-    <span class="ta-badge ta-badge--success">Customer Portal đã kích hoạt</span>
+    <div class="cp-hero__side">
+        <span class="cp-hero__role">@UiIcon.Render("shield-check")@PortalRoleText.Label(Model.Role)</span>
+        <span class="cp-hero__status">Customer Portal đã kích hoạt</span>
+    </div>
 </section>
-<div class="ta-kpi-grid ta-kpi-grid--3">
-    <section class="card ta-stat-card"><div class="ta-stat-head"><span class="ta-stat-icon">@UiIcon.Render("shield-check")</span><div><div class="ta-stat-label">Vai trò doanh nghiệp</div><div class="ta-stat-value ta-stat-value--text">@PortalRoleText.Label(Model.Role)</div></div></div><div class="ta-stat-list">Quyền trong doanh nghiệp hiện tại</div></section>
-    <section class="card ta-stat-card"><div class="ta-stat-head"><span class="ta-stat-icon ta-stat-icon--green">@UiIcon.Render("user-circle")</span><div><div class="ta-stat-label">Tài khoản</div><div class="ta-stat-value ta-stat-value--text">Đang hoạt động</div></div></div><div class="ta-stat-list">@User.Identity?.Name</div></section>
-    <section class="card ta-stat-card"><div class="ta-stat-head"><span class="ta-stat-icon ta-stat-icon--gold">@UiIcon.Render("building")</span><div><div class="ta-stat-label">Doanh nghiệp</div><div class="ta-stat-value">@Model.Code</div></div></div><div class="ta-stat-list"><a asp-controller="Profile" asp-action="Company">Xem hồ sơ doanh nghiệp →</a></div></section>
+
+<div class="cp-section"><h2>Tóm tắt</h2></div>
+<div class="cp-grid">
+    <a class="cp-card cp-stat" asp-controller="Profile" asp-action="Company" style="color:inherit;text-decoration:none">
+        <div class="cp-stat__top"><span class="cp-stat__label">Doanh nghiệp</span><span class="cp-blob">@UiIcon.Render("building")</span></div>
+        <div class="cp-stat__value">@Model.Code</div>
+        <div class="cp-stat__hint">Xem hồ sơ doanh nghiệp →</div>
+    </a>
+    <section class="cp-card cp-stat">
+        <div class="cp-stat__top"><span class="cp-stat__label">Vai trò của bạn</span><span class="cp-blob cp-blob--gold">@UiIcon.Render("shield-check")</span></div>
+        <div class="cp-stat__value">@PortalRoleText.Label(Model.Role)</div>
+        <div class="cp-stat__hint">Trong doanh nghiệp hiện tại</div>
+    </section>
+    <a class="cp-card cp-stat" asp-controller="Profile" asp-action="Personal" style="color:inherit;text-decoration:none">
+        <div class="cp-stat__top"><span class="cp-stat__label">Tài khoản</span><span class="cp-blob cp-blob--ink">@UiIcon.Render("user-circle")</span></div>
+        <div class="cp-stat__value">Đang hoạt động</div>
+        <div class="cp-stat__hint">@User.Identity?.Name</div>
+    </a>
 </div>
-<h2 class="ta-section-title ta-section-gap">Dịch vụ tài chính</h2>
-<div class="ta-service-grid">
+
+<div class="cp-section"><h2>Dịch vụ tài chính</h2><p>Sẽ được T.A kích hoạt khi sẵn sàng.</p></div>
+<div class="cp-grid">
 @foreach (var (label, icon) in new[] { ("Tài khoản ngân hàng", "building-bank"), ("QR thanh toán", "qrcode"), ("Giao dịch", "arrows-exchange"), ("Công nợ", "file-invoice"), ("Đối soát", "checks"), ("Báo cáo", "chart-bar") })
 {
-    <section class="card ta-service"><span class="ta-stat-icon" aria-hidden="true">@UiIcon.Render(icon)</span><div><h3 class="ta-service__name">@label</h3><p class="ta-service__state"><span class="ta-badge ta-badge--neutral">Chưa kích hoạt</span></p><p class="ta-service__state mt-1">Chưa có dữ liệu</p></div></section>
+    <section class="cp-card cp-service"><span class="cp-blob cp-blob--ink" aria-hidden="true">@UiIcon.Render(icon)</span><div><h3>@label</h3><p><span class="cp-badge cp-badge--gold">Chưa kích hoạt</span></p><p>Chưa có dữ liệu</p></div></section>
 }
 </div>

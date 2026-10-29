@@ -68,7 +68,7 @@ public sealed class SafeAdminCrudTests
     [InlineData("GET", "/customers/edit/6f9619ff-8b86-d011-b42d-00cf4fc964ff")]
     [InlineData("POST", "/customers/edit/6f9619ff-8b86-d011-b42d-00cf4fc964ff")]
     [InlineData("GET", "/customerportalaccounts")]
-    [InlineData("POST", "/customerportalaccounts/save")]
+    [InlineData("POST", "/customers/saveportalaccount/11111111-2222-3333-4444-555555555555")]
     public async Task GrantedPermissionsWithoutSystemAdminAreForbidden(string method, string path)
     {
         // Customer Portal roles and fine-grained permissions must never unlock SYS_ADMIN-only management.
@@ -82,8 +82,8 @@ public sealed class SafeAdminCrudTests
     [InlineData("/users/create")]
     [InlineData("/customers/create")]
     [InlineData("/customers/edit/6f9619ff-8b86-d011-b42d-00cf4fc964ff")]
-    [InlineData("/customerportalaccounts/save")]
-    [InlineData("/customerportalaccounts/setactive")]
+    [InlineData("/customers/saveportalaccount/11111111-2222-3333-4444-555555555555")]
+    [InlineData("/customers/setportalaccountactive/11111111-2222-3333-4444-555555555555")]
     public async Task SystemAdminPostsWithoutCsrfTokenAreRejectedBeforeData(string path)
     {
         using var f = Factory("SYS_ADMIN");

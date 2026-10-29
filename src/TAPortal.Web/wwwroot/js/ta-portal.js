@@ -1,25 +1,6 @@
 (() => {
     'use strict';
 
-    const progress = document.querySelector('[data-ta-progress]');
-    let progressTimer;
-
-    const startProgress = () => {
-        if (!progress) return;
-        clearTimeout(progressTimer);
-        progress.classList.add('is-active');
-        progress.setAttribute('aria-hidden', 'false');
-    };
-
-    const finishProgress = () => {
-        if (!progress) return;
-        progress.classList.add('is-complete');
-        progressTimer = window.setTimeout(() => {
-            progress.classList.remove('is-active', 'is-complete');
-            progress.setAttribute('aria-hidden', 'true');
-        }, 220);
-    };
-
     const setButtonLoading = (button) => {
         if (!button || button.classList.contains('ta-action-loading')) return;
         const width = button.getBoundingClientRect().width;
@@ -32,6 +13,7 @@
         button.innerHTML = `<span class="spinner-border spinner-border-sm" aria-hidden="true"></span><span>${loadingText}</span>`;
     };
 
+    // Full-page submits only (login page): forms inside the shell are submitted in the background by ta-shell.js.
     document.addEventListener('submit', (event) => {
         const form = event.target;
         if (!(form instanceof HTMLFormElement) || event.defaultPrevented) return;
@@ -41,44 +23,17 @@
         }
         form.dataset.taSubmitting = 'true';
         setButtonLoading(event.submitter || form.querySelector('[type="submit"]'));
-        startProgress();
     });
-
-    document.addEventListener('click', (event) => {
-        const link = event.target.closest('a[href]');
-        if (!link || event.defaultPrevented || event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
-        const url = new URL(link.href, window.location.href);
-        const staysOnPage = url.pathname === window.location.pathname && url.search === window.location.search && url.hash;
-        const isPlaceholder = (link.getAttribute('href') || '').startsWith('#');
-        if (url.origin === window.location.origin && !staysOnPage && !isPlaceholder && link.target !== '_blank' && !link.hasAttribute('download') && !link.matches('[data-bs-toggle]')) startProgress();
-    });
-
-    window.taFilterRows = (query, tableId) => {
-        const table = document.getElementById(tableId);
-        if (!table) return;
-        const value = query.trim().toLocaleLowerCase('vi');
-        let visible = 0;
-        table.querySelectorAll('tbody tr[data-ta-row]').forEach((row) => {
-            const matches = row.innerText.toLocaleLowerCase('vi').includes(value);
-            row.hidden = !matches;
-            if (matches) visible += 1;
-        });
-        const card = table.closest('.ta-table-card');
-        card?.querySelector('[data-ta-no-results]')?.classList.toggle('d-none', visible !== 0 || value === '');
-        const counter = card?.querySelector('[data-ta-visible-count]');
-        if (counter) counter.textContent = visible.toLocaleString('vi-VN');
-    };
 
     // Bootstrap modals live at <body> level so no ancestor stacking context (page transition, sticky shell) can put
     // the modal under its own backdrop.
-    document.querySelectorAll('.ta-content .modal').forEach((modal) => document.body.appendChild(modal));
     document.addEventListener('hidden.bs.modal', (event) => {
         event.target.querySelectorAll('.password-rules li').forEach((item) => item.classList.remove('ok', 'fail'));
     });
 
     // Searchable dropdowns: every select.form-select gets a combobox with live search. The native <select> stays in
     // the form (hidden) and remains the submitted value, so model binding, onchange handlers and validation are unchanged.
-    const fold = (text) => text.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLocaleLowerCase('vi');
+    const fold = (text) => text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLocaleLowerCase('vi');
     const iconHtml = (id) => document.getElementById(id)?.innerHTML ?? '';
     let selectSeq = 0;
     let openSelect = null;
@@ -112,6 +67,7 @@
         popup.className = 'ta-select__popup';
         popup.hidden = true;
         popup.innerHTML = `<div class="ta-input-icon">${iconHtml('taIconSearch')}<input type="text" class="form-control form-control-sm" role="combobox" aria-autocomplete="list" aria-expanded="true" aria-controls="${uid}List" autocomplete="off" placeholder="Tìm kiếm..." aria-label="Tìm trong danh sách" /></div><ul class="ta-select__list" role="listbox" id="${uid}List"></ul><div class="ta-select__empty" hidden>Không tìm thấy kết quả</div>`;
+        popup.dataset.taTransient = 'true';
         (select.closest('.modal') || document.body).appendChild(popup);
         const search = popup.querySelector('input');
         const list = popup.querySelector('ul');
@@ -242,7 +198,6 @@
         sync();
     };
 
-    document.querySelectorAll('select.form-select').forEach(enhanceSelect);
     document.addEventListener('mousedown', (event) => {
         if (openSelect && !openSelect.popup.contains(event.target) && !openSelect.wrap.contains(event.target)) openSelect.close(false);
     });
@@ -252,13 +207,34 @@
     }, true);
     document.addEventListener('hide.bs.modal', () => openSelect?.close(false));
 
-    // Reopen a modal re-rendered by the server after a validation error (keeps the entered values).
-    document.querySelectorAll('.modal[data-ta-open="true"]').forEach((element) => {
-        if (window.bootstrap?.Modal) window.bootstrap.Modal.getOrCreateInstance(element).show();
+    // Page initialisation: runs on first load and again after every soft navigation (ta:load from ta-shell.js).
+    const init = () => {
+        // Bootstrap modals live at <body> level so no ancestor stacking context can put a modal under its own backdrop.
+        document.querySelectorAll('.ta-content .modal').forEach((modal) => {
+            modal.dataset.taTransient = 'true';
+            document.body.appendChild(modal);
+        });
+        document.querySelectorAll('select.form-select').forEach(enhanceSelect);
+        // Reopen a modal re-rendered by the server after a validation error (keeps the entered values).
+        document.querySelectorAll('.modal[data-ta-open="true"]').forEach((element) => {
+            if (window.bootstrap?.Modal) window.bootstrap.Modal.getOrCreateInstance(element).show();
+        });
+        document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach((element) => {
+            if (window.bootstrap?.Tooltip) window.bootstrap.Tooltip.getOrCreateInstance(element);
+        });
+    };
+    // Before content is swapped: close popups/modals of the old page and drop everything it moved to <body>.
+    document.addEventListener('ta:before-swap', () => {
+        openSelect?.close(false);
+        document.querySelectorAll('.modal.show').forEach((modal) => window.bootstrap?.Modal.getInstance(modal)?.dispose());
+        document.querySelectorAll('.modal-backdrop, [data-ta-transient]').forEach((element) => element.remove());
+        document.body.classList.remove('modal-open');
+        document.body.style.removeProperty('overflow');
+        document.body.style.removeProperty('padding-right');
+        document.querySelectorAll('.tooltip').forEach((element) => element.remove());
     });
-    document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach((element) => {
-        if (window.bootstrap?.Tooltip) window.bootstrap.Tooltip.getOrCreateInstance(element);
-    });
+    document.addEventListener('ta:load', init);
+    init();
     window.addEventListener('pageshow', () => {
         document.querySelectorAll('form[data-ta-submitting="true"]').forEach((form) => delete form.dataset.taSubmitting);
         document.querySelectorAll('.ta-action-loading').forEach((button) => {
@@ -268,6 +244,5 @@
             button.style.minWidth = '';
             button.classList.remove('ta-action-loading');
         });
-        finishProgress();
     });
 })();

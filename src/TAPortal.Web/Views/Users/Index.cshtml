@@ -32,7 +32,7 @@
     else
     {
         <div class="ta-table-wrap">
-            <table class="ta-table ta-table-stack" id="usersTable">
+            <table class="ta-table ta-table-stack" id="usersTable" data-ta-pager="10">
                 <thead><tr><th scope="col">Người dùng</th><th scope="col">Email</th><th scope="col">Điện thoại</th><th scope="col">Vai trò</th><th scope="col">Trạng thái</th><th scope="col" class="ta-col-actions">Thao tác</th></tr></thead>
                 <tbody>
                 @foreach (var x in Model)
@@ -72,7 +72,8 @@
             </table>
         </div>
         <div class="ta-empty d-none" data-ta-no-results><span class="ta-empty__icon">@UiIcon.Render("search-off")</span><p class="ta-empty__title">Không tìm thấy kết quả phù hợp</p></div>
-        <div class="ta-table-footer"><span>Hiển thị <strong data-ta-visible-count>@Model.Count.ToString("N0", vi)</strong> / @Model.Count.ToString("N0", vi) người dùng</span><span>Khóa/mở đăng nhập thực hiện trong màn hình Sửa (mục "Cho phép đăng nhập").</span></div>
+        <div class="ta-table-footer" data-ta-pager-for="usersTable" data-ta-unit="người dùng"></div>
+        <div class="card-footer text-secondary small">Khóa/mở đăng nhập thực hiện trong màn hình Sửa (mục "Cho phép đăng nhập").</div>
     }
 </section>
 <div class="modal modal-blur fade" id="createUser" tabindex="-1" aria-labelledby="createUserTitle" aria-hidden="true" data-ta-open="@(draft is null ? "false" : "true")">

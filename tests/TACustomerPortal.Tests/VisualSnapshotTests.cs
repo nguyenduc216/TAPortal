@@ -87,7 +87,7 @@ public sealed class VisualSnapshotTests
                 new(users[2].Id, customers[1].Id, "Lê Văn C", "levanc", null, customers[1].Name, "VIEWER", true, "ACTIVE", null),
                 new(users[3].Id, customers[9].Id, "Phạm Thị D", "phamthid", "d.pham@ta.example", customers[9].Name, "ADMIN", false, "ACTIVE", new DateTime(2026, 9, 2, 14, 0, 0)),
             };
-            await Save("cp-accounts", "CustomerPortalAccounts", "Index", "Index", memberships, data: v => { v["Customers"] = customers; v["Users"] = users; v["CustomerId"] = null; });
+            await Save("customers-accounts", "Customers", "Accounts", "Accounts", new AdminModels.CustomerAccountsOverviewVm(memberships, customers));
             var ws = new AdminModels.CustomerEditVm { Id = customers[0].Id, Code = customers[0].Code, Name = customers[0].Name, TaxCode = customers[0].TaxCode, Email = customers[0].Email, Phone = customers[0].Phone, Address = "12 Nguyễn Huệ, Quận 1, TP. Hồ Chí Minh", Status = "ACTIVE", IsActive = true };
             var wsRows = memberships.Take(2).Select(m => m with { CustomerId = ws.Id, CustomerName = ws.Name }).Append(memberships[2] with { CustomerId = ws.Id, CustomerName = ws.Name }).ToList();
             await Save("ws-overview", "Customers", "Details", "Details", new AdminModels.CustomerOverviewVm(ws, new(3, 2, 1)), data: v => v["Workspace"] = AdminModels.CustomerWorkspaceHeader.From(ws, AdminModels.CustomerWorkspace.Overview));

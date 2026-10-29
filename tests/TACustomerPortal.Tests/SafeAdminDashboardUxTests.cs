@@ -164,7 +164,7 @@ public sealed class SafeAdminDashboardUxTests
         // UI redesign: the Tabler navbar-collapse was replaced by an off-canvas drawer / icon rail driven by ta-shell.js.
         Assert.Matches("<button type=\"button\" class=\"ta-icon-btn\" data-ta-sidebar-toggle aria-controls=\"taSidebar\" aria-expanded=\"[a-z]+\" aria-label=\"[^\"]+\">", html);
         Assert.Matches("<aside class=\"ta-sidebar\" id=\"taSidebar\" aria-label=\"[^\"]+\">", html);
-        Assert.Matches("<nav class=\"ta-nav\" aria-label=\"[^\"]+\">", html);
+        Assert.Matches("<nav class=\"ta-nav\" aria-label=\"[^\"]+\" id=\"taNav\" data-ta-swap>", html);
         Assert.DoesNotMatch("<svg class=\"ta-icon[^\"]*\"(?![^>]*(aria-hidden=\"true\"|aria-label=))[^>]*>", html);   // every icon is decorative or labelled
         Assert.DoesNotContain("<i class=\"ti ", html);                  // no web-font icons left
         Assert.Matches("data-bs-toggle=\"dropdown\" role=\"button\"[^>]*aria-label=\"Tài khoản", WebUtility.HtmlDecode(html));
