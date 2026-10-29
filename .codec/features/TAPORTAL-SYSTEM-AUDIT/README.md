@@ -44,3 +44,7 @@ AUD-23 FIXED (app; TIMING_NOT_VERIFIED); AUD-24 PARTIAL (memory bound, proxy all
 
 ## Production UAT preparation publish — current status
 LOCAL_PUBLISH_COMPLETE from cd5ccc0 (source tree identical to RC 95e64ce): Admin `f97e0bcb…f10e` (57), Customer `564e037d…944b` (54), Shared DLL `1dc9333b…dd74` in both. Backup of RC pair in publish\rollback\TAPORTAL-SYSTEM-AUDIT-CHG-20261029T141835Z-D2DFFD\. NOT_DEPLOYED; IIS NOT_CHECKED; no SQL executed; production prerequisites NOT_VERIFIED. Prior status lines above are historical.
+| `TAPORTAL-SYSTEM-AUDIT-CHG-20261029T151702Z-ABDD41` | 2026-10-29 | UI/UX redesign per operator mockup: design system, sidebar, Customers/Users, Customer Portal | 70917eb9170426d8843eaed3dd3c6b0822b5800e | NONE_REQUIRED | PUBLISHED (local, Admin + Customer) / NOT_DEPLOYED | PENDING_APPROVAL |
+
+## UI/UX redesign — current status
+UI_IMPLEMENTED, BUILD_VERIFIED, LOCAL_PUBLISH_COMPLETE; VISUAL_NOT_VERIFIED on real browser/data/IIS; PRODUCTION_NOT_DEPLOYED. Shared design system (css/ta-design.css + js/ta-shell.js identical in both apps), Tabler bundled locally (no CDN), inline SVG icons (TAPortal.Shared.UiIcon). UI-01..09 FIXED. Safe tests 235/235. Admin `ddb59cce…98e2` (61), Customer `b39bb31c…dc0e` (58), Shared DLL `4af267cc…626a`. Report: docs/audits/ui-redesign-TAPORTAL-SYSTEM-AUDIT-CHG-20261029T151702Z-ABDD41.md. Prior status lines above are historical.

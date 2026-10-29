@@ -793,5 +793,69 @@
       "Operator deploys via runbook Phase B and runs UAT Phase C",
       "PR #7 merge only after acceptance and approval"
     ]
+  },
+  {
+    "change_id": "TAPORTAL-SYSTEM-AUDIT-CHG-20261029T151702Z-ABDD41",
+    "created_at": "2026-10-29T15:17:02.248774+00:00",
+    "title": "UI/UX redesign per operator mockup: design system, sidebar, Customers/Users, Customer Portal",
+    "status": "UI_IMPLEMENTED / BUILD_VERIFIED / LOCAL_PUBLISH_COMPLETE / VISUAL_NOT_VERIFIED / PRODUCTION_NOT_DEPLOYED",
+    "commit_sha": "70917eb9170426d8843eaed3dd3c6b0822b5800e",
+    "migration_status": "NONE_REQUIRED / NO_SQL_EXECUTED",
+    "publish_status": "PUBLISHED (local, Admin + Customer) / NOT_DEPLOYED",
+    "merge_status": "PENDING_APPROVAL",
+    "agent": "Claude Code (claude-opus-5-5)",
+    "base_sha": "d4c5332ded98ac2fb8d0be83973d38265a3ebbc4",
+    "ui_findings": {
+      "UI-01": "FIXED (HIGH): Tabler CSS/JS + icon web font loaded from cdn.jsdelivr.net; blocked CDN collapses layout and icons -> local bundle + inline SVG",
+      "UI-02": "FIXED (HIGH): mobile empty navy area / oversized logo, cut action column -> off-canvas drawer, card tables",
+      "UI-03": "FIXED (MEDIUM): 'Sap co' badge clipped in sidebar",
+      "UI-04": "FIXED (MEDIUM): tablet email broken per character, actions pushed out -> nowrap + sticky actions",
+      "UI-05": "FIXED (MEDIUM): active menu only for exact Index path -> server-side aria-current by controller",
+      "UI-06": "FIXED (MEDIUM): Customer Portal without icons/active state, hard-coded root paths",
+      "UI-07": "FIXED (LOW): inconsistent colours, gold button contrast 2.1:1",
+      "UI-08": "FIXED (LOW): no standard page header",
+      "UI-09": "FIXED (LOW): Users index view queried PortalDb directly",
+      "UI-10": "INFO: few menu items for non SYS_ADMIN users is correct authorization (unchanged)"
+    },
+    "build": {
+      "restore": "OK",
+      "release_build": "0 warnings / 0 errors",
+      "safe_tests": "235 passed / 0 failed / 0 skipped (20 new)",
+      "codec_tests": "OK",
+      "codec_validate": "PASS",
+      "diff_check": "PASS",
+      "visual": "47 headless screenshots (offline) via VisualSnapshotTests; VISUAL_NOT_VERIFIED on real browser/data/IIS"
+    },
+    "artifacts": {
+      "TAPortal.Web": {
+        "path": "D:\\T.A\\TAPortal\\TAPortal\\publish\\deployed-TAPortal.Web",
+        "exit_code": 0,
+        "started_utc": "2026-10-29T15:43:05Z",
+        "finished_utc": "2026-10-29T15:43:08Z",
+        "files": 61,
+        "sha256": "ddb59cce55fad80178b14cbbedba69731936f4e625bfefd0a85ceaf80b8398e2",
+        "previous_sha256": "f97e0bcbf198703b539d96fdc87f57450fb1d3ac76d120c51b12caaa71fcf10e"
+      },
+      "TACustomerPortal.Web": {
+        "path": "D:\\T.A\\TAPortal\\TAPortal\\publish\\deployed-TACustomerPortal.Web",
+        "exit_code": 0,
+        "started_utc": "2026-10-29T15:43:08Z",
+        "finished_utc": "2026-10-29T15:43:10Z",
+        "files": 58,
+        "sha256": "b39bb31c86eeb817b200d34e43df0c85a350a069aac051f937d7b9aa6477dc0e",
+        "previous_sha256": "564e037dd1bc21c827c7097ac88c68fbcb208a4ef24ea2d35af84852b627944b"
+      },
+      "shared_dll_sha256": "4af267cc9cfa7831d55e7e273612ce720280f7314ad1251d962aafa0d94b626a"
+    },
+    "backup": "publish\\rollback\\TAPORTAL-SYSTEM-AUDIT-CHG-20261029T151702Z-ABDD41\\ (verified identical to pre-publish manifests)",
+    "iis": "NOT_CHECKED",
+    "pr": "https://github.com/nguyenduc216/TAPortal/pull/7 (draft)",
+    "report": "docs/audits/ui-redesign-TAPORTAL-SYSTEM-AUDIT-CHG-20261029T151702Z-ABDD41.md",
+    "remaining": [
+      "Operator UI UAT after deployment (desktop/tablet/mobile, dropdowns, drawer, table filter)",
+      "Server-side pagination for Customers/Users (changes queries; needs decision)",
+      "Stricter CSP script-src/style-src 'self' after removing inline handlers (PENDING_APPROVAL)",
+      "Razor Class Library for shared static assets instead of byte-identical copies (PENDING_APPROVAL)"
+    ]
   }
 ]
