@@ -13,6 +13,7 @@ public static class IntegrationsServiceCollectionExtensions
         services.TryAddSingleton(TimeProvider.System);
         services.TryAddSingleton<ITingeeWebhookInbox, UnavailableTingeeWebhookInbox>();
         services.AddHttpClient<TingeeClient>(client => client.Timeout = TimeSpan.FromSeconds(30));
+        services.TryAddScoped<ITingeeApi, TingeeApi>();
         return services;
     }
 }

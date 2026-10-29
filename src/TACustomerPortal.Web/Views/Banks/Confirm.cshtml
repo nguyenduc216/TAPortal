@@ -1,0 +1,29 @@
+@model BankConfirmVm
+@{
+    ViewData["Title"] = Model.Deleting ? "Xác nhận hủy liên kết" : "Xác nhận liên kết";
+    ViewData["Eyebrow"] = "Tài khoản ngân hàng";
+    ViewData["Subtitle"] = $"{Model.Account.BankName} đã gửi mã OTP tới số điện thoại của chủ tài khoản.";
+    var a = Model.Account;
+    var errors = ViewData.ModelState.TryGetValue("otp", out var entry) ? entry.Errors.Select(e => e.ErrorMessage).ToList() : [];
+}
+<div class="cp-grid cp-grid--2">
+    <form class="cp-card" method="post" asp-action="Confirm" asp-route-id="@a.Id">
+        <div class="cp-card__body">
+            <div class="cp-field">
+                <label class="cp-label" for="otp">Mã OTP</label>
+                <div class="cp-input-wrap">@UiIcon.Render("key")<input class="cp-input cp-otp" id="otp" name="otp" inputmode="numeric" autocomplete="one-time-code" maxlength="8" required autofocus /></div>
+                @foreach (var e in errors) {<div class="cp-error">@e</div>}
+            </div>
+            @if (a.ConfirmExpiresAt is DateTime expires)
+            {
+                <p class="cp-hint">Mã có hiệu lực đến @PaymentText.VietnamTime(expires) (giờ Việt Nam), khoảng 4 phút kể từ khi gửi.</p>
+            }
+            @if (a.ActionLink is string link) {<p><a class="cp-link" href="@link" target="_blank" rel="noopener noreferrer">Mở ứng dụng/trang xác thực của ngân hàng</a></p>}
+        </div>
+        <div class="cp-card__foot">
+            <a class="cp-btn cp-btn--ghost" asp-action="Index">@UiIcon.Render("arrow-left")<span>Để sau</span></a>
+            <button class="cp-btn cp-btn--primary" type="submit" style="margin-left:auto">@UiIcon.Render("check")<span>@(Model.Deleting ? "Xác nhận hủy" : "Xác nhận")</span></button>
+        </div>
+    </form>
+    <aside class="cp-note" style="align-self:start">@UiIcon.Render("info-circle")<div>Tài khoản: <strong>@a.BankName</strong> @(a.AccountNumber ?? a.VaAccountNumber). Nếu mã hết hạn, hãy quay lại danh sách và thực hiện lại. T.A và Tingee không bao giờ hỏi mã OTP qua điện thoại.</div></aside>
+</div>

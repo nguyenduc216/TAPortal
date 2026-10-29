@@ -61,6 +61,8 @@ builder.Services.AddScoped<IUserRoleStore, SqlUserRoleStore>();
 builder.Services.AddScoped<IUserAccountStore, SqlUserAccountStore>();
 builder.Services.AddScoped<ICustomerAdminStore, SqlCustomerAdminStore>();
 builder.Services.AddScoped<IDashboardStore, SqlDashboardStore>();
+builder.Services.AddScoped<ITingeeMerchantStore, SqlTingeeMerchantStore>();
+TAPortal.Integrations.IntegrationsServiceCollectionExtensions.AddTingee(builder.Services, builder.Configuration);
 builder.Services.AddSingleton(sp =>
 {
     var options = new AdminAuditOptions();

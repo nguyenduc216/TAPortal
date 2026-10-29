@@ -1,0 +1,82 @@
+@model OrderCreateVm
+@using TAPortal.Integrations.Tingee
+@{
+    ViewData["Title"] = "Tạo đơn hàng";
+    ViewData["Eyebrow"] = "Đơn hàng & QR";
+    ViewData["Subtitle"] = "Lưu đơn và tạo mã QR thanh toán theo tài khoản nhận tiền đã chọn.";
+    var i = Model.Input;
+    var lineErrors = ViewData.ModelState.TryGetValue("Lines", out var le) ? le.Errors.Select(e => e.ErrorMessage).ToList() : [];
+    var ready = Model.Linked && Model.ApiConfigured && Model.Banks.Count > 0;
+}
+@if (!Model.Linked) { <partial name="_PaymentsNotLinked" /> }
+else if (Model.Banks.Count == 0)
+{
+    <aside class="cp-note" style="margin-bottom:14px">@UiIcon.Render("info-circle")<div>Chưa có tài khoản ngân hàng nào đang hoạt động. <a class="cp-link" asp-controller="Banks" asp-action="Index">Liên kết tài khoản ngân hàng</a> trước khi tạo đơn.</div></aside>
+}
+<form method="post" asp-action="Create" data-cp-order-form>
+    <div asp-validation-summary="ModelOnly" class="cp-alert" role="alert"></div>
+    <section class="cp-card" style="margin-bottom:14px">
+        <div class="cp-card__head"><span class="cp-blob">@UiIcon.Render("file-invoice")</span><h2>Thông tin đơn</h2></div>
+        <div class="cp-card__body cp-form-grid">
+            <div class="cp-field">
+                <label class="cp-label" for="ContactId">Khách hàng</label>
+                <select class="cp-input cp-input--plain" id="ContactId" name="ContactId">
+                    <option value="">Khách lẻ (không lưu thông tin)</option>
+                    @foreach (var c in Model.Contacts) {<option value="@c.Id" selected="@(c.Id == i.ContactId)">@c.Code — @c.Name</option>}
+                </select>
+                <div class="cp-error">@Html.ValidationMessage("ContactId")</div>
+            </div>
+            <div class="cp-field">
+                <label class="cp-label" for="BankAccountId">Tài khoản nhận tiền</label>
+                <select class="cp-input cp-input--plain" id="BankAccountId" name="BankAccountId" required>
+                    @foreach (var b in Model.Banks) {<option value="@b.Id" selected="@(b.Id == i.BankAccountId)">@b.BankName — @b.ReceiveAccount @(TingeeBankCatalog.SupportsDynamicQr(b.BankBin, b.AccountType) ? "(QR động)" : "(QR tĩnh)")</option>}
+                </select>
+                <div class="cp-error">@Html.ValidationMessage("BankAccountId")</div>
+            </div>
+            <div class="cp-field">
+                <label class="cp-label" for="QrExpireMinutes">Thời hạn QR (phút)</label>
+                <div class="cp-input-wrap">@UiIcon.Render("clock")<input class="cp-input" id="QrExpireMinutes" name="QrExpireMinutes" type="number" min="1" max="43200" value="@i.QrExpireMinutes" required /></div>
+                <div class="cp-hint">1440 = 1 ngày; tối đa 43.200 (30 ngày).</div>
+                <div class="cp-error">@Html.ValidationMessage("QrExpireMinutes")</div>
+            </div>
+            <div class="cp-field cp-span">
+                <label class="cp-label" for="Description">Mô tả</label>
+                <div class="cp-input-wrap">@UiIcon.Render("file-text")<input class="cp-input" id="Description" name="Description" value="@i.Description" maxlength="500" /></div>
+            </div>
+            <div class="cp-span">
+                <input type="hidden" name="AutoIssueInvoice" value="false" />
+                <label class="cp-check"><input type="checkbox" name="AutoIssueInvoice" value="true" checked="@i.AutoIssueInvoice" /><span><strong>Tự động xuất hóa đơn điện tử khi đơn được thanh toán đủ</strong><span class="cp-muted" style="display:block">Mặc định theo Cài đặt thanh toán của doanh nghiệp.</span></span></label>
+            </div>
+        </div>
+    </section>
+    <section class="cp-card">
+        <div class="cp-card__head"><span class="cp-blob cp-blob--gold">@UiIcon.Render("list-tree")</span><h2>Hàng hóa / dịch vụ</h2></div>
+        @foreach (var e in lineErrors) {<div class="cp-error" style="padding:8px 18px 0">@e</div>}
+        <div class="cp-table-wrap">
+            <table class="cp-table cp-lines" id="orderLines">
+                <thead><tr><th>Tên hàng hóa/dịch vụ</th><th>ĐVT</th><th class="cp-num">Số lượng</th><th class="cp-num">Đơn giá (₫)</th><th>Thuế suất</th><th class="cp-num">Thành tiền</th><th></th></tr></thead>
+                <tbody>
+                @for (var n = 0; n < i.Lines.Count; n++)
+                {
+                    var l = i.Lines[n];
+                    <tr data-cp-line>
+                        <td><div class="cp-input-wrap">@UiIcon.Render("file-text")<input class="cp-input" name="Lines[@n].ItemName" value="@l.ItemName" maxlength="500" aria-label="Tên hàng hóa" /></div></td>
+                        <td style="width:110px"><div class="cp-input-wrap">@UiIcon.Render("list-tree")<input class="cp-input" name="Lines[@n].UnitName" value="@l.UnitName" maxlength="50" aria-label="Đơn vị tính" /></div></td>
+                        <td style="width:120px"><div class="cp-input-wrap">@UiIcon.Render("hash")<input class="cp-input cp-num" name="Lines[@n].Quantity" value="@l.Quantity?.ToString(System.Globalization.CultureInfo.InvariantCulture)" type="number" min="0.001" step="0.001" aria-label="Số lượng" data-cp-qty /></div></td>
+                        <td style="width:160px"><div class="cp-input-wrap">@UiIcon.Render("report-money")<input class="cp-input cp-num" name="Lines[@n].UnitPrice" value="@l.UnitPrice?.ToString(System.Globalization.CultureInfo.InvariantCulture)" type="number" min="0" step="1" aria-label="Đơn giá" data-cp-price /></div></td>
+                        <td style="width:170px"><select class="cp-input cp-input--plain" name="Lines[@n].TaxRate" aria-label="Thuế suất" data-cp-tax>@foreach (var (code, label) in OrderMath.TaxRates) {<option value="@code" selected="@(code == l.TaxRate)">@label</option>}</select></td>
+                        <td class="cp-num" data-cp-line-total>—</td>
+                        <td style="width:44px"><button type="button" class="cp-btn cp-btn--sm cp-btn--ghost" data-cp-remove-line aria-label="Xóa dòng">@UiIcon.Render("x")</button></td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+        <div class="cp-card__body" style="padding-top:10px"><button type="button" class="cp-btn cp-btn--ghost cp-btn--sm" data-cp-add-line>@UiIcon.Render("plus")<span>Thêm dòng</span></button></div>
+        <div class="cp-total"><span>Tổng thanh toán (gồm thuế)</span><span data-cp-order-total>—</span></div>
+        <div class="cp-card__foot">
+            <a class="cp-btn cp-btn--ghost" asp-action="Index">@UiIcon.Render("arrow-left")<span>Quay lại</span></a>
+            <button class="cp-btn cp-btn--primary" type="submit" style="margin-left:auto" disabled="@(!ready)">@UiIcon.Render("qrcode")<span>Lưu và tạo QR</span></button>
+        </div>
+    </section>
+</form>

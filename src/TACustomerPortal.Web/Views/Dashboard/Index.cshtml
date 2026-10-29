@@ -37,10 +37,14 @@
     </a>
 </div>
 
-<div class="cp-section"><h2>Dịch vụ tài chính</h2><p>Sẽ được T.A kích hoạt khi sẵn sàng.</p></div>
+<div class="cp-section"><h2>Dịch vụ tài chính</h2><p>Thanh toán qua Tingee do T.A kích hoạt cho doanh nghiệp.</p></div>
 <div class="cp-grid">
-@foreach (var (label, icon) in new[] { ("Tài khoản ngân hàng", "building-bank"), ("QR thanh toán", "qrcode"), ("Giao dịch", "arrows-exchange"), ("Công nợ", "file-invoice"), ("Đối soát", "checks"), ("Báo cáo", "chart-bar") })
+@foreach (var (label, icon, controller, hint) in new[] { ("Đơn hàng & QR", "qrcode", "Orders", "Tạo đơn, mã QR có thời hạn"), ("Khách hàng", "users", "Contacts", "Danh sách khách hàng của bạn"), ("Tài khoản ngân hàng", "building-bank", "Banks", "Liên kết tài khoản nhận tiền") })
 {
-    <section class="cp-card cp-service"><span class="cp-blob cp-blob--ink" aria-hidden="true">@UiIcon.Render(icon)</span><div><h3>@label</h3><p><span class="cp-badge cp-badge--gold">Chưa kích hoạt</span></p><p>Chưa có dữ liệu</p></div></section>
+    <a class="cp-card cp-service" asp-controller="@controller" asp-action="Index" style="color:inherit;text-decoration:none"><span class="cp-blob" aria-hidden="true">@UiIcon.Render(icon)</span><div><h3>@label</h3><p><span class="cp-badge cp-badge--blue">Sẵn sàng</span></p><p>@hint</p></div></a>
+}
+@foreach (var (label, icon) in new[] { ("Đối soát", "checks"), ("Hóa đơn điện tử", "file-text"), ("Zalo OA", "mail") })
+{
+    <section class="cp-card cp-service"><span class="cp-blob cp-blob--ink" aria-hidden="true">@UiIcon.Render(icon)</span><div><h3>@label</h3><p><span class="cp-badge cp-badge--gold">Sắp ra mắt</span></p><p>Giai đoạn tiếp theo</p></div></section>
 }
 </div>

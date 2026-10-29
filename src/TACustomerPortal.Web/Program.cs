@@ -7,6 +7,7 @@ using System.Net;
 using System.Threading.RateLimiting;
 using TACustomerPortal.Web.Services;
 using TACustomerPortal.Web.Security;
+using TAPortal.Integrations;
 using TAPortal.Shared;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -17,6 +18,9 @@ builder.Services.AddSingleton<LoginAttemptLimiter>();
 builder.Services.AddScoped<ICustomerStore, CustomerStore>();
 builder.Services.AddScoped<ICurrentCustomerContext, CurrentCustomerContext>();
 builder.Services.AddScoped<CustomerCookieEvents>();
+builder.Services.AddScoped<IPaymentStore, SqlPaymentStore>();
+builder.Services.AddScoped<OrderPayments>();
+builder.Services.AddTingee(builder.Configuration);
 var protection = builder.Services.AddDataProtection().SetApplicationName("TA.CustomerPortal");
 if (!string.IsNullOrWhiteSpace(builder.Configuration["DataProtection:KeyPath"]))
 {

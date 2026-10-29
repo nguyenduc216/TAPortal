@@ -1,0 +1,77 @@
+@model BankAddVm
+@using TAPortal.Integrations.Tingee
+@{
+    ViewData["Title"] = "Liên kết tài khoản";
+    ViewData["Eyebrow"] = "Tài khoản ngân hàng";
+    ViewData["Subtitle"] = "Chọn ngân hàng và loại tài khoản; biểu mẫu chỉ hỏi những thông tin ngân hàng đó yêu cầu.";
+    var bank = Model.Bank;
+    var rule = Model.Rule;
+    var i = Model.Input;
+    bool Need(TingeeBankField f) => rule?.Required.Contains(f) == true;
+}
+@functions {
+    private Microsoft.AspNetCore.Html.IHtmlContent Error(string key) =>
+        ViewData.ModelState.TryGetValue(key, out var entry) && entry.Errors.Count > 0
+            ? new Microsoft.AspNetCore.Html.HtmlString($"<div class=\"cp-error\">{System.Net.WebUtility.HtmlEncode(entry.Errors[0].ErrorMessage)}</div>")
+            : Microsoft.AspNetCore.Html.HtmlString.Empty;
+}
+@if (!Model.Linked) { <partial name="_PaymentsNotLinked" /> }
+<section class="cp-card" style="margin-bottom:14px">
+    <div class="cp-card__head"><span class="cp-blob">@UiIcon.Render("building-bank")</span><h2>1. Ngân hàng</h2></div>
+    <div class="cp-card__body">
+        <nav class="cp-bank-pick" aria-label="Chọn ngân hàng">
+            @foreach (var b in TingeeBankCatalog.Banks)
+            {
+                <a asp-action="Add" asp-route-bin="@b.Bin" aria-current="@(b.Bin == bank?.Bin ? "true" : null)">@UiIcon.Render("building-bank")<span>@b.Name</span></a>
+            }
+        </nav>
+    </div>
+</section>
+@if (bank is not null)
+{
+    <section class="cp-card" style="margin-bottom:14px">
+        <div class="cp-card__head"><span class="cp-blob">@UiIcon.Render("id")</span><h2>2. Loại tài khoản @bank.Name</h2></div>
+        <div class="cp-card__body cp-filters">
+            @foreach (var t in bank.AccountTypes)
+            {
+                <a class="cp-filter" asp-action="Add" asp-route-bin="@bank.Bin" asp-route-type="@t" aria-current="@(t == Model.AccountType ? "page" : null)">@TingeeAccountTypes.Label(t)</a>
+            }
+        </div>
+    </section>
+}
+@if (bank is not null && rule is not null)
+{
+    <form class="cp-card" method="post" asp-action="Add">
+        <div class="cp-card__head"><span class="cp-blob cp-blob--gold">@UiIcon.Render("key")</span><h2>3. Thông tin liên kết — @bank.Name, @TingeeAccountTypes.Label(Model.AccountType)</h2></div>
+        <div class="cp-card__body">
+            <div asp-validation-summary="ModelOnly" class="cp-alert" role="alert"></div>
+            @if (rule.Note is string note) {<aside class="cp-note" style="margin-bottom:14px">@UiIcon.Render("info-circle")<div>@note</div></aside>}
+            <input type="hidden" name="Bin" value="@bank.Bin" />
+            <input type="hidden" name="AccountType" value="@Model.AccountType" />
+            <div class="cp-form-grid">
+                @if (Need(TingeeBankField.AccountNumber)) {<div class="cp-field"><label class="cp-label" for="AccountNumber">Số tài khoản</label><div class="cp-input-wrap">@UiIcon.Render("hash")<input class="cp-input" id="AccountNumber" name="AccountNumber" value="@i.AccountNumber" inputmode="numeric" autocomplete="off" required /></div>@Error("AccountNumber")</div>}
+                @if (Need(TingeeBankField.AccountName)) {<div class="cp-field"><label class="cp-label" for="AccountName">Tên chủ tài khoản</label><div class="cp-input-wrap">@UiIcon.Render("user")<input class="cp-input" id="AccountName" name="AccountName" value="@i.AccountName" autocomplete="off" required /></div><div class="cp-hint">Đúng như tại ngân hàng; hệ thống tự chuyển sang chữ in hoa không dấu.</div>@Error("AccountName")</div>}
+                @if (Need(TingeeBankField.Identity)) {<div class="cp-field"><label class="cp-label" for="Identity">CCCD / MST chủ tài khoản</label><div class="cp-input-wrap">@UiIcon.Render("id")<input class="cp-input" id="Identity" name="Identity" value="@i.Identity" inputmode="numeric" autocomplete="off" required /></div>@Error("Identity")</div>}
+                @if (Need(TingeeBankField.Mobile)) {<div class="cp-field"><label class="cp-label" for="Mobile">Số điện thoại nhận OTP</label><div class="cp-input-wrap">@UiIcon.Render("phone")<input class="cp-input" id="Mobile" name="Mobile" value="@i.Mobile" inputmode="tel" autocomplete="off" required /></div><div class="cp-hint">Số đã đăng ký với ngân hàng.</div>@Error("Mobile")</div>}
+                @if (Need(TingeeBankField.VaSuffix)) {<div class="cp-field"><label class="cp-label" for="VaSuffix">Hậu tố tài khoản ảo</label><div class="cp-input-wrap">@UiIcon.Render("hash")<input class="cp-input" id="VaSuffix" name="VaSuffix" value="@i.VaSuffix" maxlength="16" autocomplete="off" required /></div>@Error("VaSuffix")</div>}
+                @if (Need(TingeeBankField.MerchantName)) {<div class="cp-field"><label class="cp-label" for="MerchantName">Tên hiển thị khi thanh toán</label><div class="cp-input-wrap">@UiIcon.Render("building")<input class="cp-input" id="MerchantName" name="MerchantName" value="@(i.MerchantName ?? Model.Customer.Name.ToUpperInvariant())" required /></div>@Error("MerchantName")</div>}
+                @if (Need(TingeeBankField.VaAccountNumber)) {<div class="cp-field"><label class="cp-label" for="VaAccountNumber">Số tài khoản ảo đã khai báo tại ngân hàng</label><div class="cp-input-wrap">@UiIcon.Render("hash")<input class="cp-input" id="VaAccountNumber" name="VaAccountNumber" value="@i.VaAccountNumber" inputmode="numeric" required /></div>@Error("VaAccountNumber")</div>}
+                @if (Need(TingeeBankField.AcbUserId)) {<div class="cp-field"><label class="cp-label" for="AcbUserId">Tên đăng nhập ACB Online/Biz</label><div class="cp-input-wrap">@UiIcon.Render("user")<input class="cp-input" id="AcbUserId" name="AcbUserId" value="@i.AcbUserId" autocomplete="off" required /></div>@Error("AcbUserId")</div>}
+            </div>
+            @if (rule.Required.Count == 0) {<p class="cp-hint">Ngân hàng không yêu cầu thêm thông tin; bạn sẽ xác thực trực tiếp với ngân hàng ở bước tiếp theo.</p>}
+            @if (rule.SupportsRootNotify && rule.VaSupported)
+            {
+                <label class="cp-check" style="margin-top:6px"><input type="checkbox" name="NotifyRootAccount" value="true" checked="@i.NotifyRootAccount" /><span><strong>Nhận biến động trên số tài khoản gốc</strong><span class="cp-muted" style="display:block">Khách chuyển khoản thẳng vào số tài khoản gốc cũng được ghi nhận. Bỏ chọn để chỉ nhận qua tài khoản ảo (VA).</span></span></label>
+            }
+            else if (!rule.VaSupported)
+            {
+                <p class="cp-hint">@bank.Name chỉ liên kết số tài khoản gốc (không có tài khoản ảo).</p>
+            }
+            <p class="cp-hint">QR theo đơn hàng có thời hạn: @(rule.SupportsDynamicQr ? "có (QR động)" : "không — đơn hàng dùng QR tĩnh với nội dung là mã đơn").</p>
+        </div>
+        <div class="cp-card__foot">
+            <a class="cp-btn cp-btn--ghost" asp-action="Index">@UiIcon.Render("arrow-left")<span>Quay lại</span></a>
+            <button class="cp-btn cp-btn--primary" type="submit" style="margin-left:auto" disabled="@(!Model.Linked || !Model.ApiConfigured)">@UiIcon.Render("check")<span>Gửi yêu cầu liên kết</span></button>
+        </div>
+    </form>
+}

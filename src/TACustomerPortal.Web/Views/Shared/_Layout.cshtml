@@ -1,17 +1,21 @@
 @inject TACustomerPortal.Web.Security.ICurrentCustomerContext CurrentCustomer
 @functions {
-    // Customer Portal navigation, grouped like a SaaS workspace. Same destinations as before; no new modules.
+    // Customer Portal navigation, grouped like a SaaS workspace. "Index" entries stay active on every page of their module.
     private static readonly (string Group, string Controller, string Action, string Icon, string Label)[] Nav =
     [
         ("Không gian làm việc", "Dashboard", "Index", "layout-dashboard", "Tổng quan"),
         ("Không gian làm việc", "Profile", "Company", "building", "Hồ sơ doanh nghiệp"),
+        ("Thanh toán", "Orders", "Index", "file-invoice", "Đơn hàng & QR"),
+        ("Thanh toán", "Contacts", "Index", "users", "Khách hàng"),
+        ("Thanh toán", "Banks", "Index", "building-bank", "Tài khoản ngân hàng"),
+        ("Thanh toán", "PaymentSettings", "Index", "settings", "Cài đặt thanh toán"),
         ("Tài khoản", "Profile", "Personal", "id", "Thông tin cá nhân"),
         ("Tài khoản", "Account", "ChangePassword", "shield-lock", "Bảo mật & mật khẩu"),
     ];
 
     private bool IsCurrent(string controller, string action) =>
         string.Equals(ViewContext.RouteData.Values["controller"]?.ToString(), controller, StringComparison.OrdinalIgnoreCase)
-        && string.Equals(ViewContext.RouteData.Values["action"]?.ToString(), action, StringComparison.OrdinalIgnoreCase);
+        && (action == "Index" || string.Equals(ViewContext.RouteData.Values["action"]?.ToString(), action, StringComparison.OrdinalIgnoreCase));
 
     private static string Initials(string? name, int count = 1)
     {
@@ -106,6 +110,8 @@
                     </div>
                 </div>
             }
+            @if (TempData["Success"] is string flashOk) {<div class="cp-flash cp-flash--ok" role="status">@UiIcon.Render("circle-check")<div>@flashOk</div></div>}
+            @if (TempData["Error"] is string flashError) {<div class="cp-flash cp-flash--error" role="alert">@UiIcon.Render("alert-circle")<div>@flashError</div></div>}
             @RenderBody()
         </main>
     </div>

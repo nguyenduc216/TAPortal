@@ -1,0 +1,44 @@
+@model ContactsVm
+@{
+    ViewData["Title"] = "Khách hàng";
+    ViewData["Eyebrow"] = "Thanh toán";
+    ViewData["Subtitle"] = "Khách hàng của doanh nghiệp: người thanh toán đơn hàng và người mua trên hóa đơn điện tử.";
+}
+<section class="cp-card">
+    <div class="cp-toolbar">
+        <div class="cp-search">@UiIcon.Render("search")<input class="cp-input" type="search" aria-label="Tìm khách hàng" placeholder="Tìm theo mã, tên, MST, điện thoại..." oninput="taFilterRows(this.value,'contactsTable')" /></div>
+        @if (Model.CanManage) {<div class="cp-toolbar__end"><a class="cp-btn cp-btn--primary" asp-action="Create">@UiIcon.Render("user-plus")<span>Thêm khách hàng</span></a></div>}
+    </div>
+    @if (Model.Contacts.Count == 0)
+    {
+        <div class="cp-empty" data-cp-empty>@UiIcon.Render("users")<p>Chưa có khách hàng nào.</p></div>
+    }
+    else
+    {
+        <div class="cp-table-wrap">
+            <table class="cp-table" id="contactsTable" data-ta-pager="10">
+                <thead><tr><th>Mã</th><th>Khách hàng</th><th>MST</th><th>Liên hệ</th><th>Trạng thái</th><th class="cp-actions">Thao tác</th></tr></thead>
+                <tbody>
+                @foreach (var c in Model.Contacts)
+                {
+                    <tr data-ta-row>
+                        <td><span class="cp-code">@c.Code</span></td>
+                        <td><strong>@c.Name</strong>@if (c.LegalName is string legal) {<div class="cp-muted">@legal</div>}</td>
+                        <td>@(c.TaxCode ?? "—")</td>
+                        <td>@(c.Phone ?? "—")<div class="cp-muted">@c.Email</div></td>
+                        <td><span class="cp-badge @(c.IsActive ? "cp-badge--green" : "cp-badge--soft")">@(c.IsActive ? "Đang dùng" : "Ngừng sử dụng")</span></td>
+                        <td class="cp-actions">
+                            @if (Model.CanManage)
+                            {
+                                @if (c.IsActive) {<a class="cp-btn cp-btn--sm cp-btn--ghost" asp-controller="Orders" asp-action="Create" asp-route-contactId="@c.Id">@UiIcon.Render("qrcode")<span>Tạo đơn</span></a>}
+                                <a class="cp-btn cp-btn--sm cp-btn--ghost" asp-action="Edit" asp-route-id="@c.Id">@UiIcon.Render("pencil")<span>Sửa</span></a>
+                                <form method="post" asp-action="SetActive" asp-route-id="@c.Id"><input type="hidden" name="active" value="@(c.IsActive ? "false" : "true")" /><button class="cp-btn cp-btn--sm @(c.IsActive ? "cp-btn--danger" : "cp-btn--ghost")" type="submit">@(c.IsActive ? "Ngừng" : "Kích hoạt")</button></form>
+                            }
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    }
+</section>

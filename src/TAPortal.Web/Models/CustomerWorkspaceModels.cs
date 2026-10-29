@@ -12,12 +12,14 @@ public static class CustomerWorkspace
     public const string Overview = "overview";
     public const string Info = "info";
     public const string Portal = "portal";
+    public const string Tingee = "tingee";
 
     public static readonly IReadOnlyList<CustomerWorkspaceTab> Tabs =
     [
         new(Overview, "Tổng quan", "layout-dashboard", "Details"),
         new(Info, "Thông tin khách hàng", "id", "Edit"),
         new(Portal, "Tài khoản Portal", "users-group", "PortalAccounts"),
+        new(Tingee, "Thanh toán Tingee", "building-bank", "Tingee"),
     ];
 }
 

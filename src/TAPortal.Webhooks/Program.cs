@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Options;
+using TAPortal.Shared;
 using TAPortal.Integrations;
 using TAPortal.Integrations.Tingee;
 using TAPortal.Webhooks;
@@ -6,9 +7,13 @@ using TAPortal.Webhooks;
 var builder = WebApplication.CreateBuilder(args);
 builder.WebHost.ConfigureKestrel(options => options.Limits.MaxRequestBodySize = TingeeWebhookEndpoints.MaxBodyBytes);
 builder.Services.Configure<IISServerOptions>(options => options.MaxRequestBodySize = TingeeWebhookEndpoints.MaxBodyBytes);
+// Durable inbox when a connection string is configured; otherwise AddTingee keeps the "unavailable" inbox (503 + retry).
+if (!string.IsNullOrWhiteSpace(builder.Configuration["Database:ConnectionString"]))
+    builder.Services.AddSingleton<ITingeeWebhookInbox, SqlTingeeWebhookInbox>();
 builder.Services.AddTingee(builder.Configuration);
 
 var app = builder.Build();
+app.UseTaSecurityHeaders();
 
 var tingee = app.Services.GetRequiredService<IOptions<TingeeOptions>>().Value;
 if (!tingee.IsConfigured)

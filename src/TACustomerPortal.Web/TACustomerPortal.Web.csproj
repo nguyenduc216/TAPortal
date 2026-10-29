@@ -6,5 +6,6 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../TAPortal.Shared/TAPortal.Shared.csproj" />
+    <ProjectReference Include="..\TAPortal.Integrations\TAPortal.Integrations.csproj" />
   </ItemGroup>
 </Project>

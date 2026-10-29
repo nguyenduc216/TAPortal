@@ -34,6 +34,10 @@ public sealed class TingeeClient(HttpClient http, IOptions<TingeeOptions> option
     public Task<TingeeResponse<T>> GetAsync<T>(string path, CancellationToken cancellationToken = default) =>
         SendAsync<T>(HttpMethod.Get, path, null, cancellationToken);
 
+    /// <summary>POST whose parameters travel in the query string (e.g. delete-va); the empty body is signed as "{}".</summary>
+    public Task<TingeeResponse<T>> PostQueryAsync<T>(string pathAndQuery, CancellationToken cancellationToken = default) =>
+        SendAsync<T>(HttpMethod.Post, pathAndQuery, null, cancellationToken);
+
     private async Task<TingeeResponse<T>> SendAsync<T>(HttpMethod method, string path, string? body, CancellationToken cancellationToken)
     {
         var settings = options.Value;

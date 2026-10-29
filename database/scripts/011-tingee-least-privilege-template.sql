@@ -1,0 +1,17 @@
+-- TINGEE-INTEGRATION-CHG-20261029T203104Z-1FE09C — DBA template, NOT_EXECUTED. Run after 011-tingee-payments-foundation.sql.
+-- Substitute EXISTING database principals of each website; do not run under an administrator identity in a website.
+-- IF DB_NAME() <> N'TAPortalSys' THROW 51000, 'Wrong database: expected TAPortalSys', 1;
+--
+-- Customer Portal (TACustomerPortal.Web): its own data only (every query is filtered by the signed-in customer).
+-- GRANT SELECT ON dbo.TingeeMerchants TO [CustomerApplicationPrincipal];
+-- GRANT SELECT, INSERT, UPDATE ON dbo.CustomerBankAccounts TO [CustomerApplicationPrincipal];
+-- GRANT SELECT, INSERT, UPDATE ON dbo.CustomerContacts TO [CustomerApplicationPrincipal];
+-- GRANT SELECT, INSERT, UPDATE ON dbo.CustomerOrders TO [CustomerApplicationPrincipal];
+-- GRANT SELECT, INSERT ON dbo.CustomerOrderLines TO [CustomerApplicationPrincipal];
+-- GRANT SELECT, INSERT, UPDATE ON dbo.CustomerPaymentSettings TO [CustomerApplicationPrincipal];
+--
+-- Admin (TAPortal.Web): Tingee merchant mapping.
+-- GRANT SELECT, INSERT, DELETE ON dbo.TingeeMerchants TO [AdminApplicationPrincipal];
+--
+-- Webhooks (TAPortal.Webhooks): inbox only. No DELETE, no access to customer tables yet.
+-- GRANT SELECT, INSERT ON dbo.TingeeWebhookInbox TO [WebhooksApplicationPrincipal];

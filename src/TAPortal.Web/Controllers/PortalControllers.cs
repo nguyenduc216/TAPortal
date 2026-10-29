@@ -240,7 +240,7 @@ public sealed class RolesController(PortalDb db) : Controller
 }
 
 [Authorize(Policy = "SystemAdminOnly")]
-public sealed class CustomersController(PortalDb db, ICustomerAdminStore customers, ICustomerPortalAccounts portal, PasswordService passwords, ILogger<CustomersController> logger) : Controller
+public sealed partial class CustomersController(PortalDb db, ICustomerAdminStore customers, ICustomerPortalAccounts portal, PasswordService passwords, ILogger<CustomersController> logger) : Controller
 {
     public async Task<IActionResult> Index() => View(await db.GetCustomersAsync());
 
