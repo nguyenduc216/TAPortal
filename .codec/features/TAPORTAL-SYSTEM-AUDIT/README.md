@@ -56,3 +56,7 @@ Sidebar no longer lists 'Tài khoản Customer Portal'; each customer has a work
 
 ## Admin form UX — current status
 Modal mask fixed, role names instead of codes, searchable dropdowns, field icons, live password rules (client matches PasswordPolicy). Safe tests 252/252. Admin `50265e30…081d` (62); Customer unchanged. NOT_DEPLOYED. Prior status lines above are historical.
+| `TAPORTAL-SYSTEM-AUDIT-CHG-20261029T164706Z-E9FB56` | 2026-10-29 | Cross-app UX consistency: Customer Portal role names and password UX, shared fixes, remaining screens | f38fd5b7a93dd5388cf7660dbd01ece9d85ef691 | NONE_REQUIRED | PUBLISHED (local, Admin + Customer) / NOT_DEPLOYED | PENDING_APPROVAL |
+
+## Cross-app UX consistency — current status
+Customer Portal role names, password UX and company search; shared modal/animation fix; Admin profile/top bar/role screens without role codes; Roles/Menus search; backend refuses reactivation for inactive customers. Safe tests 253/253. Admin `9b428ced…e8bd` (62), Customer `de8af4e6…d947` (58), same Shared DLL. NOT_DEPLOYED. Prior status lines above are historical.

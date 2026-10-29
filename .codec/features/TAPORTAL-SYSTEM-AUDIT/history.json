@@ -961,5 +961,43 @@
     },
     "backup": "publish\\rollback\\TAPORTAL-SYSTEM-AUDIT-CHG-20261029T164002Z-80D551\\TAPortal.Web",
     "iis": "NOT_CHECKED"
+  },
+  {
+    "change_id": "TAPORTAL-SYSTEM-AUDIT-CHG-20261029T164706Z-E9FB56",
+    "created_at": "2026-10-29T16:47:06.995519+00:00",
+    "title": "Cross-app UX consistency: Customer Portal role names and password UX, shared fixes, remaining screens",
+    "status": "IMPLEMENTED / BUILD_VERIFIED / LOCAL_PUBLISH_COMPLETE (Admin + Customer) / VISUAL_NOT_VERIFIED / PRODUCTION_NOT_DEPLOYED",
+    "commit_sha": "f38fd5b7a93dd5388cf7660dbd01ece9d85ef691",
+    "migration_status": "NONE_REQUIRED / NO_SQL_EXECUTED",
+    "publish_status": "PUBLISHED (local, Admin + Customer) / NOT_DEPLOYED",
+    "merge_status": "PENDING_APPROVAL",
+    "agent": "Claude Code (claude-opus-5-5)",
+    "base_sha": "bc86feef865d40a7f54be6653f71d5e9a59b75e8",
+    "build": {
+      "release_build": "0 warnings / 0 errors",
+      "safe_tests": "253 passed / 0 failed / 0 skipped",
+      "codec_validate": "PASS"
+    },
+    "artifacts": {
+      "TAPortal.Web": {
+        "exit_code": 0,
+        "started_utc": "2026-10-29T16:51:08Z",
+        "finished_utc": "2026-10-29T16:51:11Z",
+        "files": 62,
+        "sha256": "9b428ced25d913d3acdd7a62ff2e86f70308a6168ceefb698e47bd47ac22e8bd",
+        "previous_sha256": "50265e3053b2c6c997a3c7dc7976ba2a63e482dda1d1394e04602c0b402c081d"
+      },
+      "TACustomerPortal.Web": {
+        "exit_code": 0,
+        "started_utc": "2026-10-29T16:51:11Z",
+        "finished_utc": "2026-10-29T16:51:13Z",
+        "files": 58,
+        "sha256": "de8af4e6e36bf8f5222b6bf2d156df06f3933c4510d7ffa8bc3fea7486b0d947",
+        "previous_sha256": "b39bb31c86eeb817b200d34e43df0c85a350a069aac051f937d7b9aa6477dc0e"
+      },
+      "shared_dll_sha256": "ac0a8bef3f06074b7db29a76deb130b4b74fffa571deb6b61cabf38e5834d5ea"
+    },
+    "backup": "publish\\rollback\\TAPORTAL-SYSTEM-AUDIT-CHG-20261029T164706Z-E9FB56\\",
+    "iis": "NOT_CHECKED"
   }
 ]
