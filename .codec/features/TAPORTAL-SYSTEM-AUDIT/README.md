@@ -60,3 +60,7 @@ Modal mask fixed, role names instead of codes, searchable dropdowns, field icons
 
 ## Cross-app UX consistency — current status
 Customer Portal role names, password UX and company search; shared modal/animation fix; Admin profile/top bar/role screens without role codes; Roles/Menus search; backend refuses reactivation for inactive customers. Safe tests 253/253. Admin `9b428ced…e8bd` (62), Customer `de8af4e6…d947` (58), same Shared DLL. NOT_DEPLOYED. Prior status lines above are historical.
+| `TAPORTAL-SYSTEM-AUDIT-CHG-20261029T170242Z-4FCD90` | 2026-10-29 | Distinct Customer Portal design (gold/green), Portal accounts tab in Customers, staff exclusion, pagination and smooth navigation | 123c2ff6c2376962030c7fff159506163f8d1f01 | NONE_REQUIRED | PUBLISHED (local, Admin + Customer) / NOT_DEPLOYED | PENDING_APPROVAL |
+
+## Customer Portal redesign + navigation — current status
+Customer Portal has its own green/gold design (customer.css, no Tabler); Customers module has tabs 'Danh sách khách hàng' | 'Tài khoản Portal' (legacy page retired, GET redirects kept); TA staff excluded from Portal grants; client-side pagination and soft navigation in both apps. Safe tests 254/254; E2E navigation/pagination PASS. Admin `cc224fd3…ddfa` (62), Customer `ac27314e…5e79` (55). NOT_DEPLOYED. Prior status lines above are historical.
