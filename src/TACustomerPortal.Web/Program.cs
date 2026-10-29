@@ -41,6 +41,12 @@ builder.Services.AddAuthorization(o => o.FallbackPolicy = new AuthorizationPolic
 builder.Services.AddRateLimiter(o =>
 {
     o.RejectionStatusCode = 429;
+    o.OnRejected = async (context, token) =>
+    {
+        context.HttpContext.Response.Headers.RetryAfter = "60";
+        context.HttpContext.Response.ContentType = "text/plain; charset=utf-8";
+        await context.HttpContext.Response.WriteAsync("Quá nhiều yêu cầu đăng nhập từ địa chỉ này. Vui lòng đợi 1 phút rồi thử lại.", token);
+    };
     o.AddPolicy("login", context => RateLimitPartition.GetFixedWindowLimiter(context.Connection.RemoteIpAddress?.ToString() ?? "unknown", _ => new FixedWindowRateLimiterOptions { PermitLimit = 10, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
 });
 // Read configuration when options are resolved, including host-supplied configuration.
@@ -56,6 +62,9 @@ builder.Services.AddOptions<ForwardedHeadersOptions>().Configure<IConfiguration>
         options.KnownProxies.Add(IPAddress.Parse(proxy));
 });
 var app = builder.Build();
+// Without a connection string every sign-in fails: make that visible at startup (no secret is logged).
+if (string.IsNullOrWhiteSpace(app.Configuration["Database:ConnectionString"]))
+    app.Logger.LogCritical("CUSTOMER_PORTAL_DB_NOT_CONFIGURED: set Database__ConnectionString for this site (TAPortalSys). Sign-in cannot work without it.");
 app.UseForwardedHeaders();
 app.UseTaSecurityHeaders();
 if (!app.Environment.IsDevelopment())

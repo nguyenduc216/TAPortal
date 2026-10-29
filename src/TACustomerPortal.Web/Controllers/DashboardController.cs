@@ -8,6 +8,6 @@ public sealed class DashboardController(ICurrentCustomerContext customer) : Cont
     public async Task<IActionResult> Index()
     {
         var current = await customer.Get();
-        return current is null ? Redirect("/account/select-customer") : View(current);
+        return current is null ? RedirectToAction("SelectCustomer", "Account") : View(current);
     }
 }
