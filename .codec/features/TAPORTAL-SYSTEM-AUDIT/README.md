@@ -52,3 +52,7 @@ UI_IMPLEMENTED, BUILD_VERIFIED, LOCAL_PUBLISH_COMPLETE; VISUAL_NOT_VERIFIED on r
 
 ## Customer Workspace — current status
 Sidebar no longer lists 'Tài khoản Customer Portal'; each customer has a workspace (/Customers/Details|Edit|PortalAccounts/{id}) with per-customer membership management (assign existing / create new, role, revoke/reactivate) scoped to the route customer. Legacy /CustomerPortalAccounts kept for compatibility. Safe tests 250/250. Admin `f609696d…e607` (62); Customer unchanged `b39bb31c…dc0e`. NOT_DEPLOYED. Prior status lines above are historical.
+| `TAPORTAL-SYSTEM-AUDIT-CHG-20261029T164002Z-80D551` | 2026-10-29 | Admin form UX: modal mask fix, role names, searchable dropdowns, field icons, live password rules | 64c797bdd13a5aacf5395cbf4cab6453cabe47a2 | NONE_REQUIRED | PUBLISHED (local, Admin only) / NOT_DEPLOYED | PENDING_APPROVAL |
+
+## Admin form UX — current status
+Modal mask fixed, role names instead of codes, searchable dropdowns, field icons, live password rules (client matches PasswordPolicy). Safe tests 252/252. Admin `50265e30…081d` (62); Customer unchanged. NOT_DEPLOYED. Prior status lines above are historical.
