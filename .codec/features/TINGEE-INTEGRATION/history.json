@@ -1,0 +1,20 @@
+[
+  {
+    "change_id": "TINGEE-INTEGRATION-CHG-20261029T200714Z-B90483",
+    "created_at": "2026-10-29T20:07:14.564061+00:00",
+    "title": "Scaffold TAPortal.Integrations and TAPortal.Webhooks projects",
+    "status": "IMPLEMENTED / BUILD_VERIFIED / NOT_PUBLISHED / PRODUCTION_NOT_DEPLOYED",
+    "commit_sha": "f7979e10a7ce69174332db638c5ef1fec95369b4",
+    "migration_status": "NONE_REQUIRED / NO_SQL_EXECUTED",
+    "publish_status": "NOT_RUN (TAPortal.Webhooks has no configured target) / Admin+Customer NOT_REQUIRED",
+    "merge_status": "PENDING_APPROVAL",
+    "agent": "Claude Code (claude-opus-5-5)",
+    "base_sha": "47c5689aa7f19d15b4f5f2ab446f56e0169bc145",
+    "build": {
+      "release_build": "0 warnings / 0 errors",
+      "safe_tests": "269 passed / 0 failed / 0 skipped",
+      "codec_validate": "PASS"
+    },
+    "iis": "NOT_CHECKED"
+  }
+]
