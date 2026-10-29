@@ -32,3 +32,7 @@ AUD-15 FIXED (application); AUD-16 PARTIAL (application check FIXED, DB unique i
 
 ## Checkpoint 8 — current status
 AUD-18 FIXED (defined KPIs from SQL, real DB/audit status, explicit error/empty states); AUD-26 FIXED read-only; AUD-30..34 FIXED (UX/accessibility, BROWSER_NOT_VERIFIED). Release build 0/0; 160 safe tests + 4 Codec tests PASS; validate PASS; Admin smoke 15/15. Admin artifact `a6aca5d0…c5ff` (57 files); Customer NOT_REQUIRED (`ea77b3be…ac34`). Database NOT_VERIFIED. Backlog for Checkpoint 9/operator: AUD-23/24/25/29. Prior status lines above are historical.
+| `TAPORTAL-SYSTEM-AUDIT-CHG-20261029T050717Z-E1EAC3` | 2026-10-29 | Checkpoint 9 security hardening: login timing (AUD-23), throttle/proxy (AUD-24), durable audit (AUD-25/29) | b6eb780202049b9a8ca3014e28d50cfcd3e2e8dd | NONE_REQUIRED | PUBLISHED (local, Admin + Customer) / NOT_DEPLOYED | PENDING_APPROVAL |
+
+## Checkpoint 9 — current status
+AUD-23 FIXED (app; TIMING_NOT_VERIFIED); AUD-24 PARTIAL (memory bound, proxy allowlist; per-process counters remain, PENDING_INFRASTRUCTURE_APPROVAL); AUD-25 PARTIAL (script 007 + runbook, PENDING_OPERATOR); AUD-29 FIXED in code, CONFIGURATION_PENDING; new AUD-35/36/37/38 FIXED. Release build 0/0; 202 safe tests + 4 Codec tests PASS; validate PASS; smoke Admin 15/15, Customer 10/10. Admin `64ff472d…a10e`, Customer `71c104f1…338a` (Shared changed → both). Database NOT_VERIFIED. Prior status lines above are historical.
