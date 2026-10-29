@@ -21,7 +21,7 @@ public static partial class TaxCodePolicy
     public static bool IsValid(string? normalized) => normalized is null || Format().IsMatch(normalized);
 }
 
-public enum CustomerChangeOutcome { Saved, NotFound, DuplicateCode, DuplicateTaxCode, InvalidTaxCode }
+public enum CustomerChangeOutcome { Saved, NotFound, DuplicateCode, DuplicateTaxCode, InvalidTaxCode, AuditUnavailable }
 
 public sealed record CustomerChangeResult(CustomerChangeOutcome Outcome, string? ConflictingCustomerCode = null);
 
@@ -52,7 +52,7 @@ public static class CustomerChangePolicy
             : CustomerChangeOutcome.Saved;
 }
 
-public sealed class SqlCustomerAdminStore(IConfiguration configuration) : ICustomerAdminStore
+public sealed class SqlCustomerAdminStore(IConfiguration configuration, AdminAuditOptions audit) : ICustomerAdminStore
 {
     private SqlConnection Connection() => new(configuration["Database:ConnectionString"]);
 
@@ -77,6 +77,7 @@ public sealed class SqlCustomerAdminStore(IConfiguration configuration) : ICusto
         try
         {
             string? currentTax = null;
+            CustomerEditVm? before = null;
             if (isNew)
             {
                 vm.Id = Guid.NewGuid();
@@ -86,9 +87,9 @@ public sealed class SqlCustomerAdminStore(IConfiguration configuration) : ICusto
             }
             else
             {
-                var current = await Read(cn, tx, vm.Id);
-                if (current is null) return new(CustomerChangeOutcome.NotFound);
-                currentTax = TaxCodePolicy.Normalize(current.TaxCode);
+                before = await Read(cn, tx, vm.Id);
+                if (before is null) return new(CustomerChangeOutcome.NotFound);
+                currentTax = TaxCodePolicy.Normalize(before.TaxCode);
             }
 
             var tax = TaxCodePolicy.Normalize(vm.TaxCode);
@@ -108,8 +109,16 @@ public sealed class SqlCustomerAdminStore(IConfiguration configuration) : ICusto
                 foreach (var (name, value) in args) cmd.Parameters.AddWithValue(name, value);
                 if (await cmd.ExecuteNonQueryAsync() != 1) return new(CustomerChangeOutcome.NotFound);
             }
+            static string State(CustomerEditVm? c, string? tax) => c is null ? "{}" :
+                AuditSql.Json(("code", c.Code), ("name", c.Name), ("taxCode", tax), ("email", c.Email), ("phone", c.Phone), ("address", c.Address), ("isActive", c.IsActive));
+            await AuditSql.WriteOrThrowAsync(cn, tx, audit.RequireDurableAudit, actorId, isNew ? "CUSTOMER_CREATED" : "CUSTOMER_UPDATED", "dbo.Customers", vm.Id.ToString(),
+                State(before, currentTax), State(vm, tax), null);
             await tx.CommitAsync();
             return new(CustomerChangeOutcome.Saved);
+        }
+        catch (AuditUnavailableException)
+        {
+            return new(CustomerChangeOutcome.AuditUnavailable); // nothing committed
         }
         catch (SqlException ex) when (ex.Number is 2601 or 2627)
         {

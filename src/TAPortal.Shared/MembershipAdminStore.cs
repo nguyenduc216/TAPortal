@@ -85,6 +85,16 @@ VALUES(@u,@name,@normal,@display,@email,@ne,@hash,'ACTIVE',1,@actor)
             await add.ExecuteNonQueryAsync();
         }
 
+        string? previousRole = null;
+        bool? previousActive = null;
+        await using (var prev = new SqlCommand("SELECT PortalRole,IsActive FROM dbo.CustomerPortalMemberships WITH(UPDLOCK,HOLDLOCK) WHERE UserId=@u AND CustomerId=@c", cn, tx))
+        {
+            prev.Parameters.AddWithValue("@u", id);
+            prev.Parameters.AddWithValue("@c", input.CustomerId);
+            await using var r = await prev.ExecuteReaderAsync();
+            if (await r.ReadAsync()) (previousRole, previousActive) = (r.GetString(0), r.GetBoolean(1));
+        }
+
         await using var cmd = new SqlCommand("""
 IF NOT EXISTS(SELECT 1 FROM dbo.Users WHERE Id=@u AND IsDeleted=0 AND IsActive=1 AND Status='ACTIVE')
  OR NOT EXISTS(SELECT 1 FROM dbo.Customers WHERE Id=@c AND IsDeleted=0 AND IsActive=1 AND Status='ACTIVE')
@@ -98,6 +108,10 @@ ELSE INSERT dbo.CustomerPortalMemberships(Id,UserId,CustomerId,PortalRole,IsActi
         cmd.Parameters.AddWithValue("@role", input.PortalRole);
         cmd.Parameters.AddWithValue("@actor", actor);
         await cmd.ExecuteNonQueryAsync();
+        // AUD-36: provisioning (possibly creating the user) is audited in the same transaction; no password data is recorded.
+        await AuditSql.WriteOrThrowAsync(cn, tx, AuditPolicy.RequireDurable(configuration), actor, "CUSTOMER_PORTAL_MEMBERSHIP_SAVED", "dbo.CustomerPortalMemberships", $"{id}:{input.CustomerId}",
+            previousRole is null ? "{}" : AuditSql.Json(("role", previousRole), ("isActive", previousActive)),
+            AuditSql.Json(("role", input.PortalRole), ("isActive", true), ("userCreated", !input.UserId.HasValue)), null);
         await tx.CommitAsync();
     }
 
@@ -112,7 +126,9 @@ ELSE INSERT dbo.CustomerPortalMemberships(Id,UserId,CustomerId,PortalRole,IsActi
         cmd.Parameters.AddWithValue("@actor", actor);
         cmd.Parameters.AddWithValue("@u", userId);
         cmd.Parameters.AddWithValue("@c", customerId);
-        await cmd.ExecuteNonQueryAsync();
+        if (await cmd.ExecuteNonQueryAsync() == 1)
+            await AuditSql.WriteOrThrowAsync(cn, tx, AuditPolicy.RequireDurable(configuration), actor, "CUSTOMER_PORTAL_MEMBERSHIP_ACTIVE_CHANGED", "dbo.CustomerPortalMemberships", $"{userId}:{customerId}",
+                AuditSql.Json(("isActive", !active)), AuditSql.Json(("isActive", active)), null);
         await tx.CommitAsync();
     }
 }

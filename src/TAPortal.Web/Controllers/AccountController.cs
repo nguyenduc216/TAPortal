@@ -9,10 +9,19 @@ using TAPortal.Web.Services;
 
 namespace TAPortal.Web.Controllers;
 
-public sealed class AccountController(PortalDb db, PasswordService passwords, AdminLoginThrottle throttle, ILogger<AccountController> logger) : Controller
+public sealed class AccountController(PortalDb db, IAdminAuthStore auth, PasswordService passwords, IAdminLoginThrottle throttle, ILogger<AccountController> logger) : Controller
 {
-    // Unknown usernames still pay the full PBKDF2 cost so response time does not reveal which accounts exist.
+    // Unknown, ineligible or hash-less accounts still pay the full PBKDF2 cost so response time does not reveal which accounts exist.
     private static readonly string DummyHash = new PasswordService().Hash(Guid.NewGuid() + "Aa1!");
+    internal const string GenericLoginError = "Tài khoản hoặc mật khẩu không đúng.";
+
+    // PasswordService.Verify returns early (no PBKDF2) for empty/malformed hashes; never let that path be observable.
+    private bool VerifyWithConstantWork(string password, string? storedHash)
+    {
+        var usable = storedHash is not null && storedHash.StartsWith("PBKDF2$", StringComparison.Ordinal);
+        var ok = passwords.Verify(password, usable ? storedHash : DummyHash);
+        return usable && ok;
+    }
 
     [AllowAnonymous]
     [HttpGet]
@@ -43,12 +52,15 @@ public sealed class AccountController(PortalDb db, PasswordService passwords, Ad
         }
 
         if (!ModelState.IsValid) return View(vm);
-        var user = await db.GetAuthUserAsync(vm.Username);
-        var validPassword = passwords.Verify(vm.Password, user?.PasswordHash ?? DummyHash);
-        if (user is null || !validPassword || (user.Roles.Count == 0 && user.Permissions.Count == 0))
+        // One lookup, then PBKDF2, for every outcome; roles/permissions are loaded only after the password matched.
+        var user = await auth.FindLoginCandidateAsync(vm.Username);
+        var validPassword = VerifyWithConstantWork(vm.Password, user?.PasswordHash);
+        var grants = user is not null && validPassword ? await auth.LoadGrantsAsync(user.Id) : null;
+        if (user is null || grants is null || (grants.Roles.Count == 0 && grants.Permissions.Count == 0))
         {
             logger.LogInformation("Admin login failed. Account partition {AccountTag}.", AdminLoginThrottle.PartitionTag(vm.Username));
-            ModelState.AddModelError(string.Empty, "Tài khoản hoặc mật khẩu không đúng.");
+            ModelState.AddModelError(string.Empty, GenericLoginError);
+            vm.Password = string.Empty;
             return View(vm);
         }
 
@@ -60,16 +72,16 @@ public sealed class AccountController(PortalDb db, PasswordService passwords, Ad
             new("password_stamp", Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(user.PasswordHash))))
         };
         if (!string.IsNullOrWhiteSpace(user.Email)) claims.Add(new Claim(ClaimTypes.Email, user.Email));
-        claims.AddRange(user.Roles.Select(r => new Claim(ClaimTypes.Role, r)));
-        claims.AddRange(user.Permissions.Select(p => new Claim("permission", p)));
+        claims.AddRange(grants.Roles.Select(r => new Claim(ClaimTypes.Role, r)));
+        claims.AddRange(grants.Permissions.Select(p => new Claim("permission", p)));
 
         var principal = new ClaimsPrincipal(new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme));
         await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal,
             new AuthenticationProperties { IsPersistent = vm.RememberMe, AllowRefresh = true });
-        await db.TouchLoginAsync(user.Id);
+        await auth.TouchLoginAsync(user.Id);
 
         if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl)) return LocalRedirect(returnUrl);
-        return user.Roles.Contains("SYS_ADMIN") ? RedirectToAction("Index", "Home") : RedirectToAction(nameof(Profile));
+        return grants.Roles.Contains("SYS_ADMIN") ? RedirectToAction("Index", "Home") : RedirectToAction(nameof(Profile));
     }
 
     [Authorize]
@@ -120,7 +132,15 @@ public sealed class AccountController(PortalDb db, PasswordService passwords, Ad
             return View(vm);
         }
 
-        await db.UpdatePasswordAsync(user.Id, passwords.Hash(vm.NewPassword));
+        try
+        {
+            await db.UpdatePasswordAsync(user.Id, passwords.Hash(vm.NewPassword));
+        }
+        catch (AuditUnavailableException)
+        {
+            ModelState.AddModelError(string.Empty, "Không thể ghi nhật ký audit nên mật khẩu chưa được đổi. Liên hệ quản trị hệ thống.");
+            return View(vm);
+        }
         TempData["Success"] = "Đã đổi mật khẩu thành công.";
         return RedirectToAction(nameof(Profile));
     }

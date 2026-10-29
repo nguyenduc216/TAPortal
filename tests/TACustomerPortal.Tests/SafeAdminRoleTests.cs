@@ -126,7 +126,9 @@ public sealed class SafeAdminRoleTests
             Assert.DoesNotMatch(@"UPDATE\s+dbo\.Users", sql);
             Assert.DoesNotMatch(@"(INSERT|UPDATE|DELETE)\s+(FROM\s+)?dbo\.(Roles|Permissions|RolePermissions|UserPermissions)\b", sql);
         });
-        Assert.StartsWith("IF OBJECT_ID(N'dbo.AuditLogs',N'U') IS NOT NULL", AdminServices.UserRoleSql.Audit);
+        // CP9: the shared audit statement checks visibility first (-1), then columns (-2), then inserts via sp_executesql.
+        Assert.StartsWith("IF OBJECT_ID(N'dbo.AuditLogs',N'U') IS NULL SELECT CAST(-1 AS int);", AdminServices.UserRoleSql.Audit);
+        Assert.Contains("sp_executesql", AdminServices.UserRoleSql.Audit);
     }
 
     [Fact]

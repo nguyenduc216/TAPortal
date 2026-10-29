@@ -83,17 +83,8 @@ WHERE r.Code='SYS_ADMIN' AND r.IsActive=1 AND r.IsDeleted=0 AND u.IsActive=1 AND
     public const string DirectPermissions = "SELECT p.Code,p.Name,up.Effect FROM dbo.UserPermissions up JOIN dbo.Permissions p ON p.Id=up.PermissionId WHERE up.UserId=@u AND p.IsDeleted=0 ORDER BY up.Effect,p.Code;";
     public const string Remove = "DELETE FROM dbo.UserRoles WHERE UserId=@u AND RoleId=@r;";
     public const string Add = "INSERT dbo.UserRoles(UserId,RoleId,CreatedBy) VALUES(@u,@r,@by);";
-    // Writes only when dbo.AuditLogs exists with the expected columns (TAPortalSys schema not verified by this change).
-    public const string Audit = """
-IF OBJECT_ID(N'dbo.AuditLogs',N'U') IS NOT NULL AND COL_LENGTH(N'dbo.AuditLogs',N'UserId') IS NOT NULL AND COL_LENGTH(N'dbo.AuditLogs',N'Action') IS NOT NULL
- AND COL_LENGTH(N'dbo.AuditLogs',N'EntityName') IS NOT NULL AND COL_LENGTH(N'dbo.AuditLogs',N'EntityId') IS NOT NULL AND COL_LENGTH(N'dbo.AuditLogs',N'OldValues') IS NOT NULL
- AND COL_LENGTH(N'dbo.AuditLogs',N'NewValues') IS NOT NULL AND COL_LENGTH(N'dbo.AuditLogs',N'IpAddress') IS NOT NULL
-BEGIN
- INSERT dbo.AuditLogs(UserId,Action,EntityName,EntityId,OldValues,NewValues,IpAddress) VALUES(@actor,N'USER_ROLES_UPDATED',N'dbo.Users',@target,@old,@new,@ip);
- SELECT CAST(1 AS bit);
-END
-ELSE SELECT CAST(0 AS bit);
-""";
+    // Shared audit statement (TAPortal.Shared.AuditSql); kept here so the SQL-text guard test covers it.
+    public const string Audit = AuditSql.Insert;
 }
 
 public sealed class SqlUserRoleStore(IConfiguration configuration, AdminAuditOptions auditOptions) : IUserRoleStore
@@ -132,17 +123,14 @@ public sealed class SqlUserRoleStore(IConfiguration configuration, AdminAuditOpt
                 await Exec(cn, tx, UserRoleSql.Add, ("@u", userId), ("@r", role), ("@by", actorId));
 
             string Codes(IEnumerable<Guid> ids) => string.Join(",", ids.Select(id => target.Roles.FirstOrDefault(r => r.Id == id)?.Code ?? id.ToString()).Order(StringComparer.Ordinal));
-            await using var audit = new SqlCommand(UserRoleSql.Audit, cn, tx);
-            audit.Parameters.AddWithValue("@actor", actorId);
-            audit.Parameters.AddWithValue("@target", userId.ToString());
-            audit.Parameters.AddWithValue("@old", "{\"roles\":\"" + Codes(target.AssignedRoleIds) + "\"}");
-            audit.Parameters.AddWithValue("@new", "{\"roles\":\"" + Codes(plan.Final) + "\"}");
-            audit.Parameters.AddWithValue("@ip", (object?)ipAddress ?? DBNull.Value);
-            var persisted = (bool)(await audit.ExecuteScalarAsync())!;
-            if (!persisted && auditOptions.RequireDurableAudit)
-                return new(RoleChangeOutcome.AuditUnavailable); // transaction rolls back on dispose
+            var written = await AuditSql.WriteOrThrowAsync(cn, tx, auditOptions.RequireDurableAudit, actorId, "USER_ROLES_UPDATED", "dbo.Users", userId.ToString(),
+                AuditSql.Json(("roles", Codes(target.AssignedRoleIds))), AuditSql.Json(("roles", Codes(plan.Final))), ipAddress);
             await tx.CommitAsync();
-            return new(RoleChangeOutcome.Updated, persisted, plan.Add.Select(id => Codes([id])).ToList(), plan.Remove.Select(id => Codes([id])).ToList());
+            return new(RoleChangeOutcome.Updated, written.Written, plan.Add.Select(id => Codes([id])).ToList(), plan.Remove.Select(id => Codes([id])).ToList());
+        }
+        catch (AuditUnavailableException)
+        {
+            return new(RoleChangeOutcome.AuditUnavailable); // nothing committed: the transaction rolls back on dispose
         }
         catch (SqlException ex) when (ex.Number is 1205 or 2601 or 2627 or 547)
         {

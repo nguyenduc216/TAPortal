@@ -5,14 +5,29 @@ namespace TAPortal.Web.Services;
 
 public sealed record AuthUserSnapshot(Guid Id, string Username, string DisplayName, string? Email, string? Phone, string PasswordHash, IReadOnlyList<string> Roles, IReadOnlyList<string> Permissions);
 
-public sealed class PortalDb
+// Login-eligible user row only (IsDeleted=0 AND IsActive=1 AND Status='ACTIVE'); ineligible accounts look exactly like unknown ones.
+public sealed record LoginCandidate(Guid Id, string Username, string DisplayName, string? Email, string? Phone, string PasswordHash);
+public sealed record AuthGrants(IReadOnlyList<string> Roles, IReadOnlyList<string> Permissions);
+
+// AUD-23: the login pipeline performs one lookup, then PBKDF2, and loads roles/permissions only after the password matched,
+// so a wrong password for an existing account does the same database work as an unknown username.
+public interface IAdminAuthStore
+{
+    Task<LoginCandidate?> FindLoginCandidateAsync(string username);
+    Task<AuthGrants> LoadGrantsAsync(Guid userId);
+    Task TouchLoginAsync(Guid userId);
+}
+
+public sealed class PortalDb : IAdminAuthStore
 {
     private readonly string _connectionString;
     private readonly ILogger<PortalDb> _logger;
+    private readonly AdminAuditOptions _audit;
 
-    public PortalDb(IConfiguration configuration, ILogger<PortalDb> logger)
+    public PortalDb(IConfiguration configuration, ILogger<PortalDb> logger, AdminAuditOptions audit)
     {
         _logger = logger;
+        _audit = audit;
         _connectionString = configuration["Database:ConnectionString"] ?? string.Empty;
         if (string.IsNullOrWhiteSpace(_connectionString))
         {
@@ -23,6 +38,14 @@ public sealed class PortalDb
     private SqlConnection Open() => new(_connectionString);
 
     public async Task<AuthUserSnapshot?> GetAuthUserAsync(string username)
+    {
+        var candidate = await FindLoginCandidateAsync(username);
+        if (candidate is null) return null;
+        var grants = await LoadGrantsAsync(candidate.Id);
+        return new(candidate.Id, candidate.Username, candidate.DisplayName, candidate.Email, candidate.Phone, candidate.PasswordHash, grants.Roles, grants.Permissions);
+    }
+
+    public async Task<LoginCandidate?> FindLoginCandidateAsync(string username)
     {
         await using var cn = Open();
         await cn.OpenAsync();
@@ -35,18 +58,13 @@ WHERE NormalizedUsername=@u AND IsDeleted=0 AND IsActive=1 AND Status='ACTIVE';
         cmd.Parameters.AddWithValue("@u", username.Trim().ToUpperInvariant());
         await using var rd = await cmd.ExecuteReaderAsync();
         if (!await rd.ReadAsync()) return null;
-        var id = rd.GetGuid(0);
-        var user = new AuthUserSnapshot(
-            id,
-            rd.GetString(1),
-            rd.GetString(2),
-            rd.IsDBNull(3) ? null : rd.GetString(3),
-            rd.IsDBNull(4) ? null : rd.GetString(4),
-            rd.IsDBNull(5) ? string.Empty : rd.GetString(5),
-            Array.Empty<string>(),
-            Array.Empty<string>());
-        await rd.CloseAsync();
+        return new(rd.GetGuid(0), rd.GetString(1), rd.GetString(2), rd.IsDBNull(3) ? null : rd.GetString(3), rd.IsDBNull(4) ? null : rd.GetString(4), rd.IsDBNull(5) ? string.Empty : rd.GetString(5));
+    }
 
+    public async Task<AuthGrants> LoadGrantsAsync(Guid id)
+    {
+        await using var cn = Open();
+        await cn.OpenAsync();
         var roles = new List<string>();
         const string roleSql = """
 SELECT r.Code FROM dbo.UserRoles ur JOIN dbo.Roles r ON r.Id=ur.RoleId
@@ -92,7 +110,7 @@ WHERE up.UserId=@id AND up.Effect='DENY' AND p.IsDeleted=0;
             while (await dr.ReadAsync()) permissions.Remove(dr.GetString(0));
         }
 
-        return user with { Roles = roles, Permissions = permissions.ToList() };
+        return new(roles, permissions.ToList());
     }
 
     public async Task TouchLoginAsync(Guid userId)
@@ -148,6 +166,9 @@ VALUES(@id,@username,@nu,@email,@ne,@phone,@name,@hash,'ACTIVE',1,@createdBy);
             roleCmd.Parameters.AddWithValue("@by", (object?)createdBy ?? DBNull.Value);
             await roleCmd.ExecuteNonQueryAsync();
         }
+        // AUD-35: account creation (possibly with SYS_ADMIN) is audited in the same transaction; throws AuditUnavailableException when mandatory.
+        await AuditSql.WriteOrThrowAsync(cn, tx, _audit.RequireDurableAudit, createdBy, "USER_CREATED", "dbo.Users", id.ToString(), "{}",
+            AuditSql.Json(("username", vm.Username.Trim()), ("displayName", vm.DisplayName.Trim()), ("email", vm.Email), ("roleId", vm.RoleId)), null);
         await tx.CommitAsync();
         return id;
     }
@@ -155,10 +176,16 @@ VALUES(@id,@username,@nu,@email,@ne,@phone,@name,@hash,'ACTIVE',1,@createdBy);
     public async Task UpdatePasswordAsync(Guid userId, string passwordHash)
     {
         await using var cn = Open(); await cn.OpenAsync();
-        await using var cmd = new SqlCommand("UPDATE dbo.Users SET PasswordHash=@h,UpdatedAt=SYSUTCDATETIME(),UpdatedBy=@id WHERE Id=@id", cn);
-        cmd.Parameters.AddWithValue("@h", passwordHash);
-        cmd.Parameters.AddWithValue("@id", userId);
-        await cmd.ExecuteNonQueryAsync();
+        await using var tx = (SqlTransaction)await cn.BeginTransactionAsync();
+        await using (var cmd = new SqlCommand("UPDATE dbo.Users SET PasswordHash=@h,UpdatedAt=SYSUTCDATETIME(),UpdatedBy=@id WHERE Id=@id", cn, tx))
+        {
+            cmd.Parameters.AddWithValue("@h", passwordHash);
+            cmd.Parameters.AddWithValue("@id", userId);
+            await cmd.ExecuteNonQueryAsync();
+        }
+        // AUD-35: credential change event only; hashes are never written to the audit row.
+        await AuditSql.WriteOrThrowAsync(cn, tx, _audit.RequireDurableAudit, userId, "USER_PASSWORD_CHANGED", "dbo.Users", userId.ToString(), "{}", "{}", null);
+        await tx.CommitAsync();
     }
 
     public async Task<bool> EmailInUseAsync(string? email, Guid? exceptUserId)

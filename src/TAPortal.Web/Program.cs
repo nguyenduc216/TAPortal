@@ -71,12 +71,28 @@ builder.Services.AddSingleton(sp =>
 {
     var options = new AdminLoginThrottleOptions();
     builder.Configuration.GetSection("Security:AdminLogin").Bind(options);
-    if (options.AccountPermitLimit < 1 || options.IpPermitLimit < 1 || options.Window <= TimeSpan.Zero)
-        throw new InvalidOperationException("Security:AdminLogin limits must be positive.");
+    if (options.AccountPermitLimit < 1 || options.IpPermitLimit < 1 || options.Window <= TimeSpan.Zero || options.MaxTrackedKeys < 100)
+        throw new InvalidOperationException("Security:AdminLogin limits must be positive (MaxTrackedKeys >= 100).");
     return options;
 });
 builder.Services.AddSingleton<AdminLoginThrottle>();
+builder.Services.AddSingleton<IAdminLoginThrottle>(sp => sp.GetRequiredService<AdminLoginThrottle>());
+builder.Services.AddScoped<IAdminAuthStore>(sp => sp.GetRequiredService<PortalDb>());
+// AUD-24: X-Forwarded-For/Proto are trusted only from ReverseProxy:KnownProxies (exact IPs, one hop). Empty = ignored.
+builder.Services.AddOptions<Microsoft.AspNetCore.Builder.ForwardedHeadersOptions>().Configure<IConfiguration>((options, configuration) =>
+{
+    var proxies = TrustedProxyConfig.Parse(configuration.GetSection("ReverseProxy:KnownProxies").Get<string[]>());
+    options.ForwardedHeaders = proxies.Count == 0 ? Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.None
+        : Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedFor | Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedProto;
+    options.ForwardLimit = 1;
+    options.KnownNetworks.Clear();
+    options.KnownProxies.Clear();   // removes the framework's implicit loopback trust
+    foreach (var proxy in proxies) options.KnownProxies.Add(proxy);
+});
 var app = builder.Build();
+if (!app.Services.GetRequiredService<AdminAuditOptions>().RequireDurableAudit)
+    app.Logger.LogWarning("DURABLE_AUDIT_NOT_ENFORCED: Security:Audit:RequireDurableAudit=false; administrative changes may commit without a dbo.AuditLogs row. Enable after database/scripts/007-verify-audit-logs.sql reports PASS.");
+app.UseForwardedHeaders();
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/home/error");

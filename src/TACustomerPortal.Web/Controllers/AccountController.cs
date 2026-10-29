@@ -29,8 +29,11 @@ public sealed class AccountController(ICustomerStore store, PasswordService pass
         }
 
         var user = await store.FindUser(vm.Username);
-        var valid = passwords.Verify(vm.Password, user?.PasswordHash ?? DummyHash);
-        var memberships = user is null ? [] : await store.Memberships(user.Id);
+        // AUD-38: always run PBKDF2 (also for empty/malformed hashes) and load memberships only after the password matched,
+        // so a wrong password for an existing account does the same work as an unknown username.
+        var usableHash = user?.PasswordHash is { } h && h.StartsWith("PBKDF2$", StringComparison.Ordinal);
+        var valid = passwords.Verify(vm.Password, usableHash ? user!.PasswordHash : DummyHash) && usableHash;
+        IReadOnlyList<CustomerMembership> memberships = user is null || !valid ? [] : await store.Memberships(user.Id);
         if (!valid || user is null || memberships.Count == 0)
         {
             ModelState.AddModelError("", "Tài khoản hoặc mật khẩu không đúng, hoặc chưa được cấp quyền.");

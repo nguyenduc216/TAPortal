@@ -61,6 +61,10 @@ public sealed class UsersController(PortalDb db, PasswordService passwords, IUse
             {
                 ModelState.AddModelError(string.Empty, "Tên đăng nhập/email đã tồn tại hoặc vai trò không hợp lệ.");
             }
+            catch (AuditUnavailableException)
+            {
+                ModelState.AddModelError(string.Empty, "Không thể ghi nhật ký audit (dbo.AuditLogs) nên tài khoản chưa được tạo. Liên hệ quản trị cơ sở dữ liệu.");
+            }
         }
         // Re-render instead of redirecting so the entered values (except the password) are kept and the modal reopens.
         Response.StatusCode = StatusCodes.Status400BadRequest;
@@ -291,6 +295,7 @@ public sealed class CustomersController(PortalDb db, ICustomerAdminStore custome
             case CustomerChangeOutcome.Saved: return true;
             case CustomerChangeOutcome.DuplicateCode: ModelState.AddModelError(nameof(vm.Code), "Mã khách hàng đã tồn tại."); break;
             case CustomerChangeOutcome.InvalidTaxCode: ModelState.AddModelError(nameof(vm.TaxCode), "Mã số thuế phải gồm 10 chữ số, hoặc 10 chữ số + \"-\" + 3 chữ số đối với đơn vị phụ thuộc/chi nhánh (ví dụ 0101234567-001)."); break;
+            case CustomerChangeOutcome.AuditUnavailable: ModelState.AddModelError(string.Empty, "Không thể ghi nhật ký audit (dbo.AuditLogs) nên thay đổi đã bị hủy. Liên hệ quản trị cơ sở dữ liệu."); break;
             case CustomerChangeOutcome.DuplicateTaxCode: ModelState.AddModelError(nameof(vm.TaxCode), "Mã số thuế đã được sử dụng bởi khách hàng khác" + (result.ConflictingCustomerCode is null ? "." : $" (mã KH {result.ConflictingCustomerCode}).")); break;
             default: ModelState.AddModelError(string.Empty, "Không thể lưu khách hàng."); break;
         }

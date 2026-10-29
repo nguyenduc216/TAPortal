@@ -59,6 +59,10 @@ public sealed class CustomerPortalAccountsController(MembershipAdminStore store,
         {
             TempData["Error"] = "Thông tin trùng lặp hoặc tài khoản/doanh nghiệp không hợp lệ.";
         }
+        catch (AuditUnavailableException)
+        {
+            TempData["Error"] = AuditUnavailableMessage;
+        }
 
         return RedirectToAction(nameof(Index), new { customerId = NullIfEmpty(input.CustomerId) });
     }
@@ -75,10 +79,15 @@ public sealed class CustomerPortalAccountsController(MembershipAdminStore store,
         {
             return Forbid();
         }
+        catch (AuditUnavailableException)
+        {
+            TempData["Error"] = AuditUnavailableMessage;
+        }
 
         return RedirectToAction(nameof(Index), new { customerId = NullIfEmpty(customerId) });
     }
 
+    private const string AuditUnavailableMessage = "Không thể ghi nhật ký audit (dbo.AuditLogs) nên thay đổi đã bị hủy. Liên hệ quản trị cơ sở dữ liệu.";
     private static Guid? NullIfEmpty(Guid id) => id == Guid.Empty ? null : id;
     private Guid Actor => Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 }

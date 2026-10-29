@@ -18,8 +18,12 @@ PRINT N'PASS: database TAPortalSys';
 
 IF @obj IS NULL
 BEGIN
-    PRINT N'FAIL: dbo.AuditLogs does not exist (or is not visible to the current login).';
-    PRINT N'NEXT: review and run database/migrations/010-create-audit-logs-if-missing.sql, then rerun this script.';
+    -- OBJECT_ID returns NULL both for a missing table and for a table the caller has no permission on.
+    IF IS_ROLEMEMBER(N'db_owner') = 1 OR HAS_PERMS_BY_NAME(DB_NAME(), N'DATABASE', N'VIEW DEFINITION') = 1
+        PRINT N'FAIL: dbo.AuditLogs does not exist (caller can view all metadata).';
+    ELSE
+        PRINT N'FAIL: dbo.AuditLogs is not visible to the current login; it may exist without permission. Rerun as db_owner before concluding it is missing.';
+    PRINT N'NEXT: only if confirmed missing, review and run database/migrations/010-create-audit-logs-if-missing.sql, then rerun this script.';
     PRINT N'VERIFY_STATUS=FAIL';
     RETURN;
 END
@@ -76,8 +80,8 @@ ELSE BEGIN SET @warn += 1; PRINT N'WARN: no enabled FK AuditLogs.UserId -> Users
 IF EXISTS (SELECT 1 FROM sys.triggers WHERE parent_id = @obj AND is_disabled = 0)
 BEGIN SET @warn += 1; PRINT N'WARN: enabled triggers exist on dbo.AuditLogs; review that they cannot block inserts'; END
 
-SET @msg = N'INFO: existing USER_ROLES_UPDATED/USER_UPDATED/USER_SOFT_DELETED rows: ' +
-    CONVERT(nvarchar(20), (SELECT COUNT(1) FROM dbo.AuditLogs WHERE Action IN (N'USER_ROLES_UPDATED', N'USER_UPDATED', N'USER_SOFT_DELETED')));
+SET @msg = N'INFO: existing administrative audit rows (USER_*, CUSTOMER_*): ' +
+    CONVERT(nvarchar(20), (SELECT COUNT(1) FROM dbo.AuditLogs WHERE Action LIKE N'USER[_]%' OR Action LIKE N'CUSTOMER[_]%'));
 PRINT @msg;
 
 /* Effective permissions of the Admin application principal (no data is changed). */
@@ -88,15 +92,22 @@ BEGIN SET @fail += 1; PRINT N'FAIL: database user ' + @AppPrincipal + N' not fou
 ELSE
 BEGIN
     BEGIN TRY
-        DECLARE @insAudit int, @updUsers int, @insRoles int, @delRoles int, @insCust int, @updCust int;
+        DECLARE @visible int, @insAudit int, @updUsers int, @insRoles int, @delRoles int, @insCust int, @updCust int, @insMember int, @updMember int;
         EXECUTE AS USER = @AppPrincipal;
-        SELECT @insAudit = HAS_PERMS_BY_NAME(N'dbo.AuditLogs', N'OBJECT', N'INSERT'),
+        SELECT @visible = CASE WHEN OBJECT_ID(N'dbo.AuditLogs', N'U') IS NULL THEN 0 ELSE 1 END,
+               @insMember = HAS_PERMS_BY_NAME(N'dbo.CustomerPortalMemberships', N'OBJECT', N'INSERT'),
+               @updMember = HAS_PERMS_BY_NAME(N'dbo.CustomerPortalMemberships', N'OBJECT', N'UPDATE'),
+               @insAudit = HAS_PERMS_BY_NAME(N'dbo.AuditLogs', N'OBJECT', N'INSERT'),
                @updUsers = HAS_PERMS_BY_NAME(N'dbo.Users', N'OBJECT', N'UPDATE'),
                @insRoles = HAS_PERMS_BY_NAME(N'dbo.UserRoles', N'OBJECT', N'INSERT'),
                @delRoles = HAS_PERMS_BY_NAME(N'dbo.UserRoles', N'OBJECT', N'DELETE'),
                @insCust = HAS_PERMS_BY_NAME(N'dbo.Customers', N'OBJECT', N'INSERT'),
                @updCust = HAS_PERMS_BY_NAME(N'dbo.Customers', N'OBJECT', N'UPDATE');
         REVERT;
+        IF @visible = 1 PRINT N'PASS: dbo.AuditLogs is visible to ' + @AppPrincipal + N' (metadata)';
+        ELSE BEGIN SET @fail += 1; PRINT N'FAIL: dbo.AuditLogs is NOT visible to ' + @AppPrincipal + N'; the application treats it as missing'; END
+        IF ISNULL(@insMember, 0) = 1 AND ISNULL(@updMember, 0) = 1 PRINT N'PASS: ' + @AppPrincipal + N' has INSERT/UPDATE on CustomerPortalMemberships';
+        ELSE BEGIN SET @warn += 1; PRINT N'WARN: ' + @AppPrincipal + N' lacks INSERT/UPDATE on CustomerPortalMemberships'; END
         IF ISNULL(@insAudit, 0) = 1 PRINT N'PASS: ' + @AppPrincipal + N' can INSERT dbo.AuditLogs';
         ELSE BEGIN SET @fail += 1; PRINT N'FAIL: ' + @AppPrincipal + N' cannot INSERT dbo.AuditLogs (see scripts/009-grant-admin-audit-insert-template.sql)'; END
         IF ISNULL(@updUsers, 0) = 1 AND ISNULL(@insRoles, 0) = 1 AND ISNULL(@delRoles, 0) = 1 AND ISNULL(@insCust, 0) = 1 AND ISNULL(@updCust, 0) = 1

@@ -63,37 +63,6 @@ public interface IUserAccountStore
     Task<AccountChangeResult> SoftDeleteAsync(Guid actorId, Guid userId, string? expectedStamp, string? ipAddress);
 }
 
-public static class AuditSql
-{
-    // Inserts only when dbo.AuditLogs exists with the expected columns; returns 1 when a row was written.
-    public const string Insert = """
-IF OBJECT_ID(N'dbo.AuditLogs',N'U') IS NOT NULL AND COL_LENGTH(N'dbo.AuditLogs',N'UserId') IS NOT NULL AND COL_LENGTH(N'dbo.AuditLogs',N'Action') IS NOT NULL
- AND COL_LENGTH(N'dbo.AuditLogs',N'EntityName') IS NOT NULL AND COL_LENGTH(N'dbo.AuditLogs',N'EntityId') IS NOT NULL AND COL_LENGTH(N'dbo.AuditLogs',N'OldValues') IS NOT NULL
- AND COL_LENGTH(N'dbo.AuditLogs',N'NewValues') IS NOT NULL AND COL_LENGTH(N'dbo.AuditLogs',N'IpAddress') IS NOT NULL
-BEGIN
- INSERT dbo.AuditLogs(UserId,Action,EntityName,EntityId,OldValues,NewValues,IpAddress) VALUES(@actor,@action,@entity,@target,@old,@new,@ip);
- SELECT CAST(1 AS bit);
-END
-ELSE SELECT CAST(0 AS bit);
-""";
-
-    public static async Task<bool> WriteAsync(SqlConnection cn, SqlTransaction tx, Guid actor, string action, string entity, string target, string oldValues, string newValues, string? ip)
-    {
-        await using var cmd = new SqlCommand(Insert, cn, tx);
-        cmd.Parameters.AddWithValue("@actor", actor);
-        cmd.Parameters.AddWithValue("@action", action);
-        cmd.Parameters.AddWithValue("@entity", entity);
-        cmd.Parameters.AddWithValue("@target", target);
-        cmd.Parameters.AddWithValue("@old", oldValues);
-        cmd.Parameters.AddWithValue("@new", newValues);
-        cmd.Parameters.AddWithValue("@ip", (object?)ip ?? DBNull.Value);
-        return (bool)(await cmd.ExecuteScalarAsync())!;
-    }
-
-    public static string Json(params (string Key, object? Value)[] fields) =>
-        System.Text.Json.JsonSerializer.Serialize(fields.ToDictionary(f => f.Key, f => f.Value));
-}
-
 public static class UserAccountSql
 {
     public const string User = "SELECT Id,Username,DisplayName,Email,Phone,IsActive,Status FROM dbo.Users WITH (UPDLOCK, HOLDLOCK) WHERE Id=@u AND IsDeleted=0;";
@@ -169,10 +138,13 @@ public sealed class SqlUserAccountStore(IConfiguration configuration, AdminAudit
             outcome = await apply(cn, tx, before);
             if (outcome != AccountChangeOutcome.Updated) return new(outcome);
             var (action, oldValues, newValues) = describe(before);
-            var persisted = await AuditSql.WriteAsync(cn, tx, actorId, action, "dbo.Users", userId.ToString(), oldValues, newValues, ip);
-            if (!persisted && audit.RequireDurableAudit) return new(AccountChangeOutcome.AuditUnavailable); // rollback on dispose
+            var written = await AuditSql.WriteOrThrowAsync(cn, tx, audit.RequireDurableAudit, actorId, action, "dbo.Users", userId.ToString(), oldValues, newValues, ip);
             await tx.CommitAsync();
-            return new(AccountChangeOutcome.Updated, persisted);
+            return new(AccountChangeOutcome.Updated, written.Written);
+        }
+        catch (AuditUnavailableException)
+        {
+            return new(AccountChangeOutcome.AuditUnavailable); // nothing committed: the transaction rolls back on dispose
         }
         catch (SqlException ex) when (ex.Number is 1205)
         {

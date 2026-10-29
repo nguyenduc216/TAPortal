@@ -164,6 +164,18 @@ public sealed class SafePortalTests : IDisposable
         Assert.Equal(0, store.LoginTouches);
     }
 
+    [Theory]
+    [InlineData("wrong-password")]
+    [InlineData("empty-hash")]
+    public async Task FailedLoginDoesNotLoadMembershipsAud38(string kind)
+    {
+        if (kind == "empty-hash") store.User = store.User with { PasswordHash = "" };
+        var response = await Login(password: kind == "wrong-password" ? "Wrong!123" : Password);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(0, store.MembershipLookups); // same work as an unknown username
+        Assert.Equal(0, store.LoginTouches);
+    }
+
     [Fact]
     public async Task PasswordChangeInvalidatesOtherSessionsAndRequiresRelogin()
     {
@@ -287,8 +299,10 @@ public sealed class SafePortalTests : IDisposable
         public int LoginTouches { get; private set; }
         public Task<CustomerUser?> FindUser(string username) => Task.FromResult(username.Trim().Equals("second", StringComparison.OrdinalIgnoreCase) ? Second : username.Trim().Equals("customer", StringComparison.OrdinalIgnoreCase) && UserActive ? User : null);
         public Task<CustomerUser?> FindUser(Guid id) => Task.FromResult(id == Second.Id ? Second : id == User.Id && UserActive ? User : null);
+        public int MembershipLookups { get; private set; }
         public Task<IReadOnlyList<CustomerMembership>> Memberships(Guid userId)
         {
+            MembershipLookups++;
             var result = new List<CustomerMembership>();
             if (userId == User.Id && UserActive && GrantA) result.Add(new(A, "A", "Company Alpha", null, null, null, null, "OWNER"));
             if (userId == Second.Id || userId == User.Id && UserActive && GrantB) result.Add(new(B, "B", "Company Beta", null, null, null, null, "VIEWER"));
