@@ -78,6 +78,35 @@ public sealed class SafeCustomerWorkspaceTests
     }
 
     [Fact]
+    public async Task RoleChoicesShowNamesOnlyWhileSubmittingCodes()
+    {
+        using var f = Factory("SYS_ADMIN", out _);
+        var html = WebUtility.HtmlDecode(await Client(f).GetStringAsync($"/customers/portalaccounts/{A}"));
+        Assert.Contains("value=\"VIEWER\">Chỉ xem</option>", html);
+        Assert.Contains("value=\"ADMIN\">Quản trị doanh nghiệp</option>", html);
+        Assert.Matches("selected=\"selected\" value=\"OWNER\">Chủ sở hữu</option>", html);
+        Assert.DoesNotMatch(">(OWNER|ADMIN|VIEWER)( —[^<]*)?</option>", html);
+    }
+
+    [Fact]
+    public void EveryAdminTextFieldHasALeftIcon()
+    {
+        var views = Path.Combine(AppContext.BaseDirectory[..AppContext.BaseDirectory.IndexOf($"{Path.DirectorySeparatorChar}tests{Path.DirectorySeparatorChar}", StringComparison.Ordinal)], "src", "TAPortal.Web", "Views");
+        var missing = new List<string>();
+        foreach (var file in Directory.EnumerateFiles(views, "*.cshtml", SearchOption.AllDirectories))
+        {
+            var text = File.ReadAllText(file);
+            foreach (Match m in Regex.Matches(text, "<(input|textarea)\\b[^>]*class=\"form-control[^\"]*\"[^>]*>"))
+            {
+                if (Regex.IsMatch(m.Value, "type=\"(hidden|search|checkbox)\"")) continue;
+                var before = text[Math.Max(0, m.Index - 120)..m.Index];
+                if (!Regex.IsMatch(before, "<div class=\"ta-input-icon[^\"]*\">\\s*@UiIcon\\.Render\\(\"[a-z0-9-]+\"\\)\\s*$")) missing.Add($"{Path.GetFileName(file)}: {m.Value[..Math.Min(80, m.Value.Length)]}");
+            }
+        }
+        Assert.Empty(missing);
+    }
+
+    [Fact]
     public async Task EmptyAndInactiveCustomersShowExplicitStates()
     {
         using var f = Factory("SYS_ADMIN", out _);

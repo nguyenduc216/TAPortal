@@ -35,3 +35,35 @@
     .ta-tabs { margin-left: calc(-1 * var(--ta-sp-4)); margin-right: calc(-1 * var(--ta-sp-4)); padding: 0 var(--ta-sp-2); }
     .ta-tabs__link { padding: 10px var(--ta-sp-3); }
 }
+
+/* The page-enter animation must not leave a transform behind: a transformed ancestor becomes the containing block of
+   fixed elements and a separate stacking context, which put Bootstrap modals under their backdrop (grey mask) and
+   would misplace the dropdown popups. */
+.ta-content.ta-page-enter { animation-fill-mode: backwards; }
+
+/* Text fields with a left icon: textarea keeps the icon on the first line */
+.ta-input-icon--top > .ta-icon { top: 11px; transform: none; }
+
+/* Password rules: neutral until typing, then green (passed) or red (violated) */
+.password-rules li.ok::before { content: "✓"; width: auto; height: auto; border: 0; background: none; font-weight: 700; }
+.password-rules li.fail { color: var(--ta-danger-text); }
+.password-rules li.fail::before { content: "✕"; width: auto; height: auto; border: 0; background: none; font-weight: 700; }
+
+/* Searchable dropdown (ta-portal.js): visible trigger + popup; the native select stays hidden in the form */
+.ta-select { position: relative; min-width: 0; }
+.ta-select--sm { display: inline-block; min-width: 170px; }
+.ta-select__native { position: absolute !important; width: 1px !important; height: 1px !important; padding: 0 !important; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); border: 0 !important; opacity: 0; pointer-events: none; }
+.ta-select__trigger { display: block; width: 100%; text-align: left; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; cursor: pointer; }
+.ta-select__trigger:disabled { cursor: not-allowed; }
+.ta-select__trigger.is-invalid { border-color: var(--ta-danger); }
+.ta-select__popup { position: fixed; z-index: 1085; max-width: min(480px, calc(100vw - 16px)); padding: 8px; background: var(--ta-surface); border: 1px solid var(--ta-border); border-radius: 10px; box-shadow: 0 16px 40px rgba(15, 23, 42, .18); }
+.ta-select__popup .ta-input-icon > .ta-icon { width: 16px; height: 16px; }
+.ta-select__popup .form-control { min-height: 36px; }
+.ta-select__list { max-height: 264px; overflow-y: auto; margin: 6px 0 0; padding: 0; list-style: none; }
+.ta-select__option { display: flex; align-items: center; justify-content: space-between; gap: var(--ta-sp-2); min-height: 38px; padding: 8px 10px; border-radius: var(--ta-radius-sm); color: var(--ta-text); cursor: pointer; }
+.ta-select__option.is-active { background: var(--ta-blue-soft); }
+.ta-select__option[aria-selected="true"] { color: var(--ta-blue-strong); font-weight: 600; }
+.ta-select__option[aria-disabled="true"] { color: #94A3B8; cursor: not-allowed; background: none; }
+.ta-select__check { width: 16px; height: 16px; color: var(--ta-blue-strong); }
+.ta-select__group { padding: 10px 10px 4px; color: var(--ta-text-2); font-size: var(--ta-fs-small); font-weight: 700; letter-spacing: .03em; text-transform: uppercase; }
+.ta-select__empty { padding: 10px; color: var(--ta-text-2); font-size: var(--ta-fs-label); }

@@ -27,34 +27,34 @@
         <div class="ta-form-grid ta-form-grid--3">
             <div>
                 <label asp-for="Code" class="form-label @(isNew ? "required" : "")">Mã khách hàng</label>
-                @if (isNew) {<input asp-for="Code" class="form-control text-uppercase" maxlength="50" autocomplete="off" required />} else {<input class="form-control" value="@Model.Code" readonly disabled />}
+                @if (isNew) {<div class="ta-input-icon">@UiIcon.Render("hash")<input asp-for="Code" class="form-control text-uppercase" maxlength="50" autocomplete="off" required /></div>} else {<div class="ta-input-icon">@UiIcon.Render("hash")<input class="form-control" value="@Model.Code" readonly disabled /></div>}
                 <span asp-validation-for="Code" class="invalid-feedback d-block"></span>
                 @if (!isNew) {<div class="form-hint">Mã khách hàng không thể thay đổi.</div>}
             </div>
             <div class="ta-ws-span-2">
                 <label asp-for="Name" class="form-label required">Tên khách hàng</label>
-                <input asp-for="Name" class="form-control" maxlength="250" required placeholder="Nhập tên khách hàng" />
+                <div class="ta-input-icon">@UiIcon.Render("building")<input asp-for="Name" class="form-control" maxlength="250" required placeholder="Nhập tên khách hàng" /></div>
                 <span asp-validation-for="Name" class="invalid-feedback d-block"></span>
             </div>
             <div>
                 <label asp-for="TaxCode" class="form-label">Mã số thuế</label>
-                <input asp-for="TaxCode" class="form-control" maxlength="50" inputmode="numeric" placeholder="0101234567 hoặc 0101234567-001" />
+                <div class="ta-input-icon">@UiIcon.Render("receipt-tax")<input asp-for="TaxCode" class="form-control" maxlength="50" inputmode="numeric" placeholder="0101234567 hoặc 0101234567-001" /></div>
                 <span asp-validation-for="TaxCode" class="invalid-feedback d-block"></span>
                 <div class="form-hint">10 chữ số; đơn vị phụ thuộc/chi nhánh: 10 chữ số + "-" + 3 chữ số. Không trùng với khách hàng khác.</div>
             </div>
             <div>
                 <label asp-for="Email" class="form-label">Email</label>
-                <input asp-for="Email" class="form-control" type="email" maxlength="256" placeholder="ten@congty.vn" />
+                <div class="ta-input-icon">@UiIcon.Render("mail")<input asp-for="Email" class="form-control" type="email" maxlength="256" placeholder="ten@congty.vn" /></div>
                 <span asp-validation-for="Email" class="invalid-feedback d-block"></span>
             </div>
             <div>
                 <label asp-for="Phone" class="form-label">Điện thoại</label>
-                <input asp-for="Phone" class="form-control" maxlength="50" inputmode="tel" />
+                <div class="ta-input-icon">@UiIcon.Render("phone")<input asp-for="Phone" class="form-control" maxlength="50" inputmode="tel" /></div>
                 <span asp-validation-for="Phone" class="invalid-feedback d-block"></span>
             </div>
             <div class="ta-ws-span-2">
                 <label asp-for="Address" class="form-label">Địa chỉ</label>
-                <textarea asp-for="Address" class="form-control" rows="3" maxlength="1000" placeholder="Số nhà, đường, phường/xã, quận/huyện, tỉnh/thành phố"></textarea>
+                <div class="ta-input-icon ta-input-icon--top">@UiIcon.Render("map-pin")<textarea asp-for="Address" class="form-control" rows="3" maxlength="1000" placeholder="Số nhà, đường, phường/xã, quận/huyện, tỉnh/thành phố"></textarea></div>
                 <span asp-validation-for="Address" class="invalid-feedback d-block"></span>
             </div>
             <div>

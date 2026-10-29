@@ -43,7 +43,7 @@
                         <td data-label="Vai trò">
                             <form asp-action="SavePortalAccount" asp-route-id="@c.Id" method="post" class="d-flex gap-1 justify-content-end justify-content-md-start">
                                 <input type="hidden" name="mode" value="assign" /><input type="hidden" name="UserId" value="@r.UserId" />
-                                <select name="PortalRole" class="form-select form-select-sm" style="width:auto" aria-label="Vai trò của @r.Username" disabled="@(!ws.Operational)">@foreach (var role in new[] { "OWNER", "ADMIN", "VIEWER" }) {<option selected="@(r.Role == role)" value="@role">@role</option>}</select>
+                                <select name="PortalRole" class="form-select form-select-sm" style="width:auto" aria-label="Vai trò của @r.Username" disabled="@(!ws.Operational)">@foreach (var (code, label) in PortalRoleText.Roles) {<option selected="@(r.Role == code)" value="@code">@label</option>}</select>
                                 <button type="submit" class="btn btn-sm ta-btn-icon" title="Lưu vai trò (đồng thời kích hoạt quyền truy cập)" aria-label="Lưu vai trò của @r.Username" disabled="@(!ws.Operational)">@UiIcon.Render("check")</button>
                             </form>
                         </td>
@@ -63,7 +63,7 @@
         <div class="ta-empty d-none" data-ta-no-results><span class="ta-empty__icon">@UiIcon.Render("search-off")</span><p class="ta-empty__title">Không tìm thấy kết quả phù hợp</p></div>
         <div class="ta-table-footer"><span>Hiển thị <strong data-ta-visible-count>@accounts.Count.ToString("N0", vi)</strong> / @accounts.Count.ToString("N0", vi) tài khoản</span></div>
     }
-    <div class="card-footer text-secondary small">Vai trò OWNER/ADMIN/VIEWER chỉ có hiệu lực trong Customer Portal của khách hàng này, không cấp quyền quản trị TAPortal. "Thu hồi" chỉ gỡ quyền truy cập khách hàng này, không khóa tài khoản dùng chung; để khóa tài khoản, dùng màn hình Người dùng.</div>
+    <div class="card-footer text-secondary small">Vai trò Chủ sở hữu / Quản trị doanh nghiệp / Chỉ xem chỉ có hiệu lực trong Customer Portal của khách hàng này, không cấp quyền quản trị TAPortal. "Thu hồi" chỉ gỡ quyền truy cập khách hàng này, không khóa tài khoản dùng chung; để khóa tài khoản, dùng màn hình Người dùng.</div>
 </section>
 
 @if (canGrant)
@@ -75,7 +75,7 @@
         <div class="modal-body">
             <p class="text-secondary">Khách hàng: <strong>@c.Code — @c.Name</strong>. Không tạo tài khoản mới; tài khoản giữ nguyên mật khẩu và vai trò TAPortal hiện có.</p>
             <div class="mb-3"><label class="form-label required" for="assignUser">Tài khoản</label><select id="assignUser" name="UserId" class="form-select" required><option value="">-- Chọn tài khoản --</option>@foreach (var u in Model.Users) {var ok = u.IsActive && u.Status == "ACTIVE"; var member = memberIds.Contains(u.Id);<option value="@u.Id" disabled="@(!ok || member)">@u.Username — @u.DisplayName@(member ? " (đã có quyền)" : ok ? "" : " (ngừng)")</option>}</select><div class="form-hint">Tài khoản đã có quyền với khách hàng này: đổi vai trò hoặc kích hoạt lại ngay trong bảng.</div></div>
-            <div><label class="form-label" for="assignRole">Vai trò trong doanh nghiệp</label><select id="assignRole" name="PortalRole" class="form-select"><option value="VIEWER">VIEWER — chỉ xem</option><option value="ADMIN">ADMIN — quản trị doanh nghiệp</option><option value="OWNER">OWNER — chủ sở hữu</option></select></div>
+            <div><label class="form-label" for="assignRole">Vai trò trong doanh nghiệp</label><select id="assignRole" name="PortalRole" class="form-select">@foreach (var (code, label) in PortalRoleText.Roles) {<option value="@code">@label</option>}</select></div>
         </div>
         <div class="modal-footer"><button type="button" class="btn me-auto" data-bs-dismiss="modal">@UiIcon.Render("x")<span>Hủy</span></button><button class="btn btn-primary" type="submit" data-ta-loading data-ta-loading-text="Đang lưu...">@UiIcon.Render("device-floppy")<span>Cấp quyền</span></button></div>
     </form></div></div>
@@ -87,11 +87,11 @@
         <div class="modal-body">
             <p class="text-secondary">Tạo người dùng mới <strong>không có vai trò quản trị TAPortal</strong> và cấp quyền truy cập Customer Portal cho <strong>@c.Code</strong>.</p>
             <div class="ta-form-grid">
-                <div><label class="form-label required" for="newPortalUsername">Tên đăng nhập</label><input id="newPortalUsername" class="form-control" name="Username" maxlength="100" autocomplete="off" required /></div>
-                <div><label class="form-label required" for="newPortalDisplay">Họ tên</label><input id="newPortalDisplay" class="form-control" name="DisplayName" maxlength="200" required /></div>
-                <div><label class="form-label" for="newPortalEmail">Email</label><input id="newPortalEmail" class="form-control" name="Email" type="email" maxlength="256" /></div>
-                <div><label class="form-label" for="newPortalRole">Vai trò trong doanh nghiệp</label><select id="newPortalRole" name="PortalRole" class="form-select"><option value="VIEWER">VIEWER — chỉ xem</option><option value="ADMIN">ADMIN — quản trị doanh nghiệp</option><option value="OWNER">OWNER — chủ sở hữu</option></select></div>
-                <div class="ta-span-2"><label class="form-label required" for="newPortalPassword">Mật khẩu ban đầu</label><input id="newPortalPassword" class="form-control" name="Password" type="password" maxlength="256" autocomplete="new-password" required oninput="taCheckPassword(this.value,'newPortalRules')" />
+                <div><label class="form-label required" for="newPortalUsername">Tên đăng nhập</label><div class="ta-input-icon">@UiIcon.Render("user")<input id="newPortalUsername" class="form-control" name="Username" maxlength="100" autocomplete="off" required /></div></div>
+                <div><label class="form-label required" for="newPortalDisplay">Họ tên</label><div class="ta-input-icon">@UiIcon.Render("id")<input id="newPortalDisplay" class="form-control" name="DisplayName" maxlength="200" required /></div></div>
+                <div><label class="form-label" for="newPortalEmail">Email</label><div class="ta-input-icon">@UiIcon.Render("mail")<input id="newPortalEmail" class="form-control" name="Email" type="email" maxlength="256" /></div></div>
+                <div><label class="form-label" for="newPortalRole">Vai trò trong doanh nghiệp</label><select id="newPortalRole" name="PortalRole" class="form-select">@foreach (var (code, label) in PortalRoleText.Roles) {<option value="@code">@label</option>}</select></div>
+                <div class="ta-span-2"><label class="form-label required" for="newPortalPassword">Mật khẩu ban đầu</label><div class="ta-input-icon">@UiIcon.Render("lock")<input id="newPortalPassword" class="form-control" name="Password" type="password" maxlength="256" autocomplete="new-password" required oninput="taCheckPassword(this.value,'newPortalRules')" /><button class="ta-password-toggle" type="button" onclick="taTogglePassword('newPortalPassword',this)" aria-label="Hiện mật khẩu" aria-pressed="false">@UiIcon.Render("eye", "ta-icon-show")@UiIcon.Render("eye-off", "ta-icon-hide")</button></div>
                     <ul id="newPortalRules" class="password-rules"><li data-rule="len">Ít nhất 8 ký tự</li><li data-rule="letter">Có chữ cái</li><li data-rule="digit">Có chữ số</li><li data-rule="special">Có ký tự đặc biệt</li></ul></div>
             </div>
         </div>
