@@ -1,0 +1,79 @@
+---
+name: codec
+description: Workflow quản lý phát triển TAPortal với Feature ID, Change ID, migration thủ công, publish đúng đích, Git review/merge và lịch sử thay đổi.
+---
+
+# Codec — quy trình bắt buộc
+
+## 0. Trước khi làm
+- Đọc `AGENTS.md`, `.codec/config.json`, feature README và change history gần nhất của feature.
+- Xác định FEATURE_ID (slug IN HOA, ví dụ `CUSTOMER-MANAGEMENT`, `USER-MANAGEMENT`, `TINGEE-REGISTRATION`).
+- Tạo CHANGE_ID bằng `python .codec/tools/codec.py new --feature FEATURE_ID --title "..."` trước khi sửa.
+- Tóm tắt yêu cầu, phạm vi, dependency, rủi ro, rollback, tiêu chí chấp nhận. Không làm vượt phạm vi.
+
+## 1. Source và Git
+- Việc nhỏ, thuộc feature đang phát triển: dùng branch hiện tại theo chỉ định. Chức năng mới/độc lập hoặc thay đổi lớn: đề xuất branch `feature/<feature-slug>` và chỉ tạo khi cần.
+- Không trực tiếp push vào main trừ khi có chỉ định rõ. Không tự merge khi chưa có xác nhận hoàn thành/review từ operator.
+- Khi đã duyệt merge: kiểm tra CI, working tree sạch, target `main`, tránh force push; merge theo policy repo. Ghi merge commit SHA. Nếu chưa duyệt, báo `PENDING_APPROVAL`.
+
+## 2. Database — tuyệt đối không tự chạy
+- DB duy nhất theo cấu hình `.codec/config.json`: `TAPortalSys` (đang là môi trường phát triển nhưng website đang sử dụng).
+- KHÔNG tạo DB mới, KHÔNG chạy migration/DDL/DML sửa dữ liệu, kể cả qua ORM, CLI, DBeaver, MCP, test setup hoặc PowerShell trên DB này.
+- Chỉ tạo file migration SQL trong `database/migrations/` với tên `NNN-<feature>-<change-id>.sql` (nếu dự án dùng numbering khác thì theo convention hiện hành, tránh trùng).
+- Migration phải có guard `DB_NAME()` chính xác, kiểm tra tiền điều kiện, idempotency nếu phù hợp, transaction/XACT_ABORT nếu an toàn, mô tả rollback và các tác động dữ liệu.
+- Báo đường dẫn relative + absolute (nếu biết root), tên DB, thứ tự migration, script verify và rollback, trạng thái `NOT_EXECUTED` cho từng file.
+- Chỉ người dùng/DBA thực thi migration; Codex không tự thực thi dù người dùng yêu cầu publish sau build. Nếu muốn đổi quy tắc này phải sửa policy có phê duyệt rõ.
+- Test DB integration: chỉ được dùng DB test cô lập đã được người dùng cho phép; không tự tạo database mới trên server hiện tại.
+
+## DEV/TEST MACHINE POLICY (2026-10-28)
+- This machine is for development and testing, not a production deployment server.
+- Codex must not inspect IIS, websites, application pools, bindings or physical paths; connect to or probe server configuration; request Administrator access; deploy or change IIS websites.
+- Never run migrations, seed, rollback, mutating SQL or data-writing integration tests; never create databases or execute stored procedures with write effects.
+- Only TAPortalSys read queries using read-only permissions are allowed. Without read access, record NOT_VERIFIED and continue independent work.
+- Author migration SQL files for operator review and manual execution only. SQL verification defaults to TEXT messages via PRINT; SELECT details only when diagnosing failures.
+
+## Local publish policy — Checkpoint 3
+- Publish every web project only to `<WORKSPACE_ROOT>\src\publish\deployed-<PROJECT_NAME>`; PROJECT_NAME is the csproj filename without extension. Never rename, move or timestamp the target, or publish into a project source directory.
+- This is a local artifact directory, not an assumed IIS deployment. Do not inspect IIS before local publish; unreadable IIS configuration does not block local artifacts.
+- Check project, Git, build/safe tests, target contents and write permission. Creating the exact conventional folder is authorized. Reject path aliases/reparse points escaping the target; never delete or overwrite data outside it.
+- Local artifact publishing does not authorize server/IIS configuration or deployment. Report PUBLISHED separately from NOT_DEPLOYED, source commit SHA separately from artifact SHA256.
+- Historical: Checkpoint 3 authorized TACustomerPortal.Web only. Superseded by the MULTI-AGENT CONTRACT below: which web projects are published is decided per task by impact analysis plus the operator's request. Any live deployment requires separate approval and operator-managed backup/replacement.
+
+## 4. Sau mỗi change
+- Build/test phù hợp, ghi kết quả trung thực (không chạy thì ghi NOT_RUN).
+- Ghi mọi file thay đổi, SQL scripts, manual action, commit SHA, PR URL, deploy path, artifact hash, merge SHA vào `.codec/changes/<CHANGE_ID>.md`.
+- Cập nhật `.codec/features/<FEATURE_ID>/README.md` và `history.json`.
+- Tạo report `.codec/reports/<CHANGE_ID>.md` theo template.
+- Ghi những gì chưa hoàn thành và các phê duyệt còn thiếu; không tuyên bố merge/publish khi chưa thực hiện.
+
+## 5. Quy tắc bảo mật
+- Không lưu secret, password, PII vào Git/history.
+- Không lấy dữ liệu production cho test mà không có sự cho phép rõ.
+- Hướng dẫn trong skill không thay thế phân quyền OS/SQL/IIS. Khi thiếu quyền thì báo, không tự nâng quyền.
+
+## Installation policy additions (CODEC-WORKFLOW)
+- Intake order: identify FEATURE_ID; read AGENTS.md, Codec skill and config; read feature README.md AND history.json; read recent related changes/reports; only then inspect required source. If history is missing, initialize it and record facts verified from source. Do not scan all chat/repository without need.
+- CHANGE_ID format: FEATURE-ID-CHG-YYYYMMDDTHHMMSSZ-XXXXXX (UTC, unique). Preserve previous changes/reports/history entries; append new records, update only the current change record.
+- SQL Server: `WIN-HSHL54Q184K\MSSQLSERVER2014`; ONLY database: `TAPortalSys`. No DEV/UAT/TEST or other databases, including integration-test databases. No automatic migration, DDL, DML, seed or rollback via any channel. Only author SQL files; operator runs them manually with DBeaver or SSMS.
+- Before authoring migrations, check existing scripts to avoid duplicates. Every mutating migration must check `DB_NAME() = 'TAPortalSys'` and abort on mismatch. Document exact path, execution order, purpose, preconditions and verification instructions.
+- Local artifact publish uses the fixed convention and DEV/TEST preflight below; IIS inspection is forbidden. Live deployment requires separate approval.
+- Reuse the current feature branch; create a branch only for independent new features or substantial work. Never reset/delete uncommitted work, force push, or merge main without user acceptance and approval. Record merge SHA after approved merge.
+- Record objective, scope, technical decisions, changed files, migrations, build/test, publish, source commit SHA, merge SHA and remaining work in feature history/change/report. Never store secrets or PII.
+
+## MULTI-AGENT CONTRACT (2026-10-28) — applies to every AI coding agent
+- Scope: Claude Code, OpenAI Codex and any other AI agent working in this repository follow the same AGENTS.md, Codec skill and `.codec/config.json`. Wherever older text says "Codex", read "every AI agent". No agent may reinterpret or skip Codec.
+- Concurrency: before editing, record branch, HEAD, remote HEAD and `git status`. Never overwrite, stage, stash, reset or reformat uncommitted changes you did not make; leave them untouched and list them in the report. Do not switch or create branches without approval. Re-check HEAD/remote before commit and push; if another agent pushed meanwhile, review the impact first and stop before any push that could overwrite it. Never force push or merge main.
+- Audit before fix: inspect the source, then classify findings CRITICAL / HIGH / MEDIUM / LOW. Separate a proven defect, a potential risk, a feature not yet implemented and a test-environment limitation. Never report a defect from speculation alone. Architecture changes, complex migrations or unclear business rules → BLOCKED / PENDING_APPROVAL; do not decide them yourself.
+- Impact analysis: `src/TAPortal.Shared` is referenced by both `TAPortal.Web` (Admin) and `TACustomerPortal.Web` (Customer). Any change to Shared, shared configuration or dependencies must be evaluated against both web projects.
+- Mandatory gates: `dotnet restore TAPortal.sln`; `dotnet build TAPortal.sln -c Release --no-restore` (0 errors); safe tests only (`FullyQualifiedName~TACustomerPortal.Tests.Safe` (every Safe* class); legacy SQL tests stay skipped); `python -m unittest discover -s .codec/tools -p test_codec.py`; `python .codec/tools/codec.py validate`; `git diff --check`.
+- Publish after source change: when a task requires artifact delivery, every web project whose source or dependencies changed must be republished, and a Shared change means both web projects. Publish only to `<WORKSPACE_ROOT>\src\publish\deployed-<PROJECT_NAME>`, only after the gates pass, without `--no-build` against stale output. Before replacing an existing artifact, record its manifest SHA256 and keep a rollback copy outside the target. Never reuse an old hash for a new artifact. PUBLISHED only after the publish command exits 0; never DEPLOYED for a local artifact.
+- Artifact SHA256 (per project): sort every artifact file by relative POSIX path (ordinal); for each file write the line `<lowercase sha256>  <relative/posix/path>` followed by LF; encode as UTF-8 without BOM; the artifact SHA256 is the SHA256 of those manifest bytes. Store the manifest under `.codec/reports/<CHANGE_ID>-<PROJECT_NAME>.sha256`, never inside the artifact. Also report file count, exit code, timestamp and source SHA.
+- SHA separation: the source SHA is the commit containing the built and published application source. The delivery SHA is the final commit holding reports and metadata. A report never states its own commit SHA; give the delivery SHA in the hand-off message after push.
+- Findings ledger: every audit report includes a table with columns ID | Project | Module | Severity | Problem | Root Cause | Fix | Files | Test | Status, where Status is FIXED / VERIFIED / OPEN / BLOCKED / PENDING_OPERATOR. VERIFIED requires executed evidence.
+- Final report structure (identical for Claude and Codex): A. Identification, B. Audit Summary, C. Customer Portal Account Management, D. Admin CRUD, E. Changed Files, F. Database, G. Build & Tests, H. Admin Publish, I. Customer Publish, J. Security and Acceptance, K. Git Delivery, L. Operator Handoff. A section that does not apply states NOT_APPLICABLE or NOT_RUN with the reason.
+- Database and server limits are unchanged: no migration, seed, rollback, DDL/DML, data-writing tests or writing stored procedures; migration files only, guarded by `DB_NAME() = 'TAPortalSys'`, status NOT_EXECUTED until the operator confirms. No IIS or server inspection on this DEV/TEST machine.
+
+## PUBLISH TARGETS AND SQL OUTPUT (2026-10-30, operator decision)
+- Publish root: `D:\T.A\TAPortal\TAPortal\src\publish`, ignored by Git. Targets: `deployed-TAPortal.Web`, `deployed-TACustomerPortal.Web`, `deployed-TAPortal.Webhooks`. Each project's own `AGENTS.md` states its path. The older `<WORKSPACE_ROOT>\publish` folder holds earlier artifacts and rollback copies; never publish there again and do not delete it without operator approval. Rollback copies of artifacts go to `<WORKSPACE_ROOT>\src\publish\rollback\<CHANGE_ID>\<PROJECT_NAME>`.
+- Libraries (`TAPortal.Shared`, `TAPortal.Integrations`) and the `TAPortal.DbMcp` tool have no publish target here. A change to `TAPortal.Integrations` requires republishing `TAPortal.Web`, `TACustomerPortal.Web` and `TAPortal.Webhooks`.
+- SQL output rule: every read-only, verify or diagnostic SQL that an agent runs, authors or hands to the operator returns TEXT by default, using `PRINT` lines with a clear PASS/FAIL/WARN/INFO prefix, or one aliased text column when the channel accepts only a single SELECT. Do not return a result grid unless row-level detail is really needed for a failure that text cannot summarize; then state why. T-SQL must run on SQL Server 2014 (no `STRING_AGG`). Never print secrets or PII.

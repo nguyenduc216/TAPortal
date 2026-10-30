@@ -1,0 +1,29 @@
+@model CustomerWorkspaceHeader
+@* Customer Workspace header + tabs. Tabs come from CustomerWorkspace.Tabs; every link carries the customer id. *@
+<div class="ta-ws-head">
+    <span class="ta-ws-head__icon" aria-hidden="true">@UiIcon.Render("building")</span>
+    <div class="ta-ws-head__text">
+        <h1 class="ta-page-title">@Model.Name</h1>
+        <div class="ta-ws-head__meta">
+            <span class="ta-code" title="Mã khách hàng">@Model.Code</span>
+            <span class="ta-badge @(Model.Operational ? "ta-badge--success" : "ta-badge--danger")">@(Model.Operational ? "Hoạt động" : "Ngừng hoạt động")</span>
+            @if (Model.Status != "ACTIVE") {<span class="ta-badge ta-badge--neutral ta-badge--plain" title="Trạng thái hệ thống">@Model.Status</span>}
+        </div>
+    </div>
+    <div class="ta-ws-head__actions">
+        <a class="btn" asp-action="Index">@UiIcon.Render("arrow-left")<span>Danh sách khách hàng</span></a>
+        @if (Model.ActiveTab != CustomerWorkspace.Info) {<a class="btn btn-soft-primary" asp-action="Edit" asp-route-id="@Model.Id">@UiIcon.Render("pencil")<span>Sửa thông tin</span></a>}
+    </div>
+</div>
+<nav aria-label="Hồ sơ khách hàng @Model.Code">
+    <ul class="ta-tabs">
+        @foreach (var tab in CustomerWorkspace.Tabs)
+        {
+            <li><a class="ta-tabs__link" data-ta-keep-scroll asp-action="@tab.Action" asp-route-id="@Model.Id" aria-current="@(tab.Key == Model.ActiveTab ? "page" : null)" data-ta-tab="@tab.Key">@UiIcon.Render(tab.Icon)<span>@tab.Label</span></a></li>
+        }
+    </ul>
+</nav>
+@if (!Model.Operational)
+{
+    <div class="ta-alert ta-alert--warning" role="note">@UiIcon.Render("alert-triangle")<div class="ta-alert__body">Khách hàng đang ngừng hoạt động: mọi tài khoản Customer Portal bị chặn truy cập doanh nghiệp này (dữ liệu và quyền được giữ nguyên) và không thể cấp quyền mới.</div></div>
+}

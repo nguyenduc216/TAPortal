@@ -1,0 +1,237 @@
+[
+  {
+    "change_id": "CUSTOMER-PORTAL-FOUNDATION-CHG-20261027T141827Z-E64647",
+    "created_at": "2026-10-27T14:18:27.293889+00:00",
+    "title": "Customer Portal MVP 01 Checkpoint 1",
+    "status": "SOURCE_AND_SAFE_TESTS_COMPLETE",
+    "commit_sha": "1d048d1ec3b52cda301c18154949bb1e1ac41c8f",
+    "migration_status": "NOT_EXECUTED",
+    "publish_status": "NOT_PUBLISHED",
+    "merge_status": "PENDING_APPROVAL",
+    "objective": "Complete Checkpoint 1 without SQL mutation, database creation, publish, deploy or merge",
+    "scope": "Customer Portal foundation review, session/cache hardening, guarded SQL handoff and safe tests",
+    "technical_decisions": [
+      "Preserve existing MVP functions",
+      "SYS_ADMIN-only management retained",
+      "Switch preserves original session expiration",
+      "No-store sensitive responses",
+      "Memory-only safe tests; legacy SQL tests disabled",
+      "CI build/test only"
+    ],
+    "files_changed": [
+      ".codec/changes/CUSTOMER-PORTAL-FOUNDATION-CHG-20261027T141827Z-E64647.md",
+      ".codec/features/CUSTOMER-PORTAL-FOUNDATION/README.md",
+      ".codec/features/CUSTOMER-PORTAL-FOUNDATION/history.json",
+      ".codec/reports/CUSTOMER-PORTAL-FOUNDATION-CHG-20261027T141827Z-E64647.md",
+      ".github/workflows/build.yml",
+      ".github/workflows/customer-portal.yml",
+      ".gitignore",
+      "database/migrations/008-customer-portal-memberships.sql",
+      "database/scripts/005-rollback-customer-portal.sql",
+      "docs/customer-portal-runbook.md",
+      "src/TACustomerPortal.Web/Controllers/AccountController.cs",
+      "src/TACustomerPortal.Web/Controllers/DashboardController.cs",
+      "src/TACustomerPortal.Web/Controllers/ProfileController.cs",
+      "tests/TACustomerPortal.Tests/PortalTests.cs",
+      "tests/TACustomerPortal.Tests/SafePortalTests.cs"
+    ],
+    "migrations": [
+      {
+        "path": "database/migrations/008-customer-portal-memberships.sql",
+        "operation": "UPDATED_GUARD",
+        "status": "NOT_EXECUTED"
+      },
+      {
+        "path": "database/scripts/005-rollback-customer-portal.sql",
+        "operation": "UPDATED_GUARD",
+        "status": "NOT_EXECUTED"
+      }
+    ],
+    "build_result": "PASS: Release 0 warnings / 0 errors",
+    "test_result": {
+      "passed": 34,
+      "failed": 0,
+      "skipped_legacy_methods": 25,
+      "sql_connected": false
+    },
+    "deploy_status": "NOT_DEPLOYED",
+    "pr_url": "https://github.com/nguyenduc216/TAPortal/pull/7",
+    "remaining_work": [
+      "Operator schema audit and manual SQL only if required",
+      "Live membership CRUD, revocation and legacy Admin regression acceptance",
+      "Exact publish paths, later IIS/browser/proxy UAT; no publish now"
+    ],
+    "merge_sha": null,
+    "push_status": "PUSHED",
+    "pr_status": "OPEN_DRAFT_UPDATED",
+    "commit_note": "Implementation SHA; follow-up metadata records it. Final delivery HEAD reported separately to avoid self-reference."
+  },
+  {
+    "change_id": "CUSTOMER-PORTAL-FOUNDATION-CHG-20261028T005216Z-E6FF4A",
+    "created_at": "2026-10-28T00:52:16.007153+00:00",
+    "title": "Customer Portal MVP01 Publish Checkpoint 3",
+    "status": "PUBLISH_BLOCKED_IIS_PREFLIGHT",
+    "commit_sha": "383db10a00343c71e3e08fbd963ef09bcea743dd",
+    "migration_status": "OPERATOR_REPORTED_APPLIED_008_NOT_RERUN",
+    "publish_status": "BLOCKED",
+    "merge_status": "PENDING_APPROVAL",
+    "commit_note": "Production source SHA tested; delivery metadata commit reported separately.",
+    "objective": "Customer-only conventional artifact publish after safe preflight",
+    "scope": "Codec policy/config/validator/runbook; no production source changes",
+    "technical_decisions": [
+      "Fixed csproj-derived paths",
+      "Unreadable IIS mapping blocks artifact writes",
+      "Preserve user SQL edit"
+    ],
+    "files_changed": [
+      "AGENTS.md",
+      ".agents/skills/codec/SKILL.md",
+      ".codec/README.md",
+      ".codec/config.json",
+      ".codec/tools/codec.py",
+      ".codec/tools/test_codec.py",
+      "docs/customer-portal-runbook.md",
+      ".codec/features/CUSTOMER-PORTAL-FOUNDATION/README.md",
+      ".codec/features/CUSTOMER-PORTAL-FOUNDATION/history.json",
+      ".codec/changes/CUSTOMER-PORTAL-FOUNDATION-CHG-20261028T005216Z-E6FF4A.md",
+      ".codec/reports/CUSTOMER-PORTAL-FOUNDATION-CHG-20261028T005216Z-E6FF4A.md"
+    ],
+    "migrations": [],
+    "database_status": "VERIFIED_WITH_WARNINGS_OPERATOR_REPORTED",
+    "build_result": "PASS: 0 warnings, 0 errors",
+    "test_result": {
+      "safe_passed": 34,
+      "failed": 0,
+      "codec_tests_passed": 3,
+      "legacy_sql_tests": "NOT_SELECTED"
+    },
+    "deploy_status": "NOT_DEPLOYED",
+    "artifact_sha256": null,
+    "publish_target": "D:\\T.A\\TAPortal\\TAPortal\\publish\\deployed-TACustomerPortal.Web",
+    "merge_sha": null,
+    "remaining_work": [
+      "Operator IIS mappings/read access and new safety preflight",
+      "Publish and verify artifacts after gate",
+      "Separate IIS configuration authorization and customer membership/UAT"
+    ]
+  },
+  {
+    "change_id": "CUSTOMER-PORTAL-FOUNDATION-CHG-20261028T074006Z-654653",
+    "created_at": "2026-10-28T07:40:06.948942+00:00",
+    "title": "DEV TEST machine policy and Customer Portal local publish",
+    "status": "LOCAL_ARTIFACT_PUBLISHED",
+    "commit_sha": "ff965efc17b2e0aefde8b603df7269a8d29fbcfb",
+    "migration_status": "OPERATOR_REPORTED_APPLIED_008_NOT_RERUN",
+    "publish_status": "PUBLISHED",
+    "merge_status": "PENDING_APPROVAL",
+    "commit_note": "Application source SHA; delivery policy/report commit reported separately.",
+    "objective": "DEV/TEST policy and Customer Portal local artifact publish",
+    "scope": "Policy/config/validator/runbook/history/report; application source unchanged",
+    "technical_decisions": [
+      "No IIS preflight for local artifacts",
+      "No SQL execution",
+      "Read-only DB access only",
+      "PRINT TEXT verification default",
+      "Hash complete artifact manifest and DLL separately"
+    ],
+    "files_changed": [
+      "AGENTS.md",
+      ".agents/skills/codec/SKILL.md",
+      ".codec/README.md",
+      ".codec/config.json",
+      ".codec/tools/codec.py",
+      ".codec/tools/test_codec.py",
+      "docs/customer-portal-runbook.md",
+      ".codec/features/CUSTOMER-PORTAL-FOUNDATION/README.md",
+      ".codec/features/CUSTOMER-PORTAL-FOUNDATION/history.json",
+      ".codec/changes/CUSTOMER-PORTAL-FOUNDATION-CHG-20261028T074006Z-654653.md",
+      ".codec/reports/CUSTOMER-PORTAL-FOUNDATION-CHG-20261028T074006Z-654653.md",
+      ".codec/reports/CUSTOMER-PORTAL-FOUNDATION-CHG-20261028T074006Z-654653.sha256"
+    ],
+    "migrations": [],
+    "database_status": "VERIFIED_WITH_WARNINGS",
+    "build_result": "PASS: Release 0 warnings / 0 errors",
+    "test_result": {
+      "safe_passed": 34,
+      "codec_tests_passed": 3,
+      "failed": 0,
+      "legacy_sql_tests": "NOT_SELECTED"
+    },
+    "publish_target": "D:\\T.A\\TAPortal\\TAPortal\\publish\\deployed-TACustomerPortal.Web",
+    "artifact_sha256": "40442b0023252bc9032f75036a477dfff0dff8e458c735cbd64a738e02bdcb66",
+    "artifact_hash_method": "SHA256 of UTF-8 LF sorted relative-file SHA256 manifest",
+    "artifact_file_count": 54,
+    "iis_status": "NOT_CHECKED",
+    "deploy_status": "NOT_DEPLOYED",
+    "merge_sha": null,
+    "remaining_work": [
+      "Operator membership provisioning and functional acceptance",
+      "Separately approved future live deployment"
+    ]
+  },
+  {
+    "change_id": "CUSTOMER-PORTAL-FOUNDATION-CHG-20261028T075636Z-260F08",
+    "created_at": "2026-10-28T07:56:36.214632+00:00",
+    "title": "Checkpoint 4 local smoke and manual functional acceptance",
+    "status": "LOCAL_SMOKE_PASS_UAT_PENDING",
+    "commit_sha": "531409707fc26f0d216e11270d601f2a91ec49dc",
+    "migration_status": "NOT_EXECUTED",
+    "publish_status": "EXISTING_ARTIFACT_VERIFIED_NOT_REPUBLISHED",
+    "merge_status": "PENDING_APPROVAL",
+    "commit_note": "Verified starting HEAD; documentation delivery commit reported separately.",
+    "objective": "Checkpoint 4 local artifact smoke and manual functional acceptance",
+    "scope": "Read-only artifact verification, isolated anonymous HTTP GET, manual UAT documentation",
+    "technical_decisions": [
+      "Invalid SQL configuration and no login for smoke",
+      "Temporary external Data Protection keys",
+      "Existing artifact unchanged; no republish",
+      "Manual acceptance requires operator evidence"
+    ],
+    "files_changed": [
+      "docs/customer-portal-checkpoint4-uat.md",
+      "docs/customer-portal-runbook.md",
+      ".codec/features/CUSTOMER-PORTAL-FOUNDATION/README.md",
+      ".codec/features/CUSTOMER-PORTAL-FOUNDATION/history.json",
+      ".codec/changes/CUSTOMER-PORTAL-FOUNDATION-CHG-20261028T075636Z-260F08.md",
+      ".codec/reports/CUSTOMER-PORTAL-FOUNDATION-CHG-20261028T075636Z-260F08.md",
+      ".codec/reports/CUSTOMER-PORTAL-FOUNDATION-CHG-20261028T075636Z-260F08-smoke.json"
+    ],
+    "migrations": [],
+    "publish_target": "D:\\T.A\\TAPortal\\TAPortal\\publish\\deployed-TACustomerPortal.Web",
+    "artifact_sha256": "40442b0023252bc9032f75036a477dfff0dff8e458c735cbd64a738e02bdcb66",
+    "artifact_source_sha": "ff965efc17b2e0aefde8b603df7269a8d29fbcfb",
+    "build_result": "PASS: Release 0 warnings / 0 errors",
+    "test_result": {
+      "safe_passed": 34,
+      "codec_passed": 3,
+      "http_get_passed": 10,
+      "failed": 0,
+      "legacy_sql_tests": "NOT_SELECTED"
+    },
+    "checkpoint_4a": "PASS",
+    "checkpoint_4b": "PENDING_OPERATOR",
+    "customer_portal_mvp01": "NOT_YET_ACCEPTED",
+    "startup_status": "PASS_PROCESS_STOPPED",
+    "local_url": "http://127.0.0.1:5187",
+    "database_status": "NOT_VERIFIED_NOT_ACCESSED",
+    "iis_status": "NOT_CHECKED",
+    "deploy_status": "NOT_DEPLOYED",
+    "manual_uat": {
+      "UAT-01": "NOT_RUN",
+      "UAT-02": "NOT_RUN",
+      "UAT-03": "NOT_RUN",
+      "UAT-04": "NOT_RUN",
+      "UAT-05": "NOT_RUN",
+      "UAT-06": "NOT_RUN",
+      "UAT-07": "NOT_RUN",
+      "UAT-08": "NOT_RUN",
+      "UAT-09": "NOT_RUN"
+    },
+    "merge_sha": null,
+    "remaining_work": [
+      "Operator test setup and UAT-01 through UAT-09 with evidence",
+      "HTTPS/browser/CDN and authenticated cache verification",
+      "Operator acceptance decision"
+    ]
+  }
+]

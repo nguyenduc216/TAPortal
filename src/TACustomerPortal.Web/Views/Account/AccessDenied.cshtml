@@ -1,0 +1,9 @@
+@{ ViewData["Title"] = "Không có quyền truy cập"; ViewData["HideHeader"] = true; }
+<div class="@(User.Identity?.IsAuthenticated == true ? "cp-center" : "cp-center cp-center--full")" style="@(User.Identity?.IsAuthenticated == true ? "" : "min-height:100vh")">
+    <section class="cp-card cp-state">
+        <span class="cp-blob cp-blob--gold">@UiIcon.Render("lock")</span>
+        <h1>Không có quyền truy cập</h1>
+        <p>Vui lòng liên hệ quản trị viên T.A để kiểm tra quyền doanh nghiệp của bạn.</p>
+        <a class="cp-btn cp-btn--primary" asp-controller="Account" asp-action="Login">@UiIcon.Render("login-2")<span>Đăng nhập</span></a>
+    </section>
+</div>

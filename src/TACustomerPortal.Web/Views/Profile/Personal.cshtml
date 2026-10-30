@@ -1,0 +1,24 @@
+@model CustomerUser
+@{
+    ViewData["Title"] = "Thông tin cá nhân";
+    ViewData["Eyebrow"] = "Tài khoản";
+    var last = (Model.DisplayName ?? "").Split(' ', StringSplitOptions.RemoveEmptyEntries).LastOrDefault();
+    var initial = string.IsNullOrEmpty(last) ? "TA" : last[..1].ToUpperInvariant();
+}
+<div class="cp-grid cp-grid--2">
+    <section class="cp-card">
+        <div class="cp-profile"><span class="cp-avatar cp-avatar--lg" aria-hidden="true">@initial</span><div><h2>@Model.DisplayName</h2><p>@Model.Username</p></div><span class="cp-badge cp-badge--green" style="margin-left:auto">Đang hoạt động</span></div>
+        <div class="cp-card__body" style="padding-top:0">
+            <dl class="cp-dl">
+                <div><dt>@UiIcon.Render("user")Họ tên</dt><dd>@Model.DisplayName</dd></div>
+                <div><dt>@UiIcon.Render("id")Tên đăng nhập</dt><dd>@Model.Username</dd></div>
+                <div class="cp-span"><dt>@UiIcon.Render("mail")Email</dt><dd>@(Model.Email ?? "—")</dd></div>
+            </dl>
+        </div>
+    </section>
+    <section class="cp-card">
+        <div class="cp-card__head"><span class="cp-blob cp-blob--gold">@UiIcon.Render("key")</span><h2>Bảo mật</h2></div>
+        <div class="cp-card__body"><p class="cp-hint" style="margin:0">Mật khẩu dùng chung với TAPortal. Nên đổi định kỳ và không chia sẻ cho người khác.</p></div>
+        <div class="cp-card__foot"><a class="cp-btn cp-btn--primary cp-btn--block" asp-controller="Account" asp-action="ChangePassword">@UiIcon.Render("key")<span>Đổi mật khẩu</span></a></div>
+    </section>
+</div>

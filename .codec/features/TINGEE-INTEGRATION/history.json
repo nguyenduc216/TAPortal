@@ -1,0 +1,146 @@
+[
+  {
+    "change_id": "TINGEE-INTEGRATION-CHG-20261029T200714Z-B90483",
+    "created_at": "2026-10-29T20:07:14.564061+00:00",
+    "title": "Scaffold TAPortal.Integrations and TAPortal.Webhooks projects",
+    "status": "IMPLEMENTED / BUILD_VERIFIED / NOT_PUBLISHED / PRODUCTION_NOT_DEPLOYED",
+    "commit_sha": "f7979e10a7ce69174332db638c5ef1fec95369b4",
+    "migration_status": "NONE_REQUIRED / NO_SQL_EXECUTED",
+    "publish_status": "NOT_RUN (TAPortal.Webhooks has no configured target) / Admin+Customer NOT_REQUIRED",
+    "merge_status": "PENDING_APPROVAL",
+    "agent": "Claude Code (claude-opus-5-5)",
+    "base_sha": "47c5689aa7f19d15b4f5f2ab446f56e0169bc145",
+    "build": {
+      "release_build": "0 warnings / 0 errors",
+      "safe_tests": "269 passed / 0 failed / 0 skipped",
+      "codec_validate": "PASS"
+    },
+    "iis": "NOT_CHECKED"
+  },
+  {
+    "change_id": "TINGEE-INTEGRATION-CHG-20261029T203104Z-1FE09C",
+    "created_at": "2026-10-29T20:31:04.411490+00:00",
+    "title": "Tingee merchant mapping (Admin); bank accounts, contacts and QR orders (Customer); webhook inbox",
+    "status": "IMPLEMENTED / BUILD_VERIFIED / LOCAL_PUBLISH_COMPLETE / MIGRATION_NOT_EXECUTED / TINGEE_NOT_VERIFIED / VISUAL_NOT_VERIFIED / PRODUCTION_NOT_DEPLOYED",
+    "commit_sha": "91e36178531a9d8b525f857b68f36dc88798371e",
+    "migration_status": "NOT_EXECUTED (011-tingee-payments-foundation.sql)",
+    "publish_status": "PUBLISHED (local: Admin, Customer, Webhooks) / NOT_DEPLOYED",
+    "merge_status": "PENDING_APPROVAL",
+    "agent": "Claude Code (claude-opus-5-5)",
+    "base_sha": "04eabd9f76cbe30cca985d8ee54828acc37f7fe5",
+    "build": {
+      "release_build": "0 warnings / 0 errors",
+      "safe_tests": "303 passed / 0 failed / 0 skipped",
+      "codec_validate": "PASS"
+    },
+    "artifacts": {
+      "TAPortal.Web": {
+        "exit_code": 0,
+        "started_utc": "2026-10-29T20:51:05Z",
+        "finished_utc": "2026-10-29T20:51:06Z",
+        "files": 65,
+        "sha256": "9f9fa64103b37c0bcd127ae27bb4f475df6073bc8d2cdf17f2bfe21be79cd244",
+        "previous_sha256": "cc224fd32f4470a870b5d97dcb9278b3eba8044a64ac47d8b6757d8dd331ddfa"
+      },
+      "TACustomerPortal.Web": {
+        "exit_code": 0,
+        "started_utc": "2026-10-29T20:51:15Z",
+        "finished_utc": "2026-10-29T20:51:16Z",
+        "files": 58,
+        "sha256": "d932771b21c577fbe5359d848f035dddb40ae107a6c57a5e1e6fd489986c95e8",
+        "previous_sha256": "45728db69dd6302831edf5f8613fc5e45b57dec069a0e46b6095c39449dc0ddc"
+      },
+      "TAPortal.Webhooks": {
+        "exit_code": 0,
+        "started_utc": "2026-10-29T20:51:20Z",
+        "finished_utc": "2026-10-29T20:51:22Z",
+        "files": 53,
+        "sha256": "a51d29acdf543b7e30105c2a60c4430dc9cb3c1366a0a2a93d44bc9c2f1ad9c5",
+        "previous_sha256": null
+      }
+    },
+    "backup": "publish\\rollback\\TINGEE-INTEGRATION-CHG-20261029T203104Z-1FE09C",
+    "iis": "NOT_CHECKED"
+  },
+  {
+    "change_id": "TINGEE-INTEGRATION-CHG-20261030T103236Z-05E4FE",
+    "created_at": "2026-10-30T10:32:36.071357+00:00",
+    "title": "Direct Merchant mode for testing without Master Merchant; text diagnostic script",
+    "status": "IMPLEMENTED / BUILD_VERIFIED / LOCAL_PUBLISH_COMPLETE (Admin, Customer, Webhooks) / TINGEE_NOT_VERIFIED / VISUAL_NOT_VERIFIED / PRODUCTION_NOT_DEPLOYED",
+    "commit_sha": "53dbe68cf9907ff3931fd593203435c15a180029",
+    "migration_status": "OPERATOR_REPORTED_011_OK; 014 NOT_EXECUTED",
+    "publish_status": "PUBLISHED (local ×3) / NOT_DEPLOYED",
+    "merge_status": "PENDING_APPROVAL",
+    "agent": "Claude Code (claude-opus-5-5)",
+    "base_sha": "205febb3dde0933dc80c6df9fab6f8dd172f81f3",
+    "build": {
+      "release_build": "0 warnings / 0 errors",
+      "safe_tests": "308 passed / 0 failed / 0 skipped",
+      "codec_validate": "PASS"
+    },
+    "iis": "NOT_CHECKED",
+    "artifacts": {
+      "TAPortal.Web": {
+        "exit_code": 0,
+        "started_utc": "2026-10-30T10:37:08Z",
+        "finished_utc": "2026-10-30T10:37:17Z",
+        "files": 65,
+        "sha256": "f16969a03d1c692863773bf608449856e1441048cc2082cf9c9ea2ccca8a5a1e",
+        "previous_sha256": "9f9fa64103b37c0bcd127ae27bb4f475df6073bc8d2cdf17f2bfe21be79cd244"
+      },
+      "TACustomerPortal.Web": {
+        "exit_code": 0,
+        "started_utc": "2026-10-30T10:37:29Z",
+        "finished_utc": "2026-10-30T10:37:32Z",
+        "files": 58,
+        "sha256": "336a9fb0726c1e4040f78a3596d34e6ecccc4dc856bd1fb3dce39ecd64e1fcb1",
+        "previous_sha256": "d932771b21c577fbe5359d848f035dddb40ae107a6c57a5e1e6fd489986c95e8"
+      },
+      "TAPortal.Webhooks": {
+        "exit_code": 0,
+        "started_utc": "2026-10-30T10:37:38Z",
+        "finished_utc": "2026-10-30T10:37:41Z",
+        "files": 53,
+        "sha256": "738d1eacfbc722d73fe3477f14e20f5d4ab43094fcf1d4de2fd620cb78f042fb",
+        "previous_sha256": "a51d29acdf543b7e30105c2a60c4430dc9cb3c1366a0a2a93d44bc9c2f1ad9c5"
+      }
+    },
+    "previous_artifact_location": "publish\\"
+  },
+  {
+    "change_id": "TINGEE-INTEGRATION-CHG-20261030T124900Z-448FB4",
+    "created_at": "2026-10-30T12:49:00.863473+00:00",
+    "title": "Fix collation conflict in diagnostic script 014",
+    "status": "IMPLEMENTED / SQL_NOT_VERIFIED / PUBLISH_NOT_RUN",
+    "commit_sha": "a04dab999b24c3779607a0296eb946ff4e5d0deb",
+    "migration_status": "NONE_REQUIRED",
+    "publish_status": "NOT_RUN",
+    "merge_status": "PENDING_APPROVAL",
+    "agent": "Claude Code (claude-opus-5-5)",
+    "base_sha": "f24133867acc447c2f685347929485308e3926b9",
+    "iis": "NOT_CHECKED"
+  },
+  {
+    "change_id": "TINGEE-INTEGRATION-CHG-20261030T131324Z-F23ADA",
+    "created_at": "2026-10-30T13:13:24.380283+00:00",
+    "title": "Separate CustomerBuyers table; stop using the existing CustomerContacts table",
+    "status": "IMPLEMENTED / BUILD_VERIFIED / LOCAL_PUBLISH_COMPLETE (Customer) / MIGRATION_OPERATOR_CONFIRMED / TINGEE_NOT_VERIFIED / PRODUCTION_NOT_DEPLOYED",
+    "commit_sha": "5db5161254907991e697eca76e3b46133edb5e33",
+    "migration_status": "OPERATOR_CONFIRMED (012-tingee-customer-buyers.sql)",
+    "publish_status": "PUBLISHED (local: Customer) / NOT_DEPLOYED",
+    "merge_status": "PENDING_APPROVAL",
+    "agent": "Claude Code (claude-opus-5-5)",
+    "base_sha": "c78fe5c73cf90359130d27b9d9976b8661420460",
+    "iis": "NOT_CHECKED",
+    "artifacts": {
+      "TACustomerPortal.Web": {
+        "exit_code": 0,
+        "started_utc": "2026-10-30T13:14:40Z",
+        "finished_utc": "2026-10-30T13:14:43Z",
+        "files": 58,
+        "sha256": "3c4095209311e454bdb1fcaa596ce3e248217a2a967d0ce1b94bb6b0030559b7",
+        "previous_sha256": "336a9fb0726c1e4040f78a3596d34e6ecccc4dc856bd1fb3dce39ecd64e1fcb1"
+      }
+    }
+  }
+]

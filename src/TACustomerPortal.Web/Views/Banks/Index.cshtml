@@ -1,0 +1,56 @@
+@model BanksVm
+@using TAPortal.Integrations.Tingee
+@{
+    ViewData["Title"] = "Tài khoản ngân hàng";
+    ViewData["Eyebrow"] = "Thanh toán";
+    ViewData["Subtitle"] = "Tài khoản nhận tiền của doanh nghiệp, liên kết qua Tingee để nhận thông báo giao dịch và tạo QR.";
+    var canLink = Model.CanManage && Model.Linked && Model.ApiConfigured;
+}
+@if (!Model.Linked) { <partial name="_PaymentsNotLinked" /> }
+<section class="cp-card">
+    <div class="cp-toolbar">
+        <strong>@Model.Accounts.Count tài khoản</strong>
+        @if (Model.CanManage)
+        {
+            <div class="cp-toolbar__end">
+                <form method="post" asp-action="Sync"><button class="cp-btn cp-btn--ghost" type="submit" disabled="@(!canLink)">@UiIcon.Render("refresh")<span>Đồng bộ trạng thái</span></button></form>
+                @if (canLink) {<a class="cp-btn cp-btn--primary" asp-action="Add">@UiIcon.Render("plus")<span>Liên kết tài khoản</span></a>}
+                else {<button class="cp-btn cp-btn--primary" type="button" disabled>@UiIcon.Render("plus")<span>Liên kết tài khoản</span></button>}
+            </div>
+        }
+    </div>
+    @if (Model.Accounts.Count == 0)
+    {
+        <div class="cp-empty" data-cp-empty>@UiIcon.Render("building-bank")<p>Chưa có tài khoản ngân hàng nào được liên kết.</p></div>
+    }
+    else
+    {
+        <div class="cp-table-wrap">
+            <table class="cp-table" id="banksTable">
+                <thead><tr><th>Ngân hàng</th><th>Loại tài khoản</th><th>Số tài khoản</th><th>Nhận tiền vào</th><th>Trạng thái</th><th class="cp-actions">Thao tác</th></tr></thead>
+                <tbody>
+                @foreach (var a in Model.Accounts)
+                {
+                    var (label, css) = PaymentText.BankStatus(a.Status);
+                    <tr data-ta-row>
+                        <td><strong>@a.BankName</strong>@if (a.IsDefault) {<span class="cp-badge cp-badge--blue" style="margin-left:6px">Mặc định</span>}<div class="cp-muted">@a.AccountName</div></td>
+                        <td>@TingeeAccountTypes.Label(a.AccountType)</td>
+                        <td><span class="cp-code">@(a.AccountNumber ?? "—")</span></td>
+                        <td>@if (a.ReceiveAccount is string r) {<span class="cp-code">@r</span><div class="cp-muted">@(a.IsNotifyAccountNumber ? "STK gốc" : "Tài khoản ảo (VA)")</div>} else {<span class="cp-muted">—</span>}</td>
+                        <td><span class="cp-badge @css">@label</span>@if (a.LastError is string err) {<div class="cp-error">@err</div>}</td>
+                        <td class="cp-actions">
+                            @if (Model.CanManage)
+                            {
+                                @if (a.ActionLink is string link && a.Status is BankStatus.PendingBank or BankStatus.PendingDelete or BankStatus.PendingOtp) {<a class="cp-btn cp-btn--sm cp-btn--gold" href="@link" target="_blank" rel="noopener noreferrer">@UiIcon.Render("lock-open")<span>Xác thực tại ngân hàng</span></a>}
+                                @if (a.ConfirmId is not null && a.Status is BankStatus.PendingOtp or BankStatus.PendingDelete) {<a class="cp-btn cp-btn--sm cp-btn--primary" asp-action="Confirm" asp-route-id="@a.Id">@UiIcon.Render("key")<span>Nhập OTP</span></a>}
+                                @if (a.IsActive && !a.IsDefault) {<form method="post" asp-action="SetDefault" asp-route-id="@a.Id"><button class="cp-btn cp-btn--sm cp-btn--ghost" type="submit">Đặt mặc định</button></form>}
+                                <form method="post" asp-action="Delete" asp-route-id="@a.Id" onsubmit="return confirm('@(a.IsActive ? "Hủy liên kết tài khoản này? Ngân hàng có thể gửi OTP để xác nhận." : "Xóa yêu cầu liên kết này?")')"><button class="cp-btn cp-btn--sm cp-btn--danger" type="submit">@UiIcon.Render("trash")<span>@(a.IsActive ? "Hủy liên kết" : "Xóa")</span></button></form>
+                            }
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    }
+</section>

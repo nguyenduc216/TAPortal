@@ -1,8 +1,19 @@
 {
 	"folders": [
 		{
+			"name": "src",
 			"path": "."
+		},
+		{
+			"name": "TAPortal.Integrations",
+			"path": "TAPortal.Integrations"
+		},
+		{
+			"name": "TAPortal.Webhooks",
+			"path": "TAPortal.Webhooks"
 		}
 	],
-	"settings": {}
+	"settings": {
+		"dotnet.defaultSolution": "../TAPortal.sln"
+	}
 }

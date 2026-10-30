@@ -1,0 +1,59 @@
+@model UserEditVm
+@{
+    ViewData["Title"] = "Sửa người dùng";
+    ViewData["Heading"] = "Sửa người dùng: " + Model.Username;
+    ViewData["Subtitle"] = "Cập nhật hồ sơ và quyền đăng nhập của tài khoản.";
+    ViewData["PageIcon"] = "pencil";
+    ViewData["ParentTitle"] = "Người dùng";
+    ViewData["ParentController"] = "Users";
+    var account = (UserAccountSnapshot)ViewBag.Account;
+    var eligible = account.LoginEligible;
+    var isSelf = string.Equals(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value, Model.Id.ToString(), StringComparison.OrdinalIgnoreCase);
+}
+<div class="row g-4">
+<div class="col-xl-8">
+<form class="card" asp-action="Edit" asp-route-id="@Model.Id" method="post" novalidate>
+    <input type="hidden" asp-for="Stamp" />
+    <div class="card-header"><h2 class="card-title">@UiIcon.Render("user")Thông tin tài khoản</h2><span class="ta-badge @(eligible ? "ta-badge--success" : !account.IsActive ? "ta-badge--danger" : "ta-badge--warning") ms-auto">@AccountStatusPolicy.Describe(account.IsActive, account.Status, false)</span></div>
+    <div class="card-body">
+        <div asp-validation-summary="ModelOnly" class="ta-alert ta-alert--danger" role="alert"></div>
+        @if (account.Status != AccountStatusPolicy.ActiveStatus)
+        {
+            <div class="ta-alert ta-alert--warning" role="note">@UiIcon.Render("alert-triangle")<div class="ta-alert__body">Trạng thái hệ thống của tài khoản là <span class="ta-code">@account.Status</span>: tài khoản không thể đăng nhập dù bật "Cho phép đăng nhập". Thay đổi trạng thái hệ thống chưa được hỗ trợ (chờ phê duyệt quy tắc).</div></div>
+        }
+        <div class="ta-form-grid">
+            <div><label class="form-label" for="usernameReadonly">Tên đăng nhập</label><div class="ta-input-icon">@UiIcon.Render("user")<input id="usernameReadonly" class="form-control" value="@Model.Username" readonly disabled /></div><div class="form-hint">Tên đăng nhập không thể thay đổi.</div></div>
+            <div><label asp-for="DisplayName" class="form-label required">Họ và tên</label><div class="ta-input-icon">@UiIcon.Render("id")<input asp-for="DisplayName" class="form-control" maxlength="200" required /></div><span asp-validation-for="DisplayName" class="invalid-feedback d-block"></span></div>
+            <div><label asp-for="Email" class="form-label">Email</label><div class="ta-input-icon">@UiIcon.Render("mail")<input asp-for="Email" class="form-control" type="email" maxlength="256" /></div><span asp-validation-for="Email" class="invalid-feedback d-block"></span></div>
+            <div><label asp-for="Phone" class="form-label">Điện thoại</label><div class="ta-input-icon">@UiIcon.Render("phone")<input asp-for="Phone" class="form-control" maxlength="50" inputmode="tel" /></div><span asp-validation-for="Phone" class="invalid-feedback d-block"></span></div>
+            <div class="ta-span-2">
+                <div class="ta-switch-row">
+                    <label class="form-check form-switch"><input asp-for="IsActive" class="form-check-input" type="checkbox" /><span class="form-check-label fw-semibold">Cho phép đăng nhập</span></label>
+                </div>
+                <span asp-validation-for="IsActive" class="invalid-feedback d-block"></span>
+                <div class="form-hint">Tắt sẽ chặn đăng nhập ở cả TAPortal và Customer Portal; phiên hiện tại bị từ chối ở request kế tiếp. Không ảnh hưởng quyền theo từng doanh nghiệp (membership).</div>
+            </div>
+        </div>
+        <div class="form-hint mt-3">Chỉnh sửa hồ sơ không thay đổi mật khẩu hay vai trò.</div>
+    </div>
+    <div class="card-footer ta-form-actions">
+        <a asp-action="Index" class="btn">@UiIcon.Render("arrow-left")<span>Quay lại</span></a>
+        @if (!isSelf) {<a asp-action="Delete" asp-route-id="@Model.Id" class="btn btn-outline-danger" data-ta-delete-link>@UiIcon.Render("trash")<span>Xóa người dùng</span></a>}
+        <button type="submit" class="btn btn-primary ms-auto" data-ta-loading data-ta-loading-text="Đang lưu...">@UiIcon.Render("device-floppy")<span>Lưu thay đổi</span></button>
+    </div>
+</form>
+</div>
+<div class="col-xl-4">
+    <section class="card" aria-labelledby="accessTitle">
+        <div class="card-header"><h2 class="card-title" id="accessTitle">@UiIcon.Render("shield-lock")Quyền truy cập</h2></div>
+        <div class="card-body">
+            <dl class="ta-dl">
+                <dt>Trạng thái hệ thống</dt><dd><span class="ta-code">@account.Status</span></dd>
+                <dt>Vai trò</dt><dd>@(account.RoleNames.Count == 0 ? "—" : string.Join(", ", account.RoleNames))</dd>
+                <dt>Doanh nghiệp đang truy cập</dt><dd>@account.ActiveMembershipCount</dd>
+            </dl>
+        </div>
+        <div class="card-footer"><a asp-action="Roles" asp-route-id="@Model.Id" class="btn w-100">@UiIcon.Render("shield-lock")<span>Quản lý vai trò</span></a></div>
+    </section>
+</div>
+</div>

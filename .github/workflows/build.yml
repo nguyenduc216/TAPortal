@@ -24,6 +24,3 @@ jobs:
 
       - name: Build
         run: dotnet build TAPortal.sln --configuration Release --no-restore
-
-      - name: Publish MCP
-        run: dotnet publish src/TAPortal.DbMcp/TAPortal.DbMcp.csproj --configuration Release --no-build --output artifacts/mcp

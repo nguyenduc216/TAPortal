@@ -1,0 +1,36 @@
+@model LoginVm
+@{ ViewData["Title"] = "Đăng nhập"; }
+<div class="cp-auth">
+    <section class="cp-auth__panel" aria-hidden="true">
+        <span class="cp-brand"><span class="cp-brand__mark">T<span>A</span></span><span class="cp-brand__text">T.A Portal<small>Khách hàng</small></span></span>
+        <div class="cp-auth__headline">
+            <h1>Doanh nghiệp của bạn, <em>trong một nơi.</em></h1>
+            <p>Theo dõi hồ sơ doanh nghiệp và làm việc cùng T.A một cách an toàn, rõ ràng.</p>
+        </div>
+        <ul class="cp-auth__points">
+            <li><span>@UiIcon.Render("building")</span>Hồ sơ doanh nghiệp luôn cập nhật</li>
+            <li><span>@UiIcon.Render("shield-check")</span>Quyền truy cập theo từng doanh nghiệp</li>
+            <li><span>@UiIcon.Render("users-group")</span>Đồng hành cùng đội ngũ T.A</li>
+        </ul>
+    </section>
+    <div class="cp-auth__form">
+        <div class="cp-auth__card">
+            <div class="cp-eyebrow">Customer Portal</div>
+            <h2>Chào mừng trở lại</h2>
+            <p>Đăng nhập để truy cập doanh nghiệp của bạn.</p>
+            <form method="post" asp-action="Login">
+                <div asp-validation-summary="All" class="cp-alert" role="alert"></div>
+                <div class="cp-field">
+                    <label asp-for="Username" class="cp-label">Tên đăng nhập</label>
+                    <div class="cp-input-wrap">@UiIcon.Render("user")<input asp-for="Username" class="cp-input" autocomplete="username" required maxlength="100" placeholder="Nhập tên đăng nhập" /></div>
+                </div>
+                <div class="cp-field">
+                    <label asp-for="Password" class="cp-label">Mật khẩu</label>
+                    <div class="cp-input-wrap">@UiIcon.Render("lock")<input asp-for="Password" id="password" type="password" class="cp-input" autocomplete="current-password" required maxlength="256" placeholder="Nhập mật khẩu" /><button class="cp-toggle" type="button" onclick="taTogglePassword('password',this)" aria-label="Hiện mật khẩu" aria-pressed="false">@UiIcon.Render("eye", "ta-icon-show")@UiIcon.Render("eye-off", "ta-icon-hide")</button></div>
+                </div>
+                <button type="submit" class="cp-btn cp-btn--primary cp-btn--block">@UiIcon.Render("login-2")<span>Đăng nhập</span></button>
+            </form>
+            <p class="cp-auth__foot">Chưa có tài khoản? Liên hệ quản trị viên T.A để được cấp quyền.</p>
+        </div>
+    </div>
+</div>

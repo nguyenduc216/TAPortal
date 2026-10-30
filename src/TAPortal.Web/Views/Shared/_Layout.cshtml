@@ -1,3 +1,30 @@
+@functions {
+    private bool HasPermission(string code) => User.Claims.Any(c => c.Type == "permission" && string.Equals(c.Value, code, StringComparison.OrdinalIgnoreCase));
+
+    private string CurrentController => ViewContext.RouteData.Values["controller"]?.ToString() ?? "";
+
+    private bool IsCurrent(string controller, string? action = null) =>
+        string.Equals(CurrentController, controller, StringComparison.OrdinalIgnoreCase)
+        && (action is null || string.Equals(ViewContext.RouteData.Values["action"]?.ToString(), action, StringComparison.OrdinalIgnoreCase));
+
+    // Initial of the given name (last word of a Vietnamese full name), e.g. "Nguyễn Văn A" -> "A".
+    private static string Initials(string? name)
+    {
+        var last = (name ?? "").Split(' ', StringSplitOptions.RemoveEmptyEntries).LastOrDefault();
+        return string.IsNullOrEmpty(last) ? "TA" : last[..1].ToUpperInvariant();
+    }
+}
+@{
+    var isAdmin = User.IsInRole("SYS_ADMIN");
+    var canRoles = isAdmin || HasPermission("AUTH.ROLES.VIEW");
+    var canMenus = isAdmin || HasPermission("SYSTEM.MENUS.MANAGE");
+    var displayName = User.FindFirst("display_name")?.Value ?? User.Identity?.Name;
+    var roleLabel = isAdmin ? "Quản trị hệ thống" : "Người dùng TAPortal";   // role codes are never shown
+    var heading = ViewData["Heading"] as string ?? ViewData["Title"] as string;
+    var parentTitle = ViewData["ParentTitle"] as string;
+    var parentController = ViewData["ParentController"] as string;
+    var hideHeader = ViewData["HideHeader"] is true;
+}
 <!doctype html>
 <html lang="vi">
 <head>
@@ -8,75 +35,112 @@
     <link rel="icon" type="image/png" sizes="192x192" href="~/images/favicon-192x192.png" asp-append-version="true" />
     <link rel="shortcut icon" href="~/favicon.ico" asp-append-version="true" />
     <link rel="apple-touch-icon" sizes="180x180" href="~/images/apple-touch-icon.png" asp-append-version="true" />
-    <meta name="theme-color" content="#07345c" />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@@tabler/core@1.0.0-beta21/dist/css/tabler.min.css" />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@@tabler/icons-webfont@3.19.0/tabler-icons.min.css" />
-    <link rel="stylesheet" href="~/css/ta-portal.css" asp-append-version="true" />
+    <meta name="theme-color" content="#082746" />
+    <link rel="stylesheet" href="~/lib/tabler/tabler.min.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/ta-design.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/ta-admin.css" asp-append-version="true" />
 </head>
-<body class="layout-fluid">
-<div class="ta-global-progress" data-ta-progress role="progressbar" aria-label="Đang tải trang" aria-hidden="true"><span></span></div>
+<body>
 @if (User.Identity?.IsAuthenticated == true)
 {
-    <div class="page">
-        <aside class="navbar navbar-vertical navbar-expand-lg ta-sidebar" data-bs-theme="dark">
-            <div class="container-fluid">
-                <h1 class="navbar-brand navbar-brand-autodark">
-                    <a asp-controller="Home" asp-action="Index" class="ta-brand text-decoration-none">
-                        <img src="~/images/ta-logo.png" class="ta-sidebar-logo" alt="T.A" onerror="this.classList.add('d-none');document.getElementById('sideLogoFallback').classList.remove('d-none');" />
-                        <span id="sideLogoFallback" class="ta-logo-mark d-none">T<span>A</span><i></i></span>
-                        <span class="ms-2">T.A Portal</span>
-                    </a>
-                </h1>
-                <div class="collapse navbar-collapse show">
-                    <ul class="navbar-nav pt-lg-3">
-                        <li class="nav-item"><a class="nav-link" asp-controller="Home" asp-action="Index"><span class="nav-link-icon"><i class="ti ti-layout-dashboard"></i></span><span class="nav-link-title">Tổng quan</span></a></li>
-                        <li class="nav-item"><a class="nav-link" asp-controller="Customers" asp-action="Index"><span class="nav-link-icon"><i class="ti ti-building-store"></i></span><span class="nav-link-title">Khách hàng</span></a></li>
-                        <li class="nav-item"><a class="nav-link" asp-controller="Users" asp-action="Index"><span class="nav-link-icon"><i class="ti ti-users"></i></span><span class="nav-link-title">Người dùng</span></a></li>
-                        <li class="nav-item"><a class="nav-link" asp-controller="Roles" asp-action="Index"><span class="nav-link-icon"><i class="ti ti-shield-lock"></i></span><span class="nav-link-title">Vai trò &amp; phân quyền</span></a></li>
-                        <li class="nav-item"><a class="nav-link" asp-controller="Menus" asp-action="Index"><span class="nav-link-icon"><i class="ti ti-list-details"></i></span><span class="nav-link-title">Quản lý menu</span></a></li>
-                        <li class="nav-item"><a class="nav-link" href="#"><span class="nav-link-icon"><i class="ti ti-settings"></i></span><span class="nav-link-title">Cấu hình hệ thống</span></a></li>
-                        <li class="nav-item"><a class="nav-link" href="#"><span class="nav-link-icon"><i class="ti ti-history"></i></span><span class="nav-link-title">Nhật ký hoạt động</span></a></li>
+    <a class="ta-skip-link" href="#taMain">Bỏ qua đến nội dung chính</a>
+    <aside class="ta-sidebar" id="taSidebar" aria-label="Điều hướng chính">
+        <div class="ta-sidebar__brand">
+            <a class="ta-brand" asp-controller="Home" asp-action="Index" title="T.A Portal">
+                <img src="~/images/ta-logo.png" class="ta-brand__logo" alt="" width="36" height="36" />
+                <span class="ta-brand__text">T.A Portal</span>
+            </a>
+            <button type="button" class="ta-sidebar__close" data-ta-drawer-close aria-label="Đóng menu">@UiIcon.Render("x")</button>
+        </div>
+        <nav class="ta-nav" aria-label="Menu quản trị" id="taNav" data-ta-swap>
+            @if (isAdmin)
+            {
+                <div class="ta-nav__group">
+                    <ul class="ta-nav__list">
+                        <li><a class="ta-nav__link" asp-controller="Home" asp-action="Index" title="Tổng quan" aria-current="@(IsCurrent("Home", "Index") ? "page" : null)"><span class="ta-nav__icon">@UiIcon.Render("layout-dashboard")</span><span class="ta-nav__label">Tổng quan</span></a></li>
                     </ul>
                 </div>
+                <div class="ta-nav__group">
+                    <p class="ta-nav__section">Quản lý khách hàng</p>
+                    <ul class="ta-nav__list">
+                        @* Customer Portal accounts are managed inside each customer's workspace (tab "Tài khoản Portal"). *@
+                        <li><a class="ta-nav__link" asp-controller="Customers" asp-action="Index" title="Khách hàng" aria-current="@(IsCurrent("Customers") || IsCurrent("CustomerPortalAccounts") ? "page" : null)"><span class="ta-nav__icon">@UiIcon.Render("building")</span><span class="ta-nav__label">Khách hàng</span></a></li>
+                    </ul>
+                </div>
+            }
+            <div class="ta-nav__group">
+                <p class="ta-nav__section">Quản lý hệ thống</p>
+                <ul class="ta-nav__list">
+                    @if (isAdmin)
+                    {
+                        <li><a class="ta-nav__link" asp-controller="Users" asp-action="Index" title="Người dùng" aria-current="@(IsCurrent("Users") ? "page" : null)"><span class="ta-nav__icon">@UiIcon.Render("users")</span><span class="ta-nav__label">Người dùng</span></a></li>
+                    }
+                    @if (canRoles)
+                    {
+                        <li><a class="ta-nav__link" asp-controller="Roles" asp-action="Index" title="Vai trò &amp; phân quyền" aria-current="@(IsCurrent("Roles") ? "page" : null)"><span class="ta-nav__icon">@UiIcon.Render("shield-check")</span><span class="ta-nav__label">Vai trò &amp; phân quyền</span></a></li>
+                    }
+                    @if (canMenus)
+                    {
+                        <li><a class="ta-nav__link" asp-controller="Menus" asp-action="Index" title="Quản lý menu" aria-current="@(IsCurrent("Menus") ? "page" : null)"><span class="ta-nav__icon">@UiIcon.Render("list-tree")</span><span class="ta-nav__label">Quản lý menu</span></a></li>
+                    }
+                    <li><span class="ta-nav__link is-disabled" aria-disabled="true" title="Cấu hình hệ thống — chức năng chưa triển khai"><span class="ta-nav__icon">@UiIcon.Render("settings")</span><span class="ta-nav__label">Cấu hình hệ thống</span><span class="ta-nav__badge">Sắp có</span></span></li>
+                    <li><span class="ta-nav__link is-disabled" aria-disabled="true" title="Nhật ký hoạt động — chức năng chưa triển khai"><span class="ta-nav__icon">@UiIcon.Render("file-text")</span><span class="ta-nav__label">Nhật ký hoạt động</span><span class="ta-nav__badge">Sắp có</span></span></li>
+                </ul>
             </div>
-        </aside>
-        <div class="page-wrapper">
-            <header class="navbar navbar-expand-md d-print-none ta-topbar">
-                <div class="container-xl">
-                    <div class="navbar-nav flex-row order-md-last ms-auto">
-                        <div class="nav-item dropdown">
-                            <a href="#" class="nav-link d-flex lh-1 text-reset p-0" data-bs-toggle="dropdown">
-                                <span class="avatar avatar-sm ta-avatar">TA</span>
-                                <div class="d-none d-xl-block ps-2">
-                                    <div>@(User.FindFirst("display_name")?.Value ?? User.Identity?.Name)</div>
-                                    <div class="mt-1 small text-secondary">@string.Join(", ", User.Claims.Where(x => x.Type == System.Security.Claims.ClaimTypes.Role).Select(x => x.Value))</div>
-                                </div>
-                            </a>
-                            <div class="dropdown-menu dropdown-menu-end dropdown-menu-arrow">
-                                <a asp-controller="Account" asp-action="Profile" class="dropdown-item"><i class="ti ti-user-circle"></i><span>Hồ sơ cá nhân</span></a>
-                                <a asp-controller="Account" asp-action="ChangePassword" class="dropdown-item"><i class="ti ti-key"></i><span>Đổi mật khẩu</span></a>
-                                <div class="dropdown-divider"></div>
-                                <form asp-controller="Account" asp-action="Logout" method="post"><button class="dropdown-item text-danger" type="submit" data-ta-loading data-ta-loading-text="Đang đăng xuất..."><i class="ti ti-logout"></i><span>Đăng xuất</span></button></form>
-                            </div>
-                        </div>
+        </nav>
+    </aside>
+    <div class="ta-overlay" data-ta-drawer-close hidden></div>
+    <div class="ta-main">
+        <header class="ta-topbar">
+            <button type="button" class="ta-icon-btn" data-ta-sidebar-toggle aria-controls="taSidebar" aria-expanded="true" aria-label="Thu gọn/mở rộng menu">@UiIcon.Render("menu-2")</button>
+            <nav class="ta-breadcrumb" aria-label="Breadcrumb" id="taCrumbs" data-ta-swap>
+                <ol>
+                    <li>@if (isAdmin) {<a asp-controller="Home" asp-action="Index" aria-label="Tổng quan">@UiIcon.Render("home")</a>} else {@UiIcon.Render("home")}</li>
+                    @if (parentTitle is not null && parentController is not null) {<li><a asp-controller="@parentController" asp-action="Index">@parentTitle</a></li>}
+                    <li><span aria-current="page">@ViewData["Title"]</span></li>
+                </ol>
+            </nav>
+            <div class="dropdown ms-auto">
+                <a href="#" class="ta-user" data-bs-toggle="dropdown" role="button" aria-expanded="false" aria-label="Tài khoản: @displayName">
+                    <span class="ta-avatar" aria-hidden="true">@Initials(displayName)</span>
+                    <span class="ta-user__text"><span class="ta-user__name d-block">@displayName</span><span class="ta-user__role d-block">@roleLabel</span></span>
+                    @UiIcon.Render("chevron-down", "text-secondary")
+                </a>
+                <div class="dropdown-menu dropdown-menu-end">
+                    <div class="dropdown-header">Đăng nhập với <strong>@User.Identity?.Name</strong></div>
+                    <a asp-controller="Account" asp-action="Profile" class="dropdown-item">@UiIcon.Render("user-circle")<span>Hồ sơ cá nhân</span></a>
+                    <a asp-controller="Account" asp-action="ChangePassword" class="dropdown-item">@UiIcon.Render("key")<span>Đổi mật khẩu</span></a>
+                    <div class="dropdown-divider"></div>
+                    <form asp-controller="Account" asp-action="Logout" method="post"><button class="dropdown-item text-danger" type="submit" data-ta-loading data-ta-loading-text="Đang đăng xuất...">@UiIcon.Render("logout")<span>Đăng xuất</span></button></form>
+                </div>
+            </div>
+        </header>
+        <main id="taMain" class="ta-content ta-page-enter" tabindex="-1" data-ta-swap>
+            @if (!hideHeader)
+            {
+                <div class="ta-page-head">
+                    @if (ViewData["PageIcon"] is string pageIcon) {<div class="ta-page-head__icon" aria-hidden="true">@UiIcon.Render(pageIcon)</div>}
+                    <div class="ta-page-head__text">
+                        <h1 class="ta-page-title">@heading</h1>
+                        @if (ViewData["Subtitle"] is string subtitle) {<p class="ta-page-sub">@subtitle</p>}
                     </div>
+                    @if (IsSectionDefined("PageActions")) {<div class="ta-page-head__actions">@RenderSection("PageActions")</div>}
                 </div>
-            </header>
-            <main class="page-body ta-page-content ta-page-enter">
-                <div class="container-xl">
-                    @if (TempData["Success"] is string success) { <div class="alert alert-success ta-alert" role="status"><i class="ti ti-circle-check" aria-hidden="true"></i><span>@success</span></div> }
-                    @if (TempData["Error"] is string error) { <div class="alert alert-danger ta-alert" role="alert"><i class="ti ti-alert-circle" aria-hidden="true"></i><span>@error</span></div> }
-                    @RenderBody()
-                </div>
-            </main>
-        </div>
+            }
+            @if (TempData["Success"] is string success) {<div class="ta-alert ta-alert--success alert-dismissible fade show" role="status">@UiIcon.Render("circle-check")<div class="ta-alert__body">@success</div><button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Đóng thông báo"></button></div>}
+            @if (TempData["Error"] is string error) {<div class="ta-alert ta-alert--danger alert-dismissible fade show" role="alert">@UiIcon.Render("alert-circle")<div class="ta-alert__body">@error</div><button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Đóng thông báo"></button></div>}
+            @RenderBody()
+        </main>
     </div>
 }
 else
 {
     @RenderBody()
 }
-<script src="https://cdn.jsdelivr.net/npm/@@tabler/core@1.0.0-beta21/dist/js/tabler.min.js"></script>
+<template id="taIconSearch">@UiIcon.Render("search")</template>
+<template id="taIconCheck">@UiIcon.Render("check", "ta-select__check")</template>
+<script src="~/lib/tabler/tabler.min.js" asp-append-version="true"></script>
+<script src="~/js/ta-shell.js" asp-append-version="true"></script>
 <script src="~/js/ta-portal.js" asp-append-version="true"></script>
 @await RenderSectionAsync("Scripts", required: false)
 </body>

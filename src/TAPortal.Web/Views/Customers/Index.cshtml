@@ -1,4 +1,51 @@
 @model IReadOnlyList<CustomerRow>
-@{ ViewData["Title"]="Khách hàng"; }
-<div class="page-header"><div class="row align-items-center"><div class="col"><h2 class="page-title">Danh sách khách hàng</h2><div class="text-secondary">Quản lý hồ sơ khách hàng T.A.</div></div><div class="col-auto ms-auto"><button class="btn btn-ta-gold" disabled title="CRUD khách hàng sẽ mở ở bước kế tiếp"><i class="ti ti-plus me-1"></i>Thêm khách hàng</button></div></div></div>
-<div class="card ta-table-card mt-3"><div class="card-header"><div class="input-icon"><span class="input-icon-addon"><i class="ti ti-search" aria-hidden="true"></i></span><input class="form-control" type="search" aria-label="Tìm khách hàng" placeholder="Tìm khách hàng..." oninput="taFilterRows(this.value,'customersTable')" /></div></div><div class="table-responsive"><table class="table table-vcenter card-table" id="customersTable"><thead><tr><th>Mã KH</th><th>Tên khách hàng</th><th>MST</th><th>Email</th><th>Điện thoại</th><th>Trạng thái</th></tr></thead><tbody>@foreach(var x in Model){<tr data-ta-row><td><code>@x.Code</code></td><td class="fw-medium">@x.Name</td><td>@x.TaxCode</td><td>@x.Email</td><td>@x.Phone</td><td><span class="badge badge-ta-active">@x.Status</span></td></tr>}</tbody></table></div>@if(Model.Count == 0){<div class="ta-table-empty"><i class="ti ti-building-store" aria-hidden="true"></i>Chưa có khách hàng.</div>}<div class="ta-table-empty d-none" data-ta-no-results><i class="ti ti-search-off" aria-hidden="true"></i>Không tìm thấy kết quả phù hợp.</div></div>
+@{
+    ViewData["Title"] = "Khách hàng";
+    ViewData["Heading"] = "Quản lý khách hàng";
+    ViewData["Subtitle"] = "Quản lý hồ sơ khách hàng T.A.";
+    ViewData["PageIcon"] = "building";
+    var vi = System.Globalization.CultureInfo.GetCultureInfo("vi-VN");
+}
+@section PageActions {
+    <a class="btn btn-ta-gold" asp-action="Create">@UiIcon.Render("plus")<span>Thêm khách hàng</span></a>
+}
+<partial name="_CustomersTabs" model="@("list")" />
+<section class="card ta-table-card" aria-label="Danh sách khách hàng">
+    <div class="ta-table-toolbar">
+        <div class="ta-search">@UiIcon.Render("search")<input class="form-control" type="search" aria-label="Tìm khách hàng" placeholder="Tìm theo mã KH, tên, MST, email, điện thoại..." oninput="taFilterRows(this.value,'customersTable')" /></div>
+    </div>
+    @if (Model.Count == 0)
+    {
+        <div class="ta-empty"><span class="ta-empty__icon">@UiIcon.Render("building")</span><p class="ta-empty__title">Chưa có khách hàng</p><p class="ta-empty__text">Bấm "Thêm khách hàng" để tạo hồ sơ đầu tiên.</p></div>
+    }
+    else
+    {
+        <div class="ta-table-wrap">
+            <table class="ta-table ta-table-stack" id="customersTable" data-ta-pager="10">
+                <thead><tr><th scope="col">Mã KH</th><th scope="col">Tên khách hàng</th><th scope="col">MST</th><th scope="col">Email</th><th scope="col">Điện thoại</th><th scope="col">Trạng thái</th><th scope="col" class="ta-col-actions">Thao tác</th></tr></thead>
+                <tbody>
+                @foreach (var x in Model)
+                {
+                    var active = x.IsActive && x.Status == "ACTIVE";
+                    <tr data-ta-row>
+                        <td data-label="Mã KH"><span class="ta-code">@x.Code</span></td>
+                        <td class="ta-cell-strong"><a class="text-reset" asp-action="Details" asp-route-id="@x.Id">@x.Name</a></td>
+                        <td class="ta-nowrap" data-label="MST">@x.TaxCode</td>
+                        <td class="ta-nowrap" data-label="Email">@x.Email</td>
+                        <td class="ta-nowrap" data-label="Điện thoại">@x.Phone</td>
+                        <td data-label="Trạng thái"><span class="ta-badge @(active ? "ta-badge--success" : "ta-badge--danger")">@(active ? "Hoạt động" : "Ngừng hoạt động")</span></td>
+                        <td class="ta-col-actions">
+                            <div class="ta-actions">
+                                <a class="btn btn-sm btn-soft-primary" asp-action="Details" asp-route-id="@x.Id" aria-label="Mở hồ sơ @x.Code">@UiIcon.Render("eye")<span>Hồ sơ</span></a>
+                                <a class="btn btn-sm" asp-action="Edit" asp-route-id="@x.Id" aria-label="Sửa @x.Code">@UiIcon.Render("pencil")<span>Sửa</span></a>
+                            </div>
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+        <div class="ta-empty d-none" data-ta-no-results><span class="ta-empty__icon">@UiIcon.Render("search-off")</span><p class="ta-empty__title">Không tìm thấy kết quả phù hợp</p></div>
+        <div class="ta-table-footer" data-ta-pager-for="customersTable" data-ta-unit="khách hàng"></div>
+    }
+</section>

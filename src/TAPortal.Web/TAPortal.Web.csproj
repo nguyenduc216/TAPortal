@@ -8,4 +8,4 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.Data.SqlClient" Version="7.0.2" />
   </ItemGroup>
-</Project>
+<ItemGroup><ProjectReference Include="../TAPortal.Shared/TAPortal.Shared.csproj" /><ProjectReference Include="..\TAPortal.Integrations\TAPortal.Integrations.csproj" /></ItemGroup></Project>

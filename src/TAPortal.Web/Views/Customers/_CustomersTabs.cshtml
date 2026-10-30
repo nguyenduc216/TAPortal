@@ -1,0 +1,8 @@
+@model string
+@* Module-level tabs of "Khách hàng". The model is the active tab: "list" or "accounts". *@
+<nav aria-label="Quản lý khách hàng">
+    <ul class="ta-tabs">
+        <li><a class="ta-tabs__link" asp-controller="Customers" asp-action="Index" data-ta-keep-scroll data-ta-tab="list" aria-current="@(Model == "list" ? "page" : null)">@UiIcon.Render("building")<span>Danh sách khách hàng</span></a></li>
+        <li><a class="ta-tabs__link" asp-controller="Customers" asp-action="Accounts" data-ta-keep-scroll data-ta-tab="accounts" aria-current="@(Model == "accounts" ? "page" : null)">@UiIcon.Render("users-group")<span>Tài khoản Portal</span></a></li>
+    </ul>
+</nav>

@@ -1,0 +1,7 @@
+-- DBA template: substitute an EXISTING customer application database principal.
+-- Do not run under an administrator/db_owner identity in the website.
+-- GRANT SELECT ON dbo.Users TO [CustomerApplicationPrincipal];
+-- GRANT SELECT ON dbo.Customers TO [CustomerApplicationPrincipal];
+-- GRANT SELECT ON dbo.CustomerPortalMemberships TO [CustomerApplicationPrincipal];
+-- GRANT UPDATE (PasswordHash,UpdatedAt,UpdatedBy,LastLoginAt) ON dbo.Users TO [CustomerApplicationPrincipal];
+-- No membership writes, customer writes, DDL, role/permission writes, or migration privileges.

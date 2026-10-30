@@ -1,0 +1,108 @@
+{
+  "schema_version": 1,
+  "project": "TAPortal",
+  "database": {
+    "server": "WIN-HSHL54Q184K\\MSSQLSERVER2014",
+    "name": "TAPortalSys",
+    "create_database_allowed": false,
+    "execute_migrations_allowed": false,
+    "execute_mutating_sql_allowed": false,
+    "allowed_databases": [
+      "TAPortalSys"
+    ],
+    "migration_execution": "MANUAL_DBEAVER_OR_SSMS",
+    "required_migration_guard": "DB_NAME() = 'TAPortalSys'",
+    "duplicate_migrations_allowed": false,
+    "read_only_queries_only": true,
+    "execute_writing_stored_procedures_allowed": false,
+    "mutating_integration_tests_allowed": false,
+    "verification_output_default": "PRINT_TEXT",
+    "read_query_output": "TEXT_UNLESS_GRID_NEEDED",
+    "unavailable_read_status": "NOT_VERIFIED"
+  },
+  "deploy": {
+    "targets": {
+      "TAPortal.Web": "D:\\T.A\\TAPortal\\TAPortal\\src\\publish\\deployed-TAPortal.Web",
+      "TACustomerPortal.Web": "D:\\T.A\\TAPortal\\TAPortal\\src\\publish\\deployed-TACustomerPortal.Web",
+      "TAPortal.Webhooks": "D:\\T.A\\TAPortal\\TAPortal\\src\\publish\\deployed-TAPortal.Webhooks"
+    },
+    "allow_alternate_target": false,
+    "create_target_directory": true,
+    "require_approval": true,
+    "require_migrations_confirmed": true,
+    "status": "CONFIGURED",
+    "rename_or_move_target_allowed": false,
+    "separate_source_sha_and_artifact_sha256": true,
+    "target_pattern": "<WORKSPACE_ROOT>\\src\\publish\\deployed-<PROJECT_NAME>",
+    "require_iis_preflight": false,
+    "live_iis_overwrite_requires_separate_approval": true,
+    "local_artifact_only": true,
+    "local_preflight": [
+      "project",
+      "git",
+      "build_safe_tests",
+      "target_contents",
+      "write_permission"
+    ],
+    "republish_changed_projects": true,
+    "shared_project": "TAPortal.Shared",
+    "shared_dependents": [
+      "TAPortal.Web",
+      "TACustomerPortal.Web",
+      "TAPortal.Webhooks"
+    ],
+    "artifact_manifest_method": "SHA256_UTF8_LF_SORTED_RELATIVE_POSIX",
+    "artifact_manifest_dir": ".codec/reports"
+  },
+  "agents": {
+    "applies_to": "ALL_AI_AGENTS",
+    "contract_file": "AGENTS.md",
+    "preserve_foreign_uncommitted_changes": true,
+    "switch_or_create_branch_requires_approval": true
+  },
+  "report": {
+    "required_sections": [
+      "A. Identification",
+      "B. Audit Summary",
+      "C. Customer Portal Account Management",
+      "D. Admin CRUD",
+      "E. Changed Files",
+      "F. Database",
+      "G. Build & Tests",
+      "H. Admin Publish",
+      "I. Customer Publish",
+      "J. Security and Acceptance",
+      "K. Git Delivery",
+      "L. Operator Handoff"
+    ],
+    "finding_statuses": [
+      "FIXED",
+      "VERIFIED",
+      "OPEN",
+      "BLOCKED",
+      "PENDING_OPERATOR"
+    ],
+    "separate_source_and_delivery_sha": true
+  },
+  "git": {
+    "main_branch": "main",
+    "new_branch_only_when_needed": true,
+    "merge_requires_approval": true,
+    "force_push_allowed": false
+  },
+  "history": {
+    "feature_dir": ".codec/features",
+    "change_dir": ".codec/changes",
+    "report_dir": ".codec/reports",
+    "append_only": true,
+    "change_id_format": "FEATURE-ID-CHG-YYYYMMDDTHHMMSSZ-XXXXXX",
+    "read_before_source": true
+  },
+  "machine": {
+    "role": "DEV_TEST",
+    "inspect_iis_allowed": false,
+    "probe_server_configuration_allowed": false,
+    "request_administrator_allowed": false,
+    "deploy_iis_allowed": false
+  }
+}

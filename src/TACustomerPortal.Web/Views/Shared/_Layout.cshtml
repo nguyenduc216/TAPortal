@@ -1,0 +1,126 @@
+@inject TACustomerPortal.Web.Security.ICurrentCustomerContext CurrentCustomer
+@functions {
+    // Customer Portal navigation, grouped like a SaaS workspace. "Index" entries stay active on every page of their module.
+    private static readonly (string Group, string Controller, string Action, string Icon, string Label)[] Nav =
+    [
+        ("Không gian làm việc", "Dashboard", "Index", "layout-dashboard", "Tổng quan"),
+        ("Không gian làm việc", "Profile", "Company", "building", "Hồ sơ doanh nghiệp"),
+        ("Thanh toán", "Orders", "Index", "file-invoice", "Đơn hàng & QR"),
+        ("Thanh toán", "Contacts", "Index", "users", "Khách hàng"),
+        ("Thanh toán", "Banks", "Index", "building-bank", "Tài khoản ngân hàng"),
+        ("Thanh toán", "PaymentSettings", "Index", "settings", "Cài đặt thanh toán"),
+        ("Tài khoản", "Profile", "Personal", "id", "Thông tin cá nhân"),
+        ("Tài khoản", "Account", "ChangePassword", "shield-lock", "Bảo mật & mật khẩu"),
+    ];
+
+    private bool IsCurrent(string controller, string action) =>
+        string.Equals(ViewContext.RouteData.Values["controller"]?.ToString(), controller, StringComparison.OrdinalIgnoreCase)
+        && (action == "Index" || string.Equals(ViewContext.RouteData.Values["action"]?.ToString(), action, StringComparison.OrdinalIgnoreCase));
+
+    private static string Initials(string? name, int count = 1)
+    {
+        var words = (name ?? "").Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        return words.Length == 0 ? "TA" : string.Concat(words.TakeLast(count).Select(w => char.ToUpperInvariant(w[0])));
+    }
+}
+@{
+    var authenticated = User.Identity?.IsAuthenticated == true;
+    var displayName = User.FindFirst("display_name")?.Value ?? User.Identity?.Name;
+    var heading = ViewData["Heading"] as string ?? ViewData["Title"] as string;
+    var hideHeader = ViewData["HideHeader"] is true;
+    // Reuses the controller's lookup for this request (scoped cache): no extra query on Dashboard/Company.
+    TACustomerPortal.Web.Services.CustomerMembership? current = null;
+    if (authenticated)
+    {
+        // The error page also uses this layout: a failing lookup must not break it.
+        try { current = await CurrentCustomer.Get(); } catch (Exception) { current = null; }
+    }
+}
+<!doctype html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <link rel="icon" type="image/png" href="~/images/favicon-32x32.png" />
+    <meta name="theme-color" content="#A16207" />
+    <title>@ViewData["Title"] · T.A Customer Portal</title>
+    <link rel="stylesheet" href="~/css/customer.css" asp-append-version="true" />
+</head>
+<body class="cp">
+@if (authenticated)
+{
+    <a class="cp-skip" href="#cpMain">Bỏ qua đến nội dung chính</a>
+    <aside class="cp-sidebar" id="taSidebar" aria-label="Điều hướng chính">
+        <div class="cp-sidebar__brand">
+            <a class="cp-brand" asp-controller="Dashboard" asp-action="Index" aria-label="T.A Customer Portal — Tổng quan">
+                <span class="cp-brand__mark" aria-hidden="true">T<span>A</span></span>
+                <span class="cp-brand__text">T.A Portal<small>Khách hàng</small></span>
+            </a>
+            <button type="button" class="cp-sidebar__close" data-ta-drawer-close aria-label="Đóng menu">@UiIcon.Render("x")</button>
+        </div>
+        <div id="cpWorkspace" data-ta-swap>
+            <a class="cp-workspace" asp-controller="Account" asp-action="SelectCustomer" title="Đổi doanh nghiệp">
+                <span class="cp-workspace__mark" aria-hidden="true">@(current is null ? "?" : Initials(current.Name, 2))</span>
+                <span class="cp-workspace__text"><small>Doanh nghiệp</small><strong>@(current?.Name ?? "Chọn doanh nghiệp")</strong></span>
+                @UiIcon.Render("switch-horizontal")
+            </a>
+        </div>
+        <nav class="cp-side-nav" id="cpNav" data-ta-swap aria-label="Menu khách hàng">
+            @foreach (var group in Nav.GroupBy(n => n.Group))
+            {
+                <p class="cp-side-nav__label">@group.Key</p>
+                @foreach (var n in group)
+                {
+                    <a class="cp-side-link" href="@Url.Action(n.Action, n.Controller)" title="@n.Label" aria-current="@(IsCurrent(n.Controller, n.Action) ? "page" : null)">@UiIcon.Render(n.Icon)<span>@n.Label</span></a>
+                }
+            }
+        </nav>
+        <div class="cp-sidebar__foot">
+            <div class="cp-help"><strong>Cần hỗ trợ?</strong>Liên hệ quản trị viên T.A phụ trách doanh nghiệp của bạn.</div>
+            <form method="post" asp-controller="Account" asp-action="Logout" data-ta-hard><button type="submit" class="cp-logout" title="Đăng xuất">@UiIcon.Render("logout")<span>Đăng xuất</span></button></form>
+        </div>
+    </aside>
+    <div class="ta-overlay" data-ta-drawer-close hidden></div>
+    <div class="cp-shell">
+        <header class="cp-topbar">
+            <button type="button" class="cp-icon-btn" data-ta-sidebar-toggle aria-controls="taSidebar" aria-expanded="true" aria-label="Thu gọn/mở rộng menu">@UiIcon.Render("menu-2")</button>
+            <div class="cp-crumbs" id="cpCrumbs" data-ta-swap>@UiIcon.Render("home")<span>@(current?.Code ?? "Customer Portal")</span>@UiIcon.Render("chevron-right")<strong>@ViewData["Title"]</strong></div>
+            <div class="cp-topbar__end">
+                <a class="cp-chip" asp-controller="Account" asp-action="SelectCustomer" title="Đổi doanh nghiệp">@UiIcon.Render("switch-horizontal")<span>Đổi doanh nghiệp</span></a>
+                <details class="cp-user" data-cp-menu>
+                    <summary aria-label="Tài khoản: @displayName"><span class="cp-avatar" aria-hidden="true">@Initials(displayName)</span><span class="cp-user__name">@displayName<small>@User.Identity?.Name</small></span>@UiIcon.Render("chevron-down")</summary>
+                    <div class="cp-user__menu">
+                        <a asp-controller="Profile" asp-action="Personal">@UiIcon.Render("id")<span>Thông tin cá nhân</span></a>
+                        <a asp-controller="Account" asp-action="ChangePassword">@UiIcon.Render("key")<span>Đổi mật khẩu</span></a>
+                        <a asp-controller="Account" asp-action="SelectCustomer">@UiIcon.Render("switch-horizontal")<span>Đổi doanh nghiệp</span></a>
+                        <hr />
+                        <form method="post" asp-controller="Account" asp-action="Logout" data-ta-hard><button type="submit" class="cp-danger">@UiIcon.Render("logout")<span>Đăng xuất</span></button></form>
+                    </div>
+                </details>
+            </div>
+        </header>
+        <main id="cpMain" class="cp-main cp-enter" tabindex="-1" data-ta-swap>
+            @if (!hideHeader)
+            {
+                <div class="cp-head">
+                    <div class="cp-head__text">
+                        @if (ViewData["Eyebrow"] is string eyebrow) {<div class="cp-eyebrow">@eyebrow</div>}
+                        <h1 class="cp-title">@heading</h1>
+                        @if (ViewData["Subtitle"] is string subtitle) {<p class="cp-sub">@subtitle</p>}
+                    </div>
+                </div>
+            }
+            @if (TempData["Success"] is string flashOk) {<div class="cp-flash cp-flash--ok" role="status">@UiIcon.Render("circle-check")<div>@flashOk</div></div>}
+            @if (TempData["Error"] is string flashError) {<div class="cp-flash cp-flash--error" role="alert">@UiIcon.Render("alert-circle")<div>@flashError</div></div>}
+            @RenderBody()
+        </main>
+    </div>
+}
+else
+{
+    <main class="cp-auth-shell">@RenderBody()</main>
+}
+<script src="~/js/ta-shell.js" asp-append-version="true"></script>
+<script src="~/js/customer.js" asp-append-version="true"></script>
+</body>
+</html>

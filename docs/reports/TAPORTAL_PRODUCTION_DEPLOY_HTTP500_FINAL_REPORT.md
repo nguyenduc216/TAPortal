@@ -28,7 +28,7 @@
 ## HTTP 500
 - reproduce steps:
   - GET `/Account/Login`
-  - POST `/Account/Login` with `admin` / `Admin@123`
+  - POST `/Account/Login` with `admin` / `<historical bootstrap credential removed>`
   - production returned HTTP 500
   - local reproduction against the same TAPortal SQL Server with the read-only account returned HTTP 500 before the fix
 - exact exception: `Microsoft.Data.SqlClient.SqlException (0x80131904): The UPDATE permission was denied on the object 'Users', database 'TAPortal', schema 'dbo'.`

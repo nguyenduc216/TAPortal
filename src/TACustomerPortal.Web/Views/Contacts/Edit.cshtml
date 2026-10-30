@@ -1,0 +1,26 @@
+@model ContactInput
+@{
+    var isNew = Model.Id == Guid.Empty;
+    ViewData["Title"] = isNew ? "Thêm khách hàng" : "Sửa khách hàng";
+    ViewData["Eyebrow"] = "Khách hàng";
+    ViewData["Subtitle"] = "Tên đơn vị, MST và địa chỉ được dùng làm thông tin người mua khi xuất hóa đơn điện tử.";
+}
+<form class="cp-card" method="post" asp-action="@(isNew ? "Create" : "Edit")" asp-route-id="@(isNew ? null : Model.Id)">
+    <div class="cp-card__body">
+        <div asp-validation-summary="ModelOnly" class="cp-alert" role="alert"></div>
+        <div class="cp-form-grid">
+            <div class="cp-field"><label asp-for="Code" class="cp-label">Mã khách hàng</label><div class="cp-input-wrap">@UiIcon.Render("hash")<input asp-for="Code" class="cp-input" maxlength="50" required /></div><span asp-validation-for="Code" class="cp-error"></span></div>
+            <div class="cp-field"><label asp-for="Name" class="cp-label">Tên khách hàng / người liên hệ</label><div class="cp-input-wrap">@UiIcon.Render("user")<input asp-for="Name" class="cp-input" maxlength="250" required /></div><span asp-validation-for="Name" class="cp-error"></span></div>
+            <div class="cp-field"><label asp-for="LegalName" class="cp-label">Tên đơn vị (trên hóa đơn)</label><div class="cp-input-wrap">@UiIcon.Render("building")<input asp-for="LegalName" class="cp-input" maxlength="250" /></div><span asp-validation-for="LegalName" class="cp-error"></span></div>
+            <div class="cp-field"><label asp-for="TaxCode" class="cp-label">Mã số thuế</label><div class="cp-input-wrap">@UiIcon.Render("receipt-tax")<input asp-for="TaxCode" class="cp-input" inputmode="numeric" /></div><span asp-validation-for="TaxCode" class="cp-error"></span></div>
+            <div class="cp-field"><label asp-for="Phone" class="cp-label">Điện thoại (Zalo)</label><div class="cp-input-wrap">@UiIcon.Render("phone")<input asp-for="Phone" class="cp-input" inputmode="tel" /></div><span asp-validation-for="Phone" class="cp-error"></span></div>
+            <div class="cp-field"><label asp-for="Email" class="cp-label">Email nhận hóa đơn</label><div class="cp-input-wrap">@UiIcon.Render("mail")<input asp-for="Email" class="cp-input" type="email" /></div><span asp-validation-for="Email" class="cp-error"></span></div>
+            <div class="cp-field cp-span"><label asp-for="Address" class="cp-label">Địa chỉ</label><div class="cp-input-wrap">@UiIcon.Render("map-pin")<input asp-for="Address" class="cp-input" maxlength="500" /></div><span asp-validation-for="Address" class="cp-error"></span></div>
+            <div class="cp-field cp-span"><label asp-for="Note" class="cp-label">Ghi chú</label><div class="cp-input-wrap cp-input-wrap--top">@UiIcon.Render("file-text")<textarea asp-for="Note" class="cp-input" maxlength="1000"></textarea></div><span asp-validation-for="Note" class="cp-error"></span></div>
+        </div>
+    </div>
+    <div class="cp-card__foot">
+        <a class="cp-btn cp-btn--ghost" asp-action="Index">@UiIcon.Render("arrow-left")<span>Quay lại</span></a>
+        <button class="cp-btn cp-btn--primary" type="submit" style="margin-left:auto">@UiIcon.Render("device-floppy")<span>Lưu khách hàng</span></button>
+    </div>
+</form>

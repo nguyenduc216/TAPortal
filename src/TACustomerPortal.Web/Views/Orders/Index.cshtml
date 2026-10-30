@@ -1,0 +1,47 @@
+@model OrdersVm
+@{
+    ViewData["Title"] = "Đơn hàng & QR";
+    ViewData["Eyebrow"] = "Thanh toán";
+    ViewData["Subtitle"] = "Mỗi đơn có mã QR thanh toán; khách có thể trả nhiều lần đến khi đủ số tiền.";
+    var filters = new (string? Code, string Label)[] { (null, "Tất cả"), (OrderStatus.Awaiting, "Chờ thanh toán"), (OrderStatus.Partial, "Một phần"), (OrderStatus.Paid, "Đã thanh toán"), (OrderStatus.Expired, "Hết hạn"), (OrderStatus.Draft, "Chưa có QR"), (OrderStatus.Cancelled, "Đã hủy") };
+}
+@if (!Model.Linked) { <partial name="_PaymentsNotLinked" /> }
+<section class="cp-card">
+    <div class="cp-toolbar">
+        <div class="cp-search">@UiIcon.Render("search")<input class="cp-input" type="search" aria-label="Tìm đơn hàng" placeholder="Tìm theo mã đơn, khách hàng..." oninput="taFilterRows(this.value,'ordersTable')" /></div>
+        @if (Model.CanManage) {<div class="cp-toolbar__end"><a class="cp-btn cp-btn--primary" asp-action="Create">@UiIcon.Render("plus")<span>Tạo đơn hàng</span></a></div>}
+    </div>
+    <div class="cp-toolbar cp-filters" aria-label="Lọc theo trạng thái">
+        @foreach (var (code, label) in filters)
+        {
+            <a class="cp-filter" asp-action="Index" asp-route-status="@code" aria-current="@(code == Model.Filter ? "page" : null)">@label</a>
+        }
+    </div>
+    @if (Model.Orders.Count == 0)
+    {
+        <div class="cp-empty" data-cp-empty>@UiIcon.Render("file-invoice")<p>Chưa có đơn hàng nào.</p></div>
+    }
+    else
+    {
+        <div class="cp-table-wrap">
+            <table class="cp-table" id="ordersTable" data-ta-pager="10">
+                <thead><tr><th>Mã đơn</th><th>Khách hàng</th><th class="cp-num">Số tiền</th><th class="cp-num">Đã thu</th><th>Trạng thái</th><th>Hết hạn QR</th><th>Tạo lúc</th></tr></thead>
+                <tbody>
+                @foreach (var o in Model.Orders)
+                {
+                    var (label, css) = PaymentText.OrderStatus(o.Status);
+                    <tr data-ta-row>
+                        <td><a class="cp-link" asp-action="Details" asp-route-id="@o.Id">@o.OrderNo</a><div class="cp-muted">@o.Description</div></td>
+                        <td>@(o.ContactName ?? "Khách lẻ")</td>
+                        <td class="cp-num">@PaymentText.Money(o.Amount)</td>
+                        <td class="cp-num">@PaymentText.Money(o.PaidAmount)</td>
+                        <td><span class="cp-badge @css">@label</span></td>
+                        <td>@PaymentText.VietnamTime(o.ExpiresAt)</td>
+                        <td>@PaymentText.VietnamTime(o.CreatedAt)</td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    }
+</section>

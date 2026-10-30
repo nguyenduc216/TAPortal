@@ -1,4 +1,31 @@
 @model IReadOnlyList<PortalRole>
-@{ ViewData["Title"]="Vai trò & phân quyền"; }
-<div class="page-header"><div class="row"><div class="col"><h2 class="page-title">Vai trò &amp; phân quyền</h2><div class="text-secondary">Cấu trúc RBAC: User → Role → Permission.</div></div></div></div>
-<div class="card ta-table-card mt-3"><div class="table-responsive"><table class="table table-vcenter card-table"><thead><tr><th>Mã vai trò</th><th>Tên vai trò</th><th>Mô tả</th><th>Loại</th><th>Trạng thái</th></tr></thead><tbody>@foreach(var x in Model){<tr><td><code>@x.Code</code></td><td class="fw-medium">@x.Name</td><td>@x.Description</td><td>@(x.IsSystem?"Hệ thống":"Tùy chỉnh")</td><td><span class="badge @(x.IsActive?"badge-ta-active":"bg-secondary-lt")">@(x.IsActive?"Hoạt động":"Ngừng")</span></td></tr>}</tbody></table></div>@if(Model.Count == 0){<div class="ta-table-empty"><i class="ti ti-shield-lock" aria-hidden="true"></i>Chưa có vai trò.</div>}</div>
+@{
+    ViewData["Title"] = "Vai trò & phân quyền";
+    ViewData["Subtitle"] = "Cấu trúc RBAC: User → Role → Permission.";
+    ViewData["PageIcon"] = "shield-check";
+}
+<section class="card ta-table-card" aria-label="Danh sách vai trò">
+    <div class="ta-table-toolbar">
+        <div class="ta-search">@UiIcon.Render("search")<input class="form-control" type="search" aria-label="Tìm vai trò" placeholder="Tìm theo mã, tên hoặc mô tả vai trò..." oninput="taFilterRows(this.value,'rolesTable')" /></div>
+    </div>
+    @if (Model.Count == 0)
+    {
+        <div class="ta-empty"><span class="ta-empty__icon">@UiIcon.Render("shield-check")</span><p class="ta-empty__title">Chưa có vai trò</p></div>
+    }
+    else
+    {
+        <div class="ta-table-wrap">
+            <table class="ta-table ta-table-stack" id="rolesTable" data-ta-pager="10">
+                <thead><tr><th scope="col">Mã vai trò</th><th scope="col">Tên vai trò</th><th scope="col">Mô tả</th><th scope="col">Loại</th><th scope="col">Trạng thái</th></tr></thead>
+                <tbody>
+                @foreach (var x in Model)
+                {
+                    <tr data-ta-row><td data-label="Mã vai trò"><span class="ta-code">@x.Code</span></td><td class="ta-cell-strong">@x.Name</td><td data-label="Mô tả">@x.Description</td><td data-label="Loại"><span class="ta-badge ta-badge--plain @(x.IsSystem ? "ta-badge--info" : "ta-badge--neutral")">@(x.IsSystem ? "Hệ thống" : "Tùy chỉnh")</span></td><td data-label="Trạng thái"><span class="ta-badge @(x.IsActive ? "ta-badge--success" : "ta-badge--neutral")">@(x.IsActive ? "Hoạt động" : "Ngừng")</span></td></tr>
+                }
+                </tbody>
+            </table>
+        </div>
+        <div class="ta-empty d-none" data-ta-no-results><span class="ta-empty__icon">@UiIcon.Render("search-off")</span><p class="ta-empty__title">Không tìm thấy kết quả phù hợp</p></div>
+        <div class="ta-table-footer" data-ta-pager-for="rolesTable" data-ta-unit="vai trò"></div>
+    }
+</section>

@@ -1,0 +1,72 @@
+[
+  {
+    "change_id": "CODEC-WORKFLOW-CHG-20261027T135659Z-3B9394",
+    "created_at": "2026-10-27T13:56:59.421243+00:00",
+    "title": "Install repository workflow and change history",
+    "status": "COMPLETED",
+    "commit_sha": "fa9610411a1e9ea59bcc5894776aba84b19ea7c7",
+    "migration_status": "NOT_EXECUTED",
+    "publish_status": "NOT_PUBLISHED",
+    "merge_status": "PENDING_APPROVAL",
+    "objective": "Install Codec Workflow v1 as the standard repository workflow",
+    "scope": "Workflow metadata only; no business source or SQL changes",
+    "technical_decisions": [
+      "Reuse existing feature/customer-portal-mvp01 branch",
+      "Retain original project README; kit README installed as .codec/README.md",
+      "Strengthen original utility with collision detection and policy/history validation",
+      "Publish paths remain empty / PENDING_CONFIGURATION"
+    ],
+    "files_changed": [
+      ".gitignore",
+      "AGENTS.md",
+      ".agents/skills/codec/SKILL.md",
+      ".codec/README.md",
+      ".codec/changes/CODEC-WORKFLOW-CHG-20261027T135659Z-3B9394.md",
+      ".codec/config.json",
+      ".codec/features/CODEC-WORKFLOW/README.md",
+      ".codec/features/CODEC-WORKFLOW/history.json",
+      ".codec/reports/CODEC-WORKFLOW-CHG-20261027T135659Z-3B9394.md",
+      ".codec/templates/change.md",
+      ".codec/templates/feature.md",
+      ".codec/templates/report.md",
+      ".codec/tools/codec.py",
+      ".codec/tools/test_codec.py"
+    ],
+    "migrations": [],
+    "tests": [
+      "python .codec/tools/codec.py --help: PASS",
+      "python .codec/tools/codec.py validate: POLICY PASS",
+      "python .codec/tools/codec.py list: PASS",
+      "python .codec/tools/test_codec.py: 3 PASS",
+      "git diff --check: PASS"
+    ],
+    "build_status": "NOT_RUN: metadata-only, no .NET changes",
+    "deploy_configuration": "PENDING_CONFIGURATION",
+    "merge_sha": null,
+    "remaining_work": [
+      "Operator confirms exact publish paths for TAPortal.Web and TACustomerPortal.Web before any publish/deploy"
+    ],
+    "installation_source": "Codec-TAPortal-Workflow-v1.zip",
+    "installation_zip_sha256": "cd39814a8461b2753e4a8185d5e10a2af70d740e1e7ea2b4a1e90a210b541463",
+    "push_status": "PUSHED",
+    "commit_note": "Installation commit SHA; follow-up metadata commit records this SHA and removes upstream template trailing whitespace. Final delivery HEAD is reported to operator."
+  },
+  {
+    "change_id": "CODEC-WORKFLOW-CHG-20261030T103234Z-1BBEB0",
+    "created_at": "2026-10-30T10:32:34.707466+00:00",
+    "title": "Publish targets under src/publish, per-project AGENTS.md, SQL text output rule",
+    "status": "IMPLEMENTED / BUILD_VERIFIED",
+    "commit_sha": "53dbe68cf9907ff3931fd593203435c15a180029",
+    "migration_status": "NONE_REQUIRED",
+    "publish_status": "NOT_RUN",
+    "merge_status": "PENDING_APPROVAL",
+    "agent": "Claude Code (claude-opus-5-5)",
+    "base_sha": "205febb3dde0933dc80c6df9fab6f8dd172f81f3",
+    "build": {
+      "release_build": "0 warnings / 0 errors",
+      "safe_tests": "308 passed / 0 failed / 0 skipped",
+      "codec_validate": "PASS"
+    },
+    "iis": "NOT_CHECKED"
+  }
+]

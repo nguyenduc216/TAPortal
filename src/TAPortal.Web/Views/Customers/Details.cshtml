@@ -1,0 +1,56 @@
+@model CustomerOverviewVm
+@{
+    var ws = (CustomerWorkspaceHeader)ViewData["Workspace"]!;
+    ViewData["Title"] = ws.Code;
+    ViewData["ParentTitle"] = "Khách hàng";
+    ViewData["ParentController"] = "Customers";
+    ViewData["HideHeader"] = true;
+    var c = Model.Customer;
+    var vi = System.Globalization.CultureInfo.GetCultureInfo("vi-VN");
+}
+<partial name="_Workspace" model="ws" />
+<div class="ta-ws-grid">
+    <section class="card" aria-labelledby="idTitle">
+        <div class="card-header"><h2 class="card-title" id="idTitle">@UiIcon.Render("id")Thông tin nhận diện</h2></div>
+        <div class="card-body">
+            <dl class="ta-dl">
+                <dt>Mã khách hàng</dt><dd><span class="ta-code">@c.Code</span></dd>
+                <dt>Tên khách hàng</dt><dd>@c.Name</dd>
+                <dt>Mã số thuế</dt><dd>@(c.TaxCode ?? "—")</dd>
+                <dt>Trạng thái</dt><dd><span class="ta-badge @(ws.Operational ? "ta-badge--success" : "ta-badge--danger")">@(ws.Operational ? "Hoạt động" : "Ngừng hoạt động")</span> <span class="ta-code ms-1" title="Trạng thái hệ thống">@c.Status</span></dd>
+            </dl>
+        </div>
+    </section>
+    <section class="card" aria-labelledby="contactTitle">
+        <div class="card-header"><h2 class="card-title" id="contactTitle">@UiIcon.Render("mail")Liên hệ</h2></div>
+        <div class="card-body">
+            <dl class="ta-dl">
+                <dt>Email</dt><dd>@(c.Email ?? "—")</dd>
+                <dt>Điện thoại</dt><dd>@(c.Phone ?? "—")</dd>
+                <dt>Địa chỉ</dt><dd>@(c.Address ?? "—")</dd>
+            </dl>
+        </div>
+    </section>
+    <section class="card" aria-labelledby="portalTitle" data-ta-portal-summary>
+        <div class="card-header"><h2 class="card-title" id="portalTitle">@UiIcon.Render("users-group")Customer Portal</h2></div>
+        <div class="card-body">
+            @if (Model.PortalAccounts is not { } s)
+            {
+                <p class="text-secondary mb-0">Không đọc được danh sách tài khoản Portal (chi tiết đã ghi vào nhật ký ứng dụng).</p>
+            }
+            else if (s.Total == 0)
+            {
+                <p class="text-secondary mb-0">Chưa có tài khoản nào được cấp quyền truy cập Customer Portal cho khách hàng này.</p>
+            }
+            else
+            {
+                <dl class="ta-dl">
+                    <dt>Đang có hiệu lực</dt><dd><span class="ta-metric__value" data-ta-metric="effective">@s.Effective.ToString("N0", vi)</span></dd>
+                    <dt>Tổng tài khoản</dt><dd><span class="ta-metric__value" data-ta-metric="total">@s.Total.ToString("N0", vi)</span></dd>
+                    <dt>Đã thu hồi</dt><dd><span class="ta-metric__value" data-ta-metric="revoked">@s.Revoked.ToString("N0", vi)</span></dd>
+                </dl>
+            }
+        </div>
+        <div class="card-footer"><a asp-action="PortalAccounts" asp-route-id="@c.Id">Quản lý quyền truy cập →</a></div>
+    </section>
+</div>

@@ -1,0 +1,28 @@
+@model IReadOnlyList<CustomerMembership>
+@{
+    ViewData["Title"] = "Chọn doanh nghiệp";
+    ViewData["Eyebrow"] = "Không gian làm việc";
+    ViewData["Subtitle"] = "Chọn doanh nghiệp bạn muốn làm việc. Bạn chỉ thấy những doanh nghiệp đã được cấp quyền.";
+}
+<div data-ta-list-scope style="max-width:760px">
+    @if (Model.Count == 0)
+    {
+        <section class="cp-card cp-state" style="max-width:none" data-cp-no-company><span class="cp-blob cp-blob--gold">@UiIcon.Render("building")</span><h1>Chưa có doanh nghiệp nào</h1><p>Tài khoản của bạn hiện chưa được cấp quyền truy cập doanh nghiệp nào. Vui lòng liên hệ quản trị viên T.A.</p></section>
+    }
+    <div class="cp-search">@UiIcon.Render("search")<input class="cp-input" type="search" aria-label="Tìm doanh nghiệp" placeholder="Tìm theo tên hoặc mã doanh nghiệp..." oninput="taFilterRows(this.value,'companyList')" /></div>
+    <div class="cp-company-list" id="companyList" data-ta-pager="10">
+    @foreach (var c in Model)
+    {
+        var mark = string.Concat(c.Name.Split(' ', StringSplitOptions.RemoveEmptyEntries).TakeLast(2).Select(w => char.ToUpperInvariant(w[0])));
+        <form method="post" asp-action="SelectCustomer" data-ta-row><input type="hidden" name="customerId" value="@c.CustomerId" />
+            <button type="submit" class="cp-company">
+                <span class="cp-company__mark" aria-hidden="true">@mark</span>
+                <span class="cp-company__body"><span class="cp-company__name">@c.Name</span><span class="cp-company__meta"><span class="cp-code">@c.Code</span><span class="cp-badge cp-badge--gold">@PortalRoleText.Label(c.Role)</span></span></span>
+                @UiIcon.Render("chevron-right")
+            </button>
+        </form>
+    }
+    </div>
+    <p class="cp-empty d-none" data-ta-no-results>Không tìm thấy doanh nghiệp phù hợp.</p>
+    <div data-ta-pager-for="companyList" data-ta-unit="doanh nghiệp"></div>
+</div>

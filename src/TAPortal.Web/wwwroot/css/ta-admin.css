@@ -1,0 +1,56 @@
+/* TAPortal Admin — admin-only components on top of css/ta-design.css (shared tokens). */
+
+/* Customer Workspace: header + tab navigation */
+.ta-ws-head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--ta-sp-4); margin-bottom: var(--ta-sp-4); }
+.ta-ws-head__icon { width: 56px; height: 56px; flex: 0 0 56px; display: grid; place-items: center; border-radius: var(--ta-radius-card); background: var(--ta-gold-soft); color: var(--ta-warning-text); }
+.ta-ws-head__icon .ta-icon { width: 28px; height: 28px; }
+.ta-ws-head__text { flex: 1 1 320px; min-width: 0; }
+.ta-ws-head__meta { display: flex; flex-wrap: wrap; align-items: center; gap: var(--ta-sp-2); margin-top: 6px; }
+.ta-ws-head__actions { display: flex; flex-wrap: wrap; gap: var(--ta-sp-2); margin-left: auto; }
+.ta-tabs { display: flex; gap: var(--ta-sp-1); margin: 0 0 var(--ta-sp-5); padding: 0; list-style: none; border-bottom: 1px solid var(--ta-border); overflow-x: auto; scrollbar-width: thin; }
+.ta-tabs__link { position: relative; display: inline-flex; align-items: center; gap: var(--ta-sp-2); min-height: 44px; padding: 10px var(--ta-sp-4); color: var(--ta-text-3); font-weight: 600; text-decoration: none; white-space: nowrap; border-radius: var(--ta-radius-btn) var(--ta-radius-btn) 0 0; }
+.ta-tabs__link:hover { color: var(--ta-text); background: var(--ta-surface); text-decoration: none; }
+.ta-tabs__link[aria-current="page"] { color: var(--ta-blue-strong); }
+.ta-tabs__link[aria-current="page"]::after { content: ""; position: absolute; left: var(--ta-sp-3); right: var(--ta-sp-3); bottom: -1px; height: 3px; border-radius: 3px 3px 0 0; background: var(--ta-blue); }
+.ta-tabs__link .ta-icon { width: 18px; height: 18px; }
+
+/* Workspace grids: use the full content width on desktop, collapse on tablet/mobile */
+.ta-ws-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--ta-sp-4); }
+.ta-ws-grid > .card { margin: 0; }
+.ta-ws-span-2 { grid-column: span 2; }
+.ta-ws-span-all { grid-column: 1 / -1; }
+.ta-form-grid--3 > .ta-ws-span-2 { grid-column: span 2; }
+.ta-metric__value { font-size: 1.125rem; font-weight: 750; line-height: 1.2; color: var(--ta-text); }
+
+@media (max-width: 1199.98px) {
+    .ta-ws-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .ta-ws-span-2 { grid-column: 1 / -1; }
+    .ta-form-grid--3 > .ta-ws-span-2 { grid-column: 1 / -1; }
+}
+@media (max-width: 767.98px) {
+    .ta-ws-grid { grid-template-columns: 1fr; }
+    .ta-ws-head__icon { width: 44px; height: 44px; flex-basis: 44px; }
+    .ta-ws-head__actions { width: 100%; margin-left: 0; }
+    .ta-ws-head__actions .btn { flex: 1 1 auto; }
+    .ta-tabs { margin-left: calc(-1 * var(--ta-sp-4)); margin-right: calc(-1 * var(--ta-sp-4)); padding: 0 var(--ta-sp-2); }
+    .ta-tabs__link { padding: 10px var(--ta-sp-3); }
+}
+
+/* Searchable dropdown (ta-portal.js): visible trigger + popup; the native select stays hidden in the form */
+.ta-select { position: relative; min-width: 0; }
+.ta-select--sm { display: inline-block; min-width: 170px; }
+.ta-select__native { position: absolute !important; width: 1px !important; height: 1px !important; padding: 0 !important; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); border: 0 !important; opacity: 0; pointer-events: none; }
+.ta-select__trigger { display: block; width: 100%; text-align: left; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; cursor: pointer; }
+.ta-select__trigger:disabled { cursor: not-allowed; }
+.ta-select__trigger.is-invalid { border-color: var(--ta-danger); }
+.ta-select__popup { position: fixed; z-index: 1085; max-width: min(480px, calc(100vw - 16px)); padding: 8px; background: var(--ta-surface); border: 1px solid var(--ta-border); border-radius: 10px; box-shadow: 0 16px 40px rgba(15, 23, 42, .18); }
+.ta-select__popup .ta-input-icon > .ta-icon { width: 16px; height: 16px; }
+.ta-select__popup .form-control { min-height: 36px; }
+.ta-select__list { max-height: 264px; overflow-y: auto; margin: 6px 0 0; padding: 0; list-style: none; }
+.ta-select__option { display: flex; align-items: center; justify-content: space-between; gap: var(--ta-sp-2); min-height: 38px; padding: 8px 10px; border-radius: var(--ta-radius-sm); color: var(--ta-text); cursor: pointer; }
+.ta-select__option.is-active { background: var(--ta-blue-soft); }
+.ta-select__option[aria-selected="true"] { color: var(--ta-blue-strong); font-weight: 600; }
+.ta-select__option[aria-disabled="true"] { color: #94A3B8; cursor: not-allowed; background: none; }
+.ta-select__check { width: 16px; height: 16px; color: var(--ta-blue-strong); }
+.ta-select__group { padding: 10px 10px 4px; color: var(--ta-text-2); font-size: var(--ta-fs-small); font-weight: 700; letter-spacing: .03em; text-transform: uppercase; }
+.ta-select__empty { padding: 10px; color: var(--ta-text-2); font-size: var(--ta-fs-label); }

@@ -1,0 +1,84 @@
+@model CustomerTingeeVm
+@{
+    var ws = (CustomerWorkspaceHeader)ViewData["Workspace"]!;
+    ViewData["Title"] = ws.Code;
+    ViewData["ParentTitle"] = "Khách hàng";
+    ViewData["ParentController"] = "Customers";
+    ViewData["HideHeader"] = true;
+    var c = Model.Customer;
+    var link = Model.Link;
+    var canChange = ws.Operational && Model.StoreAvailable;
+}
+<partial name="_Workspace" model="ws" />
+@if (!Model.ApiConfigured)
+{
+    <div class="ta-alert ta-alert--warning" role="note" data-ta-tingee-unconfigured>@UiIcon.Render("alert-triangle")<div class="ta-alert__body">Chưa cấu hình khóa API Master Merchant của Tingee (<code>Tingee__ClientId</code>, <code>Tingee__SecretKey</code>) cho TAPortal: chưa thể tạo tài khoản qua API. Vẫn có thể liên kết một merchant có sẵn.</div></div>
+}
+@if (Model.DirectMerchant)
+{
+    <div class="ta-alert ta-alert--warning" role="note" data-ta-tingee-direct>@UiIcon.Render("alert-triangle")<div class="ta-alert__body">Đang dùng tài khoản Merchant thường của Tingee (<code>Tingee__Mode=Direct</code>), chỉ phù hợp để test: chưa tạo được tài khoản con, và mọi khách hàng được liên kết đều dùng chung một tài khoản Tingee. Chỉ nên liên kết một khách hàng; Merchant ID nhập vào chỉ dùng để ánh xạ trên TAPortal, không gửi sang Tingee.</div></div>
+}
+@if (!Model.StoreAvailable)
+{
+    <div class="ta-alert ta-alert--danger" role="alert">@UiIcon.Render("database-off")<div class="ta-alert__body">Không đọc được bảng liên kết Tingee (dbo.TingeeMerchants). Kiểm tra migration 011 và quyền cơ sở dữ liệu; chi tiết đã ghi vào nhật ký ứng dụng.</div></div>
+}
+<div class="ta-ws-grid">
+    <section class="card" aria-labelledby="tingeeStatus">
+        <div class="card-header"><h2 class="card-title" id="tingeeStatus">@UiIcon.Render("building-bank")Tài khoản Tingee</h2></div>
+        <div class="card-body">
+            @if (link is null)
+            {
+                <p class="text-secondary mb-0" data-ta-tingee-unlinked>Khách hàng chưa có tài khoản Tingee. Tạo mới qua API (T.A là Master Merchant) hoặc liên kết merchant có sẵn để khách hàng dùng được ngân hàng, đơn hàng và QR trên Customer Portal.</p>
+            }
+            else
+            {
+                <dl class="ta-dl" data-ta-tingee-linked>
+                    <dt>Merchant ID</dt><dd><span class="ta-code">#@link.MerchantId</span></dd>
+                    <dt>Mã định danh</dt><dd>@(link.MerchantCode ?? "—")</dd>
+                    <dt>Điện thoại</dt><dd>@(link.PhoneNumber ?? "—")</dd>
+                    <dt>Email</dt><dd>@(link.Email ?? "—")</dd>
+                    <dt>Nguồn</dt><dd><span class="ta-badge @(link.Source == "CREATED" ? "ta-badge--success" : "ta-badge--neutral")">@(link.Source == "CREATED" ? "Tạo qua API" : "Liên kết có sẵn")</span></dd>
+                    <dt>Liên kết lúc (UTC)</dt><dd>@link.CreatedAt.ToString("dd/MM/yyyy HH:mm")</dd>
+                </dl>
+            }
+        </div>
+        @if (link is not null && Model.StoreAvailable)
+        {
+            <div class="card-footer">
+                <form asp-action="UnlinkTingeeMerchant" asp-route-id="@c.Id" method="post" onsubmit="return confirm('Hủy liên kết Tingee của khách hàng này? Merchant trên Tingee không bị xóa.')">
+                    <button class="btn btn-outline-danger" type="submit">@UiIcon.Render("ban")<span>Hủy liên kết</span></button>
+                </form>
+            </div>
+        }
+    </section>
+    @if (link is null && !Model.DirectMerchant)
+    {
+        <section class="card" aria-labelledby="tingeeCreate">
+            <div class="card-header"><h2 class="card-title" id="tingeeCreate">@UiIcon.Render("plus")Tạo tài khoản Tingee qua API</h2></div>
+            <form asp-action="CreateTingeeMerchant" asp-route-id="@c.Id" method="post">
+                <div class="card-body">
+                    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+                    <div class="mb-3"><label class="form-label required" for="Create_Name">Tên hiển thị</label><div class="ta-input-icon">@UiIcon.Render("building")<input class="form-control" id="Create_Name" name="Create.Name" value="@Model.Create.Name" maxlength="500" required /></div><span asp-validation-for="Create.Name" class="text-danger"></span></div>
+                    <div class="mb-3"><label class="form-label required" for="Create_PhoneNumber">Số điện thoại</label><div class="ta-input-icon">@UiIcon.Render("phone")<input class="form-control" id="Create_PhoneNumber" name="Create.PhoneNumber" value="@Model.Create.PhoneNumber" inputmode="numeric" pattern="0[0-9]{9}" required /></div><span asp-validation-for="Create.PhoneNumber" class="text-danger"></span><div class="form-hint">10 chữ số, bắt đầu bằng 0. Nếu số đã có trên Tingee, Tingee liên kết merchant đó vào T.A thay vì tạo mới.</div></div>
+                    <div class="mb-3"><label class="form-label" for="Create_Email">Email</label><div class="ta-input-icon">@UiIcon.Render("mail")<input class="form-control" id="Create_Email" name="Create.Email" value="@Model.Create.Email" type="email" /></div><span asp-validation-for="Create.Email" class="text-danger"></span></div>
+                    <div><label class="form-label" for="Create_Code">Mã định danh (mã KH của T.A)</label><div class="ta-input-icon">@UiIcon.Render("hash")<input class="form-control" id="Create_Code" name="Create.Code" value="@Model.Create.Code" maxlength="20" /></div><span asp-validation-for="Create.Code" class="text-danger"></span></div>
+                </div>
+                <div class="card-footer"><button class="btn btn-primary" type="submit" disabled="@(!canChange || !Model.ApiConfigured)" data-ta-loading data-ta-loading-text="Đang tạo...">@UiIcon.Render("device-floppy")<span>Tạo và liên kết</span></button></div>
+            </form>
+        </section>
+    }
+    @if (link is null)
+    {
+        <section class="card" aria-labelledby="tingeeLink">
+            <div class="card-header"><h2 class="card-title" id="tingeeLink">@UiIcon.Render("arrows-exchange")Liên kết merchant có sẵn</h2></div>
+            <form asp-action="LinkTingeeMerchant" asp-route-id="@c.Id" method="post">
+                <div class="card-body">
+                    <label class="form-label required" for="merchantId">Merchant ID trên Tingee</label>
+                    <div class="ta-input-icon">@UiIcon.Render("hash")<input class="form-control" id="merchantId" name="merchantId" type="number" min="1" step="1" required /></div>
+                    <div class="form-hint">Dùng khi merchant đã được tạo trên Tingee (ví dụ do Tingee hỗ trợ, hoặc lần tạo trước chưa lưu được liên kết).</div>
+                </div>
+                <div class="card-footer"><button class="btn" type="submit" disabled="@(!canChange)">@UiIcon.Render("check")<span>Liên kết</span></button></div>
+            </form>
+        </section>
+    }
+</div>

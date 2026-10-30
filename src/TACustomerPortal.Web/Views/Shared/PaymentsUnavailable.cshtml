@@ -1,0 +1,10 @@
+@{
+    ViewData["Title"] = "Thanh toán";
+    ViewData["HideHeader"] = true;
+}
+<div class="cp-card cp-state" style="margin:24px auto" data-cp-payments-unavailable>
+    <span class="cp-blob cp-blob--gold">@UiIcon.Render("database-off")</span>
+    <h1>Chức năng thanh toán chưa sẵn sàng</h1>
+    <p>Dữ liệu thanh toán của Customer Portal chưa được T.A kích hoạt trên hệ thống. Vui lòng thử lại sau hoặc liên hệ quản trị viên T.A (mã sự cố: <span data-ta-reference>@ViewData["Reference"]</span>).</p>
+    <a class="cp-btn cp-btn--ghost" asp-controller="Dashboard" asp-action="Index">@UiIcon.Render("home")<span>Về trang tổng quan</span></a>
+</div>

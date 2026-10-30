@@ -1,4 +1,16 @@
 @model AuthUserSnapshot
-@{ ViewData["Title"]="Hồ sơ cá nhân"; }
-<div class="page-header"><h2 class="page-title">Hồ sơ cá nhân</h2></div>
-<div class="row mt-3"><div class="col-lg-7"><div class="card"><div class="card-body"><div class="d-flex align-items-center mb-4"><span class="avatar avatar-lg ta-avatar me-3">TA</span><div><h3 class="mb-0">@Model.DisplayName</h3><div class="text-secondary">@Model.Username</div></div></div><dl class="row"><dt class="col-sm-3">Email</dt><dd class="col-sm-9">@(Model.Email??"—")</dd><dt class="col-sm-3">Điện thoại</dt><dd class="col-sm-9">@(Model.Phone??"—")</dd><dt class="col-sm-3">Vai trò</dt><dd class="col-sm-9">@string.Join(", ",Model.Roles)</dd></dl><a asp-action="ChangePassword" class="btn btn-primary"><i class="ti ti-key me-1"></i>Đổi mật khẩu</a></div></div></div></div>
+@{
+    ViewData["Title"] = "Hồ sơ cá nhân";
+    ViewData["Subtitle"] = "Thông tin tài khoản đang đăng nhập.";
+    ViewData["PageIcon"] = "user-circle";
+    var initial = (Model.DisplayName ?? "").Split(' ', StringSplitOptions.RemoveEmptyEntries).LastOrDefault() is { Length: > 0 } last ? last[..1].ToUpperInvariant() : "TA";
+}
+<div class="row"><div class="col-xl-7">
+<section class="card">
+    <div class="card-body">
+        <div class="d-flex align-items-center gap-3 mb-4"><span class="ta-avatar ta-avatar--lg" aria-hidden="true">@initial</span><div class="min-w-0"><h2 class="ta-section-title">@Model.DisplayName</h2><div class="text-secondary">@Model.Username</div></div></div>
+        <dl class="ta-dl"><dt>Email</dt><dd>@(Model.Email ?? "—")</dd><dt>Điện thoại</dt><dd>@(Model.Phone ?? "—")</dd><dt>Vai trò</dt><dd>@(ViewBag.RoleNames is IEnumerable<string> names && names.Any() ? string.Join(", ", names) : "—")</dd></dl>
+    </div>
+    <div class="card-footer ta-form-actions"><a asp-action="ChangePassword" class="btn btn-primary">@UiIcon.Render("key")<span>Đổi mật khẩu</span></a></div>
+</section>
+</div></div>

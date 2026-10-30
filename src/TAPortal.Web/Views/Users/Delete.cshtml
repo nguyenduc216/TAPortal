@@ -1,0 +1,32 @@
+@model UserAccountSnapshot
+@{
+    ViewData["Title"] = "Xóa người dùng";
+    ViewData["Heading"] = "Xóa người dùng: " + Model.DisplayName;
+    ViewData["Subtitle"] = "Tài khoản " + Model.Username + " — xóa mềm, giữ nguyên lịch sử.";
+    ViewData["PageIcon"] = "trash";
+    ViewData["ParentTitle"] = "Người dùng";
+    ViewData["ParentController"] = "Users";
+    var isSelf = string.Equals(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value, Model.Id.ToString(), StringComparison.OrdinalIgnoreCase);
+    var isLastAdmin = Model.SystemAdminIds.Contains(Model.Id) && Model.SystemAdminIds.Count == 1;
+}
+<div class="row"><div class="col-xl-8">
+<form class="card ta-card-danger" asp-action="Delete" asp-route-id="@Model.Id" method="post">
+    <input type="hidden" name="stamp" value="@Model.Stamp" />
+    <div class="card-header"><h2 class="card-title">@UiIcon.Render("alert-triangle")Xác nhận xóa người dùng</h2></div>
+    <div class="card-body">
+        <div asp-validation-summary="ModelOnly" class="ta-alert ta-alert--danger" role="alert"></div>
+        <p>Thao tác này là <strong>xóa mềm</strong>: tài khoản bị đánh dấu đã xóa và không thể đăng nhập TAPortal lẫn Customer Portal; phiên đang mở bị từ chối ở request kế tiếp. Dữ liệu, vai trò, membership và lịch sử được giữ nguyên để tra cứu. Chưa có chức năng khôi phục.</p>
+        <dl class="ta-dl">
+            <dt>Trạng thái</dt><dd>@AccountStatusPolicy.Describe(Model.IsActive, Model.Status, false)</dd>
+            <dt>Vai trò</dt><dd>@(Model.RoleNames.Count == 0 ? "—" : string.Join(", ", Model.RoleNames))</dd>
+            <dt>Doanh nghiệp đang truy cập</dt><dd>@Model.ActiveMembershipCount</dd>
+        </dl>
+        @if (isSelf) {<div class="ta-alert ta-alert--warning mt-4 mb-0">@UiIcon.Render("alert-triangle")<div class="ta-alert__body">Không thể tự xóa tài khoản đang đăng nhập.</div></div>}
+        else if (isLastAdmin) {<div class="ta-alert ta-alert--warning mt-4 mb-0">@UiIcon.Render("alert-triangle")<div class="ta-alert__body">Đây là quản trị viên hệ thống (SYS_ADMIN) hoạt động cuối cùng nên không thể xóa.</div></div>}
+    </div>
+    <div class="card-footer ta-form-actions">
+        <a asp-action="Edit" asp-route-id="@Model.Id" class="btn">@UiIcon.Render("arrow-left")<span>Hủy</span></a>
+        <button type="submit" class="btn btn-danger ms-auto" disabled="@(isSelf || isLastAdmin)" data-ta-loading data-ta-loading-text="Đang xóa...">@UiIcon.Render("trash")<span>Xác nhận xóa</span></button>
+    </div>
+</form>
+</div></div>

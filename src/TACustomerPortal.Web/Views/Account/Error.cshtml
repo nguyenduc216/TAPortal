@@ -1,0 +1,10 @@
+@{ ViewData["Title"] = "Lỗi hệ thống"; ViewData["HideHeader"] = true; }
+<div class="cp-center" style="@(User.Identity?.IsAuthenticated == true ? "" : "min-height:100vh")">
+    <section class="cp-card cp-state">
+        <span class="cp-blob cp-blob--gold">@UiIcon.Render("alert-triangle")</span>
+        <h1>Không thể xử lý yêu cầu</h1>
+        <p>Vui lòng thử lại sau hoặc liên hệ quản trị viên T.A.</p>
+        @if (ViewData["Reference"] is string reference) {<p class="cp-hint" style="margin-top:-8px">Mã sự cố: <span class="cp-code" data-ta-reference>@reference</span></p>}
+        <a class="cp-btn cp-btn--primary" href="~/">@UiIcon.Render("arrow-left")<span>Về trang chính</span></a>
+    </section>
+</div>

@@ -1,0 +1,69 @@
+@model OrderDetailsVm
+@using TAPortal.Integrations.Tingee
+@{
+    var o = Model.Order;
+    var (label, css) = PaymentText.OrderStatus(Model.Status);
+    ViewData["Title"] = o.OrderNo;
+    ViewData["Eyebrow"] = "Đơn hàng & QR";
+    ViewData["Heading"] = "Đơn " + o.OrderNo;
+    ViewData["Subtitle"] = o.Description;
+    var percent = o.Amount == 0 ? 0 : (int)Math.Min(100, Math.Round(o.PaidAmount * 100 / o.Amount));
+    var canIssue = Model.CanManage && Model.Status is OrderStatus.Draft or OrderStatus.Expired && o.Remaining > 0;
+    var open = Model.Status is OrderStatus.Awaiting or OrderStatus.Partial;
+}
+<div class="cp-grid cp-grid--2">
+    <div>
+        <section class="cp-card" style="margin-bottom:14px">
+            <div class="cp-card__head"><span class="cp-blob">@UiIcon.Render("file-invoice")</span><h2>Thanh toán</h2><span class="cp-badge @css" style="margin-left:auto" data-cp-order-status="@Model.Status">@label</span></div>
+            <div class="cp-card__body">
+                <dl class="cp-dl">
+                    <div><dt>@UiIcon.Render("report-money")Số tiền đơn</dt><dd>@PaymentText.Money(o.Amount)</dd></div>
+                    <div><dt>@UiIcon.Render("circle-check")Đã thu</dt><dd>@PaymentText.Money(o.PaidAmount)</dd></div>
+                    <div><dt>@UiIcon.Render("clock")Còn phải thu</dt><dd>@PaymentText.Money(o.Remaining)</dd></div>
+                    <div><dt>@UiIcon.Render("clock")QR hết hạn</dt><dd>@PaymentText.VietnamTime(o.ExpiresAt)</dd></div>
+                    <div><dt>@UiIcon.Render("user")Khách hàng</dt><dd>@(Model.Contact?.Name ?? "Khách lẻ")</dd></div>
+                    <div><dt>@UiIcon.Render("building-bank")Nhận tiền vào</dt><dd>@(Model.Bank is { } b ? $"{b.BankName} — {b.ReceiveAccount}" : "—")</dd></div>
+                    <div><dt>@UiIcon.Render("file-text")Hóa đơn điện tử</dt><dd>@(o.AutoIssueInvoice ? "Tự động xuất khi thanh toán đủ" : "Không tự động") @if (o.InvoiceStatus != "NONE") {<span class="cp-badge cp-badge--soft">@o.InvoiceStatus</span>}</dd></div>
+                    <div><dt>@UiIcon.Render("qrcode")Loại QR</dt><dd>@(o.QrType == TingeeQrTypes.Recurring ? "QR động (trả nhiều lần đến khi đủ)" : o.QrType == TingeeQrTypes.Static ? "QR tĩnh (nội dung: mã đơn)" : "—")</dd></div>
+                </dl>
+                <div class="cp-progress" style="margin-top:14px" role="progressbar" aria-valuenow="@percent" aria-valuemin="0" aria-valuemax="100" aria-label="Tỷ lệ đã thanh toán"><span style="width:@(percent)%"></span></div>
+                @if (o.LastError is string err) {<div class="cp-error" style="margin-top:10px">@err</div>}
+            </div>
+            <div class="cp-card__foot">
+                <a class="cp-btn cp-btn--ghost" asp-action="Index">@UiIcon.Render("arrow-left")<span>Danh sách đơn</span></a>
+                @if (open || Model.Status == OrderStatus.Expired) {<form method="post" asp-action="Refresh" asp-route-id="@o.Id"><button class="cp-btn cp-btn--ghost" type="submit">@UiIcon.Render("refresh")<span>Kiểm tra thanh toán</span></button></form>}
+                @if (canIssue) {<form method="post" asp-action="IssueQr" asp-route-id="@o.Id"><button class="cp-btn cp-btn--primary" type="submit">@UiIcon.Render("qrcode")<span>Tạo QR @(o.PaidAmount > 0 ? "cho số còn lại" : "")</span></button></form>}
+                @if (Model.CanManage && OrderStatus.IsOpen(o.Status) && o.PaidAmount == 0) {<form method="post" asp-action="Cancel" asp-route-id="@o.Id" style="margin-left:auto" onsubmit="return confirm('Hủy đơn @o.OrderNo? Mã QR sẽ không còn dùng được.')"><button class="cp-btn cp-btn--danger" type="submit">@UiIcon.Render("ban")<span>Hủy đơn</span></button></form>}
+            </div>
+        </section>
+        <section class="cp-card">
+            <div class="cp-card__head"><span class="cp-blob cp-blob--gold">@UiIcon.Render("list-tree")</span><h2>Hàng hóa / dịch vụ</h2></div>
+            <div class="cp-table-wrap">
+                <table class="cp-table">
+                    <thead><tr><th>#</th><th>Tên</th><th>ĐVT</th><th class="cp-num">SL</th><th class="cp-num">Đơn giá</th><th>Thuế</th><th class="cp-num">Thành tiền</th></tr></thead>
+                    <tbody>
+                    @foreach (var l in o.Lines)
+                    {
+                        <tr><td>@l.LineNumber</td><td>@l.ItemName</td><td>@(l.UnitName ?? "—")</td><td class="cp-num">@l.Quantity.ToString("0.###")</td><td class="cp-num">@PaymentText.Money(l.UnitPrice)</td><td>@OrderMath.TaxRates.First(t => t.Code == l.TaxRateCode).Label</td><td class="cp-num">@PaymentText.Money(l.Total)</td></tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+    <section class="cp-card" style="align-self:start" aria-label="Mã QR thanh toán">
+        @if (Model.QrSvg is string svg)
+        {
+            <div class="cp-qr" data-cp-qr data-cp-poll="@Url.Action("Status", new { id = o.Id })" data-cp-poll-status="@Model.Status" data-cp-poll-paid="@o.PaidAmount.ToString(System.Globalization.CultureInfo.InvariantCulture)">
+                @Html.Raw(svg)
+                <div class="cp-qr__amount">@PaymentText.Money(o.Remaining)</div>
+                <div class="cp-muted">Quét bằng ứng dụng ngân hàng · Nội dung: <span class="cp-code">@o.OrderNo</span></div>
+                <div class="cp-muted">Hiệu lực đến @PaymentText.VietnamTime(o.ExpiresAt)</div>
+            </div>
+        }
+        else
+        {
+            <div class="cp-qr cp-muted">@UiIcon.Render("qrcode")<p>@(Model.Status switch { OrderStatus.Paid => "Đơn đã được thanh toán đủ.", OrderStatus.Cancelled => "Đơn đã hủy.", OrderStatus.Expired => "Mã QR đã hết hạn.", _ => "Đơn chưa có mã QR." })</p></div>
+        }
+    </section>
+</div>
