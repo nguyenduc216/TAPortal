@@ -6,7 +6,7 @@ IF DB_NAME() <> N'TAPortalSys'
 DECLARE @fail int = 0, @name sysname;
 PRINT N'=== TINGEE FOUNDATION VERIFY ===';
 DECLARE @objects TABLE (Name sysname);
-INSERT @objects VALUES (N'TingeeMerchants'),(N'CustomerBankAccounts'),(N'CustomerContacts'),(N'CustomerOrders'),(N'CustomerOrderLines'),(N'CustomerPaymentSettings'),(N'TingeeWebhookInbox');
+INSERT @objects VALUES (N'TingeeMerchants'),(N'CustomerBankAccounts'),(N'CustomerBuyers'),(N'CustomerOrders'),(N'CustomerOrderLines'),(N'CustomerPaymentSettings'),(N'TingeeWebhookInbox');
 DECLARE c CURSOR LOCAL FAST_FORWARD FOR SELECT Name FROM @objects;
 OPEN c; FETCH NEXT FROM c INTO @name;
 WHILE @@FETCH_STATUS = 0
@@ -18,7 +18,7 @@ END
 CLOSE c; DEALLOCATE c;
 DECLARE @indexes TABLE (TableName sysname, IndexName sysname);
 INSERT @indexes VALUES (N'TingeeMerchants',N'UQ_TingeeMerchants_Customer'),(N'TingeeMerchants',N'UQ_TingeeMerchants_Merchant'),
-    (N'CustomerContacts',N'UX_CC_Customer_Code'),(N'CustomerOrders',N'UX_CO_Customer_OrderNo'),(N'CustomerOrders',N'UX_CO_BillId'),
+    (N'CustomerBuyers',N'UX_CB_Customer_Code'),(N'CustomerOrders',N'UX_CO_Customer_OrderNo'),(N'CustomerOrders',N'UX_CO_BillId'),
     (N'CustomerBankAccounts',N'UX_CBA_Customer_Va'),(N'TingeeWebhookInbox',N'UX_TWI_Kind_Dedup');
 DECLARE @t sysname, @i sysname;
 DECLARE x CURSOR LOCAL FAST_FORWARD FOR SELECT TableName, IndexName FROM @indexes;
@@ -31,7 +31,10 @@ BEGIN
     FETCH NEXT FROM x INTO @t, @i;
 END
 CLOSE x; DEALLOCATE x;
-IF EXISTS (SELECT 1 FROM sys.foreign_keys WHERE parent_object_id IN (OBJECT_ID(N'dbo.TingeeMerchants'),OBJECT_ID(N'dbo.CustomerBankAccounts'),OBJECT_ID(N'dbo.CustomerContacts'),OBJECT_ID(N'dbo.CustomerOrders'),OBJECT_ID(N'dbo.CustomerOrderLines'),OBJECT_ID(N'dbo.CustomerPaymentSettings')) AND (is_disabled = 1 OR is_not_trusted = 1))
+IF EXISTS (SELECT 1 FROM sys.foreign_keys WHERE parent_object_id IN (OBJECT_ID(N'dbo.TingeeMerchants'),OBJECT_ID(N'dbo.CustomerBankAccounts'),OBJECT_ID(N'dbo.CustomerBuyers'),OBJECT_ID(N'dbo.CustomerOrders'),OBJECT_ID(N'dbo.CustomerOrderLines'),OBJECT_ID(N'dbo.CustomerPaymentSettings')) AND (is_disabled = 1 OR is_not_trusted = 1))
 BEGIN PRINT N'FAIL: a foreign key is disabled or untrusted'; SET @fail += 1; END
 ELSE PRINT N'PASS: foreign keys enabled and trusted';
+IF EXISTS (SELECT 1 FROM sys.foreign_keys WHERE parent_object_id = OBJECT_ID(N'dbo.CustomerOrders') AND referenced_object_id = OBJECT_ID(N'dbo.CustomerContacts'))
+BEGIN PRINT N'FAIL: dbo.CustomerOrders still references dbo.CustomerContacts (run migration 012)'; SET @fail += 1; END
+ELSE PRINT N'PASS: dbo.CustomerOrders does not reference dbo.CustomerContacts';
 PRINT N'VERIFY_STATUS=' + CASE WHEN @fail = 0 THEN N'PASS' ELSE N'FAIL (' + CAST(@fail AS nvarchar(10)) + N')' END;

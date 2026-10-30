@@ -1,4 +1,4 @@
--- TINGEE-INTEGRATION-CHG-20261029T203104Z-1FE09C — DBA template, NOT_EXECUTED. Run after 011-tingee-payments-foundation.sql.
+-- TINGEE-INTEGRATION-CHG-20261029T203104Z-1FE09C — DBA template, NOT_EXECUTED. Run after migrations 011 and 012.
 -- Substitute EXISTING database principals of each website; do not run under an administrator identity in a website.
 -- HOW TO RUN: copy to a new query, remove the leading "-- " and replace the principal names; this file does nothing as it is.
 -- Check the result with 014-diagnose-tingee-foundation.sql.
@@ -7,7 +7,7 @@
 -- Customer Portal (TACustomerPortal.Web): its own data only (every query is filtered by the signed-in customer).
 -- GRANT SELECT ON dbo.TingeeMerchants TO [CustomerApplicationPrincipal];
 -- GRANT SELECT, INSERT, UPDATE ON dbo.CustomerBankAccounts TO [CustomerApplicationPrincipal];
--- GRANT SELECT, INSERT, UPDATE ON dbo.CustomerContacts TO [CustomerApplicationPrincipal];
+-- GRANT SELECT, INSERT, UPDATE ON dbo.CustomerBuyers TO [CustomerApplicationPrincipal];
 -- GRANT SELECT, INSERT, UPDATE ON dbo.CustomerOrders TO [CustomerApplicationPrincipal];
 -- GRANT SELECT, INSERT ON dbo.CustomerOrderLines TO [CustomerApplicationPrincipal];
 -- GRANT SELECT, INSERT, UPDATE ON dbo.CustomerPaymentSettings TO [CustomerApplicationPrincipal];

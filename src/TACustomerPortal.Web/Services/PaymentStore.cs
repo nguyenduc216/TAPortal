@@ -172,7 +172,7 @@ WHERE CustomerId=@c AND (IsDefault=1 OR Id=@id)
     public async Task<IReadOnlyList<Contact>> ContactsAsync(Guid customerId)
     {
         await using var cn = await Open();
-        await using var cmd = Command(cn, $"SELECT {ContactColumns} FROM dbo.CustomerContacts WHERE CustomerId=@c AND IsDeleted=0 ORDER BY Name", ("@c", customerId));
+        await using var cmd = Command(cn, $"SELECT {ContactColumns} FROM dbo.CustomerBuyers WHERE CustomerId=@c AND IsDeleted=0 ORDER BY Name", ("@c", customerId));
         var list = new List<Contact>();
         await using var r = await cmd.ExecuteReaderAsync();
         while (await r.ReadAsync()) list.Add(ReadContact(r));
@@ -182,7 +182,7 @@ WHERE CustomerId=@c AND (IsDefault=1 OR Id=@id)
     public async Task<Contact?> ContactAsync(Guid customerId, Guid id)
     {
         await using var cn = await Open();
-        await using var cmd = Command(cn, $"SELECT {ContactColumns} FROM dbo.CustomerContacts WHERE CustomerId=@c AND Id=@id AND IsDeleted=0", ("@c", customerId), ("@id", id));
+        await using var cmd = Command(cn, $"SELECT {ContactColumns} FROM dbo.CustomerBuyers WHERE CustomerId=@c AND Id=@id AND IsDeleted=0", ("@c", customerId), ("@id", id));
         await using var r = await cmd.ExecuteReaderAsync();
         return await r.ReadAsync() ? ReadContact(r) : null;
     }
@@ -191,8 +191,8 @@ WHERE CustomerId=@c AND (IsDefault=1 OR Id=@id)
     {
         await using var cn = await Open();
         var sql = x.Id == Guid.Empty
-            ? "INSERT dbo.CustomerContacts(CustomerId,Code,Name,LegalName,TaxCode,Phone,Email,Address,Note,IsActive,CreatedBy) VALUES(@c,@code,@name,@legal,@tax,@phone,@email,@address,@note,1,@actor)"
-            : "UPDATE dbo.CustomerContacts SET Code=@code,Name=@name,LegalName=@legal,TaxCode=@tax,Phone=@phone,Email=@email,Address=@address,Note=@note,UpdatedAt=SYSUTCDATETIME(),UpdatedBy=@actor WHERE CustomerId=@c AND Id=@id AND IsDeleted=0";
+            ? "INSERT dbo.CustomerBuyers(CustomerId,Code,Name,LegalName,TaxCode,Phone,Email,Address,Note,IsActive,CreatedBy) VALUES(@c,@code,@name,@legal,@tax,@phone,@email,@address,@note,1,@actor)"
+            : "UPDATE dbo.CustomerBuyers SET Code=@code,Name=@name,LegalName=@legal,TaxCode=@tax,Phone=@phone,Email=@email,Address=@address,Note=@note,UpdatedAt=SYSUTCDATETIME(),UpdatedBy=@actor WHERE CustomerId=@c AND Id=@id AND IsDeleted=0";
         await using var cmd = Command(cn, sql, ("@c", customerId), ("@id", x.Id), ("@code", x.Code), ("@name", x.Name), ("@legal", x.LegalName), ("@tax", x.TaxCode),
             ("@phone", x.Phone), ("@email", x.Email), ("@address", x.Address), ("@note", x.Note), ("@actor", actor));
         try { await cmd.ExecuteNonQueryAsync(); return true; }
@@ -202,7 +202,7 @@ WHERE CustomerId=@c AND (IsDefault=1 OR Id=@id)
     public async Task SetContactActiveAsync(Guid customerId, Guid id, bool active, Guid actor)
     {
         await using var cn = await Open();
-        await using var cmd = Command(cn, "UPDATE dbo.CustomerContacts SET IsActive=@a,UpdatedAt=SYSUTCDATETIME(),UpdatedBy=@actor WHERE CustomerId=@c AND Id=@id AND IsDeleted=0",
+        await using var cmd = Command(cn, "UPDATE dbo.CustomerBuyers SET IsActive=@a,UpdatedAt=SYSUTCDATETIME(),UpdatedBy=@actor WHERE CustomerId=@c AND Id=@id AND IsDeleted=0",
             ("@c", customerId), ("@id", id), ("@a", active), ("@actor", actor));
         await cmd.ExecuteNonQueryAsync();
     }
@@ -211,7 +211,7 @@ WHERE CustomerId=@c AND (IsDefault=1 OR Id=@id)
     private const string OrderSelect = """
 SELECT o.Id,o.OrderNo,o.ContactId,c.Name,o.BankAccountId,o.Description,o.Amount,o.PaidAmount,o.Status,o.QrType,o.QrPayload,o.QrAccount,o.BillId,
  o.QrExpireMinutes,o.ExpiresAt,o.AutoIssueInvoice,o.InvoiceStatus,o.LastError,o.CreatedAt
-FROM dbo.CustomerOrders o LEFT JOIN dbo.CustomerContacts c ON c.Id=o.ContactId AND c.CustomerId=o.CustomerId
+FROM dbo.CustomerOrders o LEFT JOIN dbo.CustomerBuyers c ON c.Id=o.ContactId AND c.CustomerId=o.CustomerId
 """;
 
     private static Order ReadOrder(SqlDataReader r, IReadOnlyList<OrderLine> lines) => new(r.GetGuid(0), r.GetString(1), r.IsDBNull(2) ? null : r.GetGuid(2), S(r, 3),

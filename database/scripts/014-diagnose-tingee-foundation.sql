@@ -1,17 +1,17 @@
--- TINGEE-INTEGRATION-CHG-20261030T103236Z-05E4FE — READ ONLY; SQL Server 2014; output only Messages.
--- Checks dbo.CustomerContacts against the application, table row counts, roles and the permissions the apps need.
+-- TINGEE-INTEGRATION-CHG-20261030T131324Z-F23ADA — READ ONLY; SQL Server 2014; output only Messages.
+-- Checks dbo.CustomerBuyers against the application, table row counts, roles and the permissions the apps need.
 -- Expected last line: DIAGNOSE_STATUS=PASS. Prints names and counts only, never row data.
 SET NOCOUNT ON;
 IF DB_NAME() <> N'TAPortalSys'
     THROW 51000, 'FAIL: Expected database TAPortalSys', 1;
 DECLARE @fail int = 0, @warn int = 0, @name sysname, @type sysname, @line nvarchar(1000), @user sysname, @userId int, @missing nvarchar(1000), @rows bigint, @created datetime;
-DECLARE @contacts int = OBJECT_ID(N'dbo.CustomerContacts', N'U');
+DECLARE @contacts int = OBJECT_ID(N'dbo.CustomerBuyers', N'U');
 PRINT N'=== TINGEE FOUNDATION DIAGNOSE ===';
 PRINT N'INFO: running as ' + USER_NAME() + N'; a user without permission on a table may see it as missing';
 
 PRINT N'--- 1. Tables ---';
 DECLARE @tables TABLE (Name sysname);
-INSERT @tables VALUES (N'TingeeMerchants'),(N'CustomerBankAccounts'),(N'CustomerContacts'),(N'CustomerOrders'),(N'CustomerOrderLines'),(N'CustomerPaymentSettings'),(N'TingeeWebhookInbox');
+INSERT @tables VALUES (N'TingeeMerchants'),(N'CustomerBankAccounts'),(N'CustomerBuyers'),(N'CustomerOrders'),(N'CustomerOrderLines'),(N'CustomerPaymentSettings'),(N'TingeeWebhookInbox');
 DECLARE t CURSOR LOCAL FAST_FORWARD FOR SELECT Name FROM @tables;
 OPEN t; FETCH NEXT FROM t INTO @name;
 WHILE @@FETCH_STATUS = 0
@@ -28,7 +28,7 @@ BEGIN
 END
 CLOSE t; DEALLOCATE t;
 
-PRINT N'--- 2. dbo.CustomerContacts columns used by the application ---';
+PRINT N'--- 2. dbo.CustomerBuyers columns used by the application ---';
 DECLARE @columns TABLE (Name sysname, TypeName sysname);
 INSERT @columns VALUES (N'Id',N'uniqueidentifier'),(N'CustomerId',N'uniqueidentifier'),(N'Code',N'varchar'),(N'Name',N'nvarchar'),(N'LegalName',N'nvarchar'),(N'TaxCode',N'varchar'),(N'Phone',N'varchar'),(N'Email',N'nvarchar'),(N'Address',N'nvarchar'),(N'Note',N'nvarchar'),(N'IsActive',N'bit'),(N'IsDeleted',N'bit'),(N'CreatedAt',N'datetime2'),(N'CreatedBy',N'uniqueidentifier'),(N'UpdatedAt',N'datetime2'),(N'UpdatedBy',N'uniqueidentifier');
 DECLARE c CURSOR LOCAL FAST_FORWARD FOR SELECT Name, TypeName FROM @columns;
@@ -52,19 +52,28 @@ OPEN x; FETCH NEXT FROM x INTO @name;
 WHILE @@FETCH_STATUS = 0
 BEGIN PRINT N'FAIL: extra required column ' + @name + N' has no default'; SET @fail += 1; FETCH NEXT FROM x INTO @name; END
 CLOSE x; DEALLOCATE x;
-IF EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = @contacts AND name = N'UX_CC_Customer_Code' AND is_unique = 1)
-    PRINT N'PASS: index UX_CC_Customer_Code';
-ELSE BEGIN PRINT N'FAIL: index UX_CC_Customer_Code missing'; SET @fail += 1; END
+IF EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = @contacts AND name = N'UX_CB_Customer_Code' AND is_unique = 1)
+    PRINT N'PASS: index UX_CB_Customer_Code';
+ELSE BEGIN PRINT N'FAIL: index UX_CB_Customer_Code missing'; SET @fail += 1; END
 IF EXISTS (SELECT 1 FROM sys.foreign_keys WHERE parent_object_id = @contacts AND referenced_object_id = OBJECT_ID(N'dbo.Customers'))
     PRINT N'PASS: foreign key to dbo.Customers';
 ELSE BEGIN PRINT N'WARN: no foreign key to dbo.Customers'; SET @warn += 1; END
+
+IF EXISTS (SELECT 1 FROM sys.foreign_keys WHERE parent_object_id = OBJECT_ID(N'dbo.CustomerOrders') AND referenced_object_id = @contacts)
+    PRINT N'PASS: dbo.CustomerOrders references dbo.CustomerBuyers';
+ELSE BEGIN PRINT N'FAIL: dbo.CustomerOrders does not reference dbo.CustomerBuyers (run migration 012)'; SET @fail += 1; END
+IF OBJECT_ID(N'dbo.CustomerContacts', N'U') IS NOT NULL
+BEGIN
+    SELECT @rows = SUM(p.rows) FROM sys.partitions p WHERE p.object_id = OBJECT_ID(N'dbo.CustomerContacts', N'U') AND p.index_id IN (0, 1);
+    PRINT N'INFO: existing dbo.CustomerContacts untouched, rows=' + CAST(@rows AS nvarchar(20));
+END
 
 PRINT N'--- 3. Database users, roles and required permissions ---';
 DECLARE @required TABLE (TableName sysname, Permission sysname);
 INSERT @required VALUES
     (N'TingeeMerchants',N'SELECT'),(N'TingeeMerchants',N'INSERT'),(N'TingeeMerchants',N'DELETE'),
     (N'CustomerBankAccounts',N'SELECT'),(N'CustomerBankAccounts',N'INSERT'),(N'CustomerBankAccounts',N'UPDATE'),
-    (N'CustomerContacts',N'SELECT'),(N'CustomerContacts',N'INSERT'),(N'CustomerContacts',N'UPDATE'),
+    (N'CustomerBuyers',N'SELECT'),(N'CustomerBuyers',N'INSERT'),(N'CustomerBuyers',N'UPDATE'),
     (N'CustomerOrders',N'SELECT'),(N'CustomerOrders',N'INSERT'),(N'CustomerOrders',N'UPDATE'),
     (N'CustomerOrderLines',N'SELECT'),(N'CustomerOrderLines',N'INSERT'),
     (N'CustomerPaymentSettings',N'SELECT'),(N'CustomerPaymentSettings',N'INSERT'),(N'CustomerPaymentSettings',N'UPDATE'),
