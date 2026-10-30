@@ -33,3 +33,7 @@ Admin: tab Thanh toán Tingee. Customer: ngân hàng, khách hàng, đơn hàng 
 ## Current status (2026-10-30, sau change 05E4FE)
 Có chế độ `Tingee__Mode=Direct` để test bằng tài khoản Merchant thường; Master Merchant vẫn PENDING_OPERATOR. Operator báo migration 011 OK, nhưng `dbo.CustomerContacts` có từ trước và chưa được đối chiếu (chờ script 014). Tingee thật NOT_VERIFIED. Publish tại `src\publish\deployed-<PROJECT_NAME>`.
 | `TINGEE-INTEGRATION-CHG-20261030T124900Z-448FB4` | 2026-10-30 | Fix collation conflict in diagnostic script 014 | a04dab999b24c3779607a0296eb946ff4e5d0deb | NONE_REQUIRED | NOT_RUN | PENDING_APPROVAL |
+| `TINGEE-INTEGRATION-CHG-20261030T131324Z-F23ADA` | 2026-10-30 | Separate CustomerBuyers table; stop using the existing CustomerContacts table | 5db5161254907991e697eca76e3b46133edb5e33 | NOT_EXECUTED (012) | PUBLISHED (local: Customer) / NOT_DEPLOYED | PENDING_APPROVAL |
+
+## Current status (2026-10-30, sau change F23ADA)
+Khách hàng của doanh nghiệp lưu ở `dbo.CustomerBuyers`; `dbo.CustomerContacts` có sẵn không được dùng. Migration 012 NOT_EXECUTED: trang khách hàng và đơn hàng chưa dùng được cho đến khi operator chạy.
