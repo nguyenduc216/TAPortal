@@ -28,3 +28,6 @@ TACustomerPortal.Web: `src\publish\deployed-TACustomerPortal.Web`, exit 0, 2026-
 
 ## Git
 Branch feature/customer-portal-mvp01; base c78fe5c73cf90359130d27b9d9976b8661420460; source 5db5161254907991e697eca76e3b46133edb5e33; PR #7 chưa merge.
+
+## Operator xác nhận (2026-10-30)
+Operator đã chạy migration 012 (`012-tingee-customer-buyers.sql: OK`), `012-verify-tingee-foundation.sql` (`VERIFY_STATUS=PASS`) và `014-diagnose-tingee-foundation.sql` (`PASS_WITH_WARNINGS (1)`: TA_User là db_owner). `dbo.CustomerContacts` vẫn 10 dòng. TG-02 về database: VERIFIED; chức năng trên trang và Tingee thật: NOT_VERIFIED.
