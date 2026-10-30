@@ -1,5 +1,7 @@
 -- TINGEE-INTEGRATION-CHG-20261029T203104Z-1FE09C — DBA template, NOT_EXECUTED. Run after 011-tingee-payments-foundation.sql.
 -- Substitute EXISTING database principals of each website; do not run under an administrator identity in a website.
+-- HOW TO RUN: copy to a new query, remove the leading "-- " and replace the principal names; this file does nothing as it is.
+-- Check the result with 014-diagnose-tingee-foundation.sql.
 -- IF DB_NAME() <> N'TAPortalSys' THROW 51000, 'Wrong database: expected TAPortalSys', 1;
 --
 -- Customer Portal (TACustomerPortal.Web): its own data only (every query is filtered by the signed-in customer).

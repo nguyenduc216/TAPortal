@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 namespace TAPortal.Integrations.Tingee;
 
 // Typed Tingee Open API calls used by Admin (Master Merchant) and Customer Portal. Every call is made with T.A's
-// Master Merchant key and carries the child merchantId. Field names follow developers.tingee.vn (openapi v1.2.2).
+// Master Merchant key and carries the child merchantId, or in Direct mode with a normal Merchant's own key and no merchantId. Field names follow developers.tingee.vn (openapi v1.2.2).
 
 public sealed record TingeeCreateMerchantRequest(
     [property: JsonPropertyName("name")] string Name,
@@ -20,7 +20,7 @@ public sealed record TingeeMerchantCreated
 
 public sealed record TingeeCreateVaRequest
 {
-    [JsonPropertyName("merchantId")] public long MerchantId { get; init; }
+    [JsonPropertyName("merchantId")] public long? MerchantId { get; init; }
     [JsonPropertyName("bankBin")] public required string BankBin { get; init; }
     [JsonPropertyName("accountType")] public string? AccountType { get; init; }
     [JsonPropertyName("accountNumber")] public string? AccountNumber { get; init; }
@@ -83,7 +83,7 @@ public sealed record TingeePage<T>
 
 public sealed record TingeeDynamicQrRequest
 {
-    [JsonPropertyName("merchantId")] public long MerchantId { get; init; }
+    [JsonPropertyName("merchantId")] public long? MerchantId { get; init; }
     [JsonPropertyName("vaAccountNumber")] public required string VaAccountNumber { get; init; }
     [JsonPropertyName("qrCodeType")] public string QrCodeType { get; init; } = TingeeQrTypes.Recurring;
     [JsonPropertyName("bankBin")] public required string BankBin { get; init; }
@@ -143,6 +143,7 @@ public sealed class TingeeApiException(string? code, string? message)
 public interface ITingeeApi
 {
     bool IsConfigured { get; }
+    bool IsDirectMerchant => false;
     Task<TingeeMerchantCreated> CreateMerchantAsync(TingeeCreateMerchantRequest request, CancellationToken ct = default);
     Task<TingeeCreateVaResult> CreateVaAsync(TingeeCreateVaRequest request, CancellationToken ct = default);
     Task<TingeeConfirmVaResult> ConfirmVaAsync(long merchantId, string bankBin, string confirmId, string otp, CancellationToken ct = default);
@@ -158,6 +159,9 @@ public interface ITingeeApi
 public sealed class TingeeApi(TingeeClient client, Microsoft.Extensions.Options.IOptions<TingeeOptions> options) : ITingeeApi
 {
     public bool IsConfigured => options.Value.IsConfigured;
+    public bool IsDirectMerchant => options.Value.IsDirectMerchant;
+
+    private long? Mid(long? merchantId) => IsDirectMerchant ? null : merchantId;
 
     public async Task<TingeeMerchantCreated> CreateMerchantAsync(TingeeCreateMerchantRequest request, CancellationToken ct = default)
     {
@@ -166,31 +170,31 @@ public sealed class TingeeApi(TingeeClient client, Microsoft.Extensions.Options.
     }
 
     public async Task<TingeeCreateVaResult> CreateVaAsync(TingeeCreateVaRequest request, CancellationToken ct = default) =>
-        Data(await client.PostAsync<TingeeCreateVaResult>("/v1/create-va", request, ct));
+        Data(await client.PostAsync<TingeeCreateVaResult>("/v1/create-va", request with { MerchantId = Mid(request.MerchantId) }, ct));
 
     public async Task<TingeeConfirmVaResult> ConfirmVaAsync(long merchantId, string bankBin, string confirmId, string otp, CancellationToken ct = default) =>
-        Data(await client.PostAsync<TingeeConfirmVaResult>("/v1/confirm-va", new { merchantId, bankBin, confirmId, otpNumber = otp }, ct));
+        Data(await client.PostAsync<TingeeConfirmVaResult>("/v1/confirm-va", new { merchantId = Mid(merchantId), bankBin, confirmId, otpNumber = otp }, ct));
 
     public async Task<TingeeDeleteVaResult> DeleteVaAsync(long merchantId, string bankBin, string vaAccountNumber, CancellationToken ct = default) =>
-        Data(await client.PostQueryAsync<TingeeDeleteVaResult>($"/v1/delete-va?merchantId={merchantId}&bankBin={Uri.EscapeDataString(bankBin)}&vaAccountNumber={Uri.EscapeDataString(vaAccountNumber)}", ct), allowEmpty: true);
+        Data(await client.PostQueryAsync<TingeeDeleteVaResult>($"/v1/delete-va?{(IsDirectMerchant ? "" : $"merchantId={merchantId}&")}bankBin={Uri.EscapeDataString(bankBin)}&vaAccountNumber={Uri.EscapeDataString(vaAccountNumber)}", ct), allowEmpty: true);
 
     public async Task ConfirmDeleteVaAsync(long merchantId, string bankBin, string confirmId, string otp, CancellationToken ct = default) =>
-        Check(await client.PostAsync<object>("/v1/confirm-delete-va", new { merchantId, bankBin, confirmId, otpNumber = otp }, ct));
+        Check(await client.PostAsync<object>("/v1/confirm-delete-va", new { merchantId = Mid(merchantId), bankBin, confirmId, otpNumber = otp }, ct));
 
     public async Task<TingeePage<TingeeVaItem>> GetVaPageAsync(long merchantId, CancellationToken ct = default) =>
-        Data(await client.PostAsync<TingeePage<TingeeVaItem>>("/v1/get-va-paging", new { merchantId, skipCount = 0, maxResultCount = 200 }, ct), allowEmpty: true);
+        Data(await client.PostAsync<TingeePage<TingeeVaItem>>("/v1/get-va-paging", new { merchantId = Mid(merchantId), skipCount = 0, maxResultCount = 200 }, ct), allowEmpty: true);
 
     public async Task<TingeeDynamicQr> GenerateDynamicQrAsync(TingeeDynamicQrRequest request, CancellationToken ct = default) =>
-        Data(await client.PostAsync<TingeeDynamicQr>("/v1/generate-dynamic-qr", request, ct));
+        Data(await client.PostAsync<TingeeDynamicQr>("/v1/generate-dynamic-qr", request with { MerchantId = Mid(request.MerchantId) }, ct));
 
     public async Task<TingeeStaticQr> GenerateStaticQrAsync(TingeeStaticQrRequest request, CancellationToken ct = default) =>
         Data(await client.PostAsync<TingeeStaticQr>("/v1/generate-viet-qr", request, ct));
 
     public async Task<TingeeQrStatus> GetDynamicQrStatusAsync(long merchantId, string qrAccount, string billId, CancellationToken ct = default) =>
-        Data(await client.PostAsync<TingeeQrStatus>("/v1/get-status-dynamic-qr", new { merchantId, qrAccount, billId }, ct));
+        Data(await client.PostAsync<TingeeQrStatus>("/v1/get-status-dynamic-qr", new { merchantId = Mid(merchantId), qrAccount, billId }, ct));
 
     public async Task DeleteDynamicQrAsync(long merchantId, string qrAccount, string billId, CancellationToken ct = default) =>
-        Check(await client.PostAsync<object>("/v1/delete-dynamic-qr", new { merchantId, qrAccount, billId }, ct));
+        Check(await client.PostAsync<object>("/v1/delete-dynamic-qr", new { merchantId = Mid(merchantId), qrAccount, billId }, ct));
 
     private static T Data<T>(TingeeResponse<T> response, bool allowEmpty = false) where T : class, new()
     {

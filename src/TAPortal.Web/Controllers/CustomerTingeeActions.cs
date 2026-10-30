@@ -95,11 +95,12 @@ public sealed partial class CustomersController
         ViewData["Workspace"] = CustomerWorkspaceHeader.From(customer, CustomerWorkspace.Tingee);
         Response.StatusCode = status;
         input ??= new() { Name = customer.Name, PhoneNumber = Digits(customer.Phone), Email = customer.Email, Code = customer.Code.Length <= 20 ? customer.Code : null };
-        return View("Tingee", new CustomerTingeeVm(customer, link, available, api.IsConfigured, input));
+        return View("Tingee", new CustomerTingeeVm(customer, link, available, api.IsConfigured, input, api.IsDirectMerchant));
     }
 
     private static string? Refusal(CustomerEditVm customer, ITingeeApi api) =>
-        !api.IsConfigured ? "Chưa cấu hình khóa API Master Merchant của Tingee (Tingee__ClientId, Tingee__SecretKey)."
+        api.IsDirectMerchant ? "Tingee đang chạy bằng tài khoản Merchant thường (Tingee__Mode=Direct) nên không tạo được tài khoản con. Hãy dùng \"Liên kết merchant có sẵn\"."
+        : !api.IsConfigured ? "Chưa cấu hình khóa API Master Merchant của Tingee (Tingee__ClientId, Tingee__SecretKey)."
         : !(customer.IsActive && customer.Status == "ACTIVE") ? InactiveCustomer : null;
 
     private async Task<TingeeLinkOutcome> SafeLink(TingeeMerchantLink link, ITingeeMerchantStore tingee, Guid actor)

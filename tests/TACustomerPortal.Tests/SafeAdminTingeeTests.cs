@@ -64,6 +64,25 @@ public sealed class SafeAdminTingeeTests
     }
 
     [Fact]
+    public async Task DirectModeHidesMerchantCreationAndRefusesItButStillLinks()
+    {
+        using var f = Factory(out var store, out var tingee);
+        tingee.Direct = true;
+        var c = Client(f);
+        var html = await c.GetStringAsync($"/customers/tingee/{A}");
+        Assert.Contains("data-ta-tingee-direct", html);
+        Assert.DoesNotContain("tingeeCreate", html);
+        Assert.Contains("tingeeLink", html);
+
+        await Post(c, $"/customers/createtingeemerchant/{A}", await Token(c, $"/customers/tingee/{A}"), new() { ["Create.Name"] = "Công ty A", ["Create.PhoneNumber"] = "0912345678" });
+        Assert.Empty(tingee.Created);
+        Assert.Empty(store.Links);
+
+        await Post(c, $"/customers/linktingeemerchant/{A}", await Token(c, $"/customers/tingee/{A}"), new() { ["merchantId"] = "1" });
+        Assert.Equal(1L, Assert.Single(store.Links).Value.MerchantId);
+    }
+
+    [Fact]
     public async Task InvalidInputAndTingeeErrorsDoNotLinkAnything()
     {
         using var f = Factory(out var store, out var tingee);
@@ -180,6 +199,8 @@ public sealed class SafeAdminTingeeTests
     public sealed class RecordingTingee(bool configured) : ITingeeApi
     {
         public bool IsConfigured => configured;
+        public bool Direct { get; set; }
+        public bool IsDirectMerchant => Direct;
         public TingeeApiException? Error { get; set; }
         public List<TingeeCreateMerchantRequest> Created { get; } = [];
         public Task<TingeeMerchantCreated> CreateMerchantAsync(TingeeCreateMerchantRequest request, CancellationToken ct = default)

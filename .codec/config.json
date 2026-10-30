@@ -17,13 +17,14 @@
     "execute_writing_stored_procedures_allowed": false,
     "mutating_integration_tests_allowed": false,
     "verification_output_default": "PRINT_TEXT",
+    "read_query_output": "TEXT_UNLESS_GRID_NEEDED",
     "unavailable_read_status": "NOT_VERIFIED"
   },
   "deploy": {
     "targets": {
-      "TAPortal.Web": "D:\\T.A\\TAPortal\\TAPortal\\publish\\deployed-TAPortal.Web",
-      "TACustomerPortal.Web": "D:\\T.A\\TAPortal\\TAPortal\\publish\\deployed-TACustomerPortal.Web",
-      "TAPortal.Webhooks": "D:\\T.A\\TAPortal\\TAPortal\\publish\\deployed-TAPortal.Webhooks"
+      "TAPortal.Web": "D:\\T.A\\TAPortal\\TAPortal\\src\\publish\\deployed-TAPortal.Web",
+      "TACustomerPortal.Web": "D:\\T.A\\TAPortal\\TAPortal\\src\\publish\\deployed-TACustomerPortal.Web",
+      "TAPortal.Webhooks": "D:\\T.A\\TAPortal\\TAPortal\\src\\publish\\deployed-TAPortal.Webhooks"
     },
     "allow_alternate_target": false,
     "create_target_directory": true,
@@ -32,7 +33,7 @@
     "status": "CONFIGURED",
     "rename_or_move_target_allowed": false,
     "separate_source_sha_and_artifact_sha256": true,
-    "target_pattern": "<WORKSPACE_ROOT>\\publish\\deployed-<PROJECT_NAME>",
+    "target_pattern": "<WORKSPACE_ROOT>\\src\\publish\\deployed-<PROJECT_NAME>",
     "require_iis_preflight": false,
     "live_iis_overwrite_requires_separate_approval": true,
     "local_artifact_only": true,

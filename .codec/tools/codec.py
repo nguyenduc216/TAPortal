@@ -46,7 +46,7 @@ def validate():
     if cfg['deploy']['allow_alternate_target']: errors.append('Alternate publish targets forbidden')
     if cfg['deploy'].get('require_iis_preflight') is not False or cfg['deploy'].get('local_artifact_only') is not True or cfg['deploy'].get('live_iis_overwrite_requires_separate_approval') is not True: errors.append('Local artifact safety guards missing')
     if cfg.get('machine') != {'role':'DEV_TEST','inspect_iis_allowed':False,'probe_server_configuration_allowed':False,'request_administrator_allowed':False,'deploy_iis_allowed':False}: errors.append('DEV/TEST machine policy invalid')
-    if cfg['database'].get('read_only_queries_only') is not True or cfg['database'].get('execute_writing_stored_procedures_allowed') is not False or cfg['database'].get('mutating_integration_tests_allowed') is not False or cfg['database'].get('verification_output_default') != 'PRINT_TEXT' or cfg['database'].get('unavailable_read_status') != 'NOT_VERIFIED': errors.append('Read-only database policy invalid')
+    if cfg['database'].get('read_only_queries_only') is not True or cfg['database'].get('execute_writing_stored_procedures_allowed') is not False or cfg['database'].get('mutating_integration_tests_allowed') is not False or cfg['database'].get('verification_output_default') != 'PRINT_TEXT' or cfg['database'].get('read_query_output') != 'TEXT_UNLESS_GRID_NEEDED' or cfg['database'].get('unavailable_read_status') != 'NOT_VERIFIED': errors.append('Read-only database policy invalid')
     if not cfg['git']['merge_requires_approval']: errors.append('Merge approval disabled')
     if cfg['database']['server'] != r'WIN-HSHL54Q184K\MSSQLSERVER2014' or cfg['database']['name'] != 'TAPortalSys': errors.append('Unexpected SQL server/database')
     if cfg['database'].get('allowed_databases') != ['TAPortalSys']: errors.append('Only TAPortalSys is allowed')
@@ -79,7 +79,7 @@ def validate():
     for value in cfg['deploy']['targets'].values():
         if value and not pathlib.PureWindowsPath(value).is_absolute(): errors.append('Publish path must be absolute')
     for project, value in cfg['deploy']['targets'].items():
-        expected = pathlib.PureWindowsPath(ROOT) / 'publish' / ('deployed-' + project)
+        expected = pathlib.PureWindowsPath(ROOT) / 'src' / 'publish' / ('deployed-' + project)
         if value and pathlib.PureWindowsPath(value) != expected: errors.append('Publish path violates fixed convention: ' + project)
     print('POLICY:', 'PASS' if not errors else 'FAIL')
     print('Publish targets awaiting operator configuration:', ', '.join(missing) or 'none')

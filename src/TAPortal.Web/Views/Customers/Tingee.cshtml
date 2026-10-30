@@ -14,6 +14,10 @@
 {
     <div class="ta-alert ta-alert--warning" role="note" data-ta-tingee-unconfigured>@UiIcon.Render("alert-triangle")<div class="ta-alert__body">Chưa cấu hình khóa API Master Merchant của Tingee (<code>Tingee__ClientId</code>, <code>Tingee__SecretKey</code>) cho TAPortal: chưa thể tạo tài khoản qua API. Vẫn có thể liên kết một merchant có sẵn.</div></div>
 }
+@if (Model.DirectMerchant)
+{
+    <div class="ta-alert ta-alert--warning" role="note" data-ta-tingee-direct>@UiIcon.Render("alert-triangle")<div class="ta-alert__body">Đang dùng tài khoản Merchant thường của Tingee (<code>Tingee__Mode=Direct</code>), chỉ phù hợp để test: chưa tạo được tài khoản con, và mọi khách hàng được liên kết đều dùng chung một tài khoản Tingee. Chỉ nên liên kết một khách hàng; Merchant ID nhập vào chỉ dùng để ánh xạ trên TAPortal, không gửi sang Tingee.</div></div>
+}
 @if (!Model.StoreAvailable)
 {
     <div class="ta-alert ta-alert--danger" role="alert">@UiIcon.Render("database-off")<div class="ta-alert__body">Không đọc được bảng liên kết Tingee (dbo.TingeeMerchants). Kiểm tra migration 011 và quyền cơ sở dữ liệu; chi tiết đã ghi vào nhật ký ứng dụng.</div></div>
@@ -47,7 +51,7 @@
             </div>
         }
     </section>
-    @if (link is null)
+    @if (link is null && !Model.DirectMerchant)
     {
         <section class="card" aria-labelledby="tingeeCreate">
             <div class="card-header"><h2 class="card-title" id="tingeeCreate">@UiIcon.Render("plus")Tạo tài khoản Tingee qua API</h2></div>
@@ -62,6 +66,9 @@
                 <div class="card-footer"><button class="btn btn-primary" type="submit" disabled="@(!canChange || !Model.ApiConfigured)" data-ta-loading data-ta-loading-text="Đang tạo...">@UiIcon.Render("device-floppy")<span>Tạo và liên kết</span></button></div>
             </form>
         </section>
+    }
+    @if (link is null)
+    {
         <section class="card" aria-labelledby="tingeeLink">
             <div class="card-header"><h2 class="card-title" id="tingeeLink">@UiIcon.Render("arrows-exchange")Liên kết merchant có sẵn</h2></div>
             <form asp-action="LinkTingeeMerchant" asp-route-id="@c.Id" method="post">

@@ -5,7 +5,7 @@ namespace TAPortal.Web.Models;
 
 // Customer Workspace → "Tingee" tab. Link is null when the customer has no Tingee merchant yet;
 // StoreAvailable=false when dbo.TingeeMerchants could not be read (migration 011 not run / no permission).
-public sealed record CustomerTingeeVm(CustomerEditVm Customer, TingeeMerchantLink? Link, bool StoreAvailable, bool ApiConfigured, TingeeMerchantCreateInput Create);
+public sealed record CustomerTingeeVm(CustomerEditVm Customer, TingeeMerchantLink? Link, bool StoreAvailable, bool ApiConfigured, TingeeMerchantCreateInput Create, bool DirectMerchant = false);
 
 public sealed class TingeeMerchantCreateInput
 {
