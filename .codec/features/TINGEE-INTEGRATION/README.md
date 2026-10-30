@@ -28,3 +28,7 @@
 
 ## Current status (2026-10-30)
 Admin: tab Thanh toán Tingee. Customer: ngân hàng, khách hàng, đơn hàng QR, cài đặt thanh toán. Webhooks: inbox SQL. Migration 011 NOT_EXECUTED; Tingee chưa có key (NOT_VERIFIED). Tiếp theo: worker xử lý inbox + đối soát, phân quyền linh hoạt, Zalo, hóa đơn.
+| `TINGEE-INTEGRATION-CHG-20261030T103236Z-05E4FE` | 2026-10-30 | Direct Merchant mode for testing without Master Merchant; text diagnostic script | 53dbe68cf9907ff3931fd593203435c15a180029 | OPERATOR_REPORTED_011_OK; 014 NOT_EXECUTED | PUBLISHED (local ×3) / NOT_DEPLOYED | PENDING_APPROVAL |
+
+## Current status (2026-10-30, sau change 05E4FE)
+Có chế độ `Tingee__Mode=Direct` để test bằng tài khoản Merchant thường; Master Merchant vẫn PENDING_OPERATOR. Operator báo migration 011 OK, nhưng `dbo.CustomerContacts` có từ trước và chưa được đối chiếu (chờ script 014). Tingee thật NOT_VERIFIED. Publish tại `src\publish\deployed-<PROJECT_NAME>`.
