@@ -106,5 +106,18 @@
       }
     },
     "previous_artifact_location": "publish\\"
+  },
+  {
+    "change_id": "TINGEE-INTEGRATION-CHG-20261030T124900Z-448FB4",
+    "created_at": "2026-10-30T12:49:00.863473+00:00",
+    "title": "Fix collation conflict in diagnostic script 014",
+    "status": "IMPLEMENTED / SQL_NOT_VERIFIED / PUBLISH_NOT_RUN",
+    "commit_sha": "a04dab999b24c3779607a0296eb946ff4e5d0deb",
+    "migration_status": "NONE_REQUIRED",
+    "publish_status": "NOT_RUN",
+    "merge_status": "PENDING_APPROVAL",
+    "agent": "Claude Code (claude-opus-5-5)",
+    "base_sha": "f24133867acc447c2f685347929485308e3926b9",
+    "iis": "NOT_CHECKED"
   }
 ]

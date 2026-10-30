@@ -32,3 +32,4 @@ Admin: tab Thanh toán Tingee. Customer: ngân hàng, khách hàng, đơn hàng 
 
 ## Current status (2026-10-30, sau change 05E4FE)
 Có chế độ `Tingee__Mode=Direct` để test bằng tài khoản Merchant thường; Master Merchant vẫn PENDING_OPERATOR. Operator báo migration 011 OK, nhưng `dbo.CustomerContacts` có từ trước và chưa được đối chiếu (chờ script 014). Tingee thật NOT_VERIFIED. Publish tại `src\publish\deployed-<PROJECT_NAME>`.
+| `TINGEE-INTEGRATION-CHG-20261030T124900Z-448FB4` | 2026-10-30 | Fix collation conflict in diagnostic script 014 | a04dab999b24c3779607a0296eb946ff4e5d0deb | NONE_REQUIRED | NOT_RUN | PENDING_APPROVAL |
