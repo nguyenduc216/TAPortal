@@ -7,6 +7,7 @@ IF DB_NAME() <> N'TAPortalSys'
 DECLARE @fail int = 0, @warn int = 0, @name sysname, @type sysname, @line nvarchar(1000), @user sysname, @userId int, @missing nvarchar(1000), @rows bigint, @created datetime;
 DECLARE @contacts int = OBJECT_ID(N'dbo.CustomerContacts', N'U');
 PRINT N'=== TINGEE FOUNDATION DIAGNOSE ===';
+PRINT N'INFO: running as ' + USER_NAME() + N'; a user without permission on a table may see it as missing';
 
 PRINT N'--- 1. Tables ---';
 DECLARE @tables TABLE (Name sysname);
@@ -46,7 +47,7 @@ CLOSE c; DEALLOCATE c;
 DECLARE x CURSOR LOCAL FAST_FORWARD FOR
     SELECT sc.name FROM sys.columns sc
     WHERE sc.object_id = @contacts AND sc.is_nullable = 0 AND sc.is_identity = 0 AND sc.is_computed = 0 AND sc.default_object_id = 0
-      AND sc.name NOT IN (SELECT Name FROM @columns);
+      AND sc.name COLLATE DATABASE_DEFAULT NOT IN (SELECT Name COLLATE DATABASE_DEFAULT FROM @columns);
 OPEN x; FETCH NEXT FROM x INTO @name;
 WHILE @@FETCH_STATUS = 0
 BEGIN PRINT N'FAIL: extra required column ' + @name + N' has no default'; SET @fail += 1; FETCH NEXT FROM x INTO @name; END
@@ -88,7 +89,7 @@ BEGIN
         FROM @required q
         WHERE NOT EXISTS (
             SELECT 1 FROM sys.database_permissions pe
-            WHERE pe.state IN ('G','W') AND pe.permission_name = q.Permission
+            WHERE pe.state IN ('G','W') AND pe.permission_name COLLATE DATABASE_DEFAULT = q.Permission COLLATE DATABASE_DEFAULT
               AND (pe.grantee_principal_id = @userId OR pe.grantee_principal_id IN (SELECT role_principal_id FROM sys.database_role_members WHERE member_principal_id = @userId))
               AND ((pe.class = 1 AND pe.major_id = OBJECT_ID(N'dbo.' + q.TableName)) OR (pe.class = 3 AND pe.major_id = SCHEMA_ID(N'dbo')) OR pe.class = 0))
           AND NOT (q.Permission = N'SELECT' AND IS_ROLEMEMBER(N'db_datareader', @user) = 1)
