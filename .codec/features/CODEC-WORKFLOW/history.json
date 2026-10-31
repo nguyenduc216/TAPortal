@@ -68,5 +68,17 @@
       "codec_validate": "PASS"
     },
     "iis": "NOT_CHECKED"
+  },
+  {
+    "change_id": "CODEC-WORKFLOW-CHG-20261031T205904Z-79AB8C",
+    "created_at": "2026-10-31T20:59:04.889184+00:00",
+    "title": "Check in operator files and hand off work to another machine",
+    "status": "CHECKED_IN / HANDOFF",
+    "commit_sha": "c0be494f4c00807b911b2d3c3ee6fc60b7d8d8c0",
+    "migration_status": "NONE_REQUIRED",
+    "publish_status": "NOT_RUN",
+    "merge_status": "PENDING_APPROVAL",
+    "agent": "Claude Code (claude-opus-5-5)",
+    "base_sha": "b7837f007528b32e0323efbd5e9e92671449d802"
   }
 ]
