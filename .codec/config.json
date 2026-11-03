@@ -5,12 +5,21 @@
     "server": "WIN-HSHL54Q184K\\MSSQLSERVER2014",
     "name": "TAPortalSys",
     "create_database_allowed": false,
-    "execute_migrations_allowed": false,
+    "execute_migrations_allowed": true,
     "execute_mutating_sql_allowed": false,
     "allowed_databases": [
       "TAPortalSys"
     ],
-    "migration_execution": "MANUAL_DBEAVER_OR_SSMS",
+    "migration_execution": "AGENT_DRY_RUN_ROLLBACK_THEN_COMMIT",
+    "migration_procedure": {
+      "scope": "database/migrations",
+      "rollback_script_required": true,
+      "dry_run_in_rolled_back_transaction": true,
+      "gates_required_before_real_run": true,
+      "rollback_on_failure": true,
+      "stop_on_destructive_or_non_transactional": true,
+      "max_backup_age_hours": 24
+    },
     "required_migration_guard": "DB_NAME() = 'TAPortalSys'",
     "duplicate_migrations_allowed": false,
     "read_only_queries_only": true,

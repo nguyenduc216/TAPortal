@@ -3,6 +3,7 @@
 import argparse, datetime as dt, json, pathlib, re, secrets, sys
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 META = ROOT / '.codec'
+MIGRATION_PROCEDURE = {'scope':'database/migrations','rollback_script_required':True,'dry_run_in_rolled_back_transaction':True,'gates_required_before_real_run':True,'rollback_on_failure':True,'stop_on_destructive_or_non_transactional':True,'max_backup_age_hours':24}
 
 def safe_id(s):
     if not re.fullmatch(r'[A-Z][A-Z0-9]*(?:-[A-Z0-9]+)*', s):
@@ -42,7 +43,8 @@ def new(feature, title):
 def validate():
     cfg=json.loads((META/'config.json').read_text(encoding='utf-8'))
     errors=[]
-    if cfg['database']['create_database_allowed'] or cfg['database']['execute_migrations_allowed'] or cfg['database']['execute_mutating_sql_allowed']: errors.append('Database mutation is not allowed')
+    if cfg['database']['create_database_allowed'] or cfg['database']['execute_mutating_sql_allowed']: errors.append('Database mutation is not allowed')
+    if cfg['database']['execute_migrations_allowed'] and (cfg['database'].get('migration_execution') != 'AGENT_DRY_RUN_ROLLBACK_THEN_COMMIT' or cfg['database'].get('migration_procedure') != MIGRATION_PROCEDURE): errors.append('Agent migrations require the dry-run/rollback procedure')
     if cfg['deploy']['allow_alternate_target']: errors.append('Alternate publish targets forbidden')
     if cfg['deploy'].get('require_iis_preflight') is not False or cfg['deploy'].get('local_artifact_only') is not True or cfg['deploy'].get('live_iis_overwrite_requires_separate_approval') is not True: errors.append('Local artifact safety guards missing')
     if cfg.get('machine') != {'role':'DEV_TEST','inspect_iis_allowed':False,'probe_server_configuration_allowed':False,'request_administrator_allowed':False,'deploy_iis_allowed':False}: errors.append('DEV/TEST machine policy invalid')

@@ -30,9 +30,9 @@ Mỗi thay đổi có một `Change ID` duy nhất; một `Feature ID` có nhi�
 ## DEV/TEST MACHINE POLICY (2026-10-28)
 - This machine is for development and testing, not a production deployment server.
 - Codex must not inspect IIS, websites, application pools, bindings or physical paths; connect to or probe server configuration; request Administrator access; deploy or change IIS websites.
-- Never run migrations, seed, rollback, mutating SQL or data-writing integration tests; never create databases or execute stored procedures with write effects.
-- Only TAPortalSys read queries using read-only permissions are allowed. Without read access, record NOT_VERIFIED and continue independent work.
-- Author migration SQL files for operator review and manual execution only. SQL verification defaults to TEXT messages via PRINT; SELECT details only when diagnosing failures.
+- Never run seed, ad-hoc mutating SQL or data-writing integration tests; never create databases or execute stored procedures with write effects. Migrations and their rollback scripts run only under `## AGENT MIGRATION EXECUTION`.
+- Outside that procedure, only TAPortalSys read queries are allowed. Without read access, record NOT_VERIFIED and continue independent work.
+- Author migration SQL files with a matching rollback script. SQL verification defaults to TEXT messages via PRINT; SELECT details only when diagnosing failures.
 
 ## Local publish policy — Checkpoint 3
 - Publish every web project only to `<WORKSPACE_ROOT>\src\publish\deployed-<PROJECT_NAME>`; PROJECT_NAME is the csproj filename without extension. Never rename, move or timestamp the target, or publish into a project source directory.

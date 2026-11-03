@@ -16,21 +16,21 @@ description: Workflow quản lý phát triển TAPortal với Feature ID, Change
 - Không trực tiếp push vào main trừ khi có chỉ định rõ. Không tự merge khi chưa có xác nhận hoàn thành/review từ operator.
 - Khi đã duyệt merge: kiểm tra CI, working tree sạch, target `main`, tránh force push; merge theo policy repo. Ghi merge commit SHA. Nếu chưa duyệt, báo `PENDING_APPROVAL`.
 
-## 2. Database — tuyệt đối không tự chạy
+## 2. Database — chỉ chạy migration theo quy trình có rollback
 - DB duy nhất theo cấu hình `.codec/config.json`: `TAPortalSys` (đang là môi trường phát triển nhưng website đang sử dụng).
-- KHÔNG tạo DB mới, KHÔNG chạy migration/DDL/DML sửa dữ liệu, kể cả qua ORM, CLI, DBeaver, MCP, test setup hoặc PowerShell trên DB này.
+- KHÔNG tạo DB mới, KHÔNG chạy DDL/DML/seed tùy ý, kể cả qua ORM, CLI, DBeaver, MCP, test setup hoặc PowerShell trên DB này. Migration chỉ được chạy theo mục `## AGENT MIGRATION EXECUTION` (dry-run có rollback trước, rồi mới chạy thật).
 - Chỉ tạo file migration SQL trong `database/migrations/` với tên `NNN-<feature>-<change-id>.sql` (nếu dự án dùng numbering khác thì theo convention hiện hành, tránh trùng).
 - Migration phải có guard `DB_NAME()` chính xác, kiểm tra tiền điều kiện, idempotency nếu phù hợp, transaction/XACT_ABORT nếu an toàn, mô tả rollback và các tác động dữ liệu.
-- Báo đường dẫn relative + absolute (nếu biết root), tên DB, thứ tự migration, script verify và rollback, trạng thái `NOT_EXECUTED` cho từng file.
-- Chỉ người dùng/DBA thực thi migration; Codex không tự thực thi dù người dùng yêu cầu publish sau build. Nếu muốn đổi quy tắc này phải sửa policy có phê duyệt rõ.
+- Mỗi migration phải có script verify và script rollback trong `database/scripts/`. Báo đường dẫn relative + absolute (nếu biết root), tên DB, thứ tự migration, script verify và rollback, trạng thái cho từng file (`NOT_EXECUTED` / `ALREADY_APPLIED` / `EXECUTED` / `DRY_RUN_FAILED` / `ROLLED_BACK`).
+- Agent chỉ thực thi migration theo đúng quy trình `## AGENT MIGRATION EXECUTION` (operator phê duyệt 2026-11-03); người dùng/DBA vẫn có thể tự chạy thủ công.
 - Test DB integration: chỉ được dùng DB test cô lập đã được người dùng cho phép; không tự tạo database mới trên server hiện tại.
 
 ## DEV/TEST MACHINE POLICY (2026-10-28)
 - This machine is for development and testing, not a production deployment server.
 - Codex must not inspect IIS, websites, application pools, bindings or physical paths; connect to or probe server configuration; request Administrator access; deploy or change IIS websites.
-- Never run migrations, seed, rollback, mutating SQL or data-writing integration tests; never create databases or execute stored procedures with write effects.
-- Only TAPortalSys read queries using read-only permissions are allowed. Without read access, record NOT_VERIFIED and continue independent work.
-- Author migration SQL files for operator review and manual execution only. SQL verification defaults to TEXT messages via PRINT; SELECT details only when diagnosing failures.
+- Never run seed, ad-hoc mutating SQL or data-writing integration tests; never create databases or execute stored procedures with write effects. Migrations and their rollback scripts run only under `## AGENT MIGRATION EXECUTION`.
+- Outside that procedure, only TAPortalSys read queries are allowed. Without read access, record NOT_VERIFIED and continue independent work.
+- Author migration SQL files with a matching rollback script. SQL verification defaults to TEXT messages via PRINT; SELECT details only when diagnosing failures.
 
 ## Local publish policy — Checkpoint 3
 - Publish every web project only to `<WORKSPACE_ROOT>\src\publish\deployed-<PROJECT_NAME>`; PROJECT_NAME is the csproj filename without extension. Never rename, move or timestamp the target, or publish into a project source directory.
@@ -54,7 +54,7 @@ description: Workflow quản lý phát triển TAPortal với Feature ID, Change
 ## Installation policy additions (CODEC-WORKFLOW)
 - Intake order: identify FEATURE_ID; read AGENTS.md, Codec skill and config; read feature README.md AND history.json; read recent related changes/reports; only then inspect required source. If history is missing, initialize it and record facts verified from source. Do not scan all chat/repository without need.
 - CHANGE_ID format: FEATURE-ID-CHG-YYYYMMDDTHHMMSSZ-XXXXXX (UTC, unique). Preserve previous changes/reports/history entries; append new records, update only the current change record.
-- SQL Server: `WIN-HSHL54Q184K\MSSQLSERVER2014`; ONLY database: `TAPortalSys`. No DEV/UAT/TEST or other databases, including integration-test databases. No automatic migration, DDL, DML, seed or rollback via any channel. Only author SQL files; operator runs them manually with DBeaver or SSMS.
+- SQL Server: `WIN-HSHL54Q184K\MSSQLSERVER2014`; ONLY database: `TAPortalSys`. No DEV/UAT/TEST or other databases, including integration-test databases. No DDL, DML, seed or rollback via any channel, except migration files executed under `## AGENT MIGRATION EXECUTION`; the operator may still run any SQL manually with DBeaver or SSMS.
 - Before authoring migrations, check existing scripts to avoid duplicates. Every mutating migration must check `DB_NAME() = 'TAPortalSys'` and abort on mismatch. Document exact path, execution order, purpose, preconditions and verification instructions.
 - Local artifact publish uses the fixed convention and DEV/TEST preflight below; IIS inspection is forbidden. Live deployment requires separate approval.
 - Reuse the current feature branch; create a branch only for independent new features or substantial work. Never reset/delete uncommitted work, force push, or merge main without user acceptance and approval. Record merge SHA after approved merge.
@@ -71,7 +71,7 @@ description: Workflow quản lý phát triển TAPortal với Feature ID, Change
 - SHA separation: the source SHA is the commit containing the built and published application source. The delivery SHA is the final commit holding reports and metadata. A report never states its own commit SHA; give the delivery SHA in the hand-off message after push.
 - Findings ledger: every audit report includes a table with columns ID | Project | Module | Severity | Problem | Root Cause | Fix | Files | Test | Status, where Status is FIXED / VERIFIED / OPEN / BLOCKED / PENDING_OPERATOR. VERIFIED requires executed evidence.
 - Final report structure (identical for Claude and Codex): A. Identification, B. Audit Summary, C. Customer Portal Account Management, D. Admin CRUD, E. Changed Files, F. Database, G. Build & Tests, H. Admin Publish, I. Customer Publish, J. Security and Acceptance, K. Git Delivery, L. Operator Handoff. A section that does not apply states NOT_APPLICABLE or NOT_RUN with the reason.
-- Database and server limits are unchanged: no migration, seed, rollback, DDL/DML, data-writing tests or writing stored procedures; migration files only, guarded by `DB_NAME() = 'TAPortalSys'`, status NOT_EXECUTED until the operator confirms. No IIS or server inspection on this DEV/TEST machine.
+- Database and server limits: no seed, ad-hoc DDL/DML, data-writing tests or writing stored procedures. Migration files are guarded by `DB_NAME() = 'TAPortalSys'` and stay NOT_EXECUTED until executed under `## AGENT MIGRATION EXECUTION` or confirmed by the operator. No IIS or server inspection on this DEV/TEST machine.
 
 ## PUBLISH TARGETS AND SQL OUTPUT (2026-10-30, operator decision)
 - Publish root: `D:\T.A\TAPortal\TAPortal\src\publish`, ignored by Git. Targets: `deployed-TAPortal.Web`, `deployed-TACustomerPortal.Web`, `deployed-TAPortal.Webhooks`. Each project's own `AGENTS.md` states its path. The older `<WORKSPACE_ROOT>\publish` folder holds earlier artifacts and rollback copies; never publish there again and do not delete it without operator approval. Rollback copies of artifacts go to `<WORKSPACE_ROOT>\src\publish\rollback\<CHANGE_ID>\<PROJECT_NAME>`.
