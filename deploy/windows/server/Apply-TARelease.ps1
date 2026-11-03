@@ -34,7 +34,8 @@ $LogFile = Join-Path $Root "logs\apply-$Target-$Stamp.log"
 New-Item -ItemType Directory -Force -Path (Split-Path $LogFile) | Out-Null
 function Log([string] $m) {
     $line = '[{0}] {1}' -f (Get-Date -Format 'yyyy-MM-dd HH:mm:ss'), $m
-    Write-Output $line
+    # Write-Host, not Write-Output: functions such as Test-Health return booleans and must not carry log lines.
+    Write-Host $line
     Add-Content -Path $LogFile -Value $line -Encoding UTF8
 }
 
@@ -124,6 +125,7 @@ if (-not (Test-Path (Join-Path $staging $T.MainDll))) { throw "Package does not 
 
 $backup = Join-Path $Config.BackupRoot "$Target-$Stamp"
 $stopped = $false
+$deployed = $false
 try {
     Log "Stopping app pool '$Pool'"
     Stop-Pool
@@ -147,6 +149,7 @@ try {
 
     if (-not (Test-Health)) { throw 'Health check failed after deploy' }
     Log "RESULT: DEPLOYED $Target $ExpectedCommit"
+    $deployed = $true
 }
 catch {
     Log "ERROR: $($_.Exception.Message) -- rolling back"
@@ -161,3 +164,6 @@ finally {
     Remove-Item $staging -Recurse -Force -ErrorAction SilentlyContinue
     Remove-OldBackups
 }
+# Explicit exit code: otherwise the caller sees robocopy's last exit code (1 = files copied).
+if ($deployed) { exit 0 }
+exit 1
