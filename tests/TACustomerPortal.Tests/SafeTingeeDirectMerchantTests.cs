@@ -59,6 +59,15 @@ public sealed class SafeTingeeDirectMerchantTests
     }
 
     [Fact]
+    public async Task ErrorBodiesKeepTingeeDetailsEvenWhenDataIsAList()
+    {
+        var handler = new Fixed("{\"code\":\"400\",\"message\":\"Data input invalid\",\"data\":[{\"field\":\"taxCode\",\"error\":\"required\"}]}");
+        var ex = await Assert.ThrowsAsync<TingeeApiException>(() => Api("Master", handler).CreateVaAsync(new TingeeCreateVaRequest { MerchantId = 1, BankBin = "970422" }));
+        Assert.Equal(("400", "Data input invalid"), (ex.Code, ex.TingeeMessage));
+        Assert.Contains("taxCode", ex.Details);
+    }
+
+    [Fact]
     public void ModeDefaultsToMaster()
     {
         Assert.False(new TingeeOptions().IsDirectMerchant);
@@ -70,6 +79,12 @@ public sealed class SafeTingeeDirectMerchantTests
     {
         var options = Options.Create(new TingeeOptions { ClientId = "id", SecretKey = "secret", Mode = mode, MerchantId = ownMerchantId });
         return new TingeeApi(new TingeeClient(new HttpClient(handler), options, TimeProvider.System), options);
+    }
+
+    private sealed class Fixed(string body) : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) =>
+            Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(body, Encoding.UTF8, "application/json") });
     }
 
     private sealed class Recorder : HttpMessageHandler

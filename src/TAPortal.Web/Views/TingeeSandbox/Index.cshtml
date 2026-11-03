@@ -159,6 +159,10 @@
                         var label = TingeeSandboxController.FieldLabel(field);
                         <div class="mb-2"><label class="form-label required" for="Bank_@name">@(char.ToUpper(label[0]) + label[1..])</label><div class="ta-input-icon">@UiIcon.Render("hash")<input class="form-control" id="Bank_@name" name="Bank.@name" value="@value" required /></div></div>
                     }
+                    @if (Model.AccountType != TingeeAccountTypes.Personal)
+                    {
+                        <div class="mb-2"><label class="form-label" for="Bank_TaxCode">Mã số thuế</label><div class="ta-input-icon">@UiIcon.Render("receipt-tax")<input class="form-control" id="Bank_TaxCode" name="Bank.TaxCode" value="@b.TaxCode" inputmode="numeric" maxlength="14" /></div><div class="form-hint">Mã số thuế của doanh nghiệp/hộ kinh doanh chủ tài khoản (Tingee dùng cho tài khoản doanh nghiệp).</div></div>
+                    }
                     @if (rule.Required.Count == 0) {<p class="form-hint">Ngân hàng này không cần nhập thêm thông tin; khách hàng xác thực trên ứng dụng ngân hàng.</p>}
                     @if (rule.SupportsRootNotify && rule.VaSupported)
                     {

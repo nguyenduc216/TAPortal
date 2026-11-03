@@ -14,6 +14,8 @@ public sealed class TingeeResponse<T>
     [JsonPropertyName("message")] public string? Message { get; set; }
     [JsonPropertyName("data")] public T? Data { get; set; }
     [JsonIgnore] public bool IsSuccess => Code == "00";
+    /// <summary>Raw response body of a failed call (truncated): Tingee puts validation details there (e.g. code 400).</summary>
+    [JsonIgnore] public string? Raw { get; set; }
 }
 
 public sealed class TingeeNotConfiguredException : InvalidOperationException
@@ -57,8 +59,24 @@ public sealed class TingeeClient(HttpClient http, IOptions<TingeeOptions> option
 
         using var response = await http.SendAsync(request, cancellationToken);
         response.EnsureSuccessStatusCode();
-        await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
-        return await JsonSerializer.DeserializeAsync<TingeeResponse<T>>(stream, Json, cancellationToken)
-            ?? new TingeeResponse<T> { Code = "EMPTY", Message = "Empty Tingee response." };
+        var text = await response.Content.ReadAsStringAsync(cancellationToken);
+        TingeeResponse<T> parsed;
+        try
+        {
+            parsed = JsonSerializer.Deserialize<TingeeResponse<T>>(text, Json) ?? new TingeeResponse<T> { Code = "EMPTY", Message = "Empty Tingee response." };
+        }
+        catch (JsonException)
+        {
+            // An error body whose "data" does not fit T (e.g. a list of field errors): keep the code/message, never fail here.
+            using var doc = JsonDocument.Parse(text);
+            var root = doc.RootElement;
+            parsed = new TingeeResponse<T>
+            {
+                Code = root.TryGetProperty("code", out var c) ? c.ToString() : "BADJSON",
+                Message = root.TryGetProperty("message", out var m) ? m.ToString() : "Unexpected Tingee response."
+            };
+        }
+        if (!parsed.IsSuccess) parsed.Raw = text.Length <= 2000 ? text : text[..2000];
+        return parsed;
     }
 }

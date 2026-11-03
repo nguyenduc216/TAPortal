@@ -70,6 +70,7 @@ public sealed partial class TingeeSandboxController(
             AcbUserId = Use(rule, TingeeBankField.AcbUserId, input.AcbUserId),
             IsNotifyAccountNumber = notifyRoot,
             Name = $"TA SANDBOX - {bank.Code}",
+            TaxCode = type == TingeeAccountTypes.Personal || string.IsNullOrWhiteSpace(input.TaxCode) ? null : input.TaxCode.Trim(),
             RedirectUrl = bank.Code == "VCB" && type == TingeeAccountTypes.Personal ? Url.Action(nameof(Index), "TingeeSandbox", new { merchant }, Request.Scheme) : null,
             WebhookUrl = rule.AsyncResult ? vaStatusUrl : null,
             RequestId = bank.Code == "TPB" ? Guid.NewGuid().ToString("N") : null
@@ -310,7 +311,9 @@ public sealed partial class TingeeSandboxController(
     {
         switch (ex)
         {
-            case TingeeApiException api: return $"Tingee trả mã {api.Code}: {api.TingeeMessage}";
+            case TingeeApiException api:
+                logger.LogWarning("TINGEE_SANDBOX_REJECTED operation={Operation} code={Code} details={Details}", operation, api.Code, api.Details);
+                return $"Tingee trả mã {api.Code}: {api.TingeeMessage}{(string.IsNullOrWhiteSpace(api.Details) ? "" : $" — chi tiết: {api.Details}")}";
             case TingeeNotConfiguredException: return "Chưa cấu hình khóa Tingee.";
             case HttpRequestException or TaskCanceledException:
                 logger.LogWarning(ex, "TINGEE_SANDBOX_UNREACHABLE operation={Operation}", operation);

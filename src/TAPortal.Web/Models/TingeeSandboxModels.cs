@@ -51,6 +51,7 @@ public sealed class TingeeSandboxBankInput
     [StringLength(100)] public string? MerchantName { get; set; }
     [StringLength(30)] public string? VaAccountNumber { get; set; }
     [StringLength(50)] public string? AcbUserId { get; set; }
+    [RegularExpression("^[0-9]{10}(-[0-9]{3})?$", ErrorMessage = "Mã số thuế gồm 10 chữ số (chi nhánh: 10 số-3 số).")] public string? TaxCode { get; set; }
     public bool NotifyRootAccount { get; set; } = true;
 }
 

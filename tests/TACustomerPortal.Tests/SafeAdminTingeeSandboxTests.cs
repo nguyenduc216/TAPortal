@@ -173,6 +173,23 @@ public sealed class SafeAdminTingeeSandboxTests
     }
 
     [Fact]
+    public async Task BusinessBankLinkSendsTheTaxCodeAndShowsTingeeDetails()
+    {
+        using var f = Factory(out var tingee, out _);
+        var c = Client(f);
+        Assert.Contains("name=\"Bank.TaxCode\"", await c.GetStringAsync("/tingeesandbox?bin=970422&type=business-account"));
+        tingee.VaError = new TingeeApiException("400", "Data input invalid", "{\"code\":\"400\",\"data\":[{\"field\":\"mobile\"}]}");
+        var r = await Post(c, "/tingeesandbox/linkbank", await Token(c), new()
+        {
+            ["Bank.Bin"] = "970422", ["Bank.AccountType"] = "business-account", ["Bank.AccountNumber"] = "250779688888",
+            ["Bank.AccountName"] = "CONG TY TNHH TU VAN GIAI PHAP TA", ["Bank.Mobile"] = "0888578074", ["Bank.TaxCode"] = "0123456789"
+        });
+        var html = WebUtility.HtmlDecode(await r.Content.ReadAsStringAsync());
+        Assert.Contains("chi tiết: {\"code\":\"400\",\"data\":[{\"field\":\"mobile\"}]}", html);
+        Assert.Equal("0123456789", Assert.Single(tingee.Vas).TaxCode);
+    }
+
+    [Fact]
     public async Task BankLinkNeedsTheMerchantIdOfTA()
     {
         using var f = Factory(out var tingee, out _, merchantId: null);
@@ -314,6 +331,7 @@ public sealed class SafeAdminTingeeSandboxTests
         public List<(string, string, string)> Confirms { get; } = [];
         public TingeeApiException? ListError { get; set; }
         public decimal Paid { get; set; }
+        public TingeeApiException? VaError { get; set; }
 
         public Task<TingeePage<TingeeVaItem>> GetVaPageAsync(long merchantId, CancellationToken ct = default)
         {
@@ -325,6 +343,7 @@ public sealed class SafeAdminTingeeSandboxTests
         public Task<TingeeCreateVaResult> CreateVaAsync(TingeeCreateVaRequest request, CancellationToken ct = default)
         {
             Vas.Add(request);
+            if (VaError is not null) throw VaError;
             return Task.FromResult(new TingeeCreateVaResult { ConfirmId = "CONF-1", OtpMethod = "SMS" });
         }
         public Task<TingeeConfirmVaResult> ConfirmVaAsync(long merchantId, string bankBin, string confirmId, string otp, CancellationToken ct = default)

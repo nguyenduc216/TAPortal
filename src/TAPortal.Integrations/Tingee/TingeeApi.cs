@@ -142,11 +142,13 @@ public sealed record TingeeBillInfo
 }
 
 /// <summary>A failed Tingee call: Code is Tingee's result code ("1065", "90", ...) and Message its text.</summary>
-public sealed class TingeeApiException(string? code, string? message)
+public sealed class TingeeApiException(string? code, string? message, string? details = null)
     : Exception($"Tingee error {code}: {message}")
 {
     public string Code { get; } = code ?? "UNKNOWN";
     public string TingeeMessage { get; } = message ?? "";
+    /// <summary>Raw Tingee error body (field-level validation details), for administrators only.</summary>
+    public string? Details { get; } = details;
 }
 
 public interface ITingeeApi
@@ -218,6 +220,6 @@ public sealed class TingeeApi(TingeeClient client, Microsoft.Extensions.Options.
 
     private static void Check<T>(TingeeResponse<T> response)
     {
-        if (!response.IsSuccess) throw new TingeeApiException(response.Code, response.Message);
+        if (!response.IsSuccess) throw new TingeeApiException(response.Code, response.Message, response.Raw);
     }
 }
