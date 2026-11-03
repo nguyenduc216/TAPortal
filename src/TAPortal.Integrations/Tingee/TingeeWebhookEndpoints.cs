@@ -1,12 +1,18 @@
 using System.Text;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Features;
+using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using TAPortal.Integrations.Tingee;
 
-namespace TAPortal.Webhooks;
+namespace TAPortal.Integrations.Tingee;
 
 /// <summary>
 /// Tingee webhook receivers: verify timestamp + HMAC over the raw body, persist to the inbox, then acknowledge.
 /// Any failure before persistence returns non-200 so Tingee retries; nothing is processed inline.
+/// Hosted by TAPortal.Webhooks and, for the Tingee Sandbox, by the Admin portal (same anonymous, signature-checked routes).
 /// </summary>
 public static class TingeeWebhookEndpoints
 {
@@ -33,6 +39,11 @@ public static class TingeeWebhookEndpoints
 
         if (!options.IsConfigured || !inbox.IsAvailable)
             return Results.StatusCode(StatusCodes.Status503ServiceUnavailable);
+
+        // Per-request cap, so hosts without a global body limit (the Admin portal) are bounded too.
+        if (http.Request.ContentLength > MaxBodyBytes) return Results.StatusCode(StatusCodes.Status413PayloadTooLarge);
+        if (http.Features.Get<IHttpMaxRequestBodySizeFeature>() is { IsReadOnly: false } limit && (limit.MaxRequestBodySize is null || limit.MaxRequestBodySize > MaxBodyBytes))
+            limit.MaxRequestBodySize = MaxBodyBytes;
 
         string body;
         using (var reader = new StreamReader(http.Request.Body, Encoding.UTF8))

@@ -17,6 +17,9 @@ public sealed class TingeeOptions
     /// <summary>"Master" (default) acts on child merchants through merchantId; "Direct" uses a normal Merchant's own key and sends no merchantId.</summary>
     public string Mode { get; set; } = "Master";
 
+    /// <summary>Public URL of the va-status webhook, sent to banks that report the linking result later (VCB personal, TPBank).</summary>
+    public string? VaStatusWebhookUrl { get; set; }
+
     public bool IsDirectMerchant => string.Equals(Mode, "Direct", StringComparison.OrdinalIgnoreCase);
 
     public bool IsConfigured => !string.IsNullOrWhiteSpace(ClientId) && !string.IsNullOrWhiteSpace(SecretKey);

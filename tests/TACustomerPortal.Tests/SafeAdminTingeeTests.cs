@@ -1,5 +1,4 @@
 extern alias admin;
-extern alias webhooks;
 
 using System.Net;
 using System.Security.Claims;
@@ -128,10 +127,10 @@ public sealed class SafeAdminTingeeTests
     public void WebhookDedupKeyPrefersTheTransactionCode()
     {
         static TingeeWebhookEnvelope E(TingeeWebhookKind kind, string body, string? requestId) => new(kind, requestId, "20261030103000123", body, DateTimeOffset.UtcNow);
-        Assert.Equal("tx:FT123", webhooks::TAPortal.Webhooks.SqlTingeeWebhookInbox.DedupKey(E(TingeeWebhookKind.Payment, "{\"transactionCode\":\" FT123 \",\"amount\":1}", "req-9")));
-        Assert.Equal("rq:req-9", webhooks::TAPortal.Webhooks.SqlTingeeWebhookInbox.DedupKey(E(TingeeWebhookKind.Payment, "not json", "req-9")));
-        Assert.Equal("rq:req-9", webhooks::TAPortal.Webhooks.SqlTingeeWebhookInbox.DedupKey(E(TingeeWebhookKind.VaStatus, "{\"transactionCode\":\"FT1\"}", "req-9")));
-        var hashed = webhooks::TAPortal.Webhooks.SqlTingeeWebhookInbox.DedupKey(E(TingeeWebhookKind.BankLink, "{}", null));
+        Assert.Equal("tx:FT123", SqlTingeeWebhookInbox.DedupKey(E(TingeeWebhookKind.Payment, "{\"transactionCode\":\" FT123 \",\"amount\":1}", "req-9")));
+        Assert.Equal("rq:req-9", SqlTingeeWebhookInbox.DedupKey(E(TingeeWebhookKind.Payment, "not json", "req-9")));
+        Assert.Equal("rq:req-9", SqlTingeeWebhookInbox.DedupKey(E(TingeeWebhookKind.VaStatus, "{\"transactionCode\":\"FT1\"}", "req-9")));
+        var hashed = SqlTingeeWebhookInbox.DedupKey(E(TingeeWebhookKind.BankLink, "{}", null));
         Assert.Matches("^sha:[0-9a-f]{64}$", hashed);
     }
 

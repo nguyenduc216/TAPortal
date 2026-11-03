@@ -62,6 +62,11 @@ builder.Services.AddScoped<IUserAccountStore, SqlUserAccountStore>();
 builder.Services.AddScoped<ICustomerAdminStore, SqlCustomerAdminStore>();
 builder.Services.AddScoped<IDashboardStore, SqlDashboardStore>();
 builder.Services.AddScoped<ITingeeMerchantStore, SqlTingeeMerchantStore>();
+builder.Services.AddScoped<ITingeeSandboxInbox, SqlTingeeSandboxInbox>();
+builder.Services.AddHttpClient(nameof(TAPortal.Web.Controllers.TingeeSandboxController), client => client.Timeout = TimeSpan.FromSeconds(20));
+// Tingee Sandbox: webhooks are received here too (same signature-checked routes as TAPortal.Webhooks) into dbo.TingeeWebhookInbox.
+if (!string.IsNullOrWhiteSpace(builder.Configuration["Database:ConnectionString"]))
+    builder.Services.AddSingleton<TAPortal.Integrations.Tingee.ITingeeWebhookInbox, TAPortal.Integrations.Tingee.SqlTingeeWebhookInbox>();
 TAPortal.Integrations.IntegrationsServiceCollectionExtensions.AddTingee(builder.Services, builder.Configuration);
 builder.Services.AddSingleton(sp =>
 {
@@ -123,6 +128,7 @@ app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllerRoute(name: "default", pattern: "{controller=Home}/{action=Index}/{id?}");
+TAPortal.Integrations.Tingee.TingeeWebhookEndpoints.MapTingeeWebhooks(app);   // anonymous by design: authenticated by the Tingee HMAC signature
 app.Run();
 public partial class Program
 {

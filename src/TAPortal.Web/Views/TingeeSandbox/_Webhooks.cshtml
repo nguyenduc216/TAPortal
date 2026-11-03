@@ -1,0 +1,34 @@
+@model (IReadOnlyList<TingeeSandboxWebhook> Rows, string? Error)
+@{
+    var vn = System.Globalization.CultureInfo.GetCultureInfo("vi-VN");
+}
+@if (Model.Error is not null)
+{
+    <div class="ta-alert ta-alert--warning mb-0" role="note" data-ta-sandbox-inbox-error>@UiIcon.Render("database-off")<div class="ta-alert__body">@Model.Error</div></div>
+}
+else if (Model.Rows.Count == 0)
+{
+    <p class="text-secondary mb-0" data-ta-sandbox-inbox-empty>Chưa nhận được webhook nào. Sau khi khai báo địa chỉ webhook trên Tingee và chuyển tiền vào tài khoản đã liên kết, giao dịch sẽ hiện ở đây.</p>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-sm mb-0" data-ta-sandbox-inbox>
+            <thead><tr><th>Nhận lúc</th><th>Loại</th><th>Số tiền</th><th>Nội dung</th><th>Tài khoản</th><th>Mã giao dịch</th><th>Chi tiết</th></tr></thead>
+            <tbody>
+                @foreach (var w in Model.Rows)
+                {
+                    <tr>
+                        <td>@w.ReceivedAtUtc.AddHours(7).ToString("HH:mm:ss dd/MM")</td>
+                        <td><span class="ta-badge @(w.Kind == "Payment" ? "ta-badge--success" : "ta-badge--neutral")">@w.Kind</span></td>
+                        <td>@(w.Amount is decimal a ? a.ToString("#,##0", vn) + "đ" : "—")</td>
+                        <td>@(w.Content ?? "—")</td>
+                        <td>@(w.Account ?? "—")@(w.Bank is null ? "" : $" ({w.Bank})")</td>
+                        <td>@(w.TransactionCode ?? "—")</td>
+                        <td><details><summary>JSON</summary><pre class="mb-0" style="white-space:pre-wrap;max-width:420px">@w.RawBody</pre></details></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}

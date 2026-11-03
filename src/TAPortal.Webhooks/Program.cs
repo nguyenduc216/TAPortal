@@ -2,7 +2,6 @@ using Microsoft.Extensions.Options;
 using TAPortal.Shared;
 using TAPortal.Integrations;
 using TAPortal.Integrations.Tingee;
-using TAPortal.Webhooks;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.WebHost.ConfigureKestrel(options => options.Limits.MaxRequestBodySize = TingeeWebhookEndpoints.MaxBodyBytes);

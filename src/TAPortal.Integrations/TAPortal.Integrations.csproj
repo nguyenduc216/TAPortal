@@ -9,5 +9,8 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="QRCoder" Version="1.6.0" />
+    <!-- SqlTingeeWebhookInbox; Pkcs pinned above 8.0.1 as in TAPortal.Shared (GHSA-846f-f764-76mx). -->
+    <PackageReference Include="Microsoft.Data.SqlClient" Version="7.0.2" />
+    <PackageReference Include="System.Security.Cryptography.Pkcs" Version="8.0.2" />
   </ItemGroup>
 </Project>

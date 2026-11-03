@@ -2,9 +2,9 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using Microsoft.Data.SqlClient;
-using TAPortal.Integrations.Tingee;
+using Microsoft.Extensions.Configuration;
 
-namespace TAPortal.Webhooks;
+namespace TAPortal.Integrations.Tingee;
 
 /// <summary>
 /// dbo.TingeeWebhookInbox (migration 011). One row per (Kind, DedupKey): a retried webhook hits the unique index and is

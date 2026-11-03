@@ -65,6 +65,7 @@
                     <ul class="ta-nav__list">
                         @* Customer Portal accounts are managed inside each customer's workspace (tab "Tài khoản Portal"). *@
                         <li><a class="ta-nav__link" asp-controller="Customers" asp-action="Index" title="Khách hàng" aria-current="@(IsCurrent("Customers") || IsCurrent("CustomerPortalAccounts") ? "page" : null)"><span class="ta-nav__icon">@UiIcon.Render("building")</span><span class="ta-nav__label">Khách hàng</span></a></li>
+                        <li><a class="ta-nav__link" asp-controller="TingeeSandbox" asp-action="Index" title="Tingee Sandbox" aria-current="@(IsCurrent("TingeeSandbox") ? "page" : null)"><span class="ta-nav__icon">@UiIcon.Render("qrcode")</span><span class="ta-nav__label">Tingee Sandbox</span></a></li>
                     </ul>
                 </div>
             }
