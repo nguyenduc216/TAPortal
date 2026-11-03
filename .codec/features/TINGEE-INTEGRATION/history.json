@@ -187,10 +187,10 @@
     "change_id": "TINGEE-INTEGRATION-CHG-20261103T175724Z-F1997E",
     "created_at": "2026-11-03T17:57:24.882172+00:00",
     "title": "Send non-ASCII JSON unescaped to Tingee (Invalid signature 97)",
-    "status": "IMPLEMENTED / TESTS_PASS",
+    "status": "DEPLOYED",
     "commit_sha": null,
     "migration_status": "NONE_REQUIRED",
-    "publish_status": "DEPLOY_PENDING",
+    "publish_status": "DEPLOYED portal + invoice 116896f",
     "merge_status": "PENDING_APPROVAL"
   }
 ]
