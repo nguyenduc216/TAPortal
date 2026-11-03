@@ -162,5 +162,15 @@
     "migration_status": "NONE_REQUIRED",
     "publish_status": "DEPLOYED portal + invoice cebf5e4",
     "merge_status": "PENDING_APPROVAL"
+  },
+  {
+    "change_id": "TINGEE-INTEGRATION-CHG-20261103T163352Z-2178D2",
+    "created_at": "2026-11-03T16:33:52.341291+00:00",
+    "title": "Tingee Sandbox works with a Master Merchant key on a linked child merchant",
+    "status": "IMPLEMENTED / TESTS_PASS",
+    "commit_sha": null,
+    "migration_status": "NONE_REQUIRED",
+    "publish_status": "DEPLOY_PENDING",
+    "merge_status": "PENDING_APPROVAL"
   }
 ]

@@ -4,7 +4,8 @@
 @{
     ViewData["Title"] = "Tingee Sandbox";
     var cfg = Model.Config;
-    var ready = cfg.Configured && cfg.Direct;
+    var ready = cfg.Configured && Model.ScopeLabel is not null;
+    var mid = Model.SelectedMerchant;
     var conn = Model.Connection;
     var rule = Model.Bank is not null && Model.AccountType is not null ? Model.Bank.Rule(Model.AccountType) : null;
     var b = Model.BankInput;
@@ -26,19 +27,40 @@
         <div class="card-body">
             <dl class="ta-dl">
                 <dt>Khóa API</dt><dd>@if (cfg.Configured) {<span class="ta-badge ta-badge--success">Đã cấu hình</span>} else {<span class="ta-badge ta-badge--danger" data-ta-sandbox-unconfigured>Chưa cấu hình</span>}</dd>
-                <dt>Merchant ID</dt><dd>@if (cfg.MerchantId is long mid) {<span class="ta-code" data-ta-sandbox-merchant>#@mid</span>} else {<span class="ta-badge ta-badge--danger" data-ta-sandbox-no-merchant>Chưa cấu hình — cần để liên kết ngân hàng</span>}</dd>
-                <dt>Chế độ</dt><dd>@if (cfg.Direct) {<span class="ta-badge ta-badge--success">Direct (Merchant T.A)</span>} else {<span class="ta-badge ta-badge--warning" data-ta-sandbox-master>Master — cần Direct</span>}</dd>
+                <dt>Chế độ</dt><dd>@if (cfg.Direct) {<span class="ta-badge ta-badge--neutral">Direct (Merchant thường)</span>} else {<span class="ta-badge ta-badge--success" data-ta-sandbox-master>Master Merchant</span>}</dd>
+                @if (cfg.Direct)
+                {
+                    <dt>Merchant ID</dt><dd>@if (cfg.MerchantId is long own) {<span class="ta-code" data-ta-sandbox-merchant>#@own</span>} else {<span class="ta-badge ta-badge--danger" data-ta-sandbox-no-merchant>Chưa cấu hình — cần để liên kết ngân hàng</span>}</dd>
+                }
+                else
+                {
+                    <dt>Merchant con</dt><dd>@if (Model.ScopeLabel is not null) {<span data-ta-sandbox-scope>@Model.ScopeLabel</span>} else {<span class="ta-badge ta-badge--danger" data-ta-sandbox-scope-missing>Chưa chọn</span>}</dd>
+                }
                 <dt>Môi trường</dt><dd><span class="ta-badge @(cfg.Production ? "ta-badge--warning" : "ta-badge--neutral")">@(cfg.Production ? "Production" : "UAT / khác")</span> <code>@cfg.BaseUrl</code></dd>
                 <dt>Hộp thư webhook</dt><dd>@(cfg.InboxAvailable ? "Sẵn sàng (dbo.TingeeWebhookInbox)" : "Chưa có kết nối cơ sở dữ liệu")</dd>
             </dl>
-            @if (!ready || cfg.MerchantId is null)
+            @if (!cfg.Direct && cfg.Configured && Model.Merchants.Count > 0)
+            {
+                <form asp-action="Index" method="get" class="mt-3" data-ta-sandbox-merchant-picker>
+                    <label class="form-label" for="merchant">Merchant con để test</label>
+                    <select class="form-select" id="merchant" name="merchant" onchange="this.form.submit()">
+                        <option value="">— Chọn —</option>
+                        @foreach (var m in Model.Merchants) { <option value="@m.MerchantId" selected="@(m.MerchantId == mid)">@m.CustomerName (@m.CustomerCode) — #@m.MerchantId</option> }
+                    </select>
+                    <noscript><button class="btn btn-sm mt-2" type="submit">Chọn</button></noscript>
+                </form>
+            }
+            @if (Model.ScopeError is not null && cfg.Configured)
+            {
+                <div class="ta-alert ta-alert--warning mt-3 mb-0" role="note" data-ta-sandbox-scope-error>@UiIcon.Render("alert-triangle")<div class="ta-alert__body">@Model.ScopeError</div></div>
+            }
+            @if (!cfg.Configured || (cfg.Direct && cfg.MerchantId is null))
             {
                 <div class="form-hint mt-3" data-ta-sandbox-howto>
-                    Thêm vào <code>appsettings.json</code> của site Portal trên server (mục <code>"Tingee"</code>), thay <code>0</code> bằng Merchant ID của T.A (xem trên trang quản trị Tingee), điền ClientId và SecretKey vào giữa hai dấu ngoặc kép đang để trống, rồi recycle app pool <code>TA.Portal</code>:
+                    Thêm vào <code>appsettings.json</code> của site Portal trên server (mục <code>"Tingee"</code>), điền ClientId và SecretKey vào giữa hai dấu ngoặc kép đang để trống (key Master Merchant dùng <code>"Mode": "Master"</code>; key Merchant thường dùng <code>"Direct"</code> kèm <code>"MerchantId"</code>), rồi recycle app pool <code>TA.Portal</code>:
                     <pre class="mt-2 mb-0"><code>"Tingee": {
   "BaseUrl": "@TingeeOptions.ProductionBaseUrl",
-  "Mode": "Direct",
-  "MerchantId": 0,
+  "Mode": "Master",
   "ClientId": "",
   "SecretKey": "",
   "VaStatusWebhookUrl": "@cfg.VaStatusWebhookUrl"
@@ -53,8 +75,8 @@
             </dl>
         </div>
         <div class="card-footer d-flex gap-2 flex-wrap">
-            <a class="btn" asp-action="Index">@UiIcon.Render("refresh")<span>Kiểm tra kết nối</span></a>
-            <form asp-action="SelfTestWebhook" method="post"><button class="btn" type="submit" disabled="@(!cfg.Configured || !cfg.InboxAvailable)" data-ta-loading data-ta-loading-text="Đang gửi...">@UiIcon.Render("inbox")<span>Gửi webhook thử</span></button></form>
+            <a class="btn" asp-action="Index" asp-route-merchant="@mid">@UiIcon.Render("refresh")<span>Kiểm tra kết nối</span></a>
+            <form asp-action="SelfTestWebhook" method="post"><input type="hidden" name="merchant" value="@mid" /><button class="btn" type="submit" disabled="@(!cfg.Configured || !cfg.InboxAvailable)" data-ta-loading data-ta-loading-text="Đang gửi...">@UiIcon.Render("inbox")<span>Gửi webhook thử</span></button></form>
         </div>
     </section>
 
@@ -63,7 +85,7 @@
         <div class="card-body">
             @if (conn is null)
             {
-                <p class="text-secondary mb-0">Cấu hình khóa API và chế độ Direct để kiểm tra kết nối.</p>
+                <p class="text-secondary mb-0">Cấu hình khóa API@(cfg.Direct ? "" : " và chọn merchant con") để kiểm tra kết nối.</p>
             }
             else if (!conn.Ok)
             {
@@ -101,6 +123,7 @@
                 @if (lr.Otp is { } otp)
                 {
                     <form asp-action="ConfirmOtp" method="post" class="mb-3" data-ta-sandbox-otp>
+                        <input type="hidden" name="merchant" value="@mid" />
                         <input type="hidden" name="bankBin" value="@otp.BankBin" />
                         <input type="hidden" name="confirmId" value="@otp.ConfirmId" />
                         <label class="form-label required" for="otp">Mã OTP @otp.BankName</label>
@@ -109,6 +132,7 @@
                 }
             }
             <form asp-action="Index" method="get" class="row g-2 mb-3">
+                <input type="hidden" name="merchant" value="@mid" />
                 <div class="col-sm-6"><label class="form-label" for="bin">Ngân hàng</label>
                     <select class="form-select" id="bin" name="bin" onchange="this.form.submit()">
                         <option value="">— Chọn —</option>
@@ -125,6 +149,7 @@
             {
                 @if (rule.Note is not null) {<p class="form-hint">@rule.Note</p>}
                 <form asp-action="LinkBank" method="post" data-ta-sandbox-link-form>
+                    <input type="hidden" name="merchant" value="@mid" />
                     <input type="hidden" name="Bank.Bin" value="@Model.Bank!.Bin" />
                     <input type="hidden" name="Bank.AccountType" value="@Model.AccountType" />
                     @foreach (var field in rule.Required)
@@ -163,8 +188,8 @@
                 </div>
                 @if (qr.Type == "dynamic" && qr.QrAccount is not null && qr.BillId is not null)
                 {
-                    <div class="ta-alert ta-alert--info" role="status" aria-live="polite" data-ta-sandbox-qr-status data-url="@Url.Action("QrStatus", new { qrAccount = qr.QrAccount, billId = qr.BillId })">@UiIcon.Render("clock")<div class="ta-alert__body" data-ta-sandbox-qr-status-text>Đang chờ thanh toán… (tự kiểm tra mỗi 5 giây)</div></div>
-                    <form asp-action="DeleteQr" method="post"><input type="hidden" name="qrAccount" value="@qr.QrAccount" /><input type="hidden" name="billId" value="@qr.BillId" /><button class="btn btn-outline-danger btn-sm" type="submit">@UiIcon.Render("x")<span>Hủy QR</span></button></form>
+                    <div class="ta-alert ta-alert--info" role="status" aria-live="polite" data-ta-sandbox-qr-status data-url="@Url.Action("QrStatus", new { qrAccount = qr.QrAccount, billId = qr.BillId, merchant = mid })">@UiIcon.Render("clock")<div class="ta-alert__body" data-ta-sandbox-qr-status-text>Đang chờ thanh toán… (tự kiểm tra mỗi 5 giây)</div></div>
+                    <form asp-action="DeleteQr" method="post"><input type="hidden" name="merchant" value="@mid" /><input type="hidden" name="qrAccount" value="@qr.QrAccount" /><input type="hidden" name="billId" value="@qr.BillId" /><button class="btn btn-outline-danger btn-sm" type="submit">@UiIcon.Render("x")<span>Hủy QR</span></button></form>
                 }
                 else
                 {
@@ -172,6 +197,7 @@
                 }
             }
             <form asp-action="CreateQr" method="post">
+                <input type="hidden" name="merchant" value="@mid" />
                 <div class="mb-2"><label class="form-label required" for="Qr_Account">Tài khoản nhận tiền</label>
                     <select class="form-select" id="Qr_Account" name="Qr.Account" required>
                         <option value="">— Chọn —</option>

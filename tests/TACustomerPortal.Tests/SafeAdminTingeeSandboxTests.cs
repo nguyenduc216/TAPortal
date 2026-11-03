@@ -37,7 +37,7 @@ public sealed class SafeAdminTingeeSandboxTests
         Assert.Contains("data-ta-sandbox-unconfigured", html);
         Assert.Contains("data-ta-sandbox-howto", html);
         Assert.Contains("https://localhost/hooks/tingee/payment", html);
-        Assert.Contains("\"Mode\": \"Direct\"", html);
+        Assert.Contains("\"Mode\": \"Master\"", html);
         Assert.Empty(tingee.Calls);
     }
 
@@ -66,16 +66,44 @@ public sealed class SafeAdminTingeeSandboxTests
     }
 
     [Fact]
-    public async Task MasterModeIsRefused()
+    public async Task MasterModeWithoutChildMerchantsExplainsHowToCreateOne()
     {
         using var f = Factory(out var tingee, out _, mode: "Master");
         var c = Client(f);
         var html = WebUtility.HtmlDecode(await c.GetStringAsync("/tingeesandbox"));
         Assert.Contains("data-ta-sandbox-master", html);
+        Assert.Contains("data-ta-sandbox-scope-error", html);
+        Assert.Contains("Tạo tài khoản Tingee qua API", html);
         var r = await Post(c, "/tingeesandbox/createqr", await Token(c), new() { ["Qr.Account"] = "970422|963123456789|personal-account", ["Qr.Amount"] = "2000" });
         Assert.Equal(HttpStatusCode.BadRequest, r.StatusCode);
-        Assert.Contains("Tingee__Mode=Direct", WebUtility.HtmlDecode(await r.Content.ReadAsStringAsync()));
         Assert.Empty(tingee.Qrs);
+        Assert.Empty(tingee.Calls);
+    }
+
+    [Fact]
+    public async Task MasterModeActsOnlyOnALinkedChildMerchant()
+    {
+        using var f = Factory(out var tingee, out _, mode: "Master", linked: [(5555, "TA", "Công ty T.A"), (6666, "KH-B", "Công ty B")]);
+        var c = Client(f);
+        var picker = WebUtility.HtmlDecode(await c.GetStringAsync("/tingeesandbox"));
+        Assert.Contains("data-ta-sandbox-merchant-picker", picker);
+        Assert.Contains("Chọn merchant con", picker);
+        Assert.Empty(tingee.Calls);   // two merchants: nothing is called until one is chosen
+
+        var html = WebUtility.HtmlDecode(await c.GetStringAsync("/tingeesandbox?merchant=5555"));
+        Assert.Contains("Công ty T.A — merchant #5555", html);
+        Assert.Contains("data-ta-sandbox-conn-ok", html);
+        Assert.Equal([5555L], tingee.ListedMerchants);
+
+        var token = await Token(c);
+        var r = await Post(c, "/tingeesandbox/createqr", token, new() { ["merchant"] = "5555", ["Qr.Account"] = "970422|963123456789|personal-account", ["Qr.Amount"] = "2000" });
+        Assert.Equal(HttpStatusCode.OK, r.StatusCode);
+        Assert.Contains("merchant=5555", WebUtility.HtmlDecode(await r.Content.ReadAsStringAsync()));
+        Assert.Equal(5555L, Assert.Single(tingee.Qrs).MerchantId);
+
+        var foreign = await Post(c, "/tingeesandbox/createqr", token, new() { ["merchant"] = "999", ["Qr.Account"] = "970422|963123456789|personal-account", ["Qr.Amount"] = "2000" });
+        Assert.Equal(HttpStatusCode.BadRequest, foreign.StatusCode);   // not linked in Admin: refused
+        Assert.Single(tingee.Qrs);
     }
 
     [Fact]
@@ -230,7 +258,7 @@ public sealed class SafeAdminTingeeSandboxTests
     private static HttpClient Client(WebApplicationFactory<admin::Program> f) =>
         f.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false, BaseAddress = new Uri("https://localhost"), HandleCookies = true });
 
-    private static WebApplicationFactory<admin::Program> Factory(out FakeTingee tingee, out MemoryInbox inbox, bool configured = true, string mode = "Direct", bool admin = true, string? merchantId = "9001")
+    private static WebApplicationFactory<admin::Program> Factory(out FakeTingee tingee, out MemoryInbox inbox, bool configured = true, string mode = "Direct", bool admin = true, string? merchantId = "9001", (long Id, string Code, string Name)[]? linked = null)
     {
         var t = tingee = new FakeTingee(configured);
         var i = inbox = new MemoryInbox();
@@ -249,6 +277,8 @@ public sealed class SafeAdminTingeeSandboxTests
                 services.AddSingleton<ITingeeWebhookInbox>(i);
                 services.RemoveAll<AdminServices.ITingeeSandboxInbox>();
                 services.AddSingleton<AdminServices.ITingeeSandboxInbox>(i);
+                services.RemoveAll<AdminServices.ITingeeSandboxMerchants>();
+                services.AddSingleton<AdminServices.ITingeeSandboxMerchants>(new LinkedMerchants(linked ?? []));
                 services.AddSingleton(new TestRole(role));
                 services.AddAuthentication().AddScheme<AuthenticationSchemeOptions, TestAuthHandler>(TestScheme, _ => { });
                 services.PostConfigure<AuthenticationOptions>(o => { o.DefaultScheme = TestScheme; o.DefaultAuthenticateScheme = TestScheme; o.DefaultChallengeScheme = TestScheme; o.DefaultForbidScheme = TestScheme; });
@@ -256,6 +286,12 @@ public sealed class SafeAdminTingeeSandboxTests
     }
 
     public sealed record TestRole(string Role);
+
+    public sealed class LinkedMerchants((long Id, string Code, string Name)[] linked) : AdminServices.ITingeeSandboxMerchants
+    {
+        public Task<IReadOnlyList<AdminModels.TingeeSandboxMerchant>> LinkedAsync(CancellationToken ct = default) =>
+            Task.FromResult<IReadOnlyList<AdminModels.TingeeSandboxMerchant>>(linked.Select(m => new AdminModels.TingeeSandboxMerchant(m.Id, m.Code, m.Name)).ToList());
+    }
 
     public sealed class MemoryInbox : ITingeeWebhookInbox, AdminServices.ITingeeSandboxInbox
     {
@@ -271,6 +307,7 @@ public sealed class SafeAdminTingeeSandboxTests
     {
         public bool IsConfigured => configured;
         public List<string> Calls { get; } = [];
+        public List<long> ListedMerchants { get; } = [];
         public List<TingeeDynamicQrRequest> Qrs { get; } = [];
         public List<(string, string, decimal?)> StaticQrs { get; } = [];
         public List<TingeeCreateVaRequest> Vas { get; } = [];
@@ -281,6 +318,7 @@ public sealed class SafeAdminTingeeSandboxTests
         public Task<TingeePage<TingeeVaItem>> GetVaPageAsync(long merchantId, CancellationToken ct = default)
         {
             Calls.Add("get-va-paging");
+            ListedMerchants.Add(merchantId);
             if (ListError is not null) throw ListError;
             return Task.FromResult(new TingeePage<TingeeVaItem> { TotalCount = 1, Items = [new() { BankBin = "970422", AccountType = "personal-account", AccountNumber = "0123456789", VaAccountNumber = "963123456789", Status = "active" }] });
         }

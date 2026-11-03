@@ -27,6 +27,26 @@ public sealed class SqlTingeeSandboxInbox(IConfiguration configuration) : ITinge
     }
 }
 
+/// <summary>Child merchants linked to customers in Admin (dbo.TingeeMerchants), the only merchants the sandbox may act on.</summary>
+public interface ITingeeSandboxMerchants
+{
+    Task<IReadOnlyList<TingeeSandboxMerchant>> LinkedAsync(CancellationToken ct = default);
+}
+
+public sealed class SqlTingeeSandboxMerchants(IConfiguration configuration) : ITingeeSandboxMerchants
+{
+    public async Task<IReadOnlyList<TingeeSandboxMerchant>> LinkedAsync(CancellationToken ct = default)
+    {
+        await using var cn = new SqlConnection(configuration["Database:ConnectionString"]);
+        await cn.OpenAsync(ct);
+        await using var cmd = new SqlCommand("SELECT m.MerchantId,c.Code,c.Name FROM dbo.TingeeMerchants m JOIN dbo.Customers c ON c.Id=m.CustomerId ORDER BY c.Name", cn);
+        var rows = new List<TingeeSandboxMerchant>();
+        await using var r = await cmd.ExecuteReaderAsync(ct);
+        while (await r.ReadAsync(ct)) rows.Add(new(r.GetInt64(0), r.GetString(1), r.GetString(2)));
+        return rows;
+    }
+}
+
 /// <summary>
 /// Pulls the usual Tingee transaction fields out of a stored webhook body for display. Field names differ between
 /// webhook kinds and banks, so several aliases are tried and anything missing stays null; the raw body is always kept.

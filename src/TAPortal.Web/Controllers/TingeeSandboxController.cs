@@ -13,49 +13,51 @@ using TAPortal.Web.Services;
 
 namespace TAPortal.Web.Controllers;
 
-// Tingee Sandbox: T.A tests its own Tingee Merchant account (Tingee__Mode=Direct, T.A's ClientId/SecretKey in the
-// Admin site's server configuration) end to end: connection, bank account linking with OTP, a test QR whose payment
-// status is polled from Tingee, and the webhooks Tingee sends to /hooks/tingee/* on this site. Nothing here is tied to a
-// customer and nothing is stored except what Tingee itself sends to the webhook inbox.
+// Tingee Sandbox: T.A tests its Tingee account (ClientId/SecretKey in the Admin site's server configuration) end to end:
+// connection, bank account linking with OTP, a test QR whose payment status is polled from Tingee, and the webhooks Tingee
+// sends to /hooks/tingee/* on this site. With a Master Merchant key (Tingee__Mode=Master) every call acts on one child
+// merchant that is already linked to a customer in Admin; with a normal Merchant key (Direct) on T.A's own merchant.
+// Nothing is stored here except what Tingee itself sends to the webhook inbox.
 [Authorize(Policy = "SystemAdminOnly")]
 public sealed partial class TingeeSandboxController(
     ITingeeApi tingee,
     IOptions<TingeeOptions> options,
     ITingeeSandboxInbox inbox,
+    ITingeeSandboxMerchants merchants,
     ITingeeWebhookInbox webhookInbox,
     IHttpClientFactory httpClients,
     TimeProvider clock,
     ILogger<TingeeSandboxController> logger) : Controller
 {
-    // In Direct mode TingeeApi sends T.A's own Tingee:MerchantId instead of this value; Master mode is not what the sandbox tests.
-    private const long DirectMerchant = 0;
     private const int QrLifetimeMinutes = 15;
 
     [HttpGet]
-    public async Task<IActionResult> Index(string? bin, string? type) =>
-        await Page(bankInput: new TingeeSandboxBankInput { Bin = bin, AccountType = type });
+    public async Task<IActionResult> Index(string? bin, string? type, long? merchant) =>
+        await Page(merchant, bankInput: new TingeeSandboxBankInput { Bin = bin, AccountType = type });
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> LinkBank([Bind(Prefix = "Bank")] TingeeSandboxBankInput input)
+    public async Task<IActionResult> LinkBank([Bind(Prefix = "Bank")] TingeeSandboxBankInput input, long? merchant)
     {
         var bank = TingeeBankCatalog.Find(input.Bin);
         var type = bank is not null && input.AccountType is not null && bank.AccountTypes.Contains(input.AccountType) ? input.AccountType : null;
-        if (Refusal() is string refused) return await Page(bankInput: input, error: refused);
-        if (options.Value.MerchantId is not > 0) return await Page(bankInput: input, error: "Tingee yêu cầu Merchant ID khi liên kết ngân hàng (mã 1096): thêm \"MerchantId\" (Merchant ID của T.A trên Tingee) vào mục Tingee trong appsettings.json rồi recycle app pool.");
-        if (bank is null || type is null) return await Page(bankInput: input, error: "Chọn ngân hàng và loại tài khoản.");
+        if (Refusal() is string refused) return await Page(merchant, bankInput: input, error: refused);
+        var (scope, _, scopeError) = await Resolve(merchant);
+        if (scope is null) return await Page(merchant, bankInput: input, error: scopeError);
+        if (options.Value.IsDirectMerchant && options.Value.MerchantId is not > 0) return await Page(merchant, bankInput: input, error: "Tingee yêu cầu Merchant ID khi liên kết ngân hàng (mã 1096): thêm \"MerchantId\" vào mục Tingee trong appsettings.json, hoặc dùng Mode=Master với merchant con.");
+        if (bank is null || type is null) return await Page(merchant, bankInput: input, error: "Chọn ngân hàng và loại tài khoản.");
         var rule = bank.Rule(type);
         foreach (var field in rule.Required)
             if (string.IsNullOrWhiteSpace(Value(input, field))) ModelState.AddModelError(string.Empty, $"Thiếu {FieldLabel(field)}.");
         var vaStatusUrl = options.Value.VaStatusWebhookUrl;
         if (rule.AsyncResult && string.IsNullOrWhiteSpace(vaStatusUrl))
             ModelState.AddModelError(string.Empty, $"{bank.Name} gửi kết quả liên kết qua webhook: cần cấu hình Tingee__VaStatusWebhookUrl = {AbsoluteHook("va-status")} trước.");
-        if (!ModelState.IsValid) return await Page(bankInput: input, status: StatusCodes.Status400BadRequest);
+        if (!ModelState.IsValid) return await Page(merchant, bankInput: input, status: StatusCodes.Status400BadRequest);
 
         var notifyRoot = !rule.VaSupported || (rule.SupportsRootNotify && input.NotifyRootAccount);
         var request = new TingeeCreateVaRequest
         {
-            MerchantId = DirectMerchant,
+            MerchantId = scope.MerchantId,
             BankBin = bank.Bin,
             AccountType = type,
             AccountNumber = Use(rule, TingeeBankField.AccountNumber, input.AccountNumber),
@@ -68,14 +70,14 @@ public sealed partial class TingeeSandboxController(
             AcbUserId = Use(rule, TingeeBankField.AcbUserId, input.AcbUserId),
             IsNotifyAccountNumber = notifyRoot,
             Name = $"TA SANDBOX - {bank.Code}",
-            RedirectUrl = bank.Code == "VCB" && type == TingeeAccountTypes.Personal ? Url.Action(nameof(Index), "TingeeSandbox", null, Request.Scheme) : null,
+            RedirectUrl = bank.Code == "VCB" && type == TingeeAccountTypes.Personal ? Url.Action(nameof(Index), "TingeeSandbox", new { merchant }, Request.Scheme) : null,
             WebhookUrl = rule.AsyncResult ? vaStatusUrl : null,
             RequestId = bank.Code == "TPB" ? Guid.NewGuid().ToString("N") : null
         };
 
         TingeeCreateVaResult result;
         try { result = await tingee.CreateVaAsync(request); }
-        catch (Exception ex) when (Explain(ex, "create-va") is string message) { return await Page(bankInput: input, error: $"Liên kết {bank.Name} không thành công: {message}"); }
+        catch (Exception ex) when (Explain(ex, "create-va") is string message) { return await Page(merchant, bankInput: input, error: $"Liên kết {bank.Name} không thành công: {message}"); }
 
         var link = SafeLink(result.AuthorizeLink ?? result.DeepLink);
         TingeeSandboxLinkResult outcome = result.ConfirmId is not null
@@ -83,42 +85,46 @@ public sealed partial class TingeeSandboxController(
             : link is not null
                 ? new(bank.Name, $"Mở liên kết xác thực của {bank.Name} để hoàn tất, sau đó bấm \"Kiểm tra kết nối\".", link, null)
                 : new(bank.Name, $"Đã gửi yêu cầu liên kết {bank.Name}{(result.VaAccountNumber is null ? "" : $" (tài khoản nhận: {result.VaAccountNumber})")}.", null, null);
-        logger.LogInformation("TINGEE_SANDBOX_VA_REQUESTED bank={Bank} type={Type} otp={Otp}", bank.Code, type, result.ConfirmId is not null);
-        return await Page(bankInput: new TingeeSandboxBankInput { Bin = bank.Bin, AccountType = type }, linkResult: outcome);
+        logger.LogInformation("TINGEE_SANDBOX_VA_REQUESTED merchant={Merchant} bank={Bank} type={Type} otp={Otp}", scope.MerchantId, bank.Code, type, result.ConfirmId is not null);
+        return await Page(merchant, bankInput: new TingeeSandboxBankInput { Bin = bank.Bin, AccountType = type }, linkResult: outcome);
     }
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> ConfirmOtp(string? bankBin, string? confirmId, string? otp)
+    public async Task<IActionResult> ConfirmOtp(string? bankBin, string? confirmId, string? otp, long? merchant)
     {
         var bank = TingeeBankCatalog.Find(bankBin);
         if (bank is null || string.IsNullOrWhiteSpace(confirmId)) return BadRequest();
-        if (Refusal() is string refused) return await Page(error: refused);
+        if (Refusal() is string refused) return await Page(merchant, error: refused);
+        var (scope, _, scopeError) = await Resolve(merchant);
+        if (scope is null) return await Page(merchant, error: scopeError);
         otp = otp?.Trim();
         var pending = new TingeeSandboxLinkResult(bank.Name, "Nhập lại mã OTP.", null, new(bank.Bin, bank.Name, confirmId, null));
         if (otp is null || !OtpPattern().IsMatch(otp))
-            return await Page(linkResult: pending, error: "Mã OTP gồm 4–8 chữ số.", status: StatusCodes.Status400BadRequest);
+            return await Page(merchant, linkResult: pending, error: "Mã OTP gồm 4–8 chữ số.", status: StatusCodes.Status400BadRequest);
         try
         {
-            var confirmed = await tingee.ConfirmVaAsync(DirectMerchant, bank.Bin, confirmId, otp);
+            var confirmed = await tingee.ConfirmVaAsync(scope.MerchantId, bank.Bin, confirmId, otp);
             TempData["Success"] = $"Đã liên kết {bank.Name}{(confirmed.VaAccountNumber is null ? "" : $", tài khoản nhận {confirmed.VaAccountNumber}")}.";
-            return RedirectToAction(nameof(Index));
+            return RedirectToAction(nameof(Index), new { merchant });
         }
         catch (Exception ex) when (Explain(ex, "confirm-va") is string message)
         {
-            return await Page(linkResult: pending, error: $"Xác nhận OTP không thành công: {message}");
+            return await Page(merchant, linkResult: pending, error: $"Xác nhận OTP không thành công: {message}");
         }
     }
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> CreateQr([Bind(Prefix = "Qr")] TingeeSandboxQrInput input)
+    public async Task<IActionResult> CreateQr([Bind(Prefix = "Qr")] TingeeSandboxQrInput input, long? merchant)
     {
-        if (Refusal() is string refused) return await Page(qrInput: input, error: refused);
-        if (!ModelState.IsValid) return await Page(qrInput: input, status: StatusCodes.Status400BadRequest);
+        if (Refusal() is string refused) return await Page(merchant, qrInput: input, error: refused);
+        var (scope, _, scopeError) = await Resolve(merchant);
+        if (scope is null) return await Page(merchant, qrInput: input, error: scopeError);
+        if (!ModelState.IsValid) return await Page(merchant, qrInput: input, status: StatusCodes.Status400BadRequest);
         var parts = (input.Account ?? "").Split('|');
         var bank = parts.Length == 3 ? TingeeBankCatalog.Find(parts[0]) : null;
-        if (bank is null || string.IsNullOrWhiteSpace(parts[1])) return await Page(qrInput: input, error: "Tài khoản nhận tiền không hợp lệ; bấm \"Kiểm tra kết nối\" rồi chọn lại.");
+        if (bank is null || string.IsNullOrWhiteSpace(parts[1])) return await Page(merchant, qrInput: input, error: "Tài khoản nhận tiền không hợp lệ; bấm \"Kiểm tra kết nối\" rồi chọn lại.");
         var account = parts[1];
         var purpose = string.IsNullOrWhiteSpace(input.Purpose) ? null : input.Purpose.Trim();
         try
@@ -134,32 +140,34 @@ public sealed partial class TingeeSandboxController(
             {
                 var made = await tingee.GenerateDynamicQrAsync(new TingeeDynamicQrRequest
                 {
-                    MerchantId = DirectMerchant, BankBin = bank.Bin, VaAccountNumber = account, Amount = input.Amount,
+                    MerchantId = scope.MerchantId, BankBin = bank.Bin, VaAccountNumber = account, Amount = input.Amount,
                     QrCodeType = TingeeQrTypes.OneTime, Purpose = purpose, ExpireInMinute = QrLifetimeMinutes
                 });
                 if (string.IsNullOrWhiteSpace(made.QrCode)) throw new TingeeApiException("EMPTY", "Tingee không trả về mã QR.");
                 qr = new(QrImage.Svg(made.QrCode), made.QrCode, "dynamic", bank.Name, account, input.Amount, purpose, made.QrAccount, made.BillId,
                     clock.GetUtcNow().UtcDateTime.AddMinutes(QrLifetimeMinutes));
             }
-            logger.LogInformation("TINGEE_SANDBOX_QR type={Type} bank={Bank} amount={Amount}", qr.Type, bank.Code, input.Amount);
-            return await Page(qrInput: input, qr: qr);
+            logger.LogInformation("TINGEE_SANDBOX_QR merchant={Merchant} type={Type} bank={Bank} amount={Amount}", scope.MerchantId, qr.Type, bank.Code, input.Amount);
+            return await Page(merchant, qrInput: input, qr: qr);
         }
         catch (Exception ex) when (Explain(ex, "qr") is string message)
         {
             var hint = input.Type == "dynamic" && parts[2] is { Length: > 0 } t && !TingeeBankCatalog.SupportsDynamicQr(bank.Bin, t)
                 ? $" {bank.Name} có thể không hỗ trợ QR động cho loại tài khoản này; thử \"QR tĩnh\"." : "";
-            return await Page(qrInput: input, error: $"Tạo QR không thành công: {message}{hint}");
+            return await Page(merchant, qrInput: input, error: $"Tạo QR không thành công: {message}{hint}");
         }
     }
 
     [HttpGet]
-    public async Task<IActionResult> QrStatus(string? qrAccount, string? billId)
+    public async Task<IActionResult> QrStatus(string? qrAccount, string? billId, long? merchant)
     {
         if (string.IsNullOrWhiteSpace(qrAccount) || string.IsNullOrWhiteSpace(billId)) return BadRequest();
         if (Refusal() is string refused) return Json(new { ok = false, error = refused });
+        var (scope, _, scopeError) = await Resolve(merchant);
+        if (scope is null) return Json(new { ok = false, error = scopeError });
         try
         {
-            var bill = (await tingee.GetDynamicQrStatusAsync(DirectMerchant, qrAccount, billId)).BillInfo;
+            var bill = (await tingee.GetDynamicQrStatusAsync(scope.MerchantId, qrAccount, billId)).BillInfo;
             return Json(new
             {
                 ok = true,
@@ -175,13 +183,15 @@ public sealed partial class TingeeSandboxController(
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> DeleteQr(string? qrAccount, string? billId)
+    public async Task<IActionResult> DeleteQr(string? qrAccount, string? billId, long? merchant)
     {
         if (string.IsNullOrWhiteSpace(qrAccount) || string.IsNullOrWhiteSpace(billId)) return BadRequest();
-        if (Refusal() is string refused) return await Page(error: refused);
-        try { await tingee.DeleteDynamicQrAsync(DirectMerchant, qrAccount, billId); TempData["Success"] = "Đã hủy QR thử."; }
+        if (Refusal() is string refused) return await Page(merchant, error: refused);
+        var (scope, _, scopeError) = await Resolve(merchant);
+        if (scope is null) return await Page(merchant, error: scopeError);
+        try { await tingee.DeleteDynamicQrAsync(scope.MerchantId, qrAccount, billId); TempData["Success"] = "Đã hủy QR thử."; }
         catch (Exception ex) when (Explain(ex, "delete-qr") is string message) { TempData["Error"] = $"Hủy QR không thành công: {message}"; }
-        return RedirectToAction(nameof(Index));
+        return RedirectToAction(nameof(Index), new { merchant });
     }
 
     [HttpGet]
@@ -197,9 +207,9 @@ public sealed partial class TingeeSandboxController(
     /// </summary>
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> SelfTestWebhook()
+    public async Task<IActionResult> SelfTestWebhook(long? merchant)
     {
-        if (!options.Value.IsConfigured) { TempData["Error"] = "Chưa cấu hình Tingee__ClientId/Tingee__SecretKey."; return RedirectToAction(nameof(Index)); }
+        if (!options.Value.IsConfigured) { TempData["Error"] = "Chưa cấu hình Tingee__ClientId/Tingee__SecretKey."; return RedirectToAction(nameof(Index), new { merchant }); }
         var url = AbsoluteHook("bank-link");
         var body = JsonSerializer.Serialize(new { sandboxSelfTest = true, requestedBy = User.Identity?.Name, at = clock.GetUtcNow().UtcDateTime });
         var timestamp = TingeeSignature.Timestamp(clock.GetUtcNow());
@@ -218,12 +228,35 @@ public sealed partial class TingeeSandboxController(
             logger.LogWarning(ex, "TINGEE_SANDBOX_SELFTEST_UNREACHABLE url={Url}", url);
             TempData["Error"] = $"Server không gọi được chính địa chỉ {url} ({ex.Message}). Kiểm tra DNS/NAT; Tingee gọi từ internet vẫn có thể tới được.";
         }
-        return RedirectToAction(nameof(Index));
+        return RedirectToAction(nameof(Index), new { merchant });
     }
 
     // ---- helpers ---------------------------------------------------------------------------------------
 
-    private async Task<IActionResult> Page(TingeeSandboxBankInput? bankInput = null, TingeeSandboxLinkResult? linkResult = null,
+    private sealed record Scope(long MerchantId, string Label);
+
+    /// <summary>
+    /// The merchant every Tingee call acts on. Direct: T.A's own (TingeeApi adds Tingee:MerchantId). Master: one of the child
+    /// merchants already linked to a customer in Admin (dbo.TingeeMerchants) — never an arbitrary id from the request.
+    /// </summary>
+    private async Task<(Scope? Scope, IReadOnlyList<TingeeSandboxMerchant> Linked, string? Error)> Resolve(long? merchant)
+    {
+        if (options.Value.IsDirectMerchant) return (new(0, "Merchant của T.A (chế độ Direct)"), [], null);
+        IReadOnlyList<TingeeSandboxMerchant> linked;
+        try { linked = await merchants.LinkedAsync(); }
+        catch (SqlException ex)
+        {
+            logger.LogWarning(ex, "TINGEE_SANDBOX_MERCHANTS_UNREADABLE");
+            return (null, [], "Không đọc được bảng dbo.TingeeMerchants (danh sách merchant con).");
+        }
+        if (linked.Count == 0)
+            return (null, linked, "Chưa có merchant con nào: vào Khách hàng → chọn khách hàng T.A → tab Tingee → \"Tạo tài khoản Tingee qua API\", rồi quay lại đây.");
+        var pick = merchant is long id ? linked.FirstOrDefault(m => m.MerchantId == id) : linked.Count == 1 ? linked[0] : null;
+        return pick is null ? (null, linked, "Chọn merchant con để test (mục 1).")
+            : (new(pick.MerchantId, $"{pick.CustomerName} — merchant #{pick.MerchantId}"), linked, null);
+    }
+
+    private async Task<IActionResult> Page(long? merchant, TingeeSandboxBankInput? bankInput = null, TingeeSandboxLinkResult? linkResult = null,
         TingeeSandboxQrInput? qrInput = null, TingeeSandboxQr? qr = null, string? error = null, int? status = null)
     {
         if (error is not null) ModelState.AddModelError(string.Empty, error);
@@ -231,16 +264,18 @@ public sealed partial class TingeeSandboxController(
         var bank = TingeeBankCatalog.Find(bankInput.Bin);
         var type = bank is not null && bankInput.AccountType is not null && bank.AccountTypes.Contains(bankInput.AccountType) ? bankInput.AccountType : null;
         var config = Config();
+        var (scope, linked, scopeError) = config.Configured ? await Resolve(merchant) : (null, [], null);
         TingeeSandboxConnection? connection = null;
-        if (config.Configured && config.Direct)
+        if (scope is not null)
         {
-            try { connection = new(true, (await tingee.GetVaPageAsync(DirectMerchant)).Items, null); }
+            try { connection = new(true, (await tingee.GetVaPageAsync(scope.MerchantId)).Items, null); }
             catch (Exception ex) when (Explain(ex, "get-va-paging") is string message) { connection = new(false, [], message); }
         }
         var (rows, webhookError) = await RecentWebhooks();
         if (status is int code) Response.StatusCode = code;
         else if (error is not null) Response.StatusCode = StatusCodes.Status400BadRequest;
-        return View("Index", new TingeeSandboxVm(config, connection, bank, type, bankInput, linkResult, qrInput ?? new TingeeSandboxQrInput(), qr, rows, webhookError));
+        return View("Index", new TingeeSandboxVm(config, linked, config.Direct ? null : scope?.MerchantId, scope?.Label, scopeError, connection, bank, type, bankInput,
+            linkResult, qrInput ?? new TingeeSandboxQrInput(), qr, rows, webhookError));
     }
 
     private async Task<(IReadOnlyList<TingeeSandboxWebhook> Rows, string? Error)> RecentWebhooks()
@@ -265,9 +300,7 @@ public sealed partial class TingeeSandboxController(
     private string? Refusal()
     {
         var o = options.Value;
-        if (!o.IsConfigured) return "Chưa cấu hình Tingee__ClientId/Tingee__SecretKey cho site Portal.";
-        if (!o.IsDirectMerchant) return "Sandbox chỉ chạy với tài khoản Merchant của T.A: đặt Tingee__Mode=Direct.";
-        return null;
+        return o.IsConfigured ? null : "Chưa cấu hình Tingee__ClientId/Tingee__SecretKey cho site Portal.";
     }
 
     private string AbsoluteHook(string kind) => $"{Request.Scheme}://{Request.Host}{Request.PathBase}/hooks/tingee/{kind}";

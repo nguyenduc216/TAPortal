@@ -9,6 +9,8 @@ namespace TAPortal.Web.Models;
 public sealed record TingeeSandboxConfig(bool Configured, bool Direct, string BaseUrl, bool Production, bool InboxAvailable,
     string PaymentWebhookUrl, string VaStatusWebhookUrl, string BankLinkWebhookUrl, string? VaStatusWebhookConfigured, long? MerchantId);
 
+public sealed record TingeeSandboxMerchant(long MerchantId, string CustomerCode, string CustomerName);
+
 public sealed record TingeeSandboxConnection(bool Ok, IReadOnlyList<TingeeVaItem> Accounts, string? Error);
 
 public sealed record TingeeSandboxQr(string Svg, string Payload, string Type, string BankName, string Account, decimal Amount, string? Purpose,
@@ -23,6 +25,10 @@ public sealed record TingeeSandboxWebhook(long Id, string Kind, string Status, D
 
 public sealed record TingeeSandboxVm(
     TingeeSandboxConfig Config,
+    IReadOnlyList<TingeeSandboxMerchant> Merchants,
+    long? SelectedMerchant,
+    string? ScopeLabel,
+    string? ScopeError,
     TingeeSandboxConnection? Connection,
     TingeeBank? Bank,
     string? AccountType,
