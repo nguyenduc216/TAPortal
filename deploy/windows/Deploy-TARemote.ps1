@@ -62,7 +62,8 @@ function Invoke-Native([string] $Exe, [string[]] $Arguments) {
 }
 
 function Invoke-Checked([string] $Exe, [string[]] $Arguments) {
-    & $Exe @Arguments
+    # git/scp/dotnet print progress on stderr; only the exit code decides success.
+    Invoke-Native $Exe $Arguments | ForEach-Object { Write-Host "  | $_" }
     if ($LASTEXITCODE -ne 0) { throw "$Exe $($Arguments -join ' ') failed with exit code $LASTEXITCODE" }
 }
 
