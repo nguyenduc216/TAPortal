@@ -1126,5 +1126,15 @@
     },
     "backup": "publish\\rollback\\TAPORTAL-SYSTEM-AUDIT-CHG-20261029T180352Z-C996C9\\TACustomerPortal.Web",
     "iis": "NOT_CHECKED"
+  },
+  {
+    "change_id": "TAPORTAL-SYSTEM-AUDIT-CHG-20261103T143443Z-55C344",
+    "created_at": "2026-11-03T14:34:43.539970+00:00",
+    "title": "Execute migration 009 on production, pin Pkcs 8.0.2, first agent deploy of portal and invoice",
+    "status": "MIGRATION_EXECUTED / DEPLOY_PENDING",
+    "commit_sha": null,
+    "migration_status": "EXECUTED (009); 008,010,011,012 VERIFIED_PRESENT",
+    "publish_status": "NOT_DEPLOYED",
+    "merge_status": "PENDING_APPROVAL"
   }
 ]
