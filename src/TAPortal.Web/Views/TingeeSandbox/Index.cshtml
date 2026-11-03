@@ -33,12 +33,12 @@
             @if (!ready)
             {
                 <div class="form-hint mt-3" data-ta-sandbox-howto>
-                    Thêm vào <code>appsettings.json</code> của site Portal trên server (mục <code>"Tingee"</code>), rồi recycle app pool <code>TA.Portal</code>:
+                    Thêm vào <code>appsettings.json</code> của site Portal trên server (mục <code>"Tingee"</code>), điền ClientId và SecretKey của T.A vào giữa hai dấu ngoặc kép đang để trống, rồi recycle app pool <code>TA.Portal</code>:
                     <pre class="mt-2 mb-0"><code>"Tingee": {
   "BaseUrl": "@TingeeOptions.ProductionBaseUrl",
   "Mode": "Direct",
-  "ClientId": "&lt;ClientId của T.A&gt;",
-  "SecretKey": "&lt;SecretKey của T.A&gt;",
+  "ClientId": "",
+  "SecretKey": "",
   "VaStatusWebhookUrl": "@cfg.VaStatusWebhookUrl"
 }</code></pre>
                 </div>
