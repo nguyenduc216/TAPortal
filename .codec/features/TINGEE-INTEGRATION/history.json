@@ -147,10 +147,10 @@
     "change_id": "TINGEE-INTEGRATION-CHG-20261103T151002Z-F31B55",
     "created_at": "2026-11-03T15:10:02.845412+00:00",
     "title": "Tingee Sandbox in Admin: config status, bank link, test QR, payment status and webhook inbox",
-    "status": "IMPLEMENTED / TESTS_PASS",
+    "status": "DEPLOYED / TINGEE_NOT_CONFIGURED",
     "commit_sha": null,
     "migration_status": "NONE_REQUIRED",
-    "publish_status": "DEPLOY_PENDING",
+    "publish_status": "DEPLOYED portal + invoice ea49b83",
     "merge_status": "PENDING_APPROVAL"
   }
 ]

@@ -4,7 +4,7 @@
 - Change ID: `TINGEE-INTEGRATION-CHG-20261103T151002Z-F31B55`
 - Created UTC: 2026-11-03T15:10:02.845412+00:00
 - Tiêu đề: Tingee Sandbox in Admin: config status, bank link, test QR, payment status and webhook inbox
-- Trạng thái: IMPLEMENTED / TESTS_PASS / DEPLOY_PENDING
+- Trạng thái: DEPLOYED (portal, invoice) / TINGEE_NOT_CONFIGURED
 
 ## Yêu cầu và phạm vi
 Operator (2026-11-03): tạo trang Sandbox trên T.A Portal để test tài khoản Tingee của chính T.A trước khi đăng ký Master Merchant: cấu hình, liên kết tài khoản ngân hàng, xuất QR, chuyển tiền thật và nhận diện tiền vào.
@@ -32,11 +32,11 @@ Quyết định của operator: Tingee **production**, chế độ Direct (Merch
 - Build Release 0 lỗi; Safe tests 319/319 (11 test mới: chưa cấu hình, kết nối OK/lỗi, từ chối chế độ Master, QR động + trạng thái, QR tĩnh + dữ liệu sai, liên kết NH + OTP, chặn non-admin, webhook ký/không ký trên site Admin, 503 khi chưa cấu hình, parser).
 
 ## Publish
-- Project:
-- Destination (chỉ từ config):
-- Trạng thái: NOT_PUBLISHED
-- Artifact SHA256:
-- Smoke test:
+- Lần 1: audit FAIL ("filled secret value" — dòng mẫu SecretKey trong trang hướng dẫn); không push/deploy. Sửa: mẫu để trống (ea49b83).
+- portal → TA.Portal: DEPLOYED 2026-11-03 15:24 UTC, source ea49b83, artifact 480c8a95eaca42c3fcb1fe92b2c53439854f58bcec32ddd4e268ba47d953aad6, package 1F38E986320F0FA4682822EAABBD79EBCF87EB34C7198C18A24360C3655396A7, health 200.
+- invoice → TA.Invoice (redeploy vì TAPortal.Integrations đổi): DEPLOYED 2026-11-03 15:24 UTC, source ea49b83, artifact 2ccdd28932e4595d0936b49887f5f490ef95ca8b0851ee7deac6d38003023292, package 85247026BD38FB8DA6371ECC99D917184B99CCE892F0F5F8807C7B9FDC6BC418, health 200.
+- Smoke: /tingeesandbox → 302 tới đăng nhập (đúng, chỉ SYS_ADMIN); POST /hooks/tingee/payment không ký → 503 (đúng: Tingee chưa cấu hình trên server).
+- Chờ operator: điền key Tingee (production, Mode=Direct) vào appsettings site Portal, khai báo webhook trên Tingee, bấm "Gửi webhook thử".
 
 ## Git
 - Branch:
