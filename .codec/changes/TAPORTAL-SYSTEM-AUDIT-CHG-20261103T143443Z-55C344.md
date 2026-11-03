@@ -4,7 +4,7 @@
 - Change ID: `TAPORTAL-SYSTEM-AUDIT-CHG-20261103T143443Z-55C344`
 - Created UTC: 2026-11-03T14:34:43.539970+00:00
 - Tiêu đề: Execute migration 009 on production, pin Pkcs 8.0.2, first agent deploy of portal and invoice
-- Trạng thái: MIGRATION_EXECUTED / DEPLOY_PENDING
+- Trạng thái: DEPLOYED (portal, invoice)
 
 ## Yêu cầu và phạm vi
 Operator (2026-11-03) cho phép deploy thường trực portal + invoice với điều kiện: (1) backup bản đang chạy trước khi thay; (2) migration phải có rollback, chạy thử toàn bộ SQL trước rồi mới chạy thật. Change này mở đường cho lần deploy đầu: xử lý 2 lỗi audit (migration trong phạm vi chưa xác minh; gói Pkcs 8.0.1 lỗi High).
@@ -27,11 +27,12 @@ Operator (2026-11-03) cho phép deploy thường trực portal + invoice với �
 - Build Release 0 lỗi / 0 cảnh báo; 308/308 Safe tests.
 
 ## Publish
-- Project:
-- Destination (chỉ từ config):
-- Trạng thái: NOT_PUBLISHED
-- Artifact SHA256:
-- Smoke test:
+- Review trước deploy (agent độc lập, phạm vi a840cf1..HEAD, TAPortal.Web/TACustomerPortal.Web/Shared/Integrations): NO_BLOCKERS. MEDIUM ghi nhận: Tingee BaseUrl mặc định UAT; Customer chưa có DataProtection KeyPath (bị đăng xuất khi recycle — như trước); Webhooks chưa deploy; Orders/Refresh cho VIEWER và IssueQr không chống bấm đôi; Banks/Confirm chưa bắt TingeeNotConfigured, ActionLink chưa kiểm http(s).
+- Cấu hình server: chỉ so tên khóa (không đọc giá trị) — tương thích; khóa mới đều tùy chọn.
+- portal → TA.Portal (H:\WEBDEPLOYED\T.A\portal_released): DEPLOYED 2026-11-03 14:42 UTC, source fbf3f78, artifact 6310f7a8b3a145765e4d13de60f437c5e3b498c8bcaf44671f525f6d1cc16489 (64 file), package 4BD69DF0FC924A6B6B86465D7EA06FB89190E282F0952FAE2A4098C8245656C4, server backup C:\TADeploy\backups\portal-20261103-214207, health HTTP 200.
+- invoice → TA.Invoice (H:\WEBDEPLOYED\T.A\customer-portal): DEPLOYED 2026-11-03 14:55 UTC, source c42b808 (khác fbf3f78 chỉ ở script deploy), artifact ba3a6a3354a00ca771ae51e612de12d2dad84c439e08229b7e9759ade3304e86 (57 file), package AFE7FE53B590D10A7FB0224AD525BD4C5E114BA59406424D762AA9C57799B43D, server backup C:\TADeploy\backups\invoice-20261103-215529, health HTTP 200.
+- Sau deploy: https://portal.tuvangiaiphapta.vn và https://hoadon.tuvangiaiphapta.vn trả 200 (trang đăng nhập). Chưa kiểm tra chức năng sau đăng nhập.
+- Sự cố trong lần đầu: script dev báo lỗi giả khi git push (stderr) và khi portal đã DEPLOYED (exit code robocopy); Apply-TARelease có lỗi Test-Health luôn đạt — đã sửa (c42b808) và cài lên server trước khi deploy invoice. State portal ghi tay = fbf3f78.
 
 ## Git
 - Branch:
