@@ -47,6 +47,18 @@ public sealed class SafeTingeeDirectMerchantTests
     }
 
     [Fact]
+    public async Task VietnameseTextIsSentUnescapedSoTingeeSignaturesMatch()
+    {
+        var handler = new Recorder();
+        // The recorder answers with no merchantId, so CreateMerchantAsync throws after the request was sent.
+        await Assert.ThrowsAsync<TingeeApiException>(() => Api("Master", handler).CreateMerchantAsync(new TingeeCreateMerchantRequest("Tư vấn giải pháp T.A", "0898386060", "a+b@ta.example")));
+        var body = Assert.Single(handler.Requests);
+        Assert.Contains("\"name\":\"Tư vấn giải pháp T.A\"", body);
+        Assert.DoesNotContain("\\u", body);
+        Assert.Contains("a+b@ta.example", body);
+    }
+
+    [Fact]
     public void ModeDefaultsToMaster()
     {
         Assert.False(new TingeeOptions().IsDirectMerchant);

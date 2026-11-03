@@ -1,5 +1,6 @@
 using System.Net.Http.Headers;
 using System.Text;
+using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.Options;
@@ -23,9 +24,12 @@ public sealed class TingeeNotConfiguredException : InvalidOperationException
 /// <summary>Signs and sends Tingee Open API requests. The signed body is exactly the bytes sent.</summary>
 public sealed class TingeeClient(HttpClient http, IOptions<TingeeOptions> options, TimeProvider clock)
 {
+    // Non-ASCII text (Vietnamese names) must be sent as raw UTF-8: Tingee checks the signature against the decoded body,
+    // so the default "ư" escaping makes every such request fail with 97 "Invalid signature" (verified 2026-11-04).
     internal static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web)
     {
-        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
     };
 
     public Task<TingeeResponse<T>> PostAsync<T>(string path, object body, CancellationToken cancellationToken = default) =>

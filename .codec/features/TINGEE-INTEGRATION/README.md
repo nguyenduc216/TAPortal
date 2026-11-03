@@ -44,3 +44,4 @@ Database sẵn sàng cho phần thanh toán (verify PASS). Tiếp theo: operator
 | `TINGEE-INTEGRATION-CHG-20261103T160537Z-DE9085` | 2026-11-03 | Direct mode sends T.A's own Merchant ID (Tingee 1096) | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |
 | `TINGEE-INTEGRATION-CHG-20261103T163352Z-2178D2` | 2026-11-03 | Tingee Sandbox works with a Master Merchant key on a linked child merchant | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |
 | `TINGEE-INTEGRATION-CHG-20261103T174253Z-B2EEA8` | 2026-11-03 | Verify an existing Tingee merchant id with Tingee before linking | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |
+| `TINGEE-INTEGRATION-CHG-20261103T175724Z-F1997E` | 2026-11-03 | Send non-ASCII JSON unescaped to Tingee (Invalid signature 97) | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |
