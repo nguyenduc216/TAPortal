@@ -63,7 +63,19 @@ public sealed partial class CustomersController
         if (merchantId is not > 0) return TingeeError(id, "Mã merchant Tingee phải là số dương.");
         if (!new CustomerWorkspaceHeader(customer.Id, customer.Code, customer.Name, customer.IsActive, customer.Status, "").Operational)
             return TingeeError(id, InactiveCustomer);
-        var outcome = await SafeLink(new(id, merchantId.Value, null, null, null, "LINKED", DateTime.UtcNow), tingee, actor);
+        string? phone = null;
+        if (api.IsConfigured && !api.IsDirectMerchant)
+        {
+            // Master Merchant: only a child merchant that Tingee actually has may be linked (a phone number typed here is not one).
+            TingeeMerchantItem? found;
+            try { found = (await api.GetMerchantsAsync()).Items.FirstOrDefault(m => m.Id == merchantId); }
+            catch (TingeeApiException ex) { return TingeeError(id, $"Không kiểm tra được merchant trên Tingee (mã {ex.Code}): {ex.TingeeMessage}"); }
+            catch (HttpRequestException ex) { logger.LogWarning(ex, "Tingee unreachable verifying merchant {MerchantId}.", merchantId); return TingeeError(id, "Không kết nối được Tingee để kiểm tra merchant. Vui lòng thử lại sau."); }
+            if (found is null)
+                return TingeeError(id, $"Tingee không có merchant con #{merchantId} của T.A, nên chưa liên kết. Merchant ID là số do Tingee cấp, không phải số điện thoại; nếu khách hàng chưa có merchant, dùng \"Tạo tài khoản Tingee qua API\".");
+            phone = Blank(found.PhoneNumber);
+        }
+        var outcome = await SafeLink(new(id, merchantId.Value, null, phone, null, "LINKED", DateTime.UtcNow), tingee, actor);
         if (outcome != TingeeLinkOutcome.Saved) return TingeeError(id, Explain(outcome));
         TempData["Success"] = $"Đã liên kết merchant Tingee #{merchantId} với khách hàng.";
         return RedirectToAction(nameof(Tingee), new { id });

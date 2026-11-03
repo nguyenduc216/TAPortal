@@ -19,6 +19,14 @@ public sealed record TingeeMerchantCreated
     [JsonPropertyName("merchantId")] public long MerchantId { get; init; }
 }
 
+public sealed record TingeeMerchantItem
+{
+    [JsonPropertyName("id")] public long Id { get; init; }
+    [JsonPropertyName("name")] public string? Name { get; init; }
+    [JsonPropertyName("phoneNumber")] public string? PhoneNumber { get; init; }
+    [JsonPropertyName("isMasterMerchant")] public bool IsMasterMerchant { get; init; }
+}
+
 public sealed record TingeeCreateVaRequest
 {
     [JsonPropertyName("merchantId")] public long? MerchantId { get; init; }
@@ -146,6 +154,8 @@ public interface ITingeeApi
     bool IsConfigured { get; }
     bool IsDirectMerchant => false;
     Task<TingeeMerchantCreated> CreateMerchantAsync(TingeeCreateMerchantRequest request, CancellationToken ct = default);
+    /// <summary>Child merchants of the Master Merchant (merchant/get-paging; a normal Merchant key gets Tingee 1133).</summary>
+    Task<TingeePage<TingeeMerchantItem>> GetMerchantsAsync(CancellationToken ct = default);
     Task<TingeeCreateVaResult> CreateVaAsync(TingeeCreateVaRequest request, CancellationToken ct = default);
     Task<TingeeConfirmVaResult> ConfirmVaAsync(long merchantId, string bankBin, string confirmId, string otp, CancellationToken ct = default);
     Task<TingeeDeleteVaResult> DeleteVaAsync(long merchantId, string bankBin, string vaAccountNumber, CancellationToken ct = default);
@@ -169,6 +179,9 @@ public sealed class TingeeApi(TingeeClient client, Microsoft.Extensions.Options.
         var created = Data(await client.PostAsync<TingeeMerchantCreated>("/v1/merchant/create", request, ct));
         return created.MerchantId > 0 ? created : throw new TingeeApiException("EMPTY", "Tingee returned no merchantId.");
     }
+
+    public async Task<TingeePage<TingeeMerchantItem>> GetMerchantsAsync(CancellationToken ct = default) =>
+        Data(await client.PostAsync<TingeePage<TingeeMerchantItem>>("/v1/merchant/get-paging", new { skipCount = 0, maxResultCount = 2000 }, ct), allowEmpty: true);
 
     public async Task<TingeeCreateVaResult> CreateVaAsync(TingeeCreateVaRequest request, CancellationToken ct = default) =>
         Data(await client.PostAsync<TingeeCreateVaResult>("/v1/create-va", request with { MerchantId = Mid(request.MerchantId) }, ct));

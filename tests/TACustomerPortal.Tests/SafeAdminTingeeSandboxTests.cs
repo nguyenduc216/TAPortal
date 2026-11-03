@@ -345,6 +345,7 @@ public sealed class SafeAdminTingeeSandboxTests
         public Task<TingeeQrStatus> GetDynamicQrStatusAsync(long merchantId, string qrAccount, string billId, CancellationToken ct = default) =>
             Task.FromResult(new TingeeQrStatus { BillInfo = new() { BillId = billId, Amount = 2000, TotalAmountPaid = Paid, TotalPaymentsCount = Paid > 0 ? 1 : 0, Status = Paid >= 2000 ? "paid" : "pending" } });
         public Task<TingeeMerchantCreated> CreateMerchantAsync(TingeeCreateMerchantRequest request, CancellationToken ct = default) => throw new NotSupportedException();
+        public Task<TingeePage<TingeeMerchantItem>> GetMerchantsAsync(CancellationToken ct = default) => throw new NotSupportedException();
         public Task<TingeeDeleteVaResult> DeleteVaAsync(long merchantId, string bankBin, string vaAccountNumber, CancellationToken ct = default) => throw new NotSupportedException();
         public Task ConfirmDeleteVaAsync(long merchantId, string bankBin, string confirmId, string otp, CancellationToken ct = default) => throw new NotSupportedException();
         public Task DeleteDynamicQrAsync(long merchantId, string qrAccount, string billId, CancellationToken ct = default) => Task.CompletedTask;

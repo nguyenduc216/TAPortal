@@ -542,6 +542,7 @@ public sealed class SafeCustomerPaymentsTests
         public List<(string QrAccount, string BillId)> DeletedQrs { get; } = [];
 
         public Task<TingeeMerchantCreated> CreateMerchantAsync(TingeeCreateMerchantRequest request, CancellationToken ct = default) => throw new NotSupportedException();
+        public Task<TingeePage<TingeeMerchantItem>> GetMerchantsAsync(CancellationToken ct = default) => throw new NotSupportedException();
         public Task<TingeeCreateVaResult> CreateVaAsync(TingeeCreateVaRequest request, CancellationToken ct = default) { CreateVaRequests.Add(request); return Task.FromResult(CreateVaResult); }
         public Task<TingeeConfirmVaResult> ConfirmVaAsync(long merchantId, string bankBin, string confirmId, string otp, CancellationToken ct = default)
         {

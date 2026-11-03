@@ -172,5 +172,15 @@
     "migration_status": "NONE_REQUIRED",
     "publish_status": "DEPLOYED portal 3dea875",
     "merge_status": "PENDING_APPROVAL"
+  },
+  {
+    "change_id": "TINGEE-INTEGRATION-CHG-20261103T174253Z-B2EEA8",
+    "created_at": "2026-11-03T17:42:53.117363+00:00",
+    "title": "Verify an existing Tingee merchant id with Tingee before linking",
+    "status": "IMPLEMENTED / TESTS_PASS",
+    "commit_sha": null,
+    "migration_status": "NONE_REQUIRED",
+    "publish_status": "DEPLOY_PENDING",
+    "merge_status": "PENDING_APPROVAL"
   }
 ]

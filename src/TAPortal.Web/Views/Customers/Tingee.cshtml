@@ -75,7 +75,7 @@
                 <div class="card-body">
                     <label class="form-label required" for="merchantId">Merchant ID trên Tingee</label>
                     <div class="ta-input-icon">@UiIcon.Render("hash")<input class="form-control" id="merchantId" name="merchantId" type="number" min="1" step="1" required /></div>
-                    <div class="form-hint">Dùng khi merchant đã được tạo trên Tingee (ví dụ do Tingee hỗ trợ, hoặc lần tạo trước chưa lưu được liên kết).</div>
+                    <div class="form-hint">Chỉ dùng khi merchant con <strong>đã có trên Tingee</strong> (mục Doanh nghiệp/Hộ kinh doanh). Merchant ID là số do Tingee cấp, <strong>không phải số điện thoại</strong>; TAPortal kiểm tra với Tingee trước khi lưu. Chưa có merchant thì dùng "Tạo tài khoản Tingee qua API".</div>
                 </div>
                 <div class="card-footer"><button class="btn" type="submit" disabled="@(!canChange)">@UiIcon.Render("check")<span>Liên kết</span></button></div>
             </form>

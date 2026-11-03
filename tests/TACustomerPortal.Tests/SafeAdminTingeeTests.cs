@@ -107,13 +107,26 @@ public sealed class SafeAdminTingeeTests
     }
 
     [Fact]
+    public async Task LinkingAnIdTingeeDoesNotHaveIsRefusedInMasterMode()
+    {
+        using var f = Factory(out var store, out _);
+        var c = Client(f);
+        var r = await Post(c, $"/customers/linktingeemerchant/{A}", await Token(c, $"/customers/tingee/{A}"), new() { ["merchantId"] = "898386060" });
+        Assert.Equal(HttpStatusCode.Redirect, r.StatusCode);
+        Assert.Empty(store.Links);
+        var page = WebUtility.HtmlDecode(await c.GetStringAsync($"/customers/tingee/{A}"));
+        Assert.Contains("Tingee không có merchant con #898386060", page);
+        Assert.Contains("không phải số điện thoại", page);
+    }
+
+    [Fact]
     public async Task ExistingMerchantsCanBeLinkedOnceAndUnlinkedLocally()
     {
         using var f = Factory(out var store, out var tingee);
         var c = Client(f);
         var token = await Token(c, $"/customers/tingee/{A}");
         Assert.Equal(HttpStatusCode.Redirect, (await Post(c, $"/customers/linktingeemerchant/{A}", token, new() { ["merchantId"] = "777" })).StatusCode);
-        Assert.Equal(("LINKED", 777L), (store.Links[A].Source, store.Links[A].MerchantId));
+        Assert.Equal(("LINKED", 777L, "0900000777"), (store.Links[A].Source, store.Links[A].MerchantId, store.Links[A].PhoneNumber));
         Assert.Empty(tingee.Created);
         await Post(c, $"/customers/unlinktingeemerchant/{A}", token, new());
         Assert.Empty(store.Links);
@@ -202,6 +215,9 @@ public sealed class SafeAdminTingeeTests
         public bool IsDirectMerchant => Direct;
         public TingeeApiException? Error { get; set; }
         public List<TingeeCreateMerchantRequest> Created { get; } = [];
+        public List<long> ChildMerchants { get; } = [777, 778];
+        public Task<TingeePage<TingeeMerchantItem>> GetMerchantsAsync(CancellationToken ct = default) =>
+            Task.FromResult(new TingeePage<TingeeMerchantItem> { TotalCount = ChildMerchants.Count, Items = ChildMerchants.Select(id => new TingeeMerchantItem { Id = id, Name = "M" + id, PhoneNumber = "0900000" + id }).ToList() });
         public Task<TingeeMerchantCreated> CreateMerchantAsync(TingeeCreateMerchantRequest request, CancellationToken ct = default)
         {
             if (Error is not null) throw Error;
