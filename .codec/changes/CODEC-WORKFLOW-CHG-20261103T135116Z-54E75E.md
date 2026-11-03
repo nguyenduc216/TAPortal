@@ -46,3 +46,9 @@ Operator (2026-11-03) yêu cầu agent tự deploy được 2 site production `p
 - Mỗi lần deploy cần operator yêu cầu trong hội thoại; chỉ 2 target portal/invoice; webhooks chưa đăng ký.
 - Script ưu tiên ssh của Git for Windows vì ssh.exe của Windows từ chối `~/.ssh/config` có ACL lạ.
 - Health check chỉ là HTTP 200 trang chủ; Portal/Customer chưa có endpoint version để so commit.
+
+## Bổ sung 2026-11-03: audit trước deploy, audit → push → deploy một lệnh
+- `Deploy-TARemote.ps1`: thêm bước Audit (phạm vi = từ commit đã deploy lần trước, lưu ở `C:\TADeploy\state\<target>.txt`; lần đầu từ merge-base với origin/main): `git diff --check`, quét secret trong dòng thêm, file cấm, migration trong phạm vi cần `-MigrationsApplied`, gói NuGet lỗi High/Critical trong project được deploy, Codec tests/validate, build Release + Safe tests. Audit đạt mới push rồi deploy; sau deploy thành công ghi commit vào state trên server.
+- Policy: yêu cầu deploy của operator bao gồm quyền push nhánh feature (không main, không force); agent tự review diff, không deploy khi còn CRITICAL/HIGH; không nới audit để lọt deploy.
+- DryRun (portal, invoice; range a840cf1..754504c, 58 commit): AUDIT FAIL đúng như mong đợi — 5 migration 008–012 trong phạm vi (cần xác nhận đã chạy) và `System.Security.Cryptography.Pkcs 8.0.1` (High, GHSA-846f-f764-76mx) trong TAPortal.Web và TACustomerPortal.Web. Các kiểm tra còn lại OK (build 0 lỗi, 308/308 Safe tests). Không push, không upload.
+- Sửa lỗi script: hàm `Git` tự gọi đệ quy (đổi `Invoke-Git`); stderr của lệnh ngoài làm dừng script trên PowerShell 5.1 (thêm `Invoke-Native`).
