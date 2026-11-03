@@ -14,11 +14,15 @@ public sealed class TingeeOptions
     /// <summary>Webhooks whose x-request-timestamp is older or newer than this window are rejected.</summary>
     public int WebhookMaxAgeMinutes { get; set; } = 10;
 
-    /// <summary>"Master" (default) acts on child merchants through merchantId; "Direct" uses a normal Merchant's own key and sends no merchantId.</summary>
+    /// <summary>"Master" (default) acts on child merchants through merchantId; "Direct" uses a normal Merchant's own key.</summary>
     public string Mode { get; set; } = "Master";
 
     /// <summary>Public URL of the va-status webhook, sent to banks that report the linking result later (VCB personal, TPBank).</summary>
     public string? VaStatusWebhookUrl { get; set; }
+
+    /// <summary>Direct mode: the Merchant's own Tingee Merchant ID. Tingee requires it on create-va (code 1096) even for a
+    /// normal Merchant; when set it replaces the per-customer id on every call, when empty no merchantId is sent.</summary>
+    public long? MerchantId { get; set; }
 
     public bool IsDirectMerchant => string.Equals(Mode, "Direct", StringComparison.OrdinalIgnoreCase);
 

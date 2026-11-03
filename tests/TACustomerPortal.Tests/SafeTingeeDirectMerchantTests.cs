@@ -5,7 +5,8 @@ using TAPortal.Integrations.Tingee;
 
 namespace TACustomerPortal.Tests;
 
-// A normal Merchant calls Tingee with its own key and no merchantId; a Master Merchant must send it. No network, no SQL.
+// A normal Merchant calls Tingee with its own key and, when configured, its own Merchant ID (never a customer's);
+// a Master Merchant sends the child merchantId. No network, no SQL.
 public sealed class SafeTingeeDirectMerchantTests
 {
     private const long Merchant = 4242;
@@ -32,6 +33,20 @@ public sealed class SafeTingeeDirectMerchantTests
     }
 
     [Fact]
+    public async Task DirectModeSendsTheOwnMerchantIdFromConfiguration()
+    {
+        var handler = new Recorder();
+        var api = Api("Direct", handler, ownMerchantId: 777);
+        await api.CreateVaAsync(new TingeeCreateVaRequest { MerchantId = Merchant, BankBin = "970422" });
+        await api.DeleteVaAsync(Merchant, "970422", "VA1");
+        await api.GenerateDynamicQrAsync(new TingeeDynamicQrRequest { MerchantId = Merchant, VaAccountNumber = "VA1", BankBin = "970422", Amount = 1000 });
+
+        Assert.Equal(3, handler.Requests.Count);
+        Assert.All(handler.Requests, request => Assert.Matches(@"merchantId\W{1,3}777\b", request));
+        Assert.All(handler.Requests, request => Assert.DoesNotContain("4242", request));
+    }
+
+    [Fact]
     public void ModeDefaultsToMaster()
     {
         Assert.False(new TingeeOptions().IsDirectMerchant);
@@ -39,9 +54,9 @@ public sealed class SafeTingeeDirectMerchantTests
         Assert.True(Api("Direct", new Recorder()).IsDirectMerchant);
     }
 
-    private static TingeeApi Api(string mode, HttpMessageHandler handler)
+    private static TingeeApi Api(string mode, HttpMessageHandler handler, long? ownMerchantId = null)
     {
-        var options = Options.Create(new TingeeOptions { ClientId = "id", SecretKey = "secret", Mode = mode });
+        var options = Options.Create(new TingeeOptions { ClientId = "id", SecretKey = "secret", Mode = mode, MerchantId = ownMerchantId });
         return new TingeeApi(new TingeeClient(new HttpClient(handler), options, TimeProvider.System), options);
     }
 

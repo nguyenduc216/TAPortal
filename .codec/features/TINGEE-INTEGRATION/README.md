@@ -41,3 +41,4 @@ Khách hàng của doanh nghiệp lưu ở `dbo.CustomerBuyers`; `dbo.CustomerCo
 ## Current status (2026-10-30, operator xác nhận migration 012)
 Database sẵn sàng cho phần thanh toán (verify PASS). Tiếp theo: operator cấu hình `Tingee__Mode=Direct` và test ngân hàng, đơn QR. Tingee thật NOT_VERIFIED.
 | `TINGEE-INTEGRATION-CHG-20261103T151002Z-F31B55` | 2026-11-03 | Tingee Sandbox in Admin: config status, bank link, test QR, payment status and webhook inbox | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |
+| `TINGEE-INTEGRATION-CHG-20261103T160537Z-DE9085` | 2026-11-03 | Direct mode sends T.A's own Merchant ID (Tingee 1096) | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |

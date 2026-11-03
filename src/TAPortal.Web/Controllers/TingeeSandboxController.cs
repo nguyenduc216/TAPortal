@@ -27,7 +27,7 @@ public sealed partial class TingeeSandboxController(
     TimeProvider clock,
     ILogger<TingeeSandboxController> logger) : Controller
 {
-    // Direct mode ignores the merchant id; Master mode (child merchants) is not what the sandbox tests.
+    // In Direct mode TingeeApi sends T.A's own Tingee:MerchantId instead of this value; Master mode is not what the sandbox tests.
     private const long DirectMerchant = 0;
     private const int QrLifetimeMinutes = 15;
 
@@ -42,6 +42,7 @@ public sealed partial class TingeeSandboxController(
         var bank = TingeeBankCatalog.Find(input.Bin);
         var type = bank is not null && input.AccountType is not null && bank.AccountTypes.Contains(input.AccountType) ? input.AccountType : null;
         if (Refusal() is string refused) return await Page(bankInput: input, error: refused);
+        if (options.Value.MerchantId is not > 0) return await Page(bankInput: input, error: "Tingee yêu cầu Merchant ID khi liên kết ngân hàng (mã 1096): thêm \"MerchantId\" (Merchant ID của T.A trên Tingee) vào mục Tingee trong appsettings.json rồi recycle app pool.");
         if (bank is null || type is null) return await Page(bankInput: input, error: "Chọn ngân hàng và loại tài khoản.");
         var rule = bank.Rule(type);
         foreach (var field in rule.Required)
@@ -258,7 +259,7 @@ public sealed partial class TingeeSandboxController(
         var o = options.Value;
         var production = Uri.TryCreate(o.BaseUrl, UriKind.Absolute, out var u) && string.Equals(u.Host, new Uri(TingeeOptions.ProductionBaseUrl).Host, StringComparison.OrdinalIgnoreCase);
         return new(o.IsConfigured, o.IsDirectMerchant, o.BaseUrl, production, webhookInbox.IsAvailable,
-            AbsoluteHook("payment"), AbsoluteHook("va-status"), AbsoluteHook("bank-link"), o.VaStatusWebhookUrl);
+            AbsoluteHook("payment"), AbsoluteHook("va-status"), AbsoluteHook("bank-link"), o.VaStatusWebhookUrl, o.MerchantId is > 0 ? o.MerchantId : null);
     }
 
     private string? Refusal()

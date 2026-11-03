@@ -26,17 +26,19 @@
         <div class="card-body">
             <dl class="ta-dl">
                 <dt>Khóa API</dt><dd>@if (cfg.Configured) {<span class="ta-badge ta-badge--success">Đã cấu hình</span>} else {<span class="ta-badge ta-badge--danger" data-ta-sandbox-unconfigured>Chưa cấu hình</span>}</dd>
+                <dt>Merchant ID</dt><dd>@if (cfg.MerchantId is long mid) {<span class="ta-code" data-ta-sandbox-merchant>#@mid</span>} else {<span class="ta-badge ta-badge--danger" data-ta-sandbox-no-merchant>Chưa cấu hình — cần để liên kết ngân hàng</span>}</dd>
                 <dt>Chế độ</dt><dd>@if (cfg.Direct) {<span class="ta-badge ta-badge--success">Direct (Merchant T.A)</span>} else {<span class="ta-badge ta-badge--warning" data-ta-sandbox-master>Master — cần Direct</span>}</dd>
                 <dt>Môi trường</dt><dd><span class="ta-badge @(cfg.Production ? "ta-badge--warning" : "ta-badge--neutral")">@(cfg.Production ? "Production" : "UAT / khác")</span> <code>@cfg.BaseUrl</code></dd>
                 <dt>Hộp thư webhook</dt><dd>@(cfg.InboxAvailable ? "Sẵn sàng (dbo.TingeeWebhookInbox)" : "Chưa có kết nối cơ sở dữ liệu")</dd>
             </dl>
-            @if (!ready)
+            @if (!ready || cfg.MerchantId is null)
             {
                 <div class="form-hint mt-3" data-ta-sandbox-howto>
-                    Thêm vào <code>appsettings.json</code> của site Portal trên server (mục <code>"Tingee"</code>), điền ClientId và SecretKey của T.A vào giữa hai dấu ngoặc kép đang để trống, rồi recycle app pool <code>TA.Portal</code>:
+                    Thêm vào <code>appsettings.json</code> của site Portal trên server (mục <code>"Tingee"</code>), thay <code>0</code> bằng Merchant ID của T.A (xem trên trang quản trị Tingee), điền ClientId và SecretKey vào giữa hai dấu ngoặc kép đang để trống, rồi recycle app pool <code>TA.Portal</code>:
                     <pre class="mt-2 mb-0"><code>"Tingee": {
   "BaseUrl": "@TingeeOptions.ProductionBaseUrl",
   "Mode": "Direct",
+  "MerchantId": 0,
   "ClientId": "",
   "SecretKey": "",
   "VaStatusWebhookUrl": "@cfg.VaStatusWebhookUrl"

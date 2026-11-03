@@ -152,5 +152,15 @@
     "migration_status": "NONE_REQUIRED",
     "publish_status": "DEPLOYED portal + invoice ea49b83",
     "merge_status": "PENDING_APPROVAL"
+  },
+  {
+    "change_id": "TINGEE-INTEGRATION-CHG-20261103T160537Z-DE9085",
+    "created_at": "2026-11-03T16:05:37.499169+00:00",
+    "title": "Direct mode sends T.A's own Merchant ID (Tingee 1096)",
+    "status": "IMPLEMENTED / TESTS_PASS",
+    "commit_sha": null,
+    "migration_status": "NONE_REQUIRED",
+    "publish_status": "DEPLOY_PENDING",
+    "merge_status": "PENDING_APPROVAL"
   }
 ]

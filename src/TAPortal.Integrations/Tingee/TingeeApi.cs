@@ -3,7 +3,8 @@ using System.Text.Json.Serialization;
 namespace TAPortal.Integrations.Tingee;
 
 // Typed Tingee Open API calls used by Admin (Master Merchant) and Customer Portal. Every call is made with T.A's
-// Master Merchant key and carries the child merchantId, or in Direct mode with a normal Merchant's own key and no merchantId. Field names follow developers.tingee.vn (openapi v1.2.2).
+// Master Merchant key and carries the child merchantId, or in Direct mode with a normal Merchant's own key and its own
+// Merchant ID from configuration (no merchantId when that is not set). Field names follow developers.tingee.vn (openapi v1.2.2).
 
 public sealed record TingeeCreateMerchantRequest(
     [property: JsonPropertyName("name")] string Name,
@@ -161,7 +162,7 @@ public sealed class TingeeApi(TingeeClient client, Microsoft.Extensions.Options.
     public bool IsConfigured => options.Value.IsConfigured;
     public bool IsDirectMerchant => options.Value.IsDirectMerchant;
 
-    private long? Mid(long? merchantId) => IsDirectMerchant ? null : merchantId;
+    private long? Mid(long? merchantId) => IsDirectMerchant ? (options.Value.MerchantId is > 0 ? options.Value.MerchantId : null) : merchantId;
 
     public async Task<TingeeMerchantCreated> CreateMerchantAsync(TingeeCreateMerchantRequest request, CancellationToken ct = default)
     {
@@ -176,7 +177,7 @@ public sealed class TingeeApi(TingeeClient client, Microsoft.Extensions.Options.
         Data(await client.PostAsync<TingeeConfirmVaResult>("/v1/confirm-va", new { merchantId = Mid(merchantId), bankBin, confirmId, otpNumber = otp }, ct));
 
     public async Task<TingeeDeleteVaResult> DeleteVaAsync(long merchantId, string bankBin, string vaAccountNumber, CancellationToken ct = default) =>
-        Data(await client.PostQueryAsync<TingeeDeleteVaResult>($"/v1/delete-va?{(IsDirectMerchant ? "" : $"merchantId={merchantId}&")}bankBin={Uri.EscapeDataString(bankBin)}&vaAccountNumber={Uri.EscapeDataString(vaAccountNumber)}", ct), allowEmpty: true);
+        Data(await client.PostQueryAsync<TingeeDeleteVaResult>($"/v1/delete-va?{(Mid(merchantId) is long mid ? $"merchantId={mid}&" : "")}bankBin={Uri.EscapeDataString(bankBin)}&vaAccountNumber={Uri.EscapeDataString(vaAccountNumber)}", ct), allowEmpty: true);
 
     public async Task ConfirmDeleteVaAsync(long merchantId, string bankBin, string confirmId, string otp, CancellationToken ct = default) =>
         Check(await client.PostAsync<object>("/v1/confirm-delete-va", new { merchantId = Mid(merchantId), bankBin, confirmId, otpNumber = otp }, ct));

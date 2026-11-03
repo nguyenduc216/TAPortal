@@ -7,7 +7,7 @@ namespace TAPortal.Web.Models;
 // bank account linking, a test QR and the webhooks that arrive — before any customer uses Tingee.
 
 public sealed record TingeeSandboxConfig(bool Configured, bool Direct, string BaseUrl, bool Production, bool InboxAvailable,
-    string PaymentWebhookUrl, string VaStatusWebhookUrl, string BankLinkWebhookUrl, string? VaStatusWebhookConfigured);
+    string PaymentWebhookUrl, string VaStatusWebhookUrl, string BankLinkWebhookUrl, string? VaStatusWebhookConfigured, long? MerchantId);
 
 public sealed record TingeeSandboxConnection(bool Ok, IReadOnlyList<TingeeVaItem> Accounts, string? Error);
 

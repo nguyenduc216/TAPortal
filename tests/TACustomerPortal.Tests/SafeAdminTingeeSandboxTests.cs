@@ -48,6 +48,7 @@ public sealed class SafeAdminTingeeSandboxTests
         var html = WebUtility.HtmlDecode(await Client(f).GetStringAsync("/tingeesandbox"));
         Assert.Contains("data-ta-sandbox-production", html);
         Assert.Contains("data-ta-sandbox-conn-ok", html);
+        Assert.Contains("#9001", html);
         Assert.Contains("963123456789", html);
         Assert.Contains("value=\"970422|963123456789|personal-account\"", html);   // offered as a QR target
         Assert.Equal(["get-va-paging"], tingee.Calls);
@@ -144,6 +145,22 @@ public sealed class SafeAdminTingeeSandboxTests
     }
 
     [Fact]
+    public async Task BankLinkNeedsTheMerchantIdOfTA()
+    {
+        using var f = Factory(out var tingee, out _, merchantId: null);
+        var c = Client(f);
+        Assert.Contains("data-ta-sandbox-no-merchant", WebUtility.HtmlDecode(await c.GetStringAsync("/tingeesandbox")));
+        var r = await Post(c, "/tingeesandbox/linkbank", await Token(c), new()
+        {
+            ["Bank.Bin"] = "970422", ["Bank.AccountType"] = "personal-account", ["Bank.AccountNumber"] = "0123456789",
+            ["Bank.AccountName"] = "CONG TY TA", ["Bank.Identity"] = "001234567890", ["Bank.Mobile"] = "0912345678"
+        });
+        Assert.Equal(HttpStatusCode.BadRequest, r.StatusCode);
+        Assert.Contains("1096", WebUtility.HtmlDecode(await r.Content.ReadAsStringAsync()));
+        Assert.Empty(tingee.Vas);
+    }
+
+    [Fact]
     public async Task NonAdminsCannotOpenTheSandbox()
     {
         using var f = Factory(out var tingee, out _, admin: false);
@@ -213,12 +230,13 @@ public sealed class SafeAdminTingeeSandboxTests
     private static HttpClient Client(WebApplicationFactory<admin::Program> f) =>
         f.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false, BaseAddress = new Uri("https://localhost"), HandleCookies = true });
 
-    private static WebApplicationFactory<admin::Program> Factory(out FakeTingee tingee, out MemoryInbox inbox, bool configured = true, string mode = "Direct", bool admin = true)
+    private static WebApplicationFactory<admin::Program> Factory(out FakeTingee tingee, out MemoryInbox inbox, bool configured = true, string mode = "Direct", bool admin = true, string? merchantId = "9001")
     {
         var t = tingee = new FakeTingee(configured);
         var i = inbox = new MemoryInbox();
         var settings = new Dictionary<string, string?> { ["Database:ConnectionString"] = "INVALID: tests must never use SQL", ["Tingee:BaseUrl"] = TingeeOptions.ProductionBaseUrl, ["Tingee:Mode"] = mode };
         if (configured) { settings["Tingee:ClientId"] = "sandbox-client"; settings["Tingee:SecretKey"] = Secret; }
+        if (merchantId is not null) settings["Tingee:MerchantId"] = merchantId;
         var role = admin ? "SYS_ADMIN" : "VIEWER";
         return new WebApplicationFactory<admin::Program>().WithWebHostBuilder(b => b.UseEnvironment("Development")
             .ConfigureAppConfiguration((_, c) => c.AddInMemoryCollection(settings))
