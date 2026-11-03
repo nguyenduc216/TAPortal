@@ -61,7 +61,19 @@
       "TAPortal.Webhooks"
     ],
     "artifact_manifest_method": "SHA256_UTF8_LF_SORTED_RELATIVE_POSIX",
-    "artifact_manifest_dir": ".codec/reports"
+    "artifact_manifest_dir": ".codec/reports",
+    "remote": {
+      "ssh_alias": "ta-server",
+      "server": "WIN-HSHL54Q184K",
+      "script": "deploy/windows/Deploy-TARemote.ps1",
+      "targets": {
+        "portal": "TAPortal.Web",
+        "invoice": "TACustomerPortal.Web"
+      },
+      "requires_operator_request": true,
+      "server_backup_and_auto_rollback": true,
+      "gates_required": true
+    }
   },
   "agents": {
     "applies_to": "ALL_AI_AGENTS",

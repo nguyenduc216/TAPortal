@@ -89,3 +89,18 @@ Supersedes every earlier clause that forbids agents from executing migrations. I
   5. Real run: run the migration for real, then the verify script. All PASS ⇒ EXECUTED. Any error or FAIL ⇒ run the rollback script immediately, verify it, status ROLLED_BACK, and stop the remaining migrations.
 - Stop and ask the operator instead of running when a migration: cannot run inside a transaction (`ALTER DATABASE`, `BACKUP`/`RESTORE`, full-text, `CREATE/DROP DATABASE`); drops a table or column, or deletes/updates existing rows; or when the latest full backup in `msdb.dbo.backupset` for `TAPortalSys` is older than 24 hours or cannot be read.
 - Record per migration in the Codec change/report and `history.json` `migration_status`: pre-check, dry-run output, gate results, real-run output, final status (ALREADY_APPLIED / EXECUTED / DRY_RUN_FAILED / ROLLED_BACK) and UTC timestamps. Output follows the SQL output rule above; never record secrets or PII.
+- Execution channel: on the production server itself over SSH (`ssh ta-server`, see below), with `sqlcmd` against the local instance `MSSQLSERVER2014`.
+
+## AGENT PRODUCTION DEPLOY (2026-11-03, operator approval)
+Supersedes earlier clauses that forbid agents from deploying or touching IIS, for the production server only; the DEV/TEST machine rules (no IIS inspection or deployment on this machine) are unchanged.
+- Server: `WIN-HSHL54Q184K` (the SQL Server host), reached only as SSH alias `ta-server` (public 113.160.249.61, port 22022, key `~/.ssh/ta_server_ed25519`, pinned ED25519 host key `SHA256:4q7pst+aobriJWTGi6Yz6UgGrc9zkSj1RfYkG/lgfIc`). Never disable host-key checking, never print or commit private keys.
+- Targets (server file `C:\TADeploy\deploy-config.json`, registered by the operator with `deploy/windows/server/Setup-TADeployServer.bat`):
+  - `portal` → `TAPortal.Web` → IIS site `TA.Portal`, pool `TA.Portal`, https://portal.tuvangiaiphapta.vn/
+  - `invoice` → `TACustomerPortal.Web` → IIS site `TA.Invoice`, pool `TA.Customer`, https://hoadon.tuvangiaiphapta.vn/
+  - `webhooks` → `TAPortal.Webhooks`: not registered yet; do not deploy until the operator registers it.
+- Approval: deploy only when the operator asks for a deploy in the conversation, naming the targets (a request covers that one deploy). Merging to main still needs its own approval; deploying a feature branch is allowed when the operator asks for it.
+- Only via `deploy/windows/Deploy-TARemote.ps1`, which enforces: clean tracked working tree and HEAD pushed to origin; mandatory gates (restore, Release build 0 errors, all Safe* tests); publish to `<WORKSPACE_ROOT>\src\publish\deployed-<PROJECT_NAME>` (previous artifact moved to `src\publish\rollback\<stamp>\<PROJECT_NAME>`); artifact manifest SHA256; zip + SHA256; upload; server-side `C:\TADeploy\Apply-TARelease.ps1` (checksum and main-DLL check, app pool stop, server backup, copy keeping `appsettings*.json`, `web.config`, `keys`, `logs`, `App_Data`, `wwwroot\uploads`, health check, automatic rollback). Run `-DryRun` first whenever the script or the release process changed.
+- Never edit production `appsettings*.json`, `web.config`, IIS sites, bindings, app pools or certificates by hand or by script; changes there go to the operator.
+- If a migration is needed, run it first under `## AGENT MIGRATION EXECUTION`, then deploy.
+- A failed deploy that rolled back is reported as ROLLED_BACK with the server log path (`C:\TADeploy\logs\apply-<target>-<stamp>.log`); `-Rollback` restores the previous server backup on request.
+- Report per target: source commit SHA, artifact manifest SHA256, package SHA256, server result (DEPLOYED / ROLLED_BACK / FAILED), health URL result and UTC time, in the Codec change/report (`publish_status`). Never record secrets.

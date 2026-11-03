@@ -55,6 +55,8 @@ def validate():
     if cfg['database'].get('required_migration_guard') != "DB_NAME() = 'TAPortalSys'": errors.append('Migration guard missing')
     if not cfg['deploy']['require_approval'] or cfg['git']['force_push_allowed']: errors.append('Approval/force-push policy invalid')
     if cfg['deploy'].get('rename_or_move_target_allowed') is not False: errors.append('Deploy path must be fixed')
+    remote=cfg['deploy'].get('remote')
+    if remote is not None and (remote.get('requires_operator_request') is not True or remote.get('server_backup_and_auto_rollback') is not True or remote.get('gates_required') is not True or not set(remote.get('targets',{}).values())<=set(cfg['deploy']['targets'])): errors.append('Remote deploy requires operator request, gates, server backup/rollback and configured projects')
     if not cfg['history'].get('append_only') or not cfg['history'].get('read_before_source'): errors.append('History policy disabled')
     for key, expected in {'feature_dir':'.codec/features','change_dir':'.codec/changes','report_dir':'.codec/reports'}.items():
         if cfg['history'][key] != expected: errors.append('Unexpected history directory: '+key)
