@@ -4,7 +4,7 @@
 - Change ID: `TINGEE-INTEGRATION-CHG-20261104T051600Z-8F5DE8`
 - Created UTC: 2026-11-04T05:16:00.359931+00:00
 - Tiêu đề: Tingee menu group; sandbox link/unlink popups with a clear OTP step
-- Trạng thái: IMPLEMENTED / TESTS_PASS
+- Trạng thái: DEPLOYED (portal)
 
 ## Yêu cầu và phạm vi
 Operator (2026-11-04, sau khi liên kết thành công MB doanh nghiệp VQRQANIFW1102 và VietinBank cá nhân): đưa Tingee vào menu riêng; trang Sandbox chỉ giữ mục 1 (Cấu hình) và 2 (Kết nối) ở hàng trên; mục 2 có nút mở popup thêm liên kết và nút xóa liên kết từng tài khoản; mục QR lên thành mục 3 (webhook thành mục 4); OTP nằm trong popup và có dấu hiệu nhận biết rõ.
@@ -28,14 +28,12 @@ Operator (2026-11-04, sau khi liên kết thành công MB doanh nghiệp VQRQANI
 
 ## Publish
 - Project:
-- Destination (chỉ từ config):
-- Trạng thái: NOT_PUBLISHED
-- Artifact SHA256:
-- Smoke test:
+- Trạng thái: DEPLOYED qua `deploy/windows/Deploy-TARemote.ps1 -Target portal` (audit PASS), source 1b4436d. Customer không đổi.
+- portal: artifact 94ce29a4802c3cd93ba96d6d98688ce2af389f7db28f0207df7ae6c03d862e24, package C1850AB90B8B174B1EF6D8BE2493EF100D1D6D777625E3BC55420DD86BE39EAB, backup C:\TADeploy\backups\portal-20261104-121813, health 200.
 
 ## Git
-- Branch:
-- Commit SHA:
+- Branch: feature/customer-portal-mvp01
+- Commit SHA: 1b4436d (source)
 - PR:
 - Merge: PENDING_APPROVAL
 - Merge SHA:
