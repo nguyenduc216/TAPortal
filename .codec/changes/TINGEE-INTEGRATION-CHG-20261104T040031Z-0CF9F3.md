@@ -39,8 +39,8 @@ Operator (2026-11-04): Tingee hỗ trợ yêu cầu gửi request gốc của l�
 ## Publish
 - Project: TAPortal.Web (portal), TACustomerPortal.Web (invoice)
 - Trạng thái: DEPLOYED qua `deploy/windows/Deploy-TARemote.ps1 -MigrationsApplied` (audit PASS), source 910726e, 2026-11-04T04:05Z.
-- portal: artifact e63509aab8684a2baafd7dfac6dd972c916d55db77e1a9c27133a135b5197d4b, package 91AE2C666C2FC65BB19AB3C0ADE41DDCD8A1029D6C603DB52B0DBECBD75BF2D8, backup C:\TADeployackups\portal-20261104-110446, health 200.
-- invoice: artifact d3a716c1a8c98a22d9075c7dba5169040e4940c4449c307c61a51a7cb3640a84, package 2193290A7C03566D81DA9DF7E9A34C5BB84D21075B15D3AAF898E50AA1F650FE, backup C:\TADeployackups\invoice-20261104-110458, health 200.
+- portal: artifact e63509aab8684a2baafd7dfac6dd972c916d55db77e1a9c27133a135b5197d4b, package 91AE2C666C2FC65BB19AB3C0ADE41DDCD8A1029D6C603DB52B0DBECBD75BF2D8, backup C:\TADeploy\backups\portal-20261104-110446, health 200.
+- invoice: artifact d3a716c1a8c98a22d9075c7dba5169040e4940c4449c307c61a51a7cb3640a84, package 2193290A7C03566D81DA9DF7E9A34C5BB84D21075B15D3AAF898E50AA1F650FE, backup C:\TADeploy\backups\invoice-20261104-110458, health 200.
 
 ## Git
 - Branch: feature/customer-portal-mvp01
