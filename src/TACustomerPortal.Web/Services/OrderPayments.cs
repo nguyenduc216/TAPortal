@@ -20,6 +20,12 @@ public static class OrderMath
     public static string EffectiveStatus(Order o, DateTime utcNow) =>
         OrderStatus.IsOpen(o.Status) && o.Status != OrderStatus.Draft && o.ExpiresAt is { } expires && expires <= utcNow && o.PaidAmount < o.Amount ? OrderStatus.Expired : o.Status;
 
+    /// <summary>
+    /// Transfer content for an order's QR: the order number with letters and digits only (DH261105-0001 → DH2611050001).
+    /// Banks reject other characters in the payment purpose (Tingee 400 "Purpose of transaction is wrong format").
+    /// </summary>
+    public static string TransferContent(string orderNo) => new(orderNo.Where(char.IsAsciiLetterOrDigit).ToArray());
+
     public static string StatusFor(decimal amount, decimal paid) => paid >= amount ? OrderStatus.Paid : paid > 0 ? OrderStatus.Partial : OrderStatus.Awaiting;
 }
 
@@ -46,13 +52,13 @@ public sealed class OrderPayments(IPaymentStore store, ITingeeApi tingee, TimePr
                 var qr = await tingee.GenerateDynamicQrAsync(new TingeeDynamicQrRequest
                 {
                     MerchantId = merchantId, VaAccountNumber = bank.VaAccountNumber, BankBin = bank.BankBin, Amount = due,
-                    QrCodeType = TingeeQrTypes.Recurring, ExpireInMinute = order.QrExpireMinutes, Purpose = order.OrderNo, ExtraInfo = order.OrderNo
+                    QrCodeType = TingeeQrTypes.Recurring, ExpireInMinute = order.QrExpireMinutes, Purpose = OrderMath.TransferContent(order.OrderNo), ExtraInfo = order.OrderNo
                 });
                 updated = order with { QrType = TingeeQrTypes.Recurring, QrPayload = qr.QrCode, QrAccount = qr.QrAccount, BillId = qr.BillId };
             }
             else
             {
-                var qr = await tingee.GenerateStaticQrAsync(new TingeeStaticQrRequest(bank.BankBin, account, due, order.OrderNo));
+                var qr = await tingee.GenerateStaticQrAsync(new TingeeStaticQrRequest(bank.BankBin, account, due, OrderMath.TransferContent(order.OrderNo)));
                 updated = order with { QrType = TingeeQrTypes.Static, QrPayload = qr.QrCode, QrAccount = account, BillId = null };
             }
         }

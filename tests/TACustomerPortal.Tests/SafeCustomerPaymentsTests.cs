@@ -454,7 +454,10 @@ public sealed class SafeCustomerPaymentsTests
         Assert.Single(order.Lines);
         Assert.True(order.AutoIssueInvoice);
         var qr = Assert.Single(tingee.DynamicQrRequests);
-        Assert.Equal((9001L, "TINGEE8888", "970418", 220_000m, 60, TingeeQrTypes.Recurring, order.OrderNo), (qr.MerchantId, qr.VaAccountNumber, qr.BankBin, qr.Amount, qr.ExpireInMinute, qr.QrCodeType, qr.Purpose));
+        // Transfer content: letters and digits only (banks reject "-"); extraInfo keeps the order number as shown.
+        Assert.Equal((9001L, "TINGEE8888", "970418", 220_000m, 60, TingeeQrTypes.Recurring, order.OrderNo.Replace("-", ""), order.OrderNo),
+            (qr.MerchantId, qr.VaAccountNumber, qr.BankBin, qr.Amount, qr.ExpireInMinute, qr.QrCodeType, qr.Purpose, qr.ExtraInfo));
+        Assert.Matches("^DH[0-9]{10}$", qr.Purpose);
         Assert.Equal(OrderStatus.Awaiting, order.Status);
         Assert.Matches(@"^DH\d{6}-0001$", order.OrderNo);
 
@@ -475,7 +478,7 @@ public sealed class SafeCustomerPaymentsTests
         await Post(c, "/orders/create", await Token(c, "/orders/create"), Lines(bank.Id, "50000"));
         var order = store.Orders.Single().Order;
         var request = Assert.Single(tingee.StaticQrRequests);
-        Assert.Equal(("970416", "12345678", 50_000m, order.OrderNo), (request.BankBin, request.AccountNumber, request.Amount, request.Content));
+        Assert.Equal(("970416", "12345678", 50_000m, order.OrderNo.Replace("-", "")), (request.BankBin, request.AccountNumber, request.Amount, request.Content));
         Assert.Empty(tingee.DynamicQrRequests);
         Assert.Equal(TingeeQrTypes.Static, order.QrType);
     }

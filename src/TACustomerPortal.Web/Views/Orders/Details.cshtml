@@ -24,7 +24,7 @@
                     <div><dt>@UiIcon.Render("user")Khách hàng</dt><dd>@(Model.Contact?.Name ?? "Khách lẻ")</dd></div>
                     <div><dt>@UiIcon.Render("building-bank")Nhận tiền vào</dt><dd>@(Model.Bank is { } b ? $"{b.BankName} — {b.ReceiveAccount}" : "—")</dd></div>
                     <div><dt>@UiIcon.Render("file-text")Hóa đơn điện tử</dt><dd>@(o.AutoIssueInvoice ? "Tự động xuất khi thanh toán đủ" : "Không tự động") @if (o.InvoiceStatus != "NONE") {<span class="cp-badge cp-badge--soft">@o.InvoiceStatus</span>}</dd></div>
-                    <div><dt>@UiIcon.Render("qrcode")Loại QR</dt><dd>@(o.QrType == TingeeQrTypes.Recurring ? "QR động (trả nhiều lần đến khi đủ)" : o.QrType == TingeeQrTypes.Static ? "QR tĩnh (nội dung: mã đơn)" : "—")</dd></div>
+                    <div><dt>@UiIcon.Render("qrcode")Loại QR</dt><dd>@(o.QrType == TingeeQrTypes.Recurring ? "QR động (trả nhiều lần đến khi đủ)" : o.QrType == TingeeQrTypes.Static ? $"QR tĩnh (nội dung: {OrderMath.TransferContent(o.OrderNo)})" : "—")</dd></div>
                 </dl>
                 <div class="cp-progress" style="margin-top:14px" role="progressbar" aria-valuenow="@percent" aria-valuemin="0" aria-valuemax="100" aria-label="Tỷ lệ đã thanh toán"><span style="width:@(percent)%"></span></div>
                 @if (o.LastError is string err) {<div class="cp-error" style="margin-top:10px">@err</div>}
@@ -57,7 +57,7 @@
             <div class="cp-qr" data-cp-qr data-cp-poll="@Url.Action("Status", new { id = o.Id })" data-cp-poll-status="@Model.Status" data-cp-poll-paid="@o.PaidAmount.ToString(System.Globalization.CultureInfo.InvariantCulture)">
                 @Html.Raw(svg)
                 <div class="cp-qr__amount">@PaymentText.Money(o.Remaining)</div>
-                <div class="cp-muted">Quét bằng ứng dụng ngân hàng · Nội dung: <span class="cp-code">@o.OrderNo</span></div>
+                <div class="cp-muted">Quét bằng ứng dụng ngân hàng · Nội dung: <span class="cp-code">@OrderMath.TransferContent(o.OrderNo)</span></div>
                 <div class="cp-muted">Hiệu lực đến @PaymentText.VietnamTime(o.ExpiresAt)</div>
             </div>
         }
