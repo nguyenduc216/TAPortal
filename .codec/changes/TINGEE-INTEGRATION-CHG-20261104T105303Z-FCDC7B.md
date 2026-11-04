@@ -4,7 +4,7 @@
 - Change ID: `TINGEE-INTEGRATION-CHG-20261104T105303Z-FCDC7B`
 - Created UTC: 2026-11-04T10:53:03.007955+00:00
 - Tiêu đề: Customer Portal: không hiển thị tên đối tác (Tingee/HENO); thông báo khi chưa cấu hình liên kết ngân hàng
-- Trạng thái: IMPLEMENTED / TESTS_PASS
+- Trạng thái: DEPLOYED (cấu hình Tingee cho site invoice: PENDING_OPERATOR)
 
 ## Yêu cầu và phạm vi
 Operator (2026-11-04, ảnh trang Tài khoản ngân hàng của Todox): "khách hàng chưa tự liên kết tới tài khoản ngân hàng được, kiểm tra lại. và tạo rule bỏ tất cả các thông tin đối tác như tingee trên tất cả các chức năng trên hệ thống customer".
@@ -28,15 +28,11 @@ Operator (2026-11-04, ảnh trang Tài khoản ngân hàng của Todox): "khách
 - Safe tests 372/372 (working tree), gồm quét view/chuỗi, hàm lọc và quét trang render (kể cả lỗi đối tác trả về có chữ Tingee).
 
 ## Publish
-- Project:
-- Destination (chỉ từ config):
-- Trạng thái: NOT_PUBLISHED
-- Artifact SHA256:
-- Smoke test:
+- invoice (TACustomerPortal.Web → TA.Invoice, H:\WEBDEPLOYED\T.A\customer-portal): DEPLOYED 2026-11-04 17:56 (UTC+7), commit 5f73a62, artifact SHA256 e826b4522190b71c5b6afba32231c487ac77b86a7fb28e264b6c7457ffa6806b, package 05415E171A3F70362281441E683FCD2C164B6AD682F957D452E7707A586DBC2E; backup C:\TADeploy\backups\invoice-20261104-175627; health HTTP 200. Audit cần -MigrationsApplied vì migration 017 (đã EXECUTED) nằm trong khoảng audit.
 
 ## Git
-- Branch:
-- Commit SHA:
+- Branch: feature/customer-portal-mvp01
+- Commit SHA: 5f73a62 (source)
 - PR:
 - Merge: PENDING_APPROVAL
 - Merge SHA:
