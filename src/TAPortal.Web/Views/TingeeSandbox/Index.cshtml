@@ -19,7 +19,6 @@
     // Errors of an open dialog are shown inside it; otherwise at the top of the page.
     var errors = ViewData.ModelState[string.Empty]?.Errors.Select(e => e.ErrorMessage).ToList() ?? [];
 }
-@section Scripts { <script src="~/js/ta-tingee-sandbox.js" asp-append-version="true"></script> }
 
 <style>
     .tg-otp { display: flex; gap: .875rem; align-items: center; padding: .875rem 1rem; margin-bottom: 1rem; border-radius: .5rem;

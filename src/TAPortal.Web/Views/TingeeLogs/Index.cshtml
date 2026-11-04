@@ -6,7 +6,6 @@
     string Path(string url) => Uri.TryCreate(url, UriKind.Absolute, out var u) ? u.AbsolutePath : url;
     string Badge(TingeeCallLogEntry e) => e.ResponseCode == "00" ? "ta-badge--success" : "ta-badge--danger";
 }
-@section Scripts { <script src="~/js/ta-tingee-sandbox.js" asp-append-version="true"></script> }
 
 <section class="card mb-3" aria-labelledby="logSearch">
     <div class="card-header"><h2 class="card-title" id="logSearch">@UiIcon.Render("search")Tra cứu log gọi Tingee</h2></div>

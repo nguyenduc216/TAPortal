@@ -149,6 +149,8 @@ else
 <script src="~/lib/tabler/tabler.min.js" asp-append-version="true"></script>
 <script src="~/js/ta-shell.js" asp-append-version="true"></script>
 <script src="~/js/ta-portal.js" asp-append-version="true"></script>
+@* Loaded on every page: the shell swaps <main> without running page scripts; it initialises on ta:load and is idle elsewhere. *@
+<script src="~/js/ta-tingee-sandbox.js" asp-append-version="true"></script>
 @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

@@ -15,8 +15,13 @@ Lần 2 (operator, ảnh "còn 15:00" đứng yên): "phải đếm giây lùi r
 - Về 0: ảnh QR bị làm mờ + lớp phủ "QR đã hết hạn" (`data-ta-qr-image` `.is-locked`), dừng kiểm tra trạng thái, báo vàng hết hạn; mở lại trang khi đã hết hạn thì khoá ngay, không gọi kiểm tra. Nhận đủ tiền: lớp phủ xanh "Đã thanh toán".
 - Kiểm tra logic JS bằng DOM giả (node): đếm 2→1→"đã hết hạn", khoá QR, 0 lần gọi trạng thái khi đã hết hạn lúc tải.
 
+Lần 3 (operator: "vẫn đứng"): nguyên nhân là soft navigation của shell (ta-shell.js thay <main> sau khi POST "Tạo QR" mà không chạy lại script trang), nên đếm ngược và kiểm tra trạng thái không khởi động cho QR mới.
+- `ta-tingee-sandbox.js`: phần theo trang gom vào `init()`, chạy lúc tải và mỗi `ta:load`; `ta:before-swap` dừng mọi timer cũ.
+- Script nạp một lần trong `_Layout.cshtml` (bỏ `@section Scripts` ở TingeeSandbox và TingeeLogs) để vào Sandbox bằng soft navigation vẫn có script; trang khác không có phần tử nên không làm gì.
+- Kiểm tra bằng DOM giả: tải trang không có QR → `ta:load` có QR → đếm 2, 1, hết hạn, khoá QR.
+
 ## File thay đổi (relative path, thao tác ADD/MODIFY/DELETE)
-- MODIFY `src/TAPortal.Web/Views/TingeeSandbox/Index.cshtml`, `src/TAPortal.Web/wwwroot/js/ta-tingee-sandbox.js` (deploy portal).
+- MODIFY `src/TAPortal.Web/Views/TingeeSandbox/Index.cshtml`, `src/TAPortal.Web/Views/TingeeLogs/Index.cshtml`, `src/TAPortal.Web/Views/Shared/_Layout.cshtml`, `src/TAPortal.Web/wwwroot/js/ta-tingee-sandbox.js` (deploy portal).
 - MODIFY `tests/TACustomerPortal.Tests/SafeAdminTingeeSandboxTests.cs`.
 
 ## Migration SQL (KHÔNG tự chạy)
