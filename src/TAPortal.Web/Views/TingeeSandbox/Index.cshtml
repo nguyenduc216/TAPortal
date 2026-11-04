@@ -156,10 +156,10 @@
                     {
                         var name = field.ToString();
                         var value = field switch { TingeeBankField.AccountNumber => b.AccountNumber, TingeeBankField.AccountName => b.AccountName, TingeeBankField.Identity => b.Identity, TingeeBankField.Mobile => b.Mobile, TingeeBankField.VaSuffix => b.VaSuffix, TingeeBankField.MerchantName => b.MerchantName, TingeeBankField.VaAccountNumber => b.VaAccountNumber, _ => b.AcbUserId };
-                        var label = TingeeSandboxController.FieldLabel(field);
+                        var label = field == TingeeBankField.Identity && rule.TaxCodeAsIdentity(Model.AccountType) ? "mã số thuế doanh nghiệp" : TingeeSandboxController.FieldLabel(field);
                         <div class="mb-2"><label class="form-label required" for="Bank_@name">@(char.ToUpper(label[0]) + label[1..])</label><div class="ta-input-icon">@UiIcon.Render("hash")<input class="form-control" id="Bank_@name" name="Bank.@name" value="@value" required /></div></div>
                     }
-                    @if (Model.AccountType != TingeeAccountTypes.Personal)
+                    @if (Model.AccountType != TingeeAccountTypes.Personal && !rule.TaxCodeAsIdentity(Model.AccountType))
                     {
                         <div class="mb-2"><label class="form-label" for="Bank_TaxCode">Mã số thuế</label><div class="ta-input-icon">@UiIcon.Render("receipt-tax")<input class="form-control" id="Bank_TaxCode" name="Bank.TaxCode" value="@b.TaxCode" inputmode="numeric" maxlength="14" /></div><div class="form-hint">Mã số thuế của doanh nghiệp/hộ kinh doanh chủ tài khoản (Tingee dùng cho tài khoản doanh nghiệp).</div></div>
                     }

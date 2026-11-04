@@ -204,20 +204,25 @@ public sealed class SafeAdminTingeeSandboxTests
     }
 
     [Fact]
-    public async Task BusinessBankLinkSendsTheTaxCodeAndShowsTingeeDetails()
+    public async Task MbBusinessBankLinkSendsTheTaxCodeAsIdentityAndShowsTingeeDetails()
     {
         using var f = Factory(out var tingee, out _);
         var c = Client(f);
-        Assert.Contains("name=\"Bank.TaxCode\"", await c.GetStringAsync("/tingeesandbox?bin=970422&type=business-account"));
+        var form = WebUtility.HtmlDecode(await c.GetStringAsync("/tingeesandbox?bin=970422&type=business-account"));
+        Assert.Contains("name=\"Bank.Identity\"", form);
+        Assert.Contains("Mã số thuế doanh nghiệp", form);
+        Assert.DoesNotContain("name=\"Bank.TaxCode\"", form);
+        Assert.Contains("name=\"Bank.TaxCode\"", await c.GetStringAsync("/tingeesandbox?bin=970418&type=business-household-account"));
         tingee.VaError = new TingeeApiException("400", "Data input invalid", "{\"code\":\"400\",\"data\":[{\"field\":\"mobile\"}]}");
         var r = await Post(c, "/tingeesandbox/linkbank", await Token(c), new()
         {
             ["Bank.Bin"] = "970422", ["Bank.AccountType"] = "business-account", ["Bank.AccountNumber"] = "250779688888",
-            ["Bank.AccountName"] = "CONG TY TNHH TU VAN GIAI PHAP TA", ["Bank.Mobile"] = "0888578074", ["Bank.TaxCode"] = "0123456789"
+            ["Bank.AccountName"] = "CONG TY TNHH TU VAN GIAI PHAP TA", ["Bank.Mobile"] = "0888578074", ["Bank.Identity"] = "0123456789", ["Bank.TaxCode"] = "9999999999"
         });
         var html = WebUtility.HtmlDecode(await r.Content.ReadAsStringAsync());
         Assert.Contains("chi tiết: {\"code\":\"400\",\"data\":[{\"field\":\"mobile\"}]}", html);
-        Assert.Equal("0123456789", Assert.Single(tingee.Vas).TaxCode);
+        var va = Assert.Single(tingee.Vas);
+        Assert.Equal(("0123456789", (string?)null), (va.Identity, va.TaxCode));   // MB business: tax code travels in identity only
     }
 
     [Fact]

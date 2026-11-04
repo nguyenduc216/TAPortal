@@ -48,3 +48,4 @@ Database sẵn sàng cho phần thanh toán (verify PASS). Tiếp theo: operator
 | `TINGEE-INTEGRATION-CHG-20261103T180623Z-6DB65E` | 2026-11-03 | Show Tingee error details; tax code for business bank links in the sandbox | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |
 | `TINGEE-INTEGRATION-CHG-20261104T040031Z-0CF9F3` | 2026-11-04 | Tingee API call log with log-code lookup (for Tingee support) | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |
 | `TINGEE-INTEGRATION-CHG-20261104T042150Z-621434` | 2026-11-04 | VietinBank personal/household links send the mobile number | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |
+| `TINGEE-INTEGRATION-CHG-20261104T044529Z-3B92C7` | 2026-11-04 | MB business bank links send the tax code in identity, not taxCode | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |

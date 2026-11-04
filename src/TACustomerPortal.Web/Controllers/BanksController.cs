@@ -75,7 +75,7 @@ public sealed partial class BanksController(ICurrentCustomerContext customer, IP
             AcbUserId = Use(rule, TingeeBankField.AcbUserId, input.AcbUserId),
             IsNotifyAccountNumber = notifyRoot,
             Name = $"{m.Code} - {bank.Code}",
-            TaxCode = type == TingeeAccountTypes.Personal ? null : m.TaxCode,
+            TaxCode = type == TingeeAccountTypes.Personal || rule.TaxCodeAsIdentity(type) ? null : m.TaxCode,
             RedirectUrl = bank.Code == "VCB" && type == TingeeAccountTypes.Personal ? Url.Action(nameof(Index), "Banks", null, Request.Scheme) : null,
             WebhookUrl = rule.AsyncResult ? webhookUrl : null,
             RequestId = bank.Code == "TPB" ? Guid.NewGuid().ToString("N") : null

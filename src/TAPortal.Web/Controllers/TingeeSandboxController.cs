@@ -70,7 +70,7 @@ public sealed partial class TingeeSandboxController(
             AcbUserId = Use(rule, TingeeBankField.AcbUserId, input.AcbUserId),
             IsNotifyAccountNumber = notifyRoot,
             Name = $"TA SANDBOX - {bank.Code}",
-            TaxCode = type == TingeeAccountTypes.Personal || string.IsNullOrWhiteSpace(input.TaxCode) ? null : input.TaxCode.Trim(),
+            TaxCode = type == TingeeAccountTypes.Personal || rule.TaxCodeAsIdentity(type) || string.IsNullOrWhiteSpace(input.TaxCode) ? null : input.TaxCode.Trim(),
             RedirectUrl = bank.Code == "VCB" && type == TingeeAccountTypes.Personal ? Url.Action(nameof(Index), "TingeeSandbox", new { merchant }, Request.Scheme) : null,
             WebhookUrl = rule.AsyncResult ? vaStatusUrl : null,
             RequestId = bank.Code == "TPB" ? Guid.NewGuid().ToString("N") : null

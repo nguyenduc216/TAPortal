@@ -72,6 +72,9 @@ public sealed class SafeCustomerPaymentsTests
         Assert.False(TingeeBankCatalog.Find("970430")!.Rule(TingeeAccountTypes.Personal).VaSupported);   // PGBank
         Assert.True(TingeeBankCatalog.Find("970416")!.Rule(TingeeAccountTypes.Business).Required.Contains(TingeeBankField.AcbUserId));
         Assert.DoesNotContain(TingeeBankField.Identity, TingeeBankCatalog.Find("970418")!.Rule(TingeeAccountTypes.Business).Required);
+        // MB business: the tax code goes in identity (Tingee support), so taxCode is not sent.
+        Assert.True(TingeeBankCatalog.Find("970422")!.Rule(TingeeAccountTypes.Business).TaxCodeAsIdentity(TingeeAccountTypes.Business));
+        Assert.False(TingeeBankCatalog.Find("970415")!.Rule(TingeeAccountTypes.Household).TaxCodeAsIdentity(TingeeAccountTypes.Household));
         // VietinBank personal/household: mobile is sent although the docs call it optional (400 "Verify string error" without it).
         Assert.Contains(TingeeBankField.Mobile, TingeeBankCatalog.Find("970415")!.Rule(TingeeAccountTypes.Personal).Required);
         Assert.Contains(TingeeBankField.Mobile, TingeeBankCatalog.Find("970415")!.Rule(TingeeAccountTypes.Household).Required);

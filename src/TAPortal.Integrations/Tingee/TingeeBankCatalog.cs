@@ -35,7 +35,14 @@ public sealed record TingeeBankRule(
     bool SupportsRootNotify,
     bool VaSupported,
     bool AsyncResult,
-    string? Note);
+    string? Note)
+{
+    /// <summary>
+    /// Business accounts whose bank asks for "identity" carry the company tax code there (MB, per Tingee support
+    /// 2026-11-04), so the separate taxCode field is not sent for them.
+    /// </summary>
+    public bool TaxCodeAsIdentity(string? accountType) => accountType == TingeeAccountTypes.Business && Required.Contains(TingeeBankField.Identity);
+}
 
 public sealed record TingeeBank(string Bin, string Code, string Name, IReadOnlyList<string> AccountTypes, Func<string, TingeeBankRule> RuleFor)
 {
@@ -68,8 +75,10 @@ public static class TingeeBankCatalog
             // "Verify string error ... Verify string is invalid" (2026-11-04, operator report): always send it.
             : Rule(t, [TingeeBankField.AccountNumber, TingeeBankField.AccountName, TingeeBankField.Identity, TingeeBankField.Mobile], dynamicQr: false, root: true,
                 note: "Số điện thoại phải là số đăng ký với VietinBank. VietinBank không gửi nội dung chuyển khoản trong thông báo giao dịch.")),
-        Bank("970422", "MBB", "MB Bank", AllTypes, t => Rule(t, t == TingeeAccountTypes.Business ? [TingeeBankField.AccountNumber, TingeeBankField.AccountName, TingeeBankField.Mobile] : Personalish(),
-            dynamicQr: true, root: false, note: t == TingeeAccountTypes.Business ? "Tài khoản doanh nghiệp MB cần T.A/Tingee cấu hình trước." : null)),
+        // MB business: Tingee support (2026-11-04) asks for the company tax code in "identity", not in "taxCode",
+        // although the create-va docs say identity does not apply to business accounts.
+        Bank("970422", "MBB", "MB Bank", AllTypes, t => Rule(t, t == TingeeAccountTypes.Business ? [TingeeBankField.AccountNumber, TingeeBankField.AccountName, TingeeBankField.Identity, TingeeBankField.Mobile] : Personalish(),
+            dynamicQr: true, root: false, note: t == TingeeAccountTypes.Business ? "Tài khoản doanh nghiệp MB: ô giấy tờ nhập mã số thuế doanh nghiệp. Tài khoản cần T.A/Tingee cấu hình trước." : null)),
         Bank("970432", "VPB", "VPBank", AllTypes, t => Rule(t, t == TingeeAccountTypes.Business ? [TingeeBankField.AccountNumber, TingeeBankField.AccountName] : [TingeeBankField.AccountNumber, TingeeBankField.AccountName, TingeeBankField.Identity],
             dynamicQr: t == TingeeAccountTypes.Business, root: t != TingeeAccountTypes.Household,
             note: t == TingeeAccountTypes.Personal ? null : "Có thể cần API key riêng của merchant (Tingee mã 1133).")),
