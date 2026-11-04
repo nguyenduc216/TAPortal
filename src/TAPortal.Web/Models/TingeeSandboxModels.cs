@@ -20,6 +20,15 @@ public sealed record TingeeSandboxOtp(string BankBin, string BankName, string Co
 
 public sealed record TingeeSandboxLinkResult(string BankName, string Message, string? ActionLink, TingeeSandboxOtp? Otp);
 
+/// <summary>A bank link being removed: Tingee may ask for an OTP (ConfirmId) or a bank page (Link) before it is gone.</summary>
+public sealed record TingeeSandboxUnlink(string BankBin, string BankName, string VaAccountNumber, string? ConfirmId, string? Link);
+
+public static class TingeeSandboxDialogs
+{
+    public const string Link = "link";
+    public const string Unlink = "unlink";
+}
+
 public sealed record TingeeSandboxWebhook(long Id, string Kind, string Status, DateTime ReceivedAtUtc, decimal? Amount, string? Content,
     string? Account, string? TransactionCode, string? TransactionTime, string? Bank, string RawBody);
 
@@ -37,7 +46,9 @@ public sealed record TingeeSandboxVm(
     TingeeSandboxQrInput QrInput,
     TingeeSandboxQr? Qr,
     IReadOnlyList<TingeeSandboxWebhook> Webhooks,
-    string? WebhookError);
+    string? WebhookError,
+    string? Dialog = null,
+    TingeeSandboxUnlink? Unlink = null);
 
 public sealed class TingeeSandboxBankInput
 {

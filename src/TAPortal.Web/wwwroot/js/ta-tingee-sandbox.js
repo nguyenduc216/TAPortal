@@ -1,7 +1,23 @@
 // Tingee Sandbox: polls the test QR's payment status (every 5 s) and refreshes the webhook list (every 10 s).
 // Tingee log: copies a call report to the clipboard.
+// Popups: "Xóa" fills the unlink popup with the chosen account; an OTP field gets the focus as soon as its popup opens.
 (function () {
     'use strict';
+
+    document.addEventListener('show.bs.modal', function (event) {
+        var trigger = event.relatedTarget;
+        var form = event.target.querySelector('#tgUnlinkForm');
+        if (!form || !trigger || !trigger.hasAttribute('data-ta-unlink-bin')) return;
+        form.querySelector('[data-ta-unlink-field="bin"]').value = trigger.getAttribute('data-ta-unlink-bin');
+        form.querySelector('[data-ta-unlink-field="va"]').value = trigger.getAttribute('data-ta-unlink-va');
+        form.querySelector('[data-ta-unlink-field="bank"]').textContent = trigger.getAttribute('data-ta-unlink-bank');
+        form.querySelector('[data-ta-unlink-field="va-text"]').textContent = trigger.getAttribute('data-ta-unlink-va');
+    });
+
+    document.addEventListener('shown.bs.modal', function (event) {
+        var otp = event.target.querySelector('[data-ta-otp-input]');
+        if (otp) otp.focus();
+    });
 
     document.addEventListener('click', function (event) {
         var button = event.target.closest('[data-ta-copy]');

@@ -242,6 +242,66 @@ public sealed class SafeAdminTingeeSandboxTests
     }
 
     [Fact]
+    public async Task LinkingHappensInAPopupThatShowsTheOtpStepClearly()
+    {
+        using var f = Factory(out var tingee, out _);
+        var c = Client(f);
+        var page = WebUtility.HtmlDecode(await c.GetStringAsync("/tingeesandbox"));
+        Assert.Contains("data-ta-sandbox-add-link", page);
+        Assert.Matches("id=\"tgLink\"[^>]*data-ta-open=\"false\"", page);   // closed until asked for
+        Assert.Contains("3. Tạo QR thử và chuyển tiền", page);
+        Assert.Contains("4. Biến động nhận được", page);
+        Assert.Matches("id=\"tgLink\"[^>]*data-ta-open=\"true\"", WebUtility.HtmlDecode(await c.GetStringAsync("/tingeesandbox?bin=970422&type=personal-account")));
+
+        var r = await Post(c, "/tingeesandbox/linkbank", await Token(c), new()
+        {
+            ["Bank.Bin"] = "970422", ["Bank.AccountType"] = "personal-account", ["Bank.AccountNumber"] = "0123456789",
+            ["Bank.AccountName"] = "NGUYEN VAN A", ["Bank.Identity"] = "001234567890", ["Bank.Mobile"] = "0912345678"
+        });
+        var html = WebUtility.HtmlDecode(await r.Content.ReadAsStringAsync());
+        Assert.Matches("id=\"tgLink\"[^>]*data-ta-open=\"true\"", html);
+        Assert.Contains("data-ta-sandbox-otp-pending", html);      // banner on the page as well
+        Assert.Contains("Nhập mã OTP để hoàn tất liên kết MB Bank", html);
+        Assert.Contains("data-ta-otp-input", html);
+        Assert.DoesNotContain("data-ta-sandbox-link-form", html); // the OTP step replaces the form
+    }
+
+    [Fact]
+    public async Task UnlinkingAsksForTheOtpThenRemovesTheLink()
+    {
+        using var f = Factory(out var tingee, out _);
+        var c = Client(f);
+        var page = WebUtility.HtmlDecode(await c.GetStringAsync("/tingeesandbox"));
+        Assert.Contains("data-ta-unlink-va=\"963123456789\"", page);
+        var token = await Token(c);
+
+        var r = await Post(c, "/tingeesandbox/deleteva", token, new() { ["bankBin"] = "970422", ["vaAccountNumber"] = "963123456789" });
+        var html = WebUtility.HtmlDecode(await r.Content.ReadAsStringAsync());
+        Assert.Equal(("970422", "963123456789"), (Assert.Single(tingee.Deleted).Item2, tingee.Deleted[0].Item3));
+        Assert.Matches("id=\"tgUnlink\"[^>]*data-ta-open=\"true\"", html);
+        Assert.Contains("Nhập mã OTP để xóa liên kết MB Bank", html);
+
+        var bad = await Post(c, "/tingeesandbox/confirmdeleteva", token, new() { ["bankBin"] = "970422", ["vaAccountNumber"] = "963123456789", ["confirmId"] = "DEL-1", ["otp"] = "1" });
+        Assert.Equal(HttpStatusCode.BadRequest, bad.StatusCode);
+        Assert.Empty(tingee.DeleteConfirms);
+        var ok = await Post(c, "/tingeesandbox/confirmdeleteva", token, new() { ["bankBin"] = "970422", ["vaAccountNumber"] = "963123456789", ["confirmId"] = "DEL-1", ["otp"] = "123456" });
+        Assert.Equal(HttpStatusCode.Redirect, ok.StatusCode);
+        Assert.Equal(("970422", "DEL-1", "123456"), Assert.Single(tingee.DeleteConfirms));
+    }
+
+    [Fact]
+    public async Task UnlinkingWithoutOtpRemovesTheLinkAtOnce()
+    {
+        using var f = Factory(out var tingee, out _);
+        tingee.DeleteConfirmId = null;
+        var c = Client(f);
+        var r = await Post(c, "/tingeesandbox/deleteva", await Token(c), new() { ["bankBin"] = "970422", ["vaAccountNumber"] = "963123456789" });
+        Assert.Equal(HttpStatusCode.Redirect, r.StatusCode);
+        Assert.Single(tingee.Deleted);
+        Assert.Empty(tingee.DeleteConfirms);
+    }
+
+    [Fact]
     public async Task NonAdminsCannotOpenTheSandbox()
     {
         using var f = Factory(out var tingee, out _, admin: false);
@@ -416,8 +476,19 @@ public sealed class SafeAdminTingeeSandboxTests
             Task.FromResult(new TingeeQrStatus { BillInfo = new() { BillId = billId, Amount = 2000, TotalAmountPaid = Paid, TotalPaymentsCount = Paid > 0 ? 1 : 0, Status = Paid >= 2000 ? "paid" : "pending" } });
         public Task<TingeeMerchantCreated> CreateMerchantAsync(TingeeCreateMerchantRequest request, CancellationToken ct = default) => throw new NotSupportedException();
         public Task<TingeePage<TingeeMerchantItem>> GetMerchantsAsync(CancellationToken ct = default) => throw new NotSupportedException();
-        public Task<TingeeDeleteVaResult> DeleteVaAsync(long merchantId, string bankBin, string vaAccountNumber, CancellationToken ct = default) => throw new NotSupportedException();
-        public Task ConfirmDeleteVaAsync(long merchantId, string bankBin, string confirmId, string otp, CancellationToken ct = default) => throw new NotSupportedException();
+        public List<(long, string, string)> Deleted { get; } = [];
+        public List<(string, string, string)> DeleteConfirms { get; } = [];
+        public string? DeleteConfirmId { get; set; } = "DEL-1";
+        public Task<TingeeDeleteVaResult> DeleteVaAsync(long merchantId, string bankBin, string vaAccountNumber, CancellationToken ct = default)
+        {
+            Deleted.Add((merchantId, bankBin, vaAccountNumber));
+            return Task.FromResult(new TingeeDeleteVaResult { ConfirmId = DeleteConfirmId });
+        }
+        public Task ConfirmDeleteVaAsync(long merchantId, string bankBin, string confirmId, string otp, CancellationToken ct = default)
+        {
+            DeleteConfirms.Add((bankBin, confirmId, otp));
+            return Task.CompletedTask;
+        }
         public Task DeleteDynamicQrAsync(long merchantId, string qrAccount, string billId, CancellationToken ct = default) => Task.CompletedTask;
     }
 

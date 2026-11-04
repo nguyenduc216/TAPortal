@@ -11,14 +11,44 @@
     var b = Model.BankInput;
     var vn = System.Globalization.CultureInfo.GetCultureInfo("vi-VN");
     string Money(decimal v) => v.ToString("#,##0", vn) + "đ";
+    var linkOtp = Model.LinkResult?.Otp;
+    var unlink = Model.Unlink;
+    var linkOpen = Model.Dialog == TingeeSandboxDialogs.Link;
+    var unlinkOpen = Model.Dialog == TingeeSandboxDialogs.Unlink;
+    // Errors of an open dialog are shown inside it; otherwise at the top of the page.
+    var errors = ViewData.ModelState[string.Empty]?.Errors.Select(e => e.ErrorMessage).ToList() ?? [];
 }
 @section Scripts { <script src="~/js/ta-tingee-sandbox.js" asp-append-version="true"></script> }
 
-<div asp-validation-summary="ModelOnly" class="ta-alert ta-alert--danger mb-3" data-ta-sandbox-errors></div>
+<style>
+    .tg-otp { display: flex; gap: .875rem; align-items: center; padding: .875rem 1rem; margin-bottom: 1rem; border-radius: .5rem;
+        background: rgba(245, 159, 0, .12); border: 1px solid #f59f00; }
+    .tg-otp__icon { flex: none; width: 2.75rem; height: 2.75rem; border-radius: 50%; display: grid; place-items: center; background: #f59f00; color: #fff;
+        animation: tg-otp-pulse 1.6s ease-out infinite; }
+    .tg-otp__title { font-weight: 700; font-size: 1.05rem; }
+    .tg-otp__input { font-size: 1.5rem !important; letter-spacing: .35em; font-variant-numeric: tabular-nums; }
+    .tg-step { display: inline-block; padding: .1rem .5rem; margin-left: .5rem; border-radius: 1rem; font-size: .75rem; font-weight: 600; background: #f59f00; color: #fff; vertical-align: middle; }
+    @@keyframes tg-otp-pulse { 0% { box-shadow: 0 0 0 0 rgba(245, 159, 0, .55); } 100% { box-shadow: 0 0 0 .9rem rgba(245, 159, 0, 0); } }
+    @@media (prefers-reduced-motion: reduce) { .tg-otp__icon { animation: none; } }
+</style>
+
+@if (Model.Dialog is null && errors.Count > 0)
+{
+    <div class="ta-alert ta-alert--danger mb-3" role="alert" data-ta-sandbox-errors>@UiIcon.Render("alert-circle")<div class="ta-alert__body">@foreach (var e in errors) {<div>@e</div>}</div></div>
+}
 
 @if (cfg.Production)
 {
     <div class="ta-alert ta-alert--warning" role="note" data-ta-sandbox-production>@UiIcon.Render("alert-triangle")<div class="ta-alert__body">Đang kết nối <strong>Tingee production</strong> (@cfg.BaseUrl): liên kết ngân hàng và QR là thật, tiền chuyển vào là tiền thật. Chỉ dùng tài khoản của T.A và số tiền nhỏ.</div></div>
+}
+
+@if (linkOtp is not null || unlink?.ConfirmId is not null)
+{
+    <div class="tg-otp" role="status" data-ta-sandbox-otp-pending>
+        <div class="tg-otp__icon">@UiIcon.Render("key")</div>
+        <div class="flex-grow-1"><div class="tg-otp__title">Đang chờ mã OTP</div><div>@(linkOtp?.BankName ?? unlink!.BankName) đã gửi mã OTP. Nhập mã trong cửa sổ xác thực để hoàn tất.</div></div>
+        <button type="button" class="btn btn-warning" data-bs-toggle="modal" data-bs-target="@(linkOtp is not null ? "#tgLink" : "#tgUnlink")">@UiIcon.Render("key")<span>Nhập OTP</span></button>
+    </div>
 }
 
 <div class="ta-ws-grid">
@@ -81,7 +111,10 @@
     </section>
 
     <section class="card" aria-labelledby="sbConn" data-ta-sandbox-connection>
-        <div class="card-header"><h2 class="card-title" id="sbConn">@UiIcon.Render("building-bank")2. Kết nối và tài khoản nhận tiền</h2></div>
+        <div class="card-header d-flex justify-content-between align-items-center gap-2">
+            <h2 class="card-title" id="sbConn">@UiIcon.Render("building-bank")2. Kết nối và tài khoản nhận tiền</h2>
+            <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#tgLink" disabled="@(!ready)" data-ta-sandbox-add-link>@UiIcon.Render("plus")<span>Thêm liên kết</span></button>
+        </div>
         <div class="card-body">
             @if (conn is null)
             {
@@ -93,18 +126,24 @@
             }
             else if (conn.Accounts.Count == 0)
             {
-                <p class="mb-0" data-ta-sandbox-conn-ok><span class="ta-badge ta-badge--success">Kết nối OK</span> Chưa có tài khoản ngân hàng nào được liên kết. Liên kết ở mục 3.</p>
+                <p class="mb-0" data-ta-sandbox-conn-ok><span class="ta-badge ta-badge--success">Kết nối OK</span> Chưa có tài khoản ngân hàng nào được liên kết. Bấm "Thêm liên kết".</p>
             }
             else
             {
                 <p data-ta-sandbox-conn-ok><span class="ta-badge ta-badge--success">Kết nối OK</span> @conn.Accounts.Count tài khoản đã liên kết.</p>
                 <div class="table-responsive">
                     <table class="table table-sm mb-0" data-ta-sandbox-accounts>
-                        <thead><tr><th>Ngân hàng</th><th>Loại</th><th>Số tài khoản</th><th>Tài khoản nhận (VA)</th><th>Trạng thái</th></tr></thead>
+                        <thead><tr><th>Ngân hàng</th><th>Loại</th><th>Số tài khoản</th><th>Tài khoản nhận (VA)</th><th>Trạng thái</th><th></th></tr></thead>
                         <tbody>
                             @foreach (var a in conn.Accounts)
                             {
-                                <tr><td>@(TingeeBankCatalog.Find(a.BankBin)?.Name ?? a.BankBin)</td><td>@TingeeAccountTypes.Label(a.AccountType)</td><td>@a.AccountNumber</td><td><span class="ta-code">@a.VaAccountNumber</span></td><td>@a.Status</td></tr>
+                                var bankName = TingeeBankCatalog.Find(a.BankBin)?.Name ?? a.BankBin;
+                                <tr>
+                                    <td>@bankName</td><td>@TingeeAccountTypes.Label(a.AccountType)</td><td>@a.AccountNumber</td><td><span class="ta-code">@a.VaAccountNumber</span></td><td>@a.Status</td>
+                                    <td class="text-end">@if (!string.IsNullOrWhiteSpace(a.VaAccountNumber) && a.BankBin is not null)
+                                    {<button type="button" class="btn btn-outline-danger btn-sm" title="Xóa liên kết" data-bs-toggle="modal" data-bs-target="#tgUnlink"
+                                        data-ta-unlink-bin="@a.BankBin" data-ta-unlink-va="@a.VaAccountNumber" data-ta-unlink-bank="@bankName">@UiIcon.Render("trash")<span>Xóa</span></button>}</td>
+                                </tr>
                             }
                         </tbody>
                     </table>
@@ -112,97 +151,38 @@
             }
         </div>
     </section>
+</div>
 
-    <section class="card" aria-labelledby="sbLink" data-ta-sandbox-link>
-        <div class="card-header"><h2 class="card-title" id="sbLink">@UiIcon.Render("arrows-exchange")3. Liên kết tài khoản ngân hàng</h2></div>
-        <div class="card-body">
-            @if (Model.LinkResult is { } lr)
+<section class="card mt-3" aria-labelledby="sbQr" data-ta-sandbox-qr>
+    <div class="card-header"><h2 class="card-title" id="sbQr">@UiIcon.Render("qrcode")3. Tạo QR thử và chuyển tiền</h2></div>
+    <div class="card-body">
+        @if (Model.Qr is { } qr)
+        {
+            <div class="d-flex gap-3 flex-wrap mb-3" data-ta-sandbox-qr-result>
+                <div style="width:220px">@Html.Raw(qr.Svg)</div>
+                <dl class="ta-dl">
+                    <dt>Loại</dt><dd>@(qr.Type == "dynamic" ? "QR động (Tingee theo dõi)" : "QR tĩnh VietQR")</dd>
+                    <dt>Ngân hàng</dt><dd>@qr.BankName</dd>
+                    <dt>Tài khoản nhận</dt><dd><span class="ta-code">@qr.Account</span></dd>
+                    <dt>Số tiền</dt><dd>@Money(qr.Amount)</dd>
+                    <dt>Nội dung</dt><dd>@(qr.Purpose ?? "—")</dd>
+                    @if (qr.ExpiresAtUtc is DateTime exp) {<dt>Hết hạn</dt><dd>@exp.AddHours(7).ToString("HH:mm dd/MM")</dd>}
+                </dl>
+            </div>
+            @if (qr.Type == "dynamic" && qr.QrAccount is not null && qr.BillId is not null)
             {
-                <div class="ta-alert ta-alert--info mb-3" role="status" data-ta-sandbox-link-result>@UiIcon.Render("info-circle")<div class="ta-alert__body">@lr.Message
-                    @if (lr.ActionLink is not null) {<div class="mt-2"><a class="btn btn-sm" href="@lr.ActionLink" target="_blank" rel="noopener noreferrer">Mở trang xác thực của ngân hàng</a></div>}</div></div>
-                @if (lr.Otp is { } otp)
-                {
-                    <form asp-action="ConfirmOtp" method="post" class="mb-3" data-ta-sandbox-otp>
-                        <input type="hidden" name="merchant" value="@mid" />
-                        <input type="hidden" name="bankBin" value="@otp.BankBin" />
-                        <input type="hidden" name="confirmId" value="@otp.ConfirmId" />
-                        <label class="form-label required" for="otp">Mã OTP @otp.BankName</label>
-                        <div class="d-flex gap-2"><div class="ta-input-icon flex-grow-1">@UiIcon.Render("key")<input class="form-control" id="otp" name="otp" inputmode="numeric" pattern="[0-9]{4,8}" autocomplete="one-time-code" required /></div><button class="btn btn-primary" type="submit" data-ta-loading>Xác nhận</button></div>
-                    </form>
-                }
+                <div class="ta-alert ta-alert--info" role="status" aria-live="polite" data-ta-sandbox-qr-status data-url="@Url.Action("QrStatus", new { qrAccount = qr.QrAccount, billId = qr.BillId, merchant = mid })">@UiIcon.Render("clock")<div class="ta-alert__body" data-ta-sandbox-qr-status-text>Đang chờ thanh toán… (tự kiểm tra mỗi 5 giây)</div></div>
+                <form asp-action="DeleteQr" method="post"><input type="hidden" name="merchant" value="@mid" /><input type="hidden" name="qrAccount" value="@qr.QrAccount" /><input type="hidden" name="billId" value="@qr.BillId" /><button class="btn btn-outline-danger btn-sm" type="submit">@UiIcon.Render("x")<span>Hủy QR</span></button></form>
             }
-            <form asp-action="Index" method="get" class="row g-2 mb-3">
-                <input type="hidden" name="merchant" value="@mid" />
-                <div class="col-sm-6"><label class="form-label" for="bin">Ngân hàng</label>
-                    <select class="form-select" id="bin" name="bin" onchange="this.form.submit()">
-                        <option value="">— Chọn —</option>
-                        @foreach (var bank in TingeeBankCatalog.Banks) { <option value="@bank.Bin" selected="@(bank.Bin == Model.Bank?.Bin)">@bank.Name</option> }
-                    </select></div>
-                <div class="col-sm-6"><label class="form-label" for="type">Loại tài khoản</label>
-                    <select class="form-select" id="type" name="type" onchange="this.form.submit()" disabled="@(Model.Bank is null)">
-                        <option value="">— Chọn —</option>
-                        @foreach (var t in Model.Bank?.AccountTypes ?? []) { <option value="@t" selected="@(t == Model.AccountType)">@TingeeAccountTypes.Label(t)</option> }
-                    </select></div>
-                <noscript><button class="btn btn-sm" type="submit">Chọn</button></noscript>
-            </form>
-            @if (rule is not null)
+            else
             {
-                @if (rule.Note is not null) {<p class="form-hint">@rule.Note</p>}
-                <form asp-action="LinkBank" method="post" data-ta-sandbox-link-form>
-                    <input type="hidden" name="merchant" value="@mid" />
-                    <input type="hidden" name="Bank.Bin" value="@Model.Bank!.Bin" />
-                    <input type="hidden" name="Bank.AccountType" value="@Model.AccountType" />
-                    @foreach (var field in rule.Required)
-                    {
-                        var name = field.ToString();
-                        var value = field switch { TingeeBankField.AccountNumber => b.AccountNumber, TingeeBankField.AccountName => b.AccountName, TingeeBankField.Identity => b.Identity, TingeeBankField.Mobile => b.Mobile, TingeeBankField.VaSuffix => b.VaSuffix, TingeeBankField.MerchantName => b.MerchantName, TingeeBankField.VaAccountNumber => b.VaAccountNumber, _ => b.AcbUserId };
-                        var label = field == TingeeBankField.Identity && rule.TaxCodeAsIdentity(Model.AccountType) ? "mã số thuế doanh nghiệp" : TingeeSandboxController.FieldLabel(field);
-                        <div class="mb-2"><label class="form-label required" for="Bank_@name">@(char.ToUpper(label[0]) + label[1..])</label><div class="ta-input-icon">@UiIcon.Render("hash")<input class="form-control" id="Bank_@name" name="Bank.@name" value="@value" required /></div></div>
-                    }
-                    @if (Model.AccountType != TingeeAccountTypes.Personal && !rule.TaxCodeAsIdentity(Model.AccountType))
-                    {
-                        <div class="mb-2"><label class="form-label" for="Bank_TaxCode">Mã số thuế</label><div class="ta-input-icon">@UiIcon.Render("receipt-tax")<input class="form-control" id="Bank_TaxCode" name="Bank.TaxCode" value="@b.TaxCode" inputmode="numeric" maxlength="14" /></div><div class="form-hint">Mã số thuế của doanh nghiệp/hộ kinh doanh chủ tài khoản (Tingee dùng cho tài khoản doanh nghiệp).</div></div>
-                    }
-                    @if (rule.Required.Count == 0) {<p class="form-hint">Ngân hàng này không cần nhập thêm thông tin; khách hàng xác thực trên ứng dụng ngân hàng.</p>}
-                    @if (rule.SupportsRootNotify && rule.VaSupported)
-                    {
-                        <label class="form-check mb-2"><input class="form-check-input" type="checkbox" name="Bank.NotifyRootAccount" value="true" checked="@b.NotifyRootAccount" /><input type="hidden" name="Bank.NotifyRootAccount" value="false" /><span class="form-check-label">Nhận biến động trên số tài khoản gốc</span></label>
-                    }
-                    <button class="btn btn-primary" type="submit" disabled="@(!ready)" data-ta-loading data-ta-loading-text="Đang gửi...">@UiIcon.Render("check")<span>Liên kết</span></button>
-                </form>
+                <p class="form-hint">QR tĩnh không có trạng thái riêng: tiền vào sẽ hiện ở mục 4 khi Tingee gửi webhook.</p>
             }
-        </div>
-    </section>
-
-    <section class="card" aria-labelledby="sbQr" data-ta-sandbox-qr>
-        <div class="card-header"><h2 class="card-title" id="sbQr">@UiIcon.Render("qrcode")4. Tạo QR thử và chuyển tiền</h2></div>
-        <div class="card-body">
-            @if (Model.Qr is { } qr)
-            {
-                <div class="d-flex gap-3 flex-wrap mb-3" data-ta-sandbox-qr-result>
-                    <div style="width:220px">@Html.Raw(qr.Svg)</div>
-                    <dl class="ta-dl">
-                        <dt>Loại</dt><dd>@(qr.Type == "dynamic" ? "QR động (Tingee theo dõi)" : "QR tĩnh VietQR")</dd>
-                        <dt>Ngân hàng</dt><dd>@qr.BankName</dd>
-                        <dt>Tài khoản nhận</dt><dd><span class="ta-code">@qr.Account</span></dd>
-                        <dt>Số tiền</dt><dd>@Money(qr.Amount)</dd>
-                        <dt>Nội dung</dt><dd>@(qr.Purpose ?? "—")</dd>
-                        @if (qr.ExpiresAtUtc is DateTime exp) {<dt>Hết hạn</dt><dd>@exp.AddHours(7).ToString("HH:mm dd/MM")</dd>}
-                    </dl>
-                </div>
-                @if (qr.Type == "dynamic" && qr.QrAccount is not null && qr.BillId is not null)
-                {
-                    <div class="ta-alert ta-alert--info" role="status" aria-live="polite" data-ta-sandbox-qr-status data-url="@Url.Action("QrStatus", new { qrAccount = qr.QrAccount, billId = qr.BillId, merchant = mid })">@UiIcon.Render("clock")<div class="ta-alert__body" data-ta-sandbox-qr-status-text>Đang chờ thanh toán… (tự kiểm tra mỗi 5 giây)</div></div>
-                    <form asp-action="DeleteQr" method="post"><input type="hidden" name="merchant" value="@mid" /><input type="hidden" name="qrAccount" value="@qr.QrAccount" /><input type="hidden" name="billId" value="@qr.BillId" /><button class="btn btn-outline-danger btn-sm" type="submit">@UiIcon.Render("x")<span>Hủy QR</span></button></form>
-                }
-                else
-                {
-                    <p class="form-hint">QR tĩnh không có trạng thái riêng: tiền vào sẽ hiện ở mục 5 khi Tingee gửi webhook.</p>
-                }
-            }
-            <form asp-action="CreateQr" method="post">
-                <input type="hidden" name="merchant" value="@mid" />
-                <div class="mb-2"><label class="form-label required" for="Qr_Account">Tài khoản nhận tiền</label>
+        }
+        <form asp-action="CreateQr" method="post">
+            <input type="hidden" name="merchant" value="@mid" />
+            <div class="row g-2 mb-2">
+                <div class="col-md-4"><label class="form-label required" for="Qr_Account">Tài khoản nhận tiền</label>
                     <select class="form-select" id="Qr_Account" name="Qr.Account" required>
                         <option value="">— Chọn —</option>
                         @foreach (var a in conn?.Accounts ?? [])
@@ -213,27 +193,174 @@
                             <option value="@key" selected="@(key == Model.QrInput.Account)">@(TingeeBankCatalog.Find(a.BankBin)?.Name ?? a.BankBin) — @number</option>
                         }
                     </select></div>
-                <div class="row g-2 mb-2">
-                    <div class="col-sm-4"><label class="form-label required" for="Qr_Amount">Số tiền (đ)</label><div class="ta-input-icon">@UiIcon.Render("report-money")<input class="form-control" id="Qr_Amount" name="Qr.Amount" type="number" min="1000" max="10000000" step="1000" value="@Model.QrInput.Amount.ToString("0", System.Globalization.CultureInfo.InvariantCulture)" required /></div></div>
-                    <div class="col-sm-4"><label class="form-label" for="Qr_Purpose">Nội dung</label><div class="ta-input-icon">@UiIcon.Render("file-text")<input class="form-control" id="Qr_Purpose" name="Qr.Purpose" value="@Model.QrInput.Purpose" maxlength="50" /></div></div>
-                    <div class="col-sm-4"><label class="form-label" for="Qr_Type">Loại QR</label>
-                        <select class="form-select" id="Qr_Type" name="Qr.Type">
-                            <option value="dynamic" selected="@(Model.QrInput.Type != "static")">QR động (theo dõi trạng thái)</option>
-                            <option value="static" selected="@(Model.QrInput.Type == "static")">QR tĩnh VietQR</option>
-                        </select></div>
-                </div>
-                <button class="btn btn-primary" type="submit" disabled="@(!ready || conn is not { Ok: true } || conn.Accounts.Count == 0)" data-ta-loading data-ta-loading-text="Đang tạo...">@UiIcon.Render("qrcode")<span>Tạo QR</span></button>
-            </form>
-        </div>
-    </section>
-</div>
+                <div class="col-md-2"><label class="form-label required" for="Qr_Amount">Số tiền (đ)</label><div class="ta-input-icon">@UiIcon.Render("report-money")<input class="form-control" id="Qr_Amount" name="Qr.Amount" type="number" min="1000" max="10000000" step="1000" value="@Model.QrInput.Amount.ToString("0", System.Globalization.CultureInfo.InvariantCulture)" required /></div></div>
+                <div class="col-md-3"><label class="form-label" for="Qr_Purpose">Nội dung</label><div class="ta-input-icon">@UiIcon.Render("file-text")<input class="form-control" id="Qr_Purpose" name="Qr.Purpose" value="@Model.QrInput.Purpose" maxlength="50" /></div></div>
+                <div class="col-md-3"><label class="form-label" for="Qr_Type">Loại QR</label>
+                    <select class="form-select" id="Qr_Type" name="Qr.Type">
+                        <option value="dynamic" selected="@(Model.QrInput.Type != "static")">QR động (theo dõi trạng thái)</option>
+                        <option value="static" selected="@(Model.QrInput.Type == "static")">QR tĩnh VietQR</option>
+                    </select></div>
+            </div>
+            <button class="btn btn-primary" type="submit" disabled="@(!ready || conn is not { Ok: true } || conn.Accounts.Count == 0)" data-ta-loading data-ta-loading-text="Đang tạo...">@UiIcon.Render("qrcode")<span>Tạo QR</span></button>
+        </form>
+    </div>
+</section>
 
 <section class="card mt-3" aria-labelledby="sbHooks">
     <div class="card-header d-flex justify-content-between align-items-center">
-        <h2 class="card-title" id="sbHooks">@UiIcon.Render("report-money")5. Biến động nhận được (webhook)</h2>
+        <h2 class="card-title" id="sbHooks">@UiIcon.Render("report-money")4. Biến động nhận được (webhook)</h2>
         <span class="form-hint">Tự làm mới mỗi 10 giây</span>
     </div>
     <div class="card-body" data-ta-sandbox-webhooks data-url="@Url.Action("Webhooks")">
         <partial name="_Webhooks" model="(Model.Webhooks, Model.WebhookError)" />
     </div>
 </section>
+
+@* ---- Popup: link a bank account (OTP step included) ---- *@
+<div class="modal modal-blur fade" id="tgLink" tabindex="-1" aria-labelledby="tgLinkTitle" aria-hidden="true" data-ta-open="@(linkOpen ? "true" : "false")" data-ta-sandbox-link>
+    <div class="modal-dialog modal-dialog-centered modal-lg"><div class="modal-content">
+        @if (linkOtp is not null) {<div class="modal-status bg-warning"></div>}
+        <div class="modal-header">
+            <h2 class="modal-title" id="tgLinkTitle">@if (linkOtp is not null) {@UiIcon.Render("key")<span>Xác thực OTP</span><span class="tg-step">Bước 2/2</span>} else {@UiIcon.Render("arrows-exchange")<span>Liên kết tài khoản ngân hàng</span><span class="tg-step" style="background:#206bc4">Bước 1/2</span>}</h2>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+        </div>
+        <div class="modal-body">
+            @if (linkOpen && errors.Count > 0)
+            {
+                <div class="ta-alert ta-alert--danger mb-3" role="alert" data-ta-sandbox-errors>@UiIcon.Render("alert-circle")<div class="ta-alert__body">@foreach (var e in errors) {<div>@e</div>}</div></div>
+            }
+            @if (Model.LinkResult is { } lr)
+            {
+                @if (lr.Otp is { } otp)
+                {
+                    <div class="tg-otp" role="alert" aria-live="assertive" data-ta-sandbox-link-result>
+                        <div class="tg-otp__icon">@UiIcon.Render("key")</div>
+                        <div><div class="tg-otp__title">Nhập mã OTP để hoàn tất liên kết @otp.BankName</div><div>@lr.Message Mã được gửi tới số điện thoại đăng ký với ngân hàng@(otp.OtpMethod is null ? "" : $" ({otp.OtpMethod})") và chỉ có hiệu lực trong thời gian ngắn.</div></div>
+                    </div>
+                    @if (lr.ActionLink is not null) {<p><a class="btn btn-sm" href="@lr.ActionLink" target="_blank" rel="noopener noreferrer">Mở trang xác thực của ngân hàng</a></p>}
+                    <form asp-action="ConfirmOtp" method="post" data-ta-sandbox-otp>
+                        <input type="hidden" name="merchant" value="@mid" />
+                        <input type="hidden" name="bankBin" value="@otp.BankBin" />
+                        <input type="hidden" name="confirmId" value="@otp.ConfirmId" />
+                        <label class="form-label required" for="otp">Mã OTP @otp.BankName</label>
+                        <div class="d-flex gap-2"><div class="ta-input-icon flex-grow-1">@UiIcon.Render("key")<input class="form-control tg-otp__input" id="otp" name="otp" inputmode="numeric" pattern="[0-9]{4,8}" maxlength="8" autocomplete="one-time-code" required data-ta-otp-input /></div><button class="btn btn-primary btn-lg" type="submit" data-ta-loading data-ta-loading-text="Đang xác nhận...">@UiIcon.Render("check")<span>Xác nhận</span></button></div>
+                    </form>
+                }
+                else
+                {
+                    <div class="ta-alert ta-alert--info mb-3" role="status" data-ta-sandbox-link-result>@UiIcon.Render("info-circle")<div class="ta-alert__body">@lr.Message
+                        @if (lr.ActionLink is not null) {<div class="mt-2"><a class="btn btn-sm" href="@lr.ActionLink" target="_blank" rel="noopener noreferrer">Mở trang xác thực của ngân hàng</a></div>}</div></div>
+                }
+            }
+            @if (linkOtp is null)
+            {
+                <form asp-action="Index" method="get" class="row g-2 mb-3">
+                    <input type="hidden" name="merchant" value="@mid" />
+                    <div class="col-sm-6"><label class="form-label" for="bin">Ngân hàng</label>
+                        <select class="form-select" id="bin" name="bin" onchange="this.form.submit()">
+                            <option value="">— Chọn —</option>
+                            @foreach (var bank in TingeeBankCatalog.Banks) { <option value="@bank.Bin" selected="@(bank.Bin == Model.Bank?.Bin)">@bank.Name</option> }
+                        </select></div>
+                    <div class="col-sm-6"><label class="form-label" for="type">Loại tài khoản</label>
+                        <select class="form-select" id="type" name="type" onchange="this.form.submit()" disabled="@(Model.Bank is null)">
+                            <option value="">— Chọn —</option>
+                            @foreach (var t in Model.Bank?.AccountTypes ?? []) { <option value="@t" selected="@(t == Model.AccountType)">@TingeeAccountTypes.Label(t)</option> }
+                        </select></div>
+                    <noscript><button class="btn btn-sm" type="submit">Chọn</button></noscript>
+                </form>
+                @if (rule is not null)
+                {
+                    @if (rule.Note is not null) {<p class="form-hint">@rule.Note</p>}
+                    <form asp-action="LinkBank" method="post" id="tgLinkForm" data-ta-sandbox-link-form>
+                        <input type="hidden" name="merchant" value="@mid" />
+                        <input type="hidden" name="Bank.Bin" value="@Model.Bank!.Bin" />
+                        <input type="hidden" name="Bank.AccountType" value="@Model.AccountType" />
+                        @foreach (var field in rule.Required)
+                        {
+                            var name = field.ToString();
+                            var value = field switch { TingeeBankField.AccountNumber => b.AccountNumber, TingeeBankField.AccountName => b.AccountName, TingeeBankField.Identity => b.Identity, TingeeBankField.Mobile => b.Mobile, TingeeBankField.VaSuffix => b.VaSuffix, TingeeBankField.MerchantName => b.MerchantName, TingeeBankField.VaAccountNumber => b.VaAccountNumber, _ => b.AcbUserId };
+                            var label = field == TingeeBankField.Identity && rule.TaxCodeAsIdentity(Model.AccountType) ? "mã số thuế doanh nghiệp" : TingeeSandboxController.FieldLabel(field);
+                            <div class="mb-2"><label class="form-label required" for="Bank_@name">@(char.ToUpper(label[0]) + label[1..])</label><div class="ta-input-icon">@UiIcon.Render("hash")<input class="form-control" id="Bank_@name" name="Bank.@name" value="@value" required /></div></div>
+                        }
+                        @if (Model.AccountType != TingeeAccountTypes.Personal && !rule.TaxCodeAsIdentity(Model.AccountType))
+                        {
+                            <div class="mb-2"><label class="form-label" for="Bank_TaxCode">Mã số thuế</label><div class="ta-input-icon">@UiIcon.Render("receipt-tax")<input class="form-control" id="Bank_TaxCode" name="Bank.TaxCode" value="@b.TaxCode" inputmode="numeric" maxlength="14" /></div><div class="form-hint">Mã số thuế của doanh nghiệp/hộ kinh doanh chủ tài khoản (Tingee dùng cho tài khoản doanh nghiệp).</div></div>
+                        }
+                        @if (rule.Required.Count == 0) {<p class="form-hint">Ngân hàng này không cần nhập thêm thông tin; khách hàng xác thực trên ứng dụng ngân hàng.</p>}
+                        @if (rule.SupportsRootNotify && rule.VaSupported)
+                        {
+                            <label class="form-check mb-0"><input class="form-check-input" type="checkbox" name="Bank.NotifyRootAccount" value="true" checked="@b.NotifyRootAccount" /><input type="hidden" name="Bank.NotifyRootAccount" value="false" /><span class="form-check-label">Nhận biến động trên số tài khoản gốc</span></label>
+                        }
+                    </form>
+                }
+                else
+                {
+                    <p class="text-secondary mb-0">Chọn ngân hàng và loại tài khoản để hiện các thông tin cần nhập.</p>
+                }
+            }
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn me-auto" data-bs-dismiss="modal">@UiIcon.Render("x")<span>Đóng</span></button>
+            @if (linkOtp is null && rule is not null)
+            {
+                <button class="btn btn-primary" type="submit" form="tgLinkForm" disabled="@(!ready)" data-ta-loading data-ta-loading-text="Đang gửi...">@UiIcon.Render("check")<span>Liên kết</span></button>
+            }
+        </div>
+    </div></div>
+</div>
+
+@* ---- Popup: remove a bank link (confirm, then OTP when the bank asks for one) ---- *@
+<div class="modal modal-blur fade" id="tgUnlink" tabindex="-1" aria-labelledby="tgUnlinkTitle" aria-hidden="true" data-ta-open="@(unlinkOpen ? "true" : "false")" data-ta-sandbox-unlink>
+    <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+        <div class="modal-status @(unlink?.ConfirmId is not null ? "bg-warning" : "bg-danger")"></div>
+        <div class="modal-header">
+            <h2 class="modal-title" id="tgUnlinkTitle">@if (unlink?.ConfirmId is not null) {@UiIcon.Render("key")<span>Xác thực OTP xóa liên kết</span><span class="tg-step">Bước 2/2</span>} else {@UiIcon.Render("trash")<span>Xóa liên kết ngân hàng</span>}</h2>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+        </div>
+        <div class="modal-body">
+            @if (unlinkOpen && errors.Count > 0)
+            {
+                <div class="ta-alert ta-alert--danger mb-3" role="alert" data-ta-sandbox-errors>@UiIcon.Render("alert-circle")<div class="ta-alert__body">@foreach (var e in errors) {<div>@e</div>}</div></div>
+            }
+            @if (unlink?.ConfirmId is not null)
+            {
+                <div class="tg-otp" role="alert" aria-live="assertive" data-ta-sandbox-unlink-otp>
+                    <div class="tg-otp__icon">@UiIcon.Render("key")</div>
+                    <div><div class="tg-otp__title">Nhập mã OTP để xóa liên kết @unlink.BankName</div><div>Ngân hàng đã gửi mã OTP tới số điện thoại đăng ký. Tài khoản nhận <strong>@unlink.VaAccountNumber</strong> sẽ ngừng nhận biến động sau khi xác nhận.</div></div>
+                </div>
+                <form asp-action="ConfirmDeleteVa" method="post" id="tgUnlinkOtpForm">
+                    <input type="hidden" name="merchant" value="@mid" />
+                    <input type="hidden" name="bankBin" value="@unlink.BankBin" />
+                    <input type="hidden" name="vaAccountNumber" value="@unlink.VaAccountNumber" />
+                    <input type="hidden" name="confirmId" value="@unlink.ConfirmId" />
+                    <label class="form-label required" for="unlinkOtp">Mã OTP @unlink.BankName</label>
+                    <div class="ta-input-icon">@UiIcon.Render("key")<input class="form-control tg-otp__input" id="unlinkOtp" name="otp" inputmode="numeric" pattern="[0-9]{4,8}" maxlength="8" autocomplete="one-time-code" required data-ta-otp-input /></div>
+                </form>
+            }
+            else
+            {
+                @if (unlink?.Link is not null)
+                {
+                    <div class="ta-alert ta-alert--info mb-3" role="status" data-ta-sandbox-unlink-link>@UiIcon.Render("info-circle")<div class="ta-alert__body">Mở trang xác thực của @unlink.BankName để hoàn tất xóa liên kết, sau đó bấm "Kiểm tra kết nối".<div class="mt-2"><a class="btn btn-sm" href="@unlink.Link" target="_blank" rel="noopener noreferrer">Mở trang xác thực của ngân hàng</a></div></div></div>
+                }
+                <form asp-action="DeleteVa" method="post" id="tgUnlinkForm">
+                    <input type="hidden" name="merchant" value="@mid" />
+                    <input type="hidden" name="bankBin" value="@unlink?.BankBin" data-ta-unlink-field="bin" />
+                    <input type="hidden" name="vaAccountNumber" value="@unlink?.VaAccountNumber" data-ta-unlink-field="va" />
+                    <p class="mb-0">Xóa liên kết <strong data-ta-unlink-field="bank">@unlink?.BankName</strong>, tài khoản nhận <strong class="ta-code" data-ta-unlink-field="va-text">@unlink?.VaAccountNumber</strong>? Tài khoản này sẽ không nhận biến động số dư qua Tingee nữa. Một số ngân hàng sẽ gửi OTP để xác nhận.</p>
+                </form>
+            }
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn me-auto" data-bs-dismiss="modal">@UiIcon.Render("x")<span>Đóng</span></button>
+            @if (unlink?.ConfirmId is not null)
+            {
+                <button class="btn btn-primary" type="submit" form="tgUnlinkOtpForm" data-ta-loading data-ta-loading-text="Đang xác nhận...">@UiIcon.Render("check")<span>Xác nhận</span></button>
+            }
+            else
+            {
+                <button class="btn btn-danger" type="submit" form="tgUnlinkForm" disabled="@(!ready)" data-ta-loading data-ta-loading-text="Đang gửi...">@UiIcon.Render("trash")<span>Xóa liên kết</span></button>
+            }
+        </div>
+    </div></div>
+</div>
