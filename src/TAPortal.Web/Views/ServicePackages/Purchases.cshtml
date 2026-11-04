@@ -1,0 +1,49 @@
+@model ServicePurchasesVm
+@{
+    ViewData["Title"] = "Giao dịch mua gói";
+    ViewData["Subtitle"] = "Mọi yêu cầu mua gói dịch vụ của khách hàng. Xác nhận thanh toán để cộng số lượng cho khách hàng.";
+    ViewData["PageIcon"] = "receipt-tax";
+    string Tone(string tone) => tone switch { "success" => "ta-badge--success", "warning" => "ta-badge--warning", "danger" => "ta-badge--danger", _ => "ta-badge--neutral" };
+}
+@if (Model.StoreError is not null)
+{
+    <div class="ta-alert ta-alert--danger mb-3" role="alert" data-sp-store-error>@UiIcon.Render("database-off")<div class="ta-alert__body">@Model.StoreError</div></div>
+}
+<section class="card ta-table-card" aria-label="Giao dịch mua gói">
+    <form class="ta-table-toolbar d-flex flex-wrap gap-2 align-items-center" method="get" asp-action="Purchases">
+        <div class="ta-search">@UiIcon.Render("search")<input class="form-control" type="search" name="q" value="@Model.Query" aria-label="Tìm giao dịch" placeholder="Mã giao dịch, mã/tên khách hàng, mã gói..." /></div>
+        <select class="form-select w-auto" name="status" aria-label="Trạng thái">
+            <option value="">Tất cả trạng thái</option>
+            @foreach (var s in ServicePurchaseStatus.All) {<option value="@s" selected="@(s == Model.Status)">@ServicePurchaseStatus.Display(s, false).Label</option>}
+        </select>
+        <button class="btn" type="submit">@UiIcon.Render("search")<span>Lọc</span></button>
+    </form>
+    @if (Model.Purchases.Count == 0)
+    {
+        <div class="ta-empty" data-sp-empty><span class="ta-empty__icon">@UiIcon.Render("receipt-tax")</span><p class="ta-empty__title">Chưa có giao dịch</p><p class="ta-empty__text">Giao dịch xuất hiện khi khách hàng mua gói trên Customer Portal hoặc T.A tạo trong hồ sơ khách hàng.</p></div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table ta-table mb-0" data-sp-purchases>
+                <thead><tr><th>Mã giao dịch</th><th>Khách hàng</th><th>Gói</th><th class="text-end">Số tiền</th><th>Tạo lúc</th><th>Trạng thái</th><th>Còn lại</th><th>Hết hạn</th></tr></thead>
+                <tbody>
+                    @foreach (var p in Model.Purchases)
+                    {
+                        var (label, tone) = ServicePurchaseStatus.Display(p.Status, p.IsExpired(Model.NowUtc));
+                        <tr data-sp-purchase="@p.PurchaseNo">
+                            <td data-label="Mã giao dịch"><a asp-action="Purchase" asp-route-id="@p.Id"><span class="ta-code">@p.PurchaseNo</span></a></td>
+                            <td data-label="Khách hàng"><strong>@p.CustomerCode</strong><div class="text-secondary small">@p.CustomerName</div></td>
+                            <td data-label="Gói">@p.PackageName<div class="text-secondary small">@ServicePackageRules.Quantities(p.InvoiceQuota, p.TransactionQuota)</div></td>
+                            <td data-label="Số tiền" class="text-end">@ServicePackageRules.Money(p.Amount)</td>
+                            <td data-label="Tạo lúc">@ServicePackageRules.Local(p.CreatedAt)<div class="text-secondary small">@(p.RequestedVia == ServicePurchaseVia.Customer ? "Khách hàng mua" : "T.A tạo")</div></td>
+                            <td data-label="Trạng thái"><span class="ta-badge @Tone(tone)">@label</span></td>
+                            <td data-label="Còn lại">@(p.Status == ServicePurchaseStatus.Paid ? ServicePackageRules.Quantities(p.InvoicesRemaining, p.TransactionsRemaining) : "—")</td>
+                            <td data-label="Hết hạn">@(p.Status == ServicePurchaseStatus.Paid ? (p.ExpiresAt is null ? "Không hết hạn" : ServicePackageRules.Local(p.ExpiresAt, "dd/MM/yyyy")) : "—")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</section>

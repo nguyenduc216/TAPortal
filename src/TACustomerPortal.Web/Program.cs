@@ -20,6 +20,7 @@ builder.Services.AddScoped<ICurrentCustomerContext, CurrentCustomerContext>();
 builder.Services.AddScoped<CustomerCookieEvents>();
 builder.Services.AddScoped<IPaymentStore, SqlPaymentStore>();
 builder.Services.AddScoped<OrderPayments>();
+builder.Services.AddScoped<IServicePackageStore, SqlServicePackageStore>();
 builder.Services.Configure<EmailOptions>(builder.Configuration.GetSection(EmailOptions.SectionName));
 builder.Services.AddSingleton<IEmailSender, SmtpEmailSender>();
 builder.Services.AddScoped<IPasswordResetStore, SqlPasswordResetStore>();

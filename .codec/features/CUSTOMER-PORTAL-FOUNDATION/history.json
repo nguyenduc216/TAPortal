@@ -263,5 +263,15 @@
     "migration_status": "EXECUTED (017)",
     "publish_status": "NOT_APPLICABLE",
     "merge_status": "PENDING_APPROVAL"
+  },
+  {
+    "change_id": "CUSTOMER-PORTAL-FOUNDATION-CHG-20261104T112825Z-F9FA74",
+    "created_at": "2026-11-04T11:28:25.511674+00:00",
+    "title": "Gói dịch vụ: quản lý gói (hóa đơn / tra soát giao dịch / combo), số dư khách hàng, giao dịch mua gói; trang mua gói trên Customer Portal",
+    "status": "IMPLEMENTED / TESTS_PASS",
+    "commit_sha": null,
+    "migration_status": "NOT_EXECUTED (018)",
+    "publish_status": "DEPLOY_PENDING",
+    "merge_status": "PENDING_APPROVAL"
   }
 ]

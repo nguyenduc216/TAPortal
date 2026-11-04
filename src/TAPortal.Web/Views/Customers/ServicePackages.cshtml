@@ -1,0 +1,75 @@
+@model CustomerServicesVm
+@{
+    var ws = (CustomerWorkspaceHeader)ViewData["Workspace"]!;
+    ViewData["Title"] = ws.Code;
+    ViewData["ParentTitle"] = "Khách hàng";
+    ViewData["ParentController"] = "Customers";
+    ViewData["HideHeader"] = true;
+    var b = Model.Balance;
+    string Tone(string tone) => tone switch { "success" => "ta-badge--success", "warning" => "ta-badge--warning", "danger" => "ta-badge--danger", _ => "ta-badge--neutral" };
+}
+<partial name="_Workspace" model="ws" />
+@if (Model.StoreError is not null)
+{
+    <div class="ta-alert ta-alert--danger mb-3" role="alert" data-sp-store-error>@UiIcon.Render("database-off")<div class="ta-alert__body">@Model.StoreError</div></div>
+}
+<section class="ta-kpi-grid mb-3" aria-label="Số lượng còn khả dụng" data-sp-balance>
+    <div class="card ta-stat-card" data-sp-balance-transactions="@b.Transactions">
+        <div class="ta-stat-head"><span class="ta-stat-icon">@UiIcon.Render("arrows-exchange")</span><div><div class="ta-stat-label">Giao dịch tra soát còn khả dụng</div><div class="ta-stat-value">@ServicePackageRules.Number(b.Transactions)</div></div></div>
+    </div>
+    <div class="card ta-stat-card" data-sp-balance-invoices="@b.Invoices">
+        <div class="ta-stat-head"><span class="ta-stat-icon ta-stat-icon--gold">@UiIcon.Render("file-invoice")</span><div><div class="ta-stat-label">Hóa đơn còn khả dụng</div><div class="ta-stat-value">@ServicePackageRules.Number(b.Invoices)</div></div></div>
+    </div>
+    <div class="card ta-stat-card">
+        <div class="ta-stat-head"><span class="ta-stat-icon ta-stat-icon--green">@UiIcon.Render("calendar")</span><div><div class="ta-stat-label">Lô gần hết hạn nhất</div><div class="ta-stat-value ta-stat-value--text">@(b.NextExpiry is null ? "Không có" : ServicePackageRules.Local(b.NextExpiry, "dd/MM/yyyy"))</div></div></div>
+    </div>
+</section>
+<div class="ta-ws-grid">
+    <section class="card" aria-labelledby="spHistory">
+        <div class="card-header"><h2 class="card-title" id="spHistory">@UiIcon.Render("receipt-tax")Giao dịch mua gói</h2></div>
+        @if (Model.Purchases.Count == 0)
+        {
+            <div class="card-body"><p class="text-secondary mb-0" data-sp-empty>Khách hàng chưa mua gói dịch vụ nào.</p></div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table ta-table mb-0" data-sp-purchases>
+                    <thead><tr><th>Mã giao dịch</th><th>Gói</th><th class="text-end">Số tiền</th><th>Trạng thái</th><th>Còn lại</th><th>Hết hạn</th></tr></thead>
+                    <tbody>
+                        @foreach (var p in Model.Purchases)
+                        {
+                            var (label, tone) = ServicePurchaseStatus.Display(p.Status, p.IsExpired(Model.NowUtc));
+                            <tr>
+                                <td data-label="Mã giao dịch"><a asp-controller="ServicePackages" asp-action="Purchase" asp-route-id="@p.Id"><span class="ta-code">@p.PurchaseNo</span></a><div class="text-secondary small">@ServicePackageRules.Local(p.CreatedAt)</div></td>
+                                <td data-label="Gói">@p.PackageName<div class="text-secondary small">@ServicePackageRules.Quantities(p.InvoiceQuota, p.TransactionQuota)</div></td>
+                                <td data-label="Số tiền" class="text-end">@ServicePackageRules.Money(p.Amount)</td>
+                                <td data-label="Trạng thái"><span class="ta-badge @Tone(tone)">@label</span></td>
+                                <td data-label="Còn lại">@(p.Status == ServicePurchaseStatus.Paid ? ServicePackageRules.Quantities(p.InvoicesRemaining, p.TransactionsRemaining) : "—")</td>
+                                <td data-label="Hết hạn">@(p.Status == ServicePurchaseStatus.Paid ? (p.ExpiresAt is null ? "Không hết hạn" : ServicePackageRules.Local(p.ExpiresAt, "dd/MM/yyyy")) : "—")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </section>
+    <form class="card" method="post" asp-action="CreateServicePurchase" asp-route-id="@ws.Id" style="align-self:start" data-sp-admin-buy>
+        <div class="card-header"><h2 class="card-title">@UiIcon.Render("plus")Tạo giao dịch mua gói</h2></div>
+        <div class="card-body">
+            @if (Model.Packages.Count == 0)
+            {
+                <p class="text-secondary mb-0">Chưa có gói đang bán. <a asp-controller="ServicePackages" asp-action="Index">Quản lý gói dịch vụ</a></p>
+            }
+            else
+            {
+                <label class="form-label required" for="packageId">Gói</label>
+                <select class="form-select" id="packageId" name="packageId" required>
+                    @foreach (var p in Model.Packages) {<option value="@p.Id">@p.Name — @ServicePackageRules.Money(p.Price) (@ServicePackageRules.Quantities(p.InvoiceQuota, p.TransactionQuota))</option>}
+                </select>
+                <p class="form-hint mt-2 mb-0">Giao dịch được tạo ở trạng thái chờ thanh toán; số lượng chỉ được cộng sau khi xác nhận thanh toán.</p>
+            }
+        </div>
+        @if (Model.Packages.Count > 0 && ws.Operational) {<div class="card-footer d-flex justify-content-end"><button class="btn btn-primary" type="submit">@UiIcon.Render("plus")<span>Tạo giao dịch</span></button></div>}
+    </form>
+</div>

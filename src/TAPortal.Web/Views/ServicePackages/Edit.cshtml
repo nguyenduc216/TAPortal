@@ -1,0 +1,76 @@
+@model ServicePackageEditVm
+@{
+    var isNew = Model.Id is null;
+    var i = Model.Input;
+    ViewData["Title"] = isNew ? "Thêm gói dịch vụ" : $"Sửa gói {i.Code}";
+    ViewData["Subtitle"] = "Giá đã gồm VAT. Thời hạn để trống: số lượng mua được dùng đến khi hết, không hết hạn.";
+    ViewData["PageIcon"] = isNew ? "plus" : "pencil";
+    ViewData["ParentTitle"] = "Gói dịch vụ";
+    ViewData["ParentController"] = "ServicePackages";
+}
+<form class="card" method="post" asp-action="@(isNew ? "Create" : "Edit")" asp-route-id="@Model.Id" novalidate data-sp-form>
+    <div class="card-header"><h2 class="card-title">@UiIcon.Render("package")Thông tin gói</h2></div>
+    <div class="card-body">
+        <div asp-validation-summary="ModelOnly" class="ta-alert ta-alert--danger" role="alert"></div>
+        <div class="ta-form-grid ta-form-grid--3">
+            <div>
+                <label class="form-label required" for="Input_Code">Mã gói</label>
+                <div class="ta-input-icon">@UiIcon.Render("hash")<input class="form-control text-uppercase" id="Input_Code" name="Input.Code" value="@i.Code" maxlength="30" autocomplete="off" required /></div>
+                <span asp-validation-for="Input.Code" class="invalid-feedback d-block"></span>
+            </div>
+            <div class="ta-ws-span-2">
+                <label class="form-label required" for="Input_Name">Tên gói</label>
+                <div class="ta-input-icon">@UiIcon.Render("package")<input class="form-control" id="Input_Name" name="Input.Name" value="@i.Name" maxlength="200" required placeholder="Ví dụ: Gói 500 hóa đơn" /></div>
+                <span asp-validation-for="Input.Name" class="invalid-feedback d-block"></span>
+            </div>
+            <div>
+                <label class="form-label required" for="Input_PackageType">Loại gói</label>
+                <select class="form-select" id="Input_PackageType" name="Input.PackageType">
+                    @foreach (var t in ServicePackageTypes.All) {<option value="@t" selected="@(t == i.PackageType)">@ServicePackageTypes.Label(t)</option>}
+                </select>
+                <span asp-validation-for="Input.PackageType" class="invalid-feedback d-block"></span>
+            </div>
+            <div data-sp-quota="invoice">
+                <label class="form-label" for="Input_InvoiceQuota">Số lượng hóa đơn</label>
+                <div class="ta-input-icon">@UiIcon.Render("file-invoice")<input class="form-control" id="Input_InvoiceQuota" name="Input.InvoiceQuota" type="number" min="0" value="@i.InvoiceQuota" /></div>
+                <div class="form-hint">Gói hóa đơn và gói combo.</div>
+                <span asp-validation-for="Input.InvoiceQuota" class="invalid-feedback d-block"></span>
+            </div>
+            <div data-sp-quota="transaction">
+                <label class="form-label" for="Input_TransactionQuota">Số lượng giao dịch tra soát</label>
+                <div class="ta-input-icon">@UiIcon.Render("arrows-exchange")<input class="form-control" id="Input_TransactionQuota" name="Input.TransactionQuota" type="number" min="0" value="@i.TransactionQuota" /></div>
+                <div class="form-hint">Gói tra soát giao dịch và gói combo.</div>
+                <span asp-validation-for="Input.TransactionQuota" class="invalid-feedback d-block"></span>
+            </div>
+            <div>
+                <label class="form-label required" for="Input_Price">Giá gói (VND, gồm VAT)</label>
+                <div class="ta-input-icon">@UiIcon.Render("cash")<input class="form-control" id="Input_Price" name="Input.Price" type="number" min="0" step="1000" value="@i.Price.ToString("0")" required /></div>
+                <span asp-validation-for="Input.Price" class="invalid-feedback d-block"></span>
+            </div>
+            <div>
+                <label class="form-label" for="Input_ValidityDays">Thời hạn sử dụng (ngày)</label>
+                <div class="ta-input-icon">@UiIcon.Render("calendar")<input class="form-control" id="Input_ValidityDays" name="Input.ValidityDays" type="number" min="1" max="3650" value="@i.ValidityDays" placeholder="Để trống = không hết hạn" /></div>
+                <span asp-validation-for="Input.ValidityDays" class="invalid-feedback d-block"></span>
+            </div>
+            <div>
+                <label class="form-label" for="Input_SortOrder">Thứ tự hiển thị</label>
+                <div class="ta-input-icon">@UiIcon.Render("list-tree")<input class="form-control" id="Input_SortOrder" name="Input.SortOrder" type="number" min="0" max="9999" value="@i.SortOrder" /></div>
+                <span asp-validation-for="Input.SortOrder" class="invalid-feedback d-block"></span>
+            </div>
+            <div class="ta-ws-span-2">
+                <label class="form-label" for="Input_Description">Mô tả (khách hàng thấy trên trang mua gói)</label>
+                <div class="ta-input-icon">@UiIcon.Render("file-text")<input class="form-control" id="Input_Description" name="Input.Description" value="@i.Description" maxlength="1000" /></div>
+                <span asp-validation-for="Input.Description" class="invalid-feedback d-block"></span>
+            </div>
+            <div class="d-flex align-items-end">
+                <input type="hidden" name="Input.IsActive" value="false" />
+                <label class="form-check mb-2"><input class="form-check-input" type="checkbox" name="Input.IsActive" value="true" checked="@i.IsActive" /> <span class="form-check-label">Đang bán (khách hàng thấy và mua được)</span></label>
+            </div>
+        </div>
+        @if (!isNew) {<p class="form-hint mb-0 mt-3">Sửa gói không ảnh hưởng các giao dịch đã tạo: mỗi giao dịch lưu lại thông tin gói tại thời điểm mua.</p>}
+    </div>
+    <div class="card-footer d-flex gap-2 justify-content-end">
+        <a class="btn" asp-action="Index">@UiIcon.Render("arrow-left")<span>Quay lại</span></a>
+        <button class="btn btn-primary" type="submit">@UiIcon.Render("device-floppy")<span>@(isNew ? "Tạo gói" : "Lưu gói")</span></button>
+    </div>
+</form>

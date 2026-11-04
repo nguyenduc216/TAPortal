@@ -23,6 +23,7 @@
     var heading = ViewData["Heading"] as string ?? ViewData["Title"] as string;
     var parentTitle = ViewData["ParentTitle"] as string;
     var parentController = ViewData["ParentController"] as string;
+    var parentAction = ViewData["ParentAction"] as string ?? "Index";
     var hideHeader = ViewData["HideHeader"] is true;
 }
 <!doctype html>
@@ -68,6 +69,13 @@
                     </ul>
                 </div>
                 <div class="ta-nav__group">
+                    <p class="ta-nav__section">Gói dịch vụ</p>
+                    <ul class="ta-nav__list">
+                        <li><a class="ta-nav__link" asp-controller="ServicePackages" asp-action="Index" title="Danh sách gói" aria-current="@(IsCurrent("ServicePackages", "Index") || IsCurrent("ServicePackages", "Create") || IsCurrent("ServicePackages", "Edit") ? "page" : null)"><span class="ta-nav__icon">@UiIcon.Render("package")</span><span class="ta-nav__label">Danh sách gói</span></a></li>
+                        <li><a class="ta-nav__link" asp-controller="ServicePackages" asp-action="Purchases" title="Giao dịch mua gói" aria-current="@(IsCurrent("ServicePackages", "Purchases") || IsCurrent("ServicePackages", "Purchase") ? "page" : null)"><span class="ta-nav__icon">@UiIcon.Render("receipt-tax")</span><span class="ta-nav__label">Giao dịch mua gói</span></a></li>
+                    </ul>
+                </div>
+                <div class="ta-nav__group">
                     <p class="ta-nav__section">Tingee</p>
                     <ul class="ta-nav__list">
                         <li><a class="ta-nav__link" asp-controller="TingeeSandbox" asp-action="Index" title="Tingee Sandbox" aria-current="@(IsCurrent("TingeeSandbox") ? "page" : null)"><span class="ta-nav__icon">@UiIcon.Render("qrcode")</span><span class="ta-nav__label">Tingee Sandbox</span></a></li>
@@ -103,7 +111,7 @@
             <nav class="ta-breadcrumb" aria-label="Breadcrumb" id="taCrumbs" data-ta-swap>
                 <ol>
                     <li>@if (isAdmin) {<a asp-controller="Home" asp-action="Index" aria-label="Tổng quan">@UiIcon.Render("home")</a>} else {@UiIcon.Render("home")}</li>
-                    @if (parentTitle is not null && parentController is not null) {<li><a asp-controller="@parentController" asp-action="Index">@parentTitle</a></li>}
+                    @if (parentTitle is not null && parentController is not null) {<li><a asp-controller="@parentController" asp-action="@parentAction">@parentTitle</a></li>}
                     <li><span aria-current="page">@ViewData["Title"]</span></li>
                 </ol>
             </nav>

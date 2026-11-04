@@ -1,0 +1,82 @@
+@model ServicePurchaseVm
+@{
+    var p = Model.Purchase;
+    var c = Model.Confirm;
+    var (label, tone) = ServicePurchaseStatus.Display(p.Status, p.IsExpired(Model.NowUtc));
+    var badge = tone switch { "success" => "ta-badge--success", "warning" => "ta-badge--warning", "danger" => "ta-badge--danger", _ => "ta-badge--neutral" };
+    var pending = p.Status == ServicePurchaseStatus.Pending;
+    ViewData["Title"] = p.PurchaseNo;
+    ViewData["Subtitle"] = $"{p.CustomerCode} — {p.CustomerName}";
+    ViewData["PageIcon"] = "receipt-tax";
+    ViewData["ParentTitle"] = "Giao dịch mua gói";
+    ViewData["ParentController"] = "ServicePackages";
+    ViewData["ParentAction"] = "Purchases";
+}
+<div class="ta-ws-grid">
+    <section class="card" aria-labelledby="spInfo" data-sp-detail>
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h2 class="card-title" id="spInfo">@UiIcon.Render("package")Thông tin giao dịch</h2>
+            <span class="ta-badge @badge" data-sp-status="@p.Status">@label</span>
+        </div>
+        <div class="card-body">
+            <dl class="ta-dl">
+                <dt>Mã giao dịch</dt><dd><span class="ta-code">@p.PurchaseNo</span></dd>
+                <dt>Khách hàng</dt><dd><a asp-controller="Customers" asp-action="ServicePackages" asp-route-id="@p.CustomerId">@p.CustomerCode — @p.CustomerName</a></dd>
+                <dt>Gói</dt><dd>@p.PackageName (<span class="ta-code">@p.PackageCode</span>) · @ServicePackageTypes.Label(p.PackageType)</dd>
+                <dt>Số lượng</dt><dd>@ServicePackageRules.Quantities(p.InvoiceQuota, p.TransactionQuota)</dd>
+                <dt>Số tiền (gồm VAT)</dt><dd><strong>@ServicePackageRules.Money(p.Amount)</strong></dd>
+                <dt>Thời hạn</dt><dd>@ServicePackageRules.Validity(p.ValidityDays)</dd>
+                <dt>Tạo lúc</dt><dd>@ServicePackageRules.Local(p.CreatedAt) · @(p.RequestedVia == ServicePurchaseVia.Customer ? "khách hàng mua trên Customer Portal" : "T.A tạo") @(p.RequestedByName is null ? "" : $"({p.RequestedByName})")</dd>
+                @if (p.Status == ServicePurchaseStatus.Paid)
+                {
+                    <dt>Đã thanh toán</dt><dd>@ServicePackageRules.Money(p.PaidAmount) · @ServicePaymentMethods.Label(p.PaymentMethod) · @ServicePackageRules.Local(p.PaidAt)@(p.PaymentReference is null ? "" : $" · Tham chiếu: {p.PaymentReference}")</dd>
+                    <dt>Xác nhận bởi</dt><dd>@(p.ConfirmedByName ?? "—")</dd>
+                    <dt>Còn lại</dt><dd data-sp-remaining>@ServicePackageRules.Quantities(p.InvoicesRemaining, p.TransactionsRemaining)</dd>
+                    <dt>Hết hạn</dt><dd>@(p.ExpiresAt is null ? "Không hết hạn" : ServicePackageRules.Local(p.ExpiresAt))</dd>
+                }
+                @if (p.Status == ServicePurchaseStatus.Cancelled)
+                {
+                    <dt>Đã hủy</dt><dd>@ServicePackageRules.Local(p.CancelledAt) · @(p.CancelledByName ?? "—")@(p.CancelReason is null ? "" : $" · {p.CancelReason}")</dd>
+                }
+            </dl>
+        </div>
+    </section>
+    @if (pending)
+    {
+        <div class="d-flex flex-column gap-3">
+            <form class="card" method="post" asp-action="ConfirmPaid" asp-route-id="@p.Id" novalidate data-sp-confirm>
+                <div class="card-header"><h2 class="card-title">@UiIcon.Render("circle-check")Xác nhận đã thanh toán</h2></div>
+                <div class="card-body">
+                    <div asp-validation-summary="ModelOnly" class="ta-alert ta-alert--danger" role="alert"></div>
+                    <p class="text-secondary">Sau khi xác nhận, khách hàng được cộng @ServicePackageRules.Quantities(p.InvoiceQuota, p.TransactionQuota)@(p.ValidityDays is int d ? $", dùng trong {d} ngày kể từ lúc xác nhận" : "")</p>
+                    <div class="mb-3">
+                        <label class="form-label required" for="Confirm_PaidAmount">Số tiền đã nhận (VND)</label>
+                        <div class="ta-input-icon">@UiIcon.Render("cash")<input class="form-control" id="Confirm_PaidAmount" name="Confirm.PaidAmount" type="number" min="0" step="1" value="@c.PaidAmount.ToString("0")" required /></div>
+                        <span asp-validation-for="Confirm.PaidAmount" class="invalid-feedback d-block"></span>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label required" for="Confirm_Method">Hình thức</label>
+                        <select class="form-select" id="Confirm_Method" name="Confirm.Method">
+                            @foreach (var (code, text) in ServicePaymentMethods.All) {<option value="@code" selected="@(code == c.Method)">@text</option>}
+                        </select>
+                        <span asp-validation-for="Confirm.Method" class="invalid-feedback d-block"></span>
+                    </div>
+                    <div>
+                        <label class="form-label" for="Confirm_Reference">Mã tham chiếu / ghi chú</label>
+                        <div class="ta-input-icon">@UiIcon.Render("hash")<input class="form-control" id="Confirm_Reference" name="Confirm.Reference" value="@c.Reference" maxlength="200" placeholder="Mã giao dịch ngân hàng, số phiếu thu..." /></div>
+                        <span asp-validation-for="Confirm.Reference" class="invalid-feedback d-block"></span>
+                    </div>
+                </div>
+                <div class="card-footer d-flex justify-content-end"><button class="btn btn-primary" type="submit">@UiIcon.Render("check")<span>Xác nhận và cộng số lượng</span></button></div>
+            </form>
+            <form class="card" method="post" asp-action="CancelPurchase" asp-route-id="@p.Id" data-sp-cancel>
+                <div class="card-header"><h2 class="card-title">@UiIcon.Render("x")Hủy giao dịch</h2></div>
+                <div class="card-body">
+                    <label class="form-label" for="reason">Lý do</label>
+                    <div class="ta-input-icon">@UiIcon.Render("file-text")<input class="form-control" id="reason" name="reason" maxlength="500" placeholder="Khách không thanh toán, tạo nhầm gói..." /></div>
+                </div>
+                <div class="card-footer d-flex justify-content-end"><button class="btn btn-outline-danger" type="submit">@UiIcon.Render("x")<span>Hủy giao dịch</span></button></div>
+            </form>
+        </div>
+    }
+</div>

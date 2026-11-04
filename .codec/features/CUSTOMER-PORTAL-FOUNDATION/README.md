@@ -33,3 +33,4 @@ CHECKPOINT_4A: PASS (existing artifact integrity, isolated localhost startup and
 | `CUSTOMER-PORTAL-FOUNDATION-CHG-20261104T052602Z-922EA0` | 2026-11-04 | Admin resets a Customer Portal password; customer must change it at next sign-in | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |
 | `CUSTOMER-PORTAL-FOUNDATION-CHG-20261104T064318Z-148859` | 2026-11-04 | Customer Portal forgot-password by email (SMTP, one-time 30-minute link) | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |
 | `CUSTOMER-PORTAL-FOUNDATION-CHG-20261104T103400Z-124DDE` | 2026-11-04 | Xoá 10 khách hàng mẫu KH0001-KH0010 (giữ TVGPTA), có bảng lưu và rollback | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |
+| `CUSTOMER-PORTAL-FOUNDATION-CHG-20261104T112825Z-F9FA74` | 2026-11-04 | Gói dịch vụ: quản lý gói (hóa đơn / tra soát giao dịch / combo), số dư khách hàng, giao dịch mua gói; trang mua gói trên Customer Portal | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |

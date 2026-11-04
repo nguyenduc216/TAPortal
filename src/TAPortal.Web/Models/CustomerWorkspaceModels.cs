@@ -13,6 +13,7 @@ public static class CustomerWorkspace
     public const string Info = "info";
     public const string Portal = "portal";
     public const string Tingee = "tingee";
+    public const string ServicePackages = "service-packages";
 
     public static readonly IReadOnlyList<CustomerWorkspaceTab> Tabs =
     [
@@ -20,6 +21,7 @@ public static class CustomerWorkspace
         new(Info, "Thông tin khách hàng", "id", "Edit"),
         new(Portal, "Tài khoản Portal", "users-group", "PortalAccounts"),
         new(Tingee, "Thanh toán Tingee", "building-bank", "Tingee"),
+        new(ServicePackages, "Gói dịch vụ", "package", "ServicePackages"),
     ];
 }
 

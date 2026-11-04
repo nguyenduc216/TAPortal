@@ -1,0 +1,50 @@
+@model ServicePackagesVm
+@{
+    ViewData["Title"] = "Gói dịch vụ";
+    ViewData["Heading"] = "Danh sách gói dịch vụ";
+    ViewData["Subtitle"] = "Gói hóa đơn, gói tra soát giao dịch và gói combo bán cho khách hàng. Giá đã gồm VAT.";
+    ViewData["PageIcon"] = "package";
+    string TypeBadge(string t) => t switch { ServicePackageTypes.Invoice => "ta-badge--info", ServicePackageTypes.Transaction => "ta-badge--warning", _ => "ta-badge--success" };
+}
+@section PageActions {
+    <a class="btn btn-ta-gold" asp-action="Create" data-sp-create>@UiIcon.Render("plus")<span>Thêm gói</span></a>
+}
+@if (Model.StoreError is not null)
+{
+    <div class="ta-alert ta-alert--danger mb-3" role="alert" data-sp-store-error>@UiIcon.Render("database-off")<div class="ta-alert__body">@Model.StoreError</div></div>
+}
+<section class="card ta-table-card" aria-label="Danh sách gói dịch vụ">
+    @if (Model.Packages.Count == 0)
+    {
+        <div class="ta-empty" data-sp-empty><span class="ta-empty__icon">@UiIcon.Render("package")</span><p class="ta-empty__title">Chưa có gói dịch vụ</p><p class="ta-empty__text">Bấm "Thêm gói" để tạo gói hóa đơn, gói tra soát giao dịch hoặc gói combo.</p></div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table ta-table mb-0" data-sp-packages>
+                <thead><tr><th>Mã gói</th><th>Tên gói</th><th>Loại</th><th>Số lượng</th><th class="text-end">Giá (gồm VAT)</th><th>Thời hạn</th><th>Trạng thái</th><th class="text-end">Thao tác</th></tr></thead>
+                <tbody>
+                    @foreach (var p in Model.Packages)
+                    {
+                        <tr data-sp-package="@p.Code">
+                            <td data-label="Mã gói"><span class="ta-code">@p.Code</span></td>
+                            <td data-label="Tên gói"><strong>@p.Name</strong>@if (p.Description is not null) {<div class="text-secondary small">@p.Description</div>}</td>
+                            <td data-label="Loại"><span class="ta-badge @TypeBadge(p.PackageType)">@ServicePackageTypes.Label(p.PackageType)</span></td>
+                            <td data-label="Số lượng">@ServicePackageRules.Quantities(p.InvoiceQuota, p.TransactionQuota)</td>
+                            <td data-label="Giá" class="text-end">@ServicePackageRules.Money(p.Price)</td>
+                            <td data-label="Thời hạn">@ServicePackageRules.Validity(p.ValidityDays)</td>
+                            <td data-label="Trạng thái"><span class="ta-badge @(p.IsActive ? "ta-badge--success" : "ta-badge--neutral")">@(p.IsActive ? "Đang bán" : "Ngừng bán")</span></td>
+                            <td class="text-end text-nowrap">
+                                <a class="btn btn-sm" asp-action="Edit" asp-route-id="@p.Id">@UiIcon.Render("pencil")<span>Sửa</span></a>
+                                <form class="d-inline" method="post" asp-action="SetActive" asp-route-id="@p.Id">
+                                    <input type="hidden" name="active" value="@(p.IsActive ? "false" : "true")" />
+                                    <button class="btn btn-sm" type="submit">@UiIcon.Render(p.IsActive ? "ban" : "check")<span>@(p.IsActive ? "Ngừng bán" : "Mở bán")</span></button>
+                                </form>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</section>

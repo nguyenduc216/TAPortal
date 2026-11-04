@@ -14,6 +14,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using TACustomerPortal.Web.Services;
 using TAPortal.Integrations.Tingee;
+using TAPortal.Shared;
 
 namespace TACustomerPortal.Tests;
 
@@ -269,7 +270,7 @@ public sealed class SafeCustomerPaymentsTests
         tingee.IsConfigured = false;
         pages.Add(await c.GetStringAsync("/banks"));
         tingee.IsConfigured = true;
-        foreach (var path in new[] { "/banks", "/banks/add", "/banks/add?bin=970422&type=business-account", "/banks/add?bin=970436&type=business-account", "/orders", "/orders/create", "/contacts", "/paymentsettings" })
+        foreach (var path in new[] { "/banks", "/banks/add", "/banks/add?bin=970422&type=business-account", "/banks/add?bin=970436&type=business-account", "/orders", "/orders/create", "/contacts", "/paymentsettings", "/servicepackages" })
             pages.Add(await c.GetStringAsync(path));
         tingee.CreateVaError = new TingeeApiException("1133", "Tingee: merchant không có quyền, liên hệ support@tingee.vn");
         var failed = await Post(c, "/banks/add", await Token(c, "/banks/add?bin=970422&type=personal-account"), new()
@@ -281,6 +282,56 @@ public sealed class SafeCustomerPaymentsTests
         Assert.Contains("mã 1133", WebUtility.HtmlDecode(pages[^1]));
         foreach (var html in pages.Select(WebUtility.HtmlDecode))
             Assert.False(PartnerText.Mentions(Regex.Replace(html, "<script.*?</script>|<link[^>]*>", "", RegexOptions.Singleline)), Regex.Match(html, @"(?i).{0,80}(tingee|heno).{0,80}").Value);
+    }
+
+    // ---- service packages --------------------------------------------------------------------------------
+    [Fact]
+    public async Task OwnerSeesTheBalanceAndPackagesOnSaleAndBuysForTheCurrentCompany()
+    {
+        var packages = new MemoryServicePackageStore(TimeProvider.System);
+        var invoice = packages.Add("HD-500", ServicePackageTypes.Invoice, 500, 0, 990_000, 365);
+        packages.Add("OLD", ServicePackageTypes.Transaction, 0, 10, 1_000, null, active: false);
+        var paid = packages.AddPurchase(A, packages.Add("TRX-1K", ServicePackageTypes.Transaction, 0, 1000, 300_000, null));
+        await packages.ConfirmPaidAsync(paid.Id, 300_000, "CASH", null, UserId);
+        packages.AddPurchase(B, invoice);   // another company's purchase stays invisible
+        using var f = Factory("OWNER", out _, out _, packages);
+        var c = Client(f);
+        var html = WebUtility.HtmlDecode(await c.GetStringAsync("/servicepackages"));
+        Assert.Contains("data-sp-balance-transactions=\"1000\"", html);
+        Assert.Contains("data-sp-balance-invoices=\"0\"", html);
+        Assert.Contains("data-sp-package=\"HD-500\"", html);
+        Assert.DoesNotContain("data-sp-package=\"OLD\"", html);
+        Assert.Contains("990.000đ", html);
+        Assert.Single(Regex.Matches(html, "data-sp-purchase=\""));
+
+        var r = await Post(c, "/servicepackages/buy", await Token(c, "/servicepackages"), new() { ["packageId"] = invoice.Id.ToString() });
+        Assert.Equal(HttpStatusCode.Redirect, r.StatusCode);
+        var mine = packages.Purchases.Last();
+        Assert.Equal((A, ServicePurchaseStatus.Pending, ServicePurchaseVia.Customer, 990_000m), (mine.CustomerId, mine.Status, mine.RequestedVia, mine.Amount));
+        Assert.Equal(1000, (await packages.BalanceAsync(A)).Transactions);   // nothing added before T.A confirms payment
+        Assert.Equal(0, (await packages.BalanceAsync(A)).Invoices);
+
+        var cancel = await Post(c, $"/servicepackages/cancel/{mine.Id}", await Token(c, "/servicepackages"), new());
+        Assert.Equal(HttpStatusCode.Redirect, cancel.StatusCode);
+        Assert.Equal(ServicePurchaseStatus.Cancelled, packages.Purchases.Last().Status);
+        var other = packages.Purchases.Single(p => p.CustomerId == B);
+        Assert.Equal(HttpStatusCode.NotFound, (await Post(c, $"/servicepackages/cancel/{other.Id}", await Token(c, "/servicepackages"), new())).StatusCode);
+        Assert.Equal(ServicePurchaseStatus.Pending, packages.Purchases.Single(p => p.CustomerId == B).Status);
+    }
+
+    [Fact]
+    public async Task ViewersSeePackagesButCannotBuy()
+    {
+        var packages = new MemoryServicePackageStore(TimeProvider.System);
+        var p = packages.Add("HD-100", ServicePackageTypes.Invoice, 100, 0, 200_000, null);
+        using var f = Factory("VIEWER", out _, out _, packages);
+        var c = Client(f);
+        var html = WebUtility.HtmlDecode(await c.GetStringAsync("/servicepackages"));
+        Assert.Contains("data-sp-package=\"HD-100\"", html);
+        Assert.DoesNotContain("action=\"/ServicePackages/Buy\"", html, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(HttpStatusCode.Forbidden, (await Post(c, "/servicepackages/buy", await Token(c, "/servicepackages"), new() { ["packageId"] = p.Id.ToString() })).StatusCode);
+        Assert.Empty(packages.Purchases);
+        Assert.Contains("Gói dịch vụ", WebUtility.HtmlDecode(await c.GetStringAsync("/orders")));   // menu entry
     }
 
     // ---- orders ----------------------------------------------------------------------------------------
@@ -467,9 +518,10 @@ public sealed class SafeCustomerPaymentsTests
     private static HttpClient Client(WebApplicationFactory<Program> f) =>
         f.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false, BaseAddress = new Uri("https://localhost"), HandleCookies = true });
 
-    private static WebApplicationFactory<Program> Factory(string role, out MemoryPaymentStore store, out FakeTingee tingee)
+    private static WebApplicationFactory<Program> Factory(string role, out MemoryPaymentStore store, out FakeTingee tingee, MemoryServicePackageStore? packages = null)
     {
         var s = store = new MemoryPaymentStore();
+        var sp = packages ?? new MemoryServicePackageStore(TimeProvider.System);
         var t = tingee = new FakeTingee();
         return new WebApplicationFactory<Program>().WithWebHostBuilder(b => b.UseEnvironment("Development")
             .ConfigureAppConfiguration((_, c) => c.AddInMemoryCollection(new Dictionary<string, string?> { ["Database:ConnectionString"] = "INVALID: tests must never use SQL", ["DataProtection:KeyPath"] = "" }))
@@ -482,6 +534,8 @@ public sealed class SafeCustomerPaymentsTests
                 services.AddSingleton<IPaymentStore>(s);
                 services.RemoveAll<ITingeeApi>();
                 services.AddSingleton<ITingeeApi>(t);
+                services.RemoveAll<IServicePackageStore>();
+                services.AddSingleton<IServicePackageStore>(sp);
                 services.AddAuthentication().AddScheme<AuthenticationSchemeOptions, TestAuthHandler>(TestScheme, _ => { });
                 services.PostConfigure<AuthenticationOptions>(o => { o.DefaultScheme = TestScheme; o.DefaultAuthenticateScheme = TestScheme; o.DefaultChallengeScheme = TestScheme; o.DefaultForbidScheme = TestScheme; });
             }));

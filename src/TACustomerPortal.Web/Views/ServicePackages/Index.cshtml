@@ -1,0 +1,112 @@
+@model ServicePackagesPageVm
+@{
+    ViewData["Title"] = "Gói dịch vụ";
+    ViewData["Eyebrow"] = "Dịch vụ";
+    ViewData["Subtitle"] = "Mua thêm lượt tra soát giao dịch và hóa đơn điện tử cho doanh nghiệp. Giá đã gồm VAT.";
+    var b = Model.Balance;
+    string Badge(string tone) => tone switch { "success" => "cp-badge--green", "warning" => "cp-badge--gold", "danger" => "cp-badge--red", _ => "cp-badge--soft" };
+}
+<style>
+    .cp-plan-group { margin: 18px 0 10px; font-size: 14px; font-weight: 700; color: var(--cp-ink-2); }
+    .cp-plans { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; }
+    .cp-plan { display: flex; flex-direction: column; gap: 10px; padding: 18px; }
+    .cp-plan__head { display: flex; align-items: center; gap: 10px; }
+    .cp-plan__head h4 { margin: 0; font-size: 15px; font-weight: 700; }
+    .cp-plan__price { font-size: 22px; font-weight: 800; color: var(--cp-ink); }
+    .cp-plan__price span { margin-left: 6px; font-size: 12px; font-weight: 500; color: var(--cp-muted, #64748B); }
+    .cp-plan__list { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; font-size: 13.5px; }
+    .cp-plan__list li { display: flex; align-items: center; gap: 8px; }
+    .cp-plan__list .ta-icon { width: 16px; height: 16px; color: var(--cp-green-700); }
+    .cp-plan__desc { margin: 0; font-size: 13px; }
+    .cp-plan__buy { margin-top: auto; }
+    .cp-plan__buy .cp-btn { width: 100%; justify-content: center; }
+</style>
+<div class="cp-grid" data-sp-balance>
+    <section class="cp-card cp-stat" data-sp-balance-transactions="@b.Transactions">
+        <div class="cp-stat__top"><span class="cp-stat__label">Giao dịch tra soát còn khả dụng</span><span class="cp-blob">@UiIcon.Render("arrows-exchange")</span></div>
+        <div class="cp-stat__value">@ServicePackageRules.Number(b.Transactions)</div>
+        <div class="cp-stat__hint">Lượt tra soát giao dịch thanh toán</div>
+    </section>
+    <section class="cp-card cp-stat" data-sp-balance-invoices="@b.Invoices">
+        <div class="cp-stat__top"><span class="cp-stat__label">Hóa đơn còn khả dụng</span><span class="cp-blob cp-blob--gold">@UiIcon.Render("file-invoice")</span></div>
+        <div class="cp-stat__value">@ServicePackageRules.Number(b.Invoices)</div>
+        <div class="cp-stat__hint">Hóa đơn điện tử có thể xuất</div>
+    </section>
+    <section class="cp-card cp-stat">
+        <div class="cp-stat__top"><span class="cp-stat__label">Hạn sử dụng gần nhất</span><span class="cp-blob cp-blob--ink">@UiIcon.Render("calendar")</span></div>
+        <div class="cp-stat__value">@(b.NextExpiry is null ? "—" : ServicePackageRules.Local(b.NextExpiry, "dd/MM/yyyy"))</div>
+        <div class="cp-stat__hint">@(b.NextExpiry is null ? "Không có số lượng sắp hết hạn" : "Số lượng của lần mua này hết hạn trước")</div>
+    </section>
+</div>
+
+<div class="cp-section"><h2>Chọn gói</h2><p>@(Model.CanManage ? "Sau khi bạn đặt mua, T.A xác nhận thanh toán và số lượng được cộng ngay vào doanh nghiệp." : "Chỉ chủ sở hữu hoặc quản trị doanh nghiệp được mua gói.")</p></div>
+@if (Model.Packages.Count == 0)
+{
+    <section class="cp-card"><div class="cp-empty" data-sp-no-packages>@UiIcon.Render("package")<p>Hiện chưa có gói dịch vụ đang mở bán. Vui lòng liên hệ T.A.</p></div></section>
+}
+else
+{
+    foreach (var group in ServicePackageTypes.All.Select(t => (Type: t, Items: Model.Packages.Where(p => p.PackageType == t).ToList())).Where(g => g.Items.Count > 0))
+    {
+        <h3 class="cp-plan-group">@ServicePackageTypes.Label(group.Type)</h3>
+        <div class="cp-plans" data-sp-group="@group.Type">
+            @foreach (var p in group.Items)
+            {
+                <article class="cp-card cp-plan" data-sp-package="@p.Code">
+                    <div class="cp-plan__head"><span class="cp-blob @(group.Type == ServicePackageTypes.Invoice ? "cp-blob--gold" : group.Type == ServicePackageTypes.Combo ? "cp-blob--ink" : "")">@UiIcon.Render(group.Type == ServicePackageTypes.Invoice ? "file-invoice" : group.Type == ServicePackageTypes.Transaction ? "arrows-exchange" : "package")</span><h4>@p.Name</h4></div>
+                    <div class="cp-plan__price">@ServicePackageRules.Money(p.Price)<span>gồm VAT</span></div>
+                    <ul class="cp-plan__list">
+                        @if (p.InvoiceQuota > 0) {<li>@UiIcon.Render("check")<span><strong>@ServicePackageRules.Number(p.InvoiceQuota)</strong> hóa đơn điện tử</span></li>}
+                        @if (p.TransactionQuota > 0) {<li>@UiIcon.Render("check")<span><strong>@ServicePackageRules.Number(p.TransactionQuota)</strong> lượt tra soát giao dịch</span></li>}
+                        <li>@UiIcon.Render("calendar")<span>@(p.ValidityDays is int d ? $"Sử dụng trong {ServicePackageRules.Number(d)} ngày" : "Không giới hạn thời gian")</span></li>
+                    </ul>
+                    @if (p.Description is not null) {<p class="cp-muted cp-plan__desc">@p.Description</p>}
+                    @if (Model.CanManage)
+                    {
+                        <form method="post" asp-action="Buy" class="cp-plan__buy" onsubmit="return confirm('Đặt mua @p.Name với giá @ServicePackageRules.Money(p.Price)?')">
+                            <input type="hidden" name="packageId" value="@p.Id" />
+                            <button class="cp-btn cp-btn--primary" type="submit">@UiIcon.Render("plus")<span>Mua gói</span></button>
+                        </form>
+                    }
+                </article>
+            }
+        </div>
+    }
+}
+
+<div class="cp-section"><h2>Lịch sử mua gói</h2></div>
+<section class="cp-card">
+    @if (Model.Purchases.Count == 0)
+    {
+        <div class="cp-empty" data-sp-empty>@UiIcon.Render("receipt-tax")<p>Doanh nghiệp chưa mua gói dịch vụ nào.</p></div>
+    }
+    else
+    {
+        <div class="cp-table-wrap">
+            <table class="cp-table" data-sp-purchases>
+                <thead><tr><th>Mã giao dịch</th><th>Gói</th><th>Số tiền</th><th>Ngày đặt</th><th>Trạng thái</th><th>Còn lại</th><th>Hết hạn</th><th class="cp-actions"></th></tr></thead>
+                <tbody>
+                @foreach (var p in Model.Purchases)
+                {
+                    var (label, tone) = ServicePurchaseStatus.Display(p.Status, p.IsExpired(Model.NowUtc));
+                    <tr data-sp-purchase="@p.PurchaseNo">
+                        <td><span class="cp-code">@p.PurchaseNo</span></td>
+                        <td><strong>@p.PackageName</strong><div class="cp-muted">@ServicePackageRules.Quantities(p.InvoiceQuota, p.TransactionQuota)</div></td>
+                        <td>@ServicePackageRules.Money(p.Amount)</td>
+                        <td>@ServicePackageRules.Local(p.CreatedAt)</td>
+                        <td><span class="cp-badge @Badge(tone)">@label</span></td>
+                        <td>@(p.Status == ServicePurchaseStatus.Paid ? ServicePackageRules.Quantities(p.InvoicesRemaining, p.TransactionsRemaining) : "—")</td>
+                        <td>@(p.Status == ServicePurchaseStatus.Paid ? (p.ExpiresAt is null ? "Không hết hạn" : ServicePackageRules.Local(p.ExpiresAt, "dd/MM/yyyy")) : "—")</td>
+                        <td class="cp-actions">
+                            @if (Model.CanManage && p.Status == ServicePurchaseStatus.Pending)
+                            {
+                                <form method="post" asp-action="Cancel" asp-route-id="@p.Id" onsubmit="return confirm('Hủy yêu cầu mua gói @p.PurchaseNo?')"><button class="cp-btn cp-btn--sm cp-btn--ghost" type="submit">@UiIcon.Render("x")<span>Hủy</span></button></form>
+                            }
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    }
+</section>
