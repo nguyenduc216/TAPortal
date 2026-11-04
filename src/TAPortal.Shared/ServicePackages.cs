@@ -198,9 +198,9 @@ public sealed class SqlServicePackageStore(IConfiguration configuration, TimePro
     private const string PackageColumns = "Id,Code,Name,PackageType,InvoiceQuota,TransactionQuota,Price,ValidityDays,Description,IsActive,SortOrder,CreatedAt";
 
     private const string PurchaseSelect = """
-SELECT p.Id,p.PurchaseNo,p.CustomerId,c.Code,c.Name,p.PackageId,p.PackageCode,p.PackageName,p.PackageType,p.InvoiceQuota,p.TransactionQuota,p.Amount,p.ValidityDays,
- p.Status,p.RequestedVia,ru.DisplayName,p.CreatedAt,p.PaidAmount,p.PaidAt,p.PaymentMethod,p.PaymentReference,cu.DisplayName,p.ExpiresAt,
- p.InvoicesRemaining,p.TransactionsRemaining,p.CancelledAt,xu.DisplayName,p.CancelReason
+SELECT p.Id,p.PurchaseNo,p.CustomerId,c.Code AS CustomerCode,c.Name AS CustomerName,p.PackageId,p.PackageCode,p.PackageName,p.PackageType,p.InvoiceQuota,p.TransactionQuota,p.Amount,p.ValidityDays,
+ p.Status,p.RequestedVia,ru.DisplayName AS RequestedByName,p.CreatedAt,p.PaidAmount,p.PaidAt,p.PaymentMethod,p.PaymentReference,cu.DisplayName AS ConfirmedByName,p.ExpiresAt,
+ p.InvoicesRemaining,p.TransactionsRemaining,p.CancelledAt,xu.DisplayName AS CancelledByName,p.CancelReason
 FROM dbo.ServicePackagePurchases p
 JOIN dbo.Customers c ON c.Id=p.CustomerId
 LEFT JOIN dbo.Users ru ON ru.Id=p.RequestedBy

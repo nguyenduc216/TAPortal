@@ -27,6 +27,19 @@ public sealed class SafeServicePackagesTests
 {
     private const string TestScheme = "SafeServicePackages";
     private static readonly Guid Actor = Guid.Parse("11111111-1111-1111-1111-111111111111");
+
+    // The purchase list wraps the purchase SELECT in "SELECT TOP (@take) * FROM (...) x": SQL Server refuses a derived table
+    // whose columns repeat a name ("The column 'DisplayName' was specified multiple times for 'x'", production 2026-11-04).
+    [Fact]
+    public void PurchaseSelectHasUniqueColumnNames()
+    {
+        var sql = (string)typeof(SqlServicePackageStore).GetField("PurchaseSelect", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!.GetValue(null)!;
+        var list = Regex.Match(sql, @"SELECT\s+(.*?)\s+FROM\s", RegexOptions.Singleline).Groups[1].Value;
+        var names = list.Split(',').Select(c => c.Trim()).Select(c => Regex.Match(c, @"(?:\s+AS\s+|\.)(\w+)$", RegexOptions.IgnoreCase).Groups[1].Value).ToList();
+        Assert.Equal(28, names.Count);
+        Assert.All(names, n => Assert.False(string.IsNullOrEmpty(n)));
+        Assert.Equal(names.Count, names.Distinct(StringComparer.OrdinalIgnoreCase).Count());
+    }
     private static readonly Guid A = Guid.Parse("aaaaaaaa-0000-0000-0000-000000000001");
     private static readonly DateTime Now = new(2026, 11, 4, 5, 0, 0, DateTimeKind.Utc);
 
