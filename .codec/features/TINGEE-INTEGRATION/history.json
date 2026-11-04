@@ -337,10 +337,10 @@
     "change_id": "TINGEE-INTEGRATION-CHG-20261104T163209Z-755A18",
     "created_at": "2026-11-04T16:32:09.041822+00:00",
     "title": "Tingee Sandbox: popup liên kết/xóa liên kết cập nhật tại chỗ, không tải lại trang",
-    "status": "IMPLEMENTED",
+    "status": "DEPLOYED",
     "commit_sha": "123371c",
     "migration_status": "NOT_APPLICABLE",
-    "publish_status": "NOT_PUBLISHED",
+    "publish_status": "DEPLOYED",
     "merge_status": "PENDING_APPROVAL"
   }
 ]

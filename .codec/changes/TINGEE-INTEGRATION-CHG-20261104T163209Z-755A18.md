@@ -4,7 +4,7 @@
 - Change ID: `TINGEE-INTEGRATION-CHG-20261104T163209Z-755A18`
 - Created UTC: 2026-11-04T16:32:09.041822+00:00
 - Tiêu đề: Tingee Sandbox: popup liên kết/xóa liên kết cập nhật tại chỗ, không tải lại trang
-- Trạng thái: IMPLEMENTED
+- Trạng thái: DEPLOYED
 
 ## Yêu cầu và phạm vi
 Operator (2026-11-04, ảnh popup "Liên kết tài khoản ngân hàng"): đổi giá trị trong popup thì màn hình nháy vì tải lại popup; xử lý các đoạn postback trong popup cho mượt.
