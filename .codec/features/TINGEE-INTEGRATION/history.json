@@ -357,10 +357,10 @@
     "change_id": "TINGEE-INTEGRATION-CHG-20261104T182406Z-ECDCF6",
     "created_at": "2026-11-04T18:24:06.362363+00:00",
     "title": "Customer Portal: automatic customer codes (KH001, KH002...)",
-    "status": "IMPLEMENTED",
-    "commit_sha": null,
+    "status": "DEPLOYED",
+    "commit_sha": "241d1758b310b72a5ad4260c0b7bf0985d6be93c",
     "migration_status": "NOT_APPLICABLE",
-    "publish_status": "NOT_PUBLISHED",
+    "publish_status": "DEPLOYED invoice",
     "merge_status": "PENDING_APPROVAL"
   }
 ]
