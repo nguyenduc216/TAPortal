@@ -34,6 +34,8 @@
     .tg-qr.is-locked svg{filter:blur(4px) grayscale(1);opacity:.35}.tg-qr.is-locked .tg-qr__lock{display:flex}.tg-qr.is-paid .tg-qr__lock{color:#2b8a3e}
     @@keyframes tg-otp-pulse { 0% { box-shadow: 0 0 0 0 rgba(245, 159, 0, .55); } 100% { box-shadow: 0 0 0 .9rem rgba(245, 159, 0, 0); } }
     @@media (prefers-reduced-motion: reduce) { .tg-otp__icon { animation: none; } }
+    #tgLink .modal-content, #tgUnlink .modal-content { transition: opacity .15s .2s; }
+    #tgLink .modal-content.is-loading, #tgUnlink .modal-content.is-loading { opacity: .7; pointer-events: none; cursor: progress; }
     .tg-hook { display: flex; align-items: center; gap: .5rem; margin-bottom: .375rem; }
     .tg-hook__label { flex: none; width: 6.5rem; font-size: .8125rem; color: var(--tblr-secondary, #667382); }
     .tg-hook__url { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -85,7 +87,7 @@
             {
                 <form asp-action="Index" method="get" class="mt-3" data-ta-sandbox-merchant-picker>
                     <label class="form-label" for="merchant">Merchant con để test</label>
-                    <select class="form-select" id="merchant" name="merchant" onchange="this.form.submit()">
+                    <select class="form-select" id="merchant" name="merchant" onchange="this.form.requestSubmit()">
                         <option value="">— Chọn —</option>
                         @foreach (var m in Model.Merchants) { <option value="@m.MerchantId" selected="@(m.MerchantId == mid)">@m.CustomerName (@m.CustomerCode) — #@m.MerchantId</option> }
                     </select>
@@ -314,12 +316,12 @@
                 <form asp-action="Index" method="get" class="row g-2 mb-3">
                     <input type="hidden" name="merchant" value="@mid" />
                     <div class="col-sm-6"><label class="form-label" for="bin">Ngân hàng</label>
-                        <select class="form-select" id="bin" name="bin" onchange="this.form.submit()">
+                        <select class="form-select" id="bin" name="bin" onchange="this.form.requestSubmit()">
                             <option value="">— Chọn —</option>
                             @foreach (var bank in TingeeBankCatalog.Banks) { <option value="@bank.Bin" selected="@(bank.Bin == Model.Bank?.Bin)">@bank.Name</option> }
                         </select></div>
                     <div class="col-sm-6"><label class="form-label" for="type">Loại tài khoản</label>
-                        <select class="form-select" id="type" name="type" onchange="this.form.submit()" disabled="@(Model.Bank is null)">
+                        <select class="form-select" id="type" name="type" onchange="this.form.requestSubmit()" disabled="@(Model.Bank is null)">
                             <option value="">— Chọn —</option>
                             @foreach (var t in Model.Bank?.AccountTypes ?? []) { <option value="@t" selected="@(t == Model.AccountType)">@TingeeAccountTypes.Label(t)</option> }
                         </select></div>

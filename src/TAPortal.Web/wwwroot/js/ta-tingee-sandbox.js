@@ -199,7 +199,77 @@
             .then(function () { button.disabled = false; });
     }, true);
 
+    // Link/unlink popups: choosing a bank or account type, sending the link form and the OTP are fetched in the background
+    // and only the popup's content is replaced, so the popup stays open instead of closing and fading in again. When
+    // the server answers with the popup closed (success → redirect), the page content is swapped like the shell does.
+    var swapPage = function (doc, url) {
+        var ids = Array.prototype.map.call(document.querySelectorAll('[data-ta-swap]'), function (e) { return e.id; }).filter(Boolean);
+        if (ids.length === 0 || !ids.every(function (id) { return doc.getElementById(id); })) { window.location.assign(url); return; }
+        document.dispatchEvent(new CustomEvent('ta:before-swap'));
+        document.title = doc.title;
+        ids.forEach(function (id) { document.getElementById(id).replaceWith(document.importNode(doc.getElementById(id), true)); });
+        window.history.replaceState({ ta: true }, '', url);
+        document.dispatchEvent(new CustomEvent('ta:load'));
+    };
+
+    document.addEventListener('submit', function (event) {
+        var form = event.target;
+        var modal = form.closest && form.closest('[data-ta-sandbox-link],[data-ta-sandbox-unlink]');
+        if (!modal || !window.fetch || !window.DOMParser) return;
+        event.preventDefault();
+        event.stopPropagation();
+        if (form.dataset.taBusy === 'true') return;
+        form.dataset.taBusy = 'true';
+        var submitter = event.submitter || document.querySelector('[form="' + form.id + '"][type="submit"]') || form.querySelector('[type="submit"]');
+        if (submitter) submitter.disabled = true;
+        var content = modal.querySelector('.modal-content');
+        content.classList.add('is-loading');
+        var isPost = (form.getAttribute('method') || 'get').toLowerCase() === 'post';
+        var data = new FormData(form);
+        var url = new URL(form.getAttribute('action') || window.location.href, window.location.href);
+        if (!isPost) url.search = new URLSearchParams(data).toString();
+        // Values already typed in the link form survive a change of bank or account type.
+        var typed = {};
+        var linkForm = modal.querySelector('[data-ta-sandbox-link-form]');
+        if (!isPost && linkForm) Array.prototype.forEach.call(linkForm.querySelectorAll('input:not([type=hidden])'), function (i) {
+            typed[i.name] = i.type === 'checkbox' ? i.checked : i.value;
+        });
+        fetch(url.href, { method: isPost ? 'POST' : 'GET', body: isPost ? data : undefined, credentials: 'same-origin', headers: { 'X-TA-Soft': '1' } })
+            .then(function (r) { return r.text().then(function (html) { return { url: r.url, html: html, ok: r.ok || r.status === 400 }; }); })
+            .then(function (res) {
+                if (!res.ok) { window.location.assign(res.url || url.href); return; }
+                var doc = new DOMParser().parseFromString(res.html, 'text/html');
+                var fresh = modal.id && doc.getElementById(modal.id);
+                if (fresh && fresh.getAttribute('data-ta-open') === 'true') {
+                    content.replaceWith(document.importNode(fresh.querySelector('.modal-content'), true));
+                    var next = modal.querySelector('[data-ta-sandbox-link-form]');
+                    if (next) Array.prototype.forEach.call(next.querySelectorAll('input:not([type=hidden])'), function (i) {
+                        if (!(i.name in typed)) return;
+                        if (i.type === 'checkbox') i.checked = typed[i.name]; else if (!i.value) i.value = typed[i.name];
+                    });
+                    if (!isPost) window.history.replaceState({ ta: true }, '', res.url || url.href);
+                    document.dispatchEvent(new CustomEvent('ta:load', { detail: { partial: true } }));   // searchable selects
+                    var otp = modal.querySelector('[data-ta-otp-input]');
+                    if (otp) otp.focus();
+                    return;
+                }
+                var instance = window.bootstrap && window.bootstrap.Modal.getInstance(modal);
+                if (instance) {
+                    modal.addEventListener('hidden.bs.modal', function () { swapPage(doc, res.url || url.href); }, { once: true });
+                    instance.hide();
+                } else {
+                    swapPage(doc, res.url || url.href);
+                }
+            })
+            .catch(function () { window.location.assign(url.href); })
+            .then(function () {
+                delete form.dataset.taBusy;
+                if (submitter) submitter.disabled = false;
+                content.classList.remove('is-loading');
+            });
+    }, true);
+
     init();
-    document.addEventListener('ta:load', init);
+    document.addEventListener('ta:load', function (event) { if (!(event.detail && event.detail.partial)) init(); });
     document.addEventListener('ta:before-swap', stopAll);
 })();

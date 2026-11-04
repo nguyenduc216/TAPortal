@@ -127,6 +127,19 @@ public sealed class SafeAdminTingeeSandboxTests
         Assert.Equal(2, tingee.Sessions.Count);
     }
 
+    // Operator 2026-11-04: changing bank/type in the link popup must not reload the page (the popup flickered). Pickers go
+    // through requestSubmit (a submit event the popup script handles in place) instead of the native form.submit().
+    [Fact]
+    public async Task LinkPopupPickersAreHandledInPlace()
+    {
+        using var f = Factory(out _, out _);
+        var html = await Client(f).GetStringAsync("/tingeesandbox?bin=970422&type=personal-account");
+        Assert.DoesNotContain("this.form.submit()", html);
+        Assert.Contains("onchange=\"this.form.requestSubmit()\"", html);
+        var js = await Client(f).GetStringAsync("/js/ta-tingee-sandbox.js");
+        Assert.Contains("closest('[data-ta-sandbox-link],[data-ta-sandbox-unlink]')", js);
+    }
+
     [Fact]
     public async Task BankLinkSdkErrorsAndForeignUrlsAreRefused()
     {
