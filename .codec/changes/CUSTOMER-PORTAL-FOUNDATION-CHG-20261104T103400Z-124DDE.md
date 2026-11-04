@@ -4,7 +4,7 @@
 - Change ID: `CUSTOMER-PORTAL-FOUNDATION-CHG-20261104T103400Z-124DDE`
 - Created UTC: 2026-11-04T10:34:00.041145+00:00
 - Tiêu đề: Xoá 10 khách hàng mẫu KH0001-KH0010 (giữ TVGPTA), có bảng lưu và rollback
-- Trạng thái: IMPLEMENTED / DRY_RUN_PASS
+- Trạng thái: EXECUTED
 
 ## Yêu cầu và phạm vi
 Operator (2026-11-04): "xoá hết dữ liệu khách hàng trừ TVGPTA trên portal"; chọn "Xoá hẳn, có bản lưu".
@@ -24,7 +24,10 @@ Operator (2026-11-04): "xoá hết dữ liệu khách hàng trừ TVGPTA trên p
 - Preflight / Verify / Rollback: database/scripts/023-verify-purge-sample-customers.sql / database/scripts/024-rollback-purge-sample-customers.sql
 - Pre-check 2026-11-04 ~10:50Z: VERIFY_STATUS=NOT_APPLIED (10 khách hàng khác, TVGPTA=1).
 - Dry-run (một transaction, sqlcmd -b, kiểm tra @@TRANCOUNT sau mỗi batch): xoá 10 liên hệ + 10 khách hàng → verify PASS → rollback khôi phục 10 + 10 → verify NOT_APPLIED → ROLLBACK, DRYRUN_TRANCOUNT=0; pre-check lặp lại không đổi.
-- Execution: NOT_EXECUTED
+- Gates trên HEAD cb978c0 (worktree sạch): restore OK, build Release 0 lỗi 0 cảnh báo, Safe tests 353/353.
+- Backup COPY_ONLY + CHECKSUM: C:\Program Files\Microsoft SQL Server\MSSQL12.MSSQLSERVER2014\MSSQL\Backup\TAPortalSys-predeploy-20261104T103823Z.bak (5,1 MB; msdb: checksums=1, damaged=0). RESTORE VERIFYONLY bị từ chối vì TA_User không có quyền CREATE DATABASE (Msg 262), nên kiểm tra qua msdb và file trên đĩa; còn bản 20261103T143226Z.
+- Chạy thật 2026-11-04 10:38Z: xoá 10 liên hệ + 10 khách hàng; verify 023 VERIFY_STATUS=PASS (TVGPTA giữ, 0 khách hàng khác, bảng lưu 10/10). Portal health 200.
+- Execution: EXECUTED
 
 ## Test và kết quả
 
@@ -43,3 +46,4 @@ Operator (2026-11-04): "xoá hết dữ liệu khách hàng trừ TVGPTA trên p
 - Merge SHA:
 
 ## Rủi ro, quyết định và việc còn lại
+- Bảng lưu `dbo.Backup20261104_Customers` / `dbo.Backup20261104_CustomerContacts` giữ trong TAPortalSys; khôi phục bằng `database/scripts/024-rollback-purge-sample-customers.sql`. Xoá hai bảng này khi operator xác nhận không cần nữa (cần migration riêng).

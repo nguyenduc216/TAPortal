@@ -258,9 +258,9 @@
     "change_id": "CUSTOMER-PORTAL-FOUNDATION-CHG-20261104T103400Z-124DDE",
     "created_at": "2026-11-04T10:34:00.041145+00:00",
     "title": "Xoá 10 khách hàng mẫu KH0001-KH0010 (giữ TVGPTA), có bảng lưu và rollback",
-    "status": "IMPLEMENTED / DRY_RUN_PASS",
-    "commit_sha": null,
-    "migration_status": "DRY_RUN_PASS (017)",
+    "status": "EXECUTED",
+    "commit_sha": "cb978c0",
+    "migration_status": "EXECUTED (017)",
     "publish_status": "NOT_APPLICABLE",
     "merge_status": "PENDING_APPROVAL"
   }
