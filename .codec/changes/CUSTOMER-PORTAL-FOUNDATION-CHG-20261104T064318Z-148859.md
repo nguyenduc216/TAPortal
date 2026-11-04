@@ -4,7 +4,7 @@
 - Change ID: `CUSTOMER-PORTAL-FOUNDATION-CHG-20261104T064318Z-148859`
 - Created UTC: 2026-11-04T06:43:18.069459+00:00
 - Tiêu đề: Customer Portal forgot-password by email (SMTP, one-time 30-minute link)
-- Trạng thái: IMPLEMENTED / TESTS_PASS
+- Trạng thái: DEPLOYED (portal, invoice) — email chưa cấu hình
 
 ## Yêu cầu và phạm vi
 Operator (2026-11-04): làm "Quên mật khẩu" qua email, địa chỉ gửi `noreply@hoadontudong.vn`.
@@ -24,21 +24,24 @@ Kiểm tra DNS 2026-11-04: hoadontudong.vn (NS zonedns.vn) chỉ có bản ghi A
 - Script / absolute path: `database/migrations/016-password-reset-tokens.sql` (bảng mới; không đổi đối tượng/dữ liệu có sẵn)
 - Thứ tự chạy: sau 015. Phải chạy TRƯỚC khi deploy.
 - Preflight / Verify / Rollback: `database/scripts/021-verify-password-reset-tokens.sql` / `database/scripts/022-rollback-password-reset-tokens.sql`
-- Execution: xem `migration_status`.
+- Execution: EXECUTED (AGENT MIGRATION EXECUTION)
+  - Backup: full backup mới nhất 2026-11-03 21:32 (server), 16 giờ (≤24h).
+  - Pre-check 2026-11-04T06:49:35Z: bảng chưa có (VERIFY FAIL = chưa áp dụng).
+  - Dry-run 2026-11-04T06:49:36Z: migration OK → verify PASS → rollback 022 OK → verify FAIL (đã gỡ) → ROLLBACK, @@TRANCOUNT=0; verify sau dry-run vẫn FAIL.
+  - Gates trên HEAD (checkout sạch): build Release 0 lỗi, Safe tests PASS.
+  - Real run: 2026-11-04T06:52:06Z: `dbo.PasswordResetTokens created`, verify PASS (bảng, 7 cột, UX_PRT_TokenHash, FK_PRT_User). Các câu SQL của SqlPasswordResetStore biên dịch được trên schema thật (SET NOEXEC ON, không thực thi). Smoke sau deploy: /account/login có link "Quên mật khẩu?", /account/forgot-password 200 báo chưa bật (chưa cấu hình Email).
 
 ## Test và kết quả
 - Build Release 0 lỗi; Safe tests 357/357 (working tree).
 
 ## Publish
-- Project:
-- Destination (chỉ từ config):
-- Trạng thái: NOT_PUBLISHED
-- Artifact SHA256:
-- Smoke test:
+- Trạng thái: DEPLOYED qua `deploy/windows/Deploy-TARemote.ps1 -MigrationsApplied` (audit PASS), source 2764a35.
+- portal: artifact 8539d2774ffcc1a690ea235e84a8e5fed50bf6ac54e230680f5bbabe3a15779d, package 01B362F67D7600FEBB147267ACA12D73A9034B3960624773578F0D65908990AF, backup C:\TADeploy\backups\portal-20261104-135517, health 200.
+- invoice: artifact 272ad7f949e8650f6aa900ec20aff3af651a40a59f2a37d3f62922dd2c2908f3, package B34CEDF66DD80C6141F34D8F108C2C6B03745B2D2E354798387C895C9A3CE592, backup C:\TADeploy\backups\invoice-20261104-135552, health 200.
 
 ## Git
-- Branch:
-- Commit SHA:
+- Branch: feature/customer-portal-mvp01
+- Commit SHA: 2764a35 (source)
 - PR:
 - Merge: PENDING_APPROVAL
 - Merge SHA:
