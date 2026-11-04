@@ -20,6 +20,9 @@ builder.Services.AddScoped<ICurrentCustomerContext, CurrentCustomerContext>();
 builder.Services.AddScoped<CustomerCookieEvents>();
 builder.Services.AddScoped<IPaymentStore, SqlPaymentStore>();
 builder.Services.AddScoped<OrderPayments>();
+builder.Services.Configure<EmailOptions>(builder.Configuration.GetSection(EmailOptions.SectionName));
+builder.Services.AddSingleton<IEmailSender, SmtpEmailSender>();
+builder.Services.AddScoped<IPasswordResetStore, SqlPasswordResetStore>();
 builder.Services.AddTingee(builder.Configuration);
 var protection = builder.Services.AddDataProtection().SetApplicationName("TA.CustomerPortal");
 if (!string.IsNullOrWhiteSpace(builder.Configuration["DataProtection:KeyPath"]))

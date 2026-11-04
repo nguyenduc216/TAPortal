@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Options;
 using TACustomerPortal.Web.Models;
 using TACustomerPortal.Web.Security;
 using TACustomerPortal.Web.Services;
@@ -13,7 +14,8 @@ using TAPortal.Shared;
 namespace TACustomerPortal.Web.Controllers;
 [Route("account")]
 [ResponseCache(Location = ResponseCacheLocation.None, NoStore = true)]
-public sealed class AccountController(ICustomerStore store, PasswordService passwords, LoginAttemptLimiter attempts, ILogger<AccountController> logger) : Controller
+public sealed class AccountController(ICustomerStore store, PasswordService passwords, LoginAttemptLimiter attempts, IPasswordResetStore resets,
+    IEmailSender email, IOptions<EmailOptions> emailOptions, ILogger<AccountController> logger) : Controller
 {
     // Perform the same expensive password verification for unknown usernames.
     private static readonly string DummyHash = new PasswordService().Hash(Guid.NewGuid() + "Aa1!");
@@ -127,6 +129,96 @@ public sealed class AccountController(ICustomerStore store, PasswordService pass
 
         await HttpContext.SignOutAsync();
         return RedirectToAction(nameof(Login));
+    }
+
+    // ---- Quên mật khẩu: a one-time link (30 minutes) to the account's email. The answer never reveals whether the
+    // account exists, has an email or was throttled; only accounts that may use the Customer Portal are served.
+    [AllowAnonymous, HttpGet("forgot-password")]
+    public IActionResult ForgotPassword() => View(new ForgotPasswordVm { Enabled = email.IsConfigured });
+
+    [AllowAnonymous, HttpPost("forgot-password"), EnableRateLimiting("login")]
+    public async Task<IActionResult> ForgotPassword(ForgotPasswordVm vm)
+    {
+        vm.Enabled = email.IsConfigured;
+        if (!vm.Enabled || !ModelState.IsValid) return View(vm);
+        try
+        {
+            var account = await resets.FindAccountAsync(vm.Login);
+            var now = DateTime.UtcNow;
+            if (account is not null && await resets.RecentRequestsAsync(account.UserId, now.AddHours(-1)) < PasswordResetTokens.MaxRequestsPerHour)
+            {
+                var token = PasswordResetTokens.New();
+                await resets.SaveTokenAsync(account.UserId, PasswordResetTokens.Hash(token)!, now.Add(PasswordResetTokens.Lifetime), HttpContext.Connection.RemoteIpAddress?.ToString());
+                await email.SendAsync(ResetEmail(account, emailOptions.Value.PublicBaseUrl!.TrimEnd('/') + "/account/reset-password?token=" + token));
+                logger.LogInformation("CUSTOMER_PASSWORD_RESET_SENT user {UserId}", account.UserId);
+            }
+        }
+        catch (Exception ex) when (IsDataUnavailable(ex) || ex is System.Net.Mail.SmtpException)
+        {
+            // Same answer for the user; the cause (database or mail server) goes to the log only.
+            logger.LogError(ex, "CUSTOMER_PASSWORD_RESET_FAILED reference {Reference}", RequestReference);
+        }
+        vm.Sent = true;
+        return View(vm);
+    }
+
+    [AllowAnonymous, HttpGet("reset-password")]
+    public async Task<IActionResult> ResetPassword(string? token)
+    {
+        var account = PasswordResetTokens.Hash(token) is { } hash ? await resets.FindByTokenAsync(hash, DateTime.UtcNow) : null;
+        return View(new ResetPasswordVm { Token = token, Valid = account is not null, Username = account?.Username });
+    }
+
+    [AllowAnonymous, HttpPost("reset-password"), EnableRateLimiting("login")]
+    public async Task<IActionResult> ResetPassword(ResetPasswordVm vm)
+    {
+        var hash = PasswordResetTokens.Hash(vm.Token);
+        var account = hash is null ? null : await resets.FindByTokenAsync(hash, DateTime.UtcNow);
+        vm.Valid = account is not null;
+        vm.Username = account?.Username;
+        if (account is null || !ModelState.IsValid) return View(vm);
+        var policy = PasswordPolicy.Validate(vm.NewPassword);
+        if (!policy.IsValid)
+        {
+            ModelState.AddModelError(nameof(vm.NewPassword), policy.Error);
+            return View(vm);
+        }
+        if (!await resets.ResetAsync(hash!, passwords.Hash(vm.NewPassword), DateTime.UtcNow))
+        {
+            vm.Valid = false;
+            return View(vm);
+        }
+        logger.LogInformation("CUSTOMER_PASSWORD_RESET_DONE user {UserId}", account.UserId);
+        await HttpContext.SignOutAsync();
+        TempData["Notice"] = "Đã đặt mật khẩu mới. Vui lòng đăng nhập bằng mật khẩu mới.";
+        return RedirectToAction(nameof(Login));
+    }
+
+    private static EmailMessage ResetEmail(RecoveryAccount account, string link)
+    {
+        var name = System.Net.WebUtility.HtmlEncode(account.DisplayName);
+        var user = System.Net.WebUtility.HtmlEncode(account.Username);
+        var href = System.Net.WebUtility.HtmlEncode(link);
+        var minutes = (int)PasswordResetTokens.Lifetime.TotalMinutes;
+        var text = $"""
+            Xin chào {account.DisplayName},
+
+            Có yêu cầu đặt lại mật khẩu Customer Portal cho tài khoản {account.Username}.
+            Mở liên kết sau để đặt mật khẩu mới (hiệu lực {minutes} phút, chỉ dùng một lần):
+            {link}
+
+            Nếu bạn không yêu cầu, hãy bỏ qua email này; mật khẩu hiện tại vẫn giữ nguyên.
+            T.A
+            """;
+        var html = $"""
+            <p>Xin chào {name},</p>
+            <p>Có yêu cầu đặt lại mật khẩu Customer Portal cho tài khoản <strong>{user}</strong>.</p>
+            <p><a href="{href}" style="display:inline-block;padding:10px 18px;background:#1d4ed8;color:#ffffff;border-radius:6px;text-decoration:none">Đặt mật khẩu mới</a></p>
+            <p>Liên kết có hiệu lực {minutes} phút và chỉ dùng được một lần. Nếu nút không mở được, chép địa chỉ sau vào trình duyệt:<br><span style="word-break:break-all">{href}</span></p>
+            <p>Nếu bạn không yêu cầu, hãy bỏ qua email này; mật khẩu hiện tại vẫn giữ nguyên.</p>
+            <p>T.A</p>
+            """;
+        return new(account.Email, "Đặt lại mật khẩu T.A Customer Portal", text, html);
     }
 
     [AllowAnonymous, HttpGet("access-denied")]

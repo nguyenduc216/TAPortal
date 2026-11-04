@@ -19,6 +19,7 @@
             <h2>Chào mừng trở lại</h2>
             <p>Đăng nhập để truy cập doanh nghiệp của bạn.</p>
             <form method="post" asp-action="Login">
+                @if (TempData["Notice"] is string notice) {<div class="cp-note" role="status" style="margin-bottom:14px" data-cp-login-notice>@UiIcon.Render("circle-check")<div>@notice</div></div>}
                 <div asp-validation-summary="All" class="cp-alert" role="alert"></div>
                 <div class="cp-field">
                     <label asp-for="Username" class="cp-label">Tên đăng nhập</label>
@@ -28,6 +29,7 @@
                     <label asp-for="Password" class="cp-label">Mật khẩu</label>
                     <div class="cp-input-wrap">@UiIcon.Render("lock")<input asp-for="Password" id="password" type="password" class="cp-input" autocomplete="current-password" required maxlength="256" placeholder="Nhập mật khẩu" /><button class="cp-toggle" type="button" onclick="taTogglePassword('password',this)" aria-label="Hiện mật khẩu" aria-pressed="false">@UiIcon.Render("eye", "ta-icon-show")@UiIcon.Render("eye-off", "ta-icon-hide")</button></div>
                 </div>
+                <p class="cp-auth__forgot"><a asp-action="ForgotPassword">Quên mật khẩu?</a></p>
                 <button type="submit" class="cp-btn cp-btn--primary cp-btn--block">@UiIcon.Render("login-2")<span>Đăng nhập</span></button>
             </form>
             <p class="cp-auth__foot">Chưa có tài khoản? Liên hệ quản trị viên T.A để được cấp quyền.</p>

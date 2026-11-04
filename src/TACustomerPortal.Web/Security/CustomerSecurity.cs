@@ -62,7 +62,7 @@ public sealed class CustomerCookieEvents(ICustomerStore store) : CookieAuthentic
 
 public static class MustChangePasswordGate
 {
-    private static readonly string[] Allowed = ["/account/change-password", "/account/logout", "/account/error", "/account/access-denied", "/account/login"];
+    private static readonly string[] Allowed = ["/account/change-password", "/account/logout", "/account/error", "/account/access-denied", "/account/login", "/account/forgot-password", "/account/reset-password"];
 
     /// <summary>A signed-in user whose password was reset by T.A is sent to "Đổi mật khẩu" for every other page.</summary>
     public static IApplicationBuilder UseMustChangePasswordGate(this IApplicationBuilder app) => app.Use(async (context, next) =>

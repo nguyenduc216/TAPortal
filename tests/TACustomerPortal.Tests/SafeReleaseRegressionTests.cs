@@ -94,7 +94,9 @@ public sealed class SafeReleaseRegressionTests
         using var f = Customer();
         var endpoints = Inventory(f.Services);
         var anonymous = endpoints.Where(e => e.Anonymous).Select(e => e.Name).ToHashSet();
-        Assert.Equal(new HashSet<string> { "Account.Login:GET", "Account.Login:POST", "Account.AccessDenied:GET", "Account.Error:ANY" }, anonymous);
+        Assert.Equal(new HashSet<string> { "Account.Login:GET", "Account.Login:POST", "Account.AccessDenied:GET", "Account.Error:ANY",
+            // Password recovery by email (reviewed: no enumeration, rate-limited, one-time hashed tokens).
+            "Account.ForgotPassword:GET", "Account.ForgotPassword:POST", "Account.ResetPassword:GET", "Account.ResetPassword:POST" }, anonymous);
         // Everything else falls under the authenticated fallback policy.
         Assert.NotNull(f.Services.GetRequiredService<Microsoft.Extensions.Options.IOptions<AuthorizationOptions>>().Value.FallbackPolicy);
     }
