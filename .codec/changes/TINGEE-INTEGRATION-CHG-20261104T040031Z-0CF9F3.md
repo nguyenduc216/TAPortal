@@ -4,7 +4,7 @@
 - Change ID: `TINGEE-INTEGRATION-CHG-20261104T040031Z-0CF9F3`
 - Created UTC: 2026-11-04T04:00:31.422691+00:00
 - Tiêu đề: Tingee API call log with log-code lookup (for Tingee support)
-- Trạng thái: IMPLEMENTED / TESTS_PASS
+- Trạng thái: DEPLOYED (portal, invoice)
 
 ## Yêu cầu và phạm vi
 Operator (2026-11-04): Tingee hỗ trợ yêu cầu gửi request gốc của lỗi liên kết VietinBank cá nhân (400 "Verify string error … Refid=…"). Cần ghi log các lần gọi Tingee, có form tra cứu log và tìm theo mã log, làm nhanh.
@@ -26,21 +26,25 @@ Operator (2026-11-04): Tingee hỗ trợ yêu cầu gửi request gốc của l�
 - Script / absolute path: `database/migrations/014-tingee-api-logs.sql` (bảng mới, không đổi đối tượng/dữ liệu có sẵn)
 - Thứ tự chạy: sau 012 (013 thuộc CUSTOMER-PROFILE, chưa commit, không liên quan)
 - Preflight / Verify / Rollback: `database/scripts/017-verify-tingee-api-logs.sql` / `database/scripts/018-rollback-tingee-api-logs.sql` (chỉ xóa bảng khi rỗng)
-- Execution: theo AGENT MIGRATION EXECUTION — xem `migration_status`.
+- Execution: EXECUTED (AGENT MIGRATION EXECUTION)
+  - Backup: full backup mới nhất 2026-11-03 21:32 (server), 13 giờ (≤24h).
+  - Pre-check 2026-11-04T03:59Z: `FAIL: dbo.TingeeApiLogs missing` (chưa áp dụng).
+  - Dry-run 2026-11-04T04:02:51Z (sqlcmd -b, giao dịch bọc): migration OK → verify PASS → rollback 018 OK → verify FAIL (đã gỡ) → ROLLBACK, @@TRANCOUNT=0; verify sau dry-run vẫn FAIL (không để lại gì).
+  - Gates trên HEAD 910726e (checkout sạch): build Release 0 lỗi, Safe 333/333.
+  - Real run 2026-11-04T04:03:01Z: `dbo.TingeeApiLogs created`, verify PASS (bảng, 15 cột, UX_TAL_LogCode).
 
 ## Test và kết quả
 - Build Release 0 lỗi; Safe tests pass (7 test mới: ghi log đúng request/chữ ký, mã log trong lỗi Tingee và lỗi mạng, chuẩn hóa mã log, trang tra cứu tìm theo mã / không tìm thấy / mã sai, chặn non-admin).
 
 ## Publish
 - Project: TAPortal.Web (portal), TACustomerPortal.Web (invoice)
-- Destination (chỉ từ config):
-- Trạng thái: NOT_PUBLISHED
-- Artifact SHA256:
-- Smoke test:
+- Trạng thái: DEPLOYED qua `deploy/windows/Deploy-TARemote.ps1 -MigrationsApplied` (audit PASS), source 910726e, 2026-11-04T04:05Z.
+- portal: artifact e63509aab8684a2baafd7dfac6dd972c916d55db77e1a9c27133a135b5197d4b, package 91AE2C666C2FC65BB19AB3C0ADE41DDCD8A1029D6C603DB52B0DBECBD75BF2D8, backup C:\TADeployackups\portal-20261104-110446, health 200.
+- invoice: artifact d3a716c1a8c98a22d9075c7dba5169040e4940c4449c307c61a51a7cb3640a84, package 2193290A7C03566D81DA9DF7E9A34C5BB84D21075B15D3AAF898E50AA1F650FE, backup C:\TADeployackups\invoice-20261104-110458, health 200.
 
 ## Git
-- Branch:
-- Commit SHA:
+- Branch: feature/customer-portal-mvp01
+- Commit SHA: 910726e (source)
 - PR:
 - Merge: PENDING_APPROVAL
 - Merge SHA:
