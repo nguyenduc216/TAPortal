@@ -30,6 +30,14 @@ public sealed class TingeeOptions
     /// </summary>
     public string WebhookBaseUrl { get; set; } = DefaultWebhookBaseUrl;
 
+    /// <summary>
+    /// Shared key Tingee sends in a header with every webhook (Tingee endpoint "API key tuỳ chỉnh"). When set it is required;
+    /// a request carrying x-signature must also verify, and an unsigned one is accepted only with this key.
+    /// </summary>
+    public string? WebhookApiKey { get; set; }
+    public string WebhookApiKeyHeader { get; set; } = "x-api-key";
+    public bool HasWebhookApiKey => !string.IsNullOrWhiteSpace(WebhookApiKey);
+
     public string WebhookUrl(string kind) => $"{WebhookBaseUrl.TrimEnd('/')}{WebhookPathPrefix}/{kind}";
 
     /// <summary>va-status receiver sent in create-va: an explicit VaStatusWebhookUrl, otherwise the webhook site's.</summary>

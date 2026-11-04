@@ -52,3 +52,4 @@ Database sẵn sàng cho phần thanh toán (verify PASS). Tiếp theo: operator
 | `TINGEE-INTEGRATION-CHG-20261104T051600Z-8F5DE8` | 2026-11-04 | Tingee menu group; sandbox link/unlink popups with a clear OTP step | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |
 | `TINGEE-INTEGRATION-CHG-20261104T063712Z-0516FA` | 2026-11-04 | Sandbox: QR card beside sections 1-2; short webhook addresses with copy buttons | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |
 | `TINGEE-INTEGRATION-CHG-20261104T073052Z-945D42` | 2026-11-04 | Webhook site webhook.hoadontudong.vn (TAPortal.Webhooks): one /tingee address, auto-deploy target | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |
+| `TINGEE-INTEGRATION-CHG-20261104T080429Z-668347` | 2026-11-04 | Webhook API key authentication and a health/status page for the webhook site | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |

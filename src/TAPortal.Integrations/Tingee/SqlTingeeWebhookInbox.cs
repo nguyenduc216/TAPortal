@@ -10,8 +10,16 @@ namespace TAPortal.Integrations.Tingee;
 /// dbo.TingeeWebhookInbox (migration 011). One row per (Kind, DedupKey): a retried webhook hits the unique index and is
 /// treated as already stored, so Tingee still gets "00" and nothing is processed twice.
 /// </summary>
-public sealed class SqlTingeeWebhookInbox(IConfiguration configuration) : ITingeeWebhookInbox
+public sealed class SqlTingeeWebhookInbox(IConfiguration configuration) : ITingeeWebhookInbox, ITingeeWebhookInboxProbe
 {
+    public async Task<DateTime?> LastReceivedAtAsync(CancellationToken cancellationToken)
+    {
+        await using var cn = new SqlConnection(ConnectionString);
+        await cn.OpenAsync(cancellationToken);
+        await using var cmd = new SqlCommand("SELECT MAX(ReceivedAt) FROM dbo.TingeeWebhookInbox", cn) { CommandTimeout = 5 };
+        return await cmd.ExecuteScalarAsync(cancellationToken) is DateTime last ? DateTime.SpecifyKind(last, DateTimeKind.Utc) : null;
+    }
+
     private string? ConnectionString => configuration["Database:ConnectionString"];
 
     public bool IsAvailable => !string.IsNullOrWhiteSpace(ConnectionString);

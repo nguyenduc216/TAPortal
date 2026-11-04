@@ -99,10 +99,57 @@ public sealed class SafeTingeeIntegrationTests
     [Fact]
     public async Task HealthEndpointAnswersWithoutSecrets()
     {
-        using var f = Factory(new MemoryInbox());
+        using var f = Factory(new MemoryInbox(), apiKey: ApiKey);
         var response = await f.CreateClient().GetAsync("/health");
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.DoesNotContain(Secret, await response.Content.ReadAsStringAsync());
+        var json = await response.Content.ReadAsStringAsync();
+        Assert.DoesNotContain(Secret, json);
+        Assert.DoesNotContain(ApiKey, json);
+        Assert.Contains("\"status\":\"ok\"", json);
+        Assert.Contains("\"apiKey\":\"required (x-api-key)\"", json);
+        Assert.Contains("/tingee/payment", json);
+
+        var page = WebUtility.HtmlDecode(await f.CreateClient().GetStringAsync("/"));
+        Assert.Contains("Hoạt động bình thường", page);
+        Assert.DoesNotContain(ApiKey, page);
+    }
+
+    [Fact]
+    public async Task HealthIsUnhealthyWithoutKeysOrInbox()
+    {
+        using (var f = Factory(new MemoryInbox(), secret: ""))
+            Assert.Equal(HttpStatusCode.ServiceUnavailable, (await f.CreateClient().GetAsync("/health")).StatusCode);
+        using (var f = Factory(inbox: null))
+        {
+            var r = await f.CreateClient().GetAsync("/");
+            Assert.Equal(HttpStatusCode.ServiceUnavailable, r.StatusCode);
+            Assert.Contains("Có lỗi", WebUtility.HtmlDecode(await r.Content.ReadAsStringAsync()));
+        }
+    }
+
+    [Theory]
+    [InlineData("right-key-unsigned", HttpStatusCode.OK)]
+    [InlineData("right-key-signed", HttpStatusCode.OK)]
+    [InlineData("right-key-bad-signature", HttpStatusCode.Unauthorized)]
+    [InlineData("missing-key-signed", HttpStatusCode.Unauthorized)]
+    [InlineData("wrong-key-signed", HttpStatusCode.Unauthorized)]
+    public async Task ConfiguredApiKeyIsRequiredAndASentSignatureMustStillVerify(string mode, HttpStatusCode expected)
+    {
+        var inbox = new MemoryInbox();
+        using var f = Factory(inbox, apiKey: ApiKey);
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/tingee/payment") { Content = new StringContent(Body, Encoding.UTF8, "application/json") };
+        request.Headers.Add("x-request-id", "req-key");
+        if (mode.StartsWith("right-key")) request.Headers.Add("x-api-key", ApiKey);
+        if (mode.StartsWith("wrong-key")) request.Headers.Add("x-api-key", ApiKey + "x");
+        if (mode.EndsWith("-signed") || mode.EndsWith("bad-signature"))
+        {
+            request.Headers.Add("x-request-timestamp", Timestamp);
+            request.Headers.Add("x-signature", mode.EndsWith("bad-signature") ? BodySignature.Replace('7', '8') : BodySignature);
+        }
+        var response = await f.CreateClient().SendAsync(request);
+        Assert.Equal(expected, response.StatusCode);
+        Assert.Equal(expected == HttpStatusCode.OK ? 1 : 0, inbox.Saved.Count);
+        if (expected == HttpStatusCode.OK) Assert.Equal(Body, inbox.Saved[0].RawBody);
     }
 
     private static async Task<HttpResponseMessage> Post(WebApplicationFactory<webhooks::Program> f, string path, string body, string timestamp, string signature)
@@ -114,14 +161,17 @@ public sealed class SafeTingeeIntegrationTests
         return await f.CreateClient().SendAsync(request);
     }
 
-    private static WebApplicationFactory<webhooks::Program> Factory(MemoryInbox? inbox, string secret = Secret) =>
+    private const string ApiKey = "webhook-test-api-key-0123456789";
+
+    private static WebApplicationFactory<webhooks::Program> Factory(MemoryInbox? inbox, string secret = Secret, string? apiKey = null) =>
         new WebApplicationFactory<webhooks::Program>().WithWebHostBuilder(b =>
         {
             b.UseEnvironment("Testing");
             b.ConfigureAppConfiguration((_, c) => c.AddInMemoryCollection(new Dictionary<string, string?>
             {
                 ["Tingee:ClientId"] = "test-client",
-                ["Tingee:SecretKey"] = secret
+                ["Tingee:SecretKey"] = secret,
+                ["Tingee:WebhookApiKey"] = apiKey
             }));
             b.ConfigureTestServices(s =>
             {

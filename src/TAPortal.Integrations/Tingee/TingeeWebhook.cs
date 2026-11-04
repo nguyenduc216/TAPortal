@@ -22,6 +22,12 @@ public interface ITingeeWebhookInbox
     Task SaveAsync(TingeeWebhookEnvelope envelope, CancellationToken cancellationToken);
 }
 
+/// <summary>Health probe of a durable inbox: reaches the database and returns when the last webhook arrived (UTC).</summary>
+public interface ITingeeWebhookInboxProbe
+{
+    Task<DateTime?> LastReceivedAtAsync(CancellationToken cancellationToken);
+}
+
 /// <summary>Placeholder until the inbox table is migrated: never acknowledges, so Tingee keeps retrying.</summary>
 public sealed class UnavailableTingeeWebhookInbox : ITingeeWebhookInbox
 {

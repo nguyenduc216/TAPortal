@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using System.Text;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -56,13 +57,24 @@ public static class TingeeWebhookEndpoints
         var requestId = http.Request.Headers["x-request-id"].ToString();
         var now = clock.GetUtcNow();
 
-        if (!TingeeSignature.TryParseTimestamp(timestamp, out var sentAt)
-            || !TingeeSignature.IsFresh(sentAt, now, TimeSpan.FromMinutes(options.WebhookMaxAgeMinutes))
-            || !TingeeSignature.Verify(timestamp, body, signature, options.SecretKey))
+        // API key (when configured) is always required. The HMAC signature is required unless the API key is configured,
+        // and whenever a signature is sent it must verify and be fresh.
+        string? rejected = null;
+        if (options.HasWebhookApiKey && !SameSecret(http.Request.Headers[options.WebhookApiKeyHeader].ToString(), options.WebhookApiKey!))
+            rejected = "api-key";
+        else if (signature.Length > 0 || !options.HasWebhookApiKey)
         {
-            logger.LogWarning("TINGEE_WEBHOOK_REJECTED kind={Kind} requestId={RequestId}", kind, requestId);
+            if (!TingeeSignature.TryParseTimestamp(timestamp, out var sentAt)
+                || !TingeeSignature.IsFresh(sentAt, now, TimeSpan.FromMinutes(options.WebhookMaxAgeMinutes))
+                || !TingeeSignature.Verify(timestamp, body, signature, options.SecretKey))
+                rejected = "signature";
+        }
+        if (rejected is not null)
+        {
+            logger.LogWarning("TINGEE_WEBHOOK_REJECTED kind={Kind} reason={Reason} requestId={RequestId}", kind, rejected, requestId);
             return Results.Unauthorized();
         }
+        if (timestamp.Length == 0) timestamp = TingeeSignature.Timestamp(now);
 
         try
         {
@@ -76,4 +88,7 @@ public static class TingeeWebhookEndpoints
 
         return Results.Ok(Success);
     }
+
+    private static bool SameSecret(string given, string expected) =>
+        CryptographicOperations.FixedTimeEquals(SHA256.HashData(Encoding.UTF8.GetBytes(given)), SHA256.HashData(Encoding.UTF8.GetBytes(expected)));
 }

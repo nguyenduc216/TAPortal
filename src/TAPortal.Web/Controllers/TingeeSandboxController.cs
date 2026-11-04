@@ -268,11 +268,12 @@ public sealed partial class TingeeSandboxController(
         request.Headers.Add("x-request-timestamp", timestamp);
         request.Headers.Add("x-signature", TingeeSignature.Sign(timestamp, body, options.Value.SecretKey));
         request.Headers.Add("x-request-id", "sandbox-selftest-" + Guid.NewGuid().ToString("N"));
+        if (options.Value.HasWebhookApiKey) request.Headers.Add(options.Value.WebhookApiKeyHeader, options.Value.WebhookApiKey);
         try
         {
             using var response = await httpClients.CreateClient(nameof(TingeeSandboxController)).SendAsync(request);
             if (response.IsSuccessStatusCode) TempData["Success"] = $"Webhook thử đã tới {url} và được lưu (HTTP {(int)response.StatusCode}).";
-            else TempData["Error"] = $"Webhook thử tới {url} bị từ chối: HTTP {(int)response.StatusCode}. 503 = thiếu key hoặc không ghi được bảng TingeeWebhookInbox; 401 = sai chữ ký/giờ.";
+            else TempData["Error"] = $"Webhook thử tới {url} bị từ chối: HTTP {(int)response.StatusCode}. 503 = thiếu key hoặc không ghi được bảng TingeeWebhookInbox; 401 = sai chữ ký/giờ hoặc API key webhook (Tingee__WebhookApiKey) khác với site webhook.";
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
         {

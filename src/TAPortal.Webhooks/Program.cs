@@ -20,7 +20,20 @@ if (!tingee.IsConfigured)
 if (!app.Services.GetRequiredService<ITingeeWebhookInbox>().IsAvailable)
     app.Logger.LogCritical("WEBHOOKS_INBOX_UNAVAILABLE: webhook inbox not configured; Tingee webhooks will be refused with 503 so Tingee retries.");
 
-app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
+// /health: JSON state for the deploy health check and monitoring (503 when keys or the inbox database are missing);
+// /: the same state as a page. Neither shows secrets.
+app.MapGet("/health", async (HttpContext http) =>
+{
+    var report = await WebhookHealth.CheckAsync(http.RequestServices, http.RequestAborted);
+    http.Response.Headers.CacheControl = "no-store";
+    return Results.Json(report, statusCode: report.Healthy ? StatusCodes.Status200OK : StatusCodes.Status503ServiceUnavailable);
+});
+app.MapGet("/", async (HttpContext http) =>
+{
+    var report = await WebhookHealth.CheckAsync(http.RequestServices, http.RequestAborted);
+    http.Response.Headers.CacheControl = "no-store";
+    return Results.Content(WebhookHealth.Page(report), "text/html; charset=utf-8", statusCode: report.Healthy ? StatusCodes.Status200OK : StatusCodes.Status503ServiceUnavailable);
+});
 app.MapTingeeWebhooks();
 
 app.Run();
