@@ -97,6 +97,56 @@ public sealed class SafeAdminTingeeSandboxTests
     }
 
     [Fact]
+    public async Task BankLinkSdkSessionIsOpenedForTheChosenChildMerchant()
+    {
+        using var f = Factory(out var tingee, out _, mode: "Master", linked: [(5555, "TA", "Công ty T.A"), (6666, "KH-B", "Công ty B")]);
+        var c = Client(f);
+        var html = WebUtility.HtmlDecode(await c.GetStringAsync("/tingeesandbox?merchant=5555"));
+        Assert.Contains("data-ta-sandbox-sdk", html);
+        Assert.Contains("action=\"/TingeeSandbox/BankLinkSession\"", html);
+
+        var token = await Token(c);
+        var r = await Post(c, "/tingeesandbox/banklinksession", token, new() { ["merchant"] = "5555", ["kind"] = "bank-config", ["bank"] = "vcb", ["accountType"] = "business-account" });
+        using var json = JsonDocument.Parse(await r.Content.ReadAsStringAsync());
+        Assert.True(json.RootElement.GetProperty("ok").GetBoolean());
+        Assert.Equal("https://bank-link.tingee.vn?token=abc&s=def", json.RootElement.GetProperty("url").GetString());
+        Assert.Equal("https://bank-link.tingee.vn/js/tingee-bank-link.js", json.RootElement.GetProperty("script").GetString());   // production API → production SDK
+        var session = Assert.Single(tingee.Sessions);
+        Assert.Equal(5555L, session.MerchantId);
+        Assert.Equal(TingeeBankLinkTypes.Config, session.Type);
+        Assert.Equal("VCB", session.BankName);
+        Assert.Equal("business-account", session.BankAccountType);
+        Assert.Contains("\"source\":\"ta-sandbox\"", session.Metadata);
+
+        // Anything outside the catalog is dropped; the session type falls back to bank-link.
+        await Post(c, "/tingeesandbox/banklinksession", token, new() { ["merchant"] = "5555", ["kind"] = "x", ["bank"] = "NOPE", ["accountType"] = "x" });
+        Assert.Equal((TingeeBankLinkTypes.Link, (string?)null, (string?)null), (tingee.Sessions[1].Type, tingee.Sessions[1].BankName, tingee.Sessions[1].BankAccountType));
+
+        var foreign = await Post(c, "/tingeesandbox/banklinksession", token, new() { ["merchant"] = "999" });
+        Assert.False(JsonDocument.Parse(await foreign.Content.ReadAsStringAsync()).RootElement.GetProperty("ok").GetBoolean());
+        Assert.Equal(2, tingee.Sessions.Count);
+    }
+
+    [Fact]
+    public async Task BankLinkSdkErrorsAndForeignUrlsAreRefused()
+    {
+        using var f = Factory(out var tingee, out _);
+        var c = Client(f);
+        var token = await Token(c);
+        tingee.SessionUrl = "https://evil.example/tingee.vn";
+        var bad = JsonDocument.Parse(await (await Post(c, "/tingeesandbox/banklinksession", token, new())).Content.ReadAsStringAsync()).RootElement;
+        Assert.False(bad.GetProperty("ok").GetBoolean());
+        Assert.False(bad.TryGetProperty("url", out _));
+
+        tingee.SessionError = new TingeeApiException("1063", "Không có quyền Bank");
+        var failed = JsonDocument.Parse(await (await Post(c, "/tingeesandbox/banklinksession", token, new())).Content.ReadAsStringAsync()).RootElement;
+        Assert.Contains("Tingee trả mã 1063", failed.GetProperty("error").GetString());
+
+        var noToken = await c.PostAsync("/tingeesandbox/banklinksession", new FormUrlEncodedContent(new Dictionary<string, string>()));
+        Assert.Equal(HttpStatusCode.BadRequest, noToken.StatusCode);
+    }
+
+    [Fact]
     public async Task MasterModeWithoutChildMerchantsExplainsHowToCreateOne()
     {
         using var f = Factory(out var tingee, out _, mode: "Master");
@@ -502,6 +552,15 @@ public sealed class SafeAdminTingeeSandboxTests
             return Task.CompletedTask;
         }
         public Task DeleteDynamicQrAsync(long merchantId, string qrAccount, string billId, CancellationToken ct = default) => Task.CompletedTask;
+        public List<TingeeBankLinkSessionRequest> Sessions { get; } = [];
+        public string SessionUrl { get; set; } = "https://bank-link.tingee.vn?token=abc&s=def";
+        public TingeeApiException? SessionError { get; set; }
+        public Task<string> CreateBankLinkSessionAsync(TingeeBankLinkSessionRequest request, CancellationToken ct = default)
+        {
+            Sessions.Add(request);
+            if (SessionError is not null) throw SessionError;
+            return Task.FromResult(SessionUrl);
+        }
     }
 
     private sealed class TestAuthHandler(IOptionsMonitor<AuthenticationSchemeOptions> options, ILoggerFactory logger, UrlEncoder encoder, TestRole role)

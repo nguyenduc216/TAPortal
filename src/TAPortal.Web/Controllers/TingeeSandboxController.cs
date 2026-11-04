@@ -245,6 +245,36 @@ public sealed partial class TingeeSandboxController(
         }
     }
 
+    /// <summary>
+    /// Bank Link SDK trial: opens a create-bank-link-session for the chosen merchant and returns the SDK URL as JSON; the page
+    /// loads Tingee's script and opens the URL (popup or inline). The result comes back by the SDK callbacks and the bank-link
+    /// webhook (section 4). metadata tags the session so the webhook can be matched to this sandbox.
+    /// </summary>
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> BankLinkSession(string? kind, string? bank, string? accountType, long? merchant)
+    {
+        if (Refusal() is string refused) return Json(new { ok = false, error = refused });
+        var (scope, _, scopeError) = await Resolve(merchant);
+        if (scope is null) return Json(new { ok = false, error = scopeError });
+        var type = kind == TingeeBankLinkTypes.Config ? TingeeBankLinkTypes.Config : TingeeBankLinkTypes.Link;
+        var code = TingeeBankCatalog.Banks.FirstOrDefault(b => string.Equals(b.Code, bank, StringComparison.OrdinalIgnoreCase))?.Code;
+        var account = accountType is not null && TingeeAccountTypes.All.Contains(accountType) ? accountType : null;
+        var metadata = JsonSerializer.Serialize(new { source = "ta-sandbox", merchant = scope.MerchantId, by = User.Identity?.Name, at = clock.GetUtcNow().UtcDateTime });
+        string url;
+        try
+        {
+            url = await tingee.CreateBankLinkSessionAsync(new TingeeBankLinkSessionRequest
+            {
+                MerchantId = scope.MerchantId, Type = type, BankName = code, BankAccountType = account, Metadata = metadata
+            });
+        }
+        catch (Exception ex) when (Explain(ex, "create-bank-link-session") is string message) { return Json(new { ok = false, error = $"Tạo phiên SDK không thành công: {message}" }); }
+        if (!IsTingeeSdkUrl(url)) return Json(new { ok = false, error = "Tingee trả về địa chỉ SDK không hợp lệ (không phải https://*.tingee.vn)." });
+        logger.LogInformation("TINGEE_SANDBOX_SDK_SESSION merchant={Merchant} type={Type} bank={Bank} accountType={AccountType}", scope.MerchantId, type, code, account);
+        return Json(new { ok = true, url, script = SdkScript() });
+    }
+
     [HttpGet]
     public async Task<IActionResult> Webhooks()
     {
@@ -357,6 +387,13 @@ public sealed partial class TingeeSandboxController(
     }
 
     private string AbsoluteHook(string kind) => options.Value.WebhookUrl(kind);
+
+    /// <summary>Tingee's Bank Link web SDK: the production script for the production API, otherwise UAT.</summary>
+    private string SdkScript() => Config().Production ? "https://bank-link.tingee.vn/js/tingee-bank-link.js" : "https://uat-bank-link.tingee.vn/js/tingee-bank-link.js";
+
+    private static bool IsTingeeSdkUrl(string? url) =>
+        Uri.TryCreate(url, UriKind.Absolute, out var u) && u.Scheme == Uri.UriSchemeHttps
+        && (u.Host.Equals("tingee.vn", StringComparison.OrdinalIgnoreCase) || u.Host.EndsWith(".tingee.vn", StringComparison.OrdinalIgnoreCase));
 
     /// <summary>Message for expected Tingee/network failures; null lets anything else propagate as a real error.</summary>
     private string? Explain(Exception ex, string operation) =>

@@ -670,5 +670,6 @@ public sealed class SafeCustomerPaymentsTests
         }
         public Task<TingeeQrStatus> GetDynamicQrStatusAsync(long merchantId, string qrAccount, string billId, CancellationToken ct = default) => Task.FromResult(Status);
         public Task DeleteDynamicQrAsync(long merchantId, string qrAccount, string billId, CancellationToken ct = default) { DeletedQrs.Add((qrAccount, billId)); return Task.CompletedTask; }
+        public Task<string> CreateBankLinkSessionAsync(TingeeBankLinkSessionRequest request, CancellationToken ct = default) => throw new NotSupportedException();
     }
 }

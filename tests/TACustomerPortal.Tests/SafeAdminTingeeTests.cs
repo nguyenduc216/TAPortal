@@ -233,6 +233,7 @@ public sealed class SafeAdminTingeeTests
         public Task<TingeeStaticQr> GenerateStaticQrAsync(TingeeStaticQrRequest request, CancellationToken ct = default) => throw new NotSupportedException();
         public Task<TingeeQrStatus> GetDynamicQrStatusAsync(long merchantId, string qrAccount, string billId, CancellationToken ct = default) => throw new NotSupportedException();
         public Task DeleteDynamicQrAsync(long merchantId, string qrAccount, string billId, CancellationToken ct = default) => throw new NotSupportedException();
+        public Task<string> CreateBankLinkSessionAsync(TingeeBankLinkSessionRequest request, CancellationToken ct = default) => throw new NotSupportedException();
     }
 
     private sealed class TestAuthHandler(IOptionsMonitor<AuthenticationSchemeOptions> options, ILoggerFactory logger, UrlEncoder encoder)

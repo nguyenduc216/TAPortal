@@ -90,6 +90,25 @@ public sealed record TingeePage<T>
     [JsonPropertyName("items")] public List<T> Items { get; init; } = [];
 }
 
+/// <summary>create-bank-link-session: Tingee's own bank linking UI (Bank Link SDK). Bank fields take bank codes, not BINs.</summary>
+public sealed record TingeeBankLinkSessionRequest
+{
+    [JsonPropertyName("merchantId")] public long? MerchantId { get; init; }
+    [JsonPropertyName("type")] public string Type { get; init; } = TingeeBankLinkTypes.Link;
+    [JsonPropertyName("shopId")] public long? ShopId { get; init; }
+    [JsonPropertyName("allowedBanks")] public IReadOnlyList<string>? AllowedBanks { get; init; }
+    [JsonPropertyName("bankName")] public string? BankName { get; init; }
+    [JsonPropertyName("bankAccountType")] public string? BankAccountType { get; init; }
+    [JsonPropertyName("redirectUrl")] public string? RedirectUrl { get; init; }
+    [JsonPropertyName("metadata")] public string? Metadata { get; init; }
+}
+
+public static class TingeeBankLinkTypes
+{
+    public const string Link = "bank-link";
+    public const string Config = "bank-config";
+}
+
 public sealed record TingeeDynamicQrRequest
 {
     [JsonPropertyName("merchantId")] public long? MerchantId { get; init; }
@@ -169,6 +188,8 @@ public interface ITingeeApi
     Task<TingeeStaticQr> GenerateStaticQrAsync(TingeeStaticQrRequest request, CancellationToken ct = default);
     Task<TingeeQrStatus> GetDynamicQrStatusAsync(long merchantId, string qrAccount, string billId, CancellationToken ct = default);
     Task DeleteDynamicQrAsync(long merchantId, string qrAccount, string billId, CancellationToken ct = default);
+    /// <summary>Opens a Bank Link SDK session; returns the SDK URL (with its token) for TingeeBankLink.Url.Open.</summary>
+    Task<string> CreateBankLinkSessionAsync(TingeeBankLinkSessionRequest request, CancellationToken ct = default);
 }
 
 public sealed class TingeeApi(TingeeClient client, Microsoft.Extensions.Options.IOptions<TingeeOptions> options) : ITingeeApi
@@ -213,6 +234,13 @@ public sealed class TingeeApi(TingeeClient client, Microsoft.Extensions.Options.
 
     public async Task DeleteDynamicQrAsync(long merchantId, string qrAccount, string billId, CancellationToken ct = default) =>
         Check(await client.PostAsync<object>("/v1/delete-dynamic-qr", new { merchantId = Mid(merchantId), qrAccount, billId }, ct));
+
+    public async Task<string> CreateBankLinkSessionAsync(TingeeBankLinkSessionRequest request, CancellationToken ct = default)
+    {
+        var response = await client.PostAsync<string>("/v1/create-bank-link-session", request with { MerchantId = Mid(request.MerchantId) }, ct);
+        Check(response);
+        return string.IsNullOrWhiteSpace(response.Data) ? throw new TingeeApiException("EMPTY", "Tingee returned no SDK URL.") { LogCode = response.LogCode } : response.Data;
+    }
 
     private static T Data<T>(TingeeResponse<T> response, bool allowEmpty = false) where T : class, new()
     {

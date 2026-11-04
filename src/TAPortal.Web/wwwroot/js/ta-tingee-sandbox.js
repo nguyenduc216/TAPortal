@@ -128,6 +128,77 @@
         }
     };
 
+    // Bank Link SDK trial (section 5): the server opens a create-bank-link-session and returns the SDK URL and Tingee's
+    // script; the script is loaded once, then the session opens as a popup or inside the page. Every callback is listed.
+    // Capture phase: runs before the shell's soft-navigation submit handler, which would otherwise post the form.
+    var sdkScripts = {};
+    var loadSdk = function (src) {
+        if (!sdkScripts[src]) {
+            sdkScripts[src] = new Promise(function (resolve, reject) {
+                var tag = document.createElement('script');
+                tag.src = src; tag.async = true;
+                tag.onload = function () { window.TingeeBankLink ? resolve(window.TingeeBankLink) : reject(new Error('không thấy TingeeBankLink')); };
+                tag.onerror = function () { delete sdkScripts[src]; reject(new Error('không tải được ' + src)); };
+                document.head.appendChild(tag);
+            });
+        }
+        return sdkScripts[src];
+    };
+
+    document.addEventListener('submit', function (event) {
+        var form = event.target.closest && event.target.closest('[data-ta-banklink-form]');
+        if (!form) return;
+        event.preventDefault();
+        var card = form.closest('[data-ta-sandbox-sdk]');
+        var status = card.querySelector('[data-ta-banklink-status]');
+        var statusText = card.querySelector('[data-ta-banklink-status-text]');
+        var log = card.querySelector('[data-ta-banklink-log]');
+        var inline = card.querySelector('[data-ta-banklink-inline]');
+        var button = form.querySelector('[data-ta-banklink-open]');
+        var mode = form.querySelector('[data-ta-banklink-mode]').value;
+        var say = function (tone, text) {
+            status.hidden = false;
+            status.className = 'ta-alert ta-alert--' + tone + ' mt-3 mb-0';
+            statusText.textContent = text;
+        };
+        var note = function (name, data) {
+            log.hidden = false;
+            var item = document.createElement('li');
+            var time = new Date().toLocaleTimeString('vi-VN');
+            item.textContent = time + ' ' + name + (data === undefined ? '' : ': ' + JSON.stringify(data));
+            log.appendChild(item);
+        };
+        button.disabled = true;
+        say('info', 'Đang tạo phiên SDK…');
+        fetch(form.action, { method: 'POST', body: new FormData(form), credentials: 'same-origin', headers: { 'Accept': 'application/json' } })
+            .then(function (r) { return r.json(); })
+            .then(function (s) {
+                if (!s.ok) throw new Error(s.error);
+                return loadSdk(s.script).then(function (sdk) {
+                    sdk.Setup({
+                        size: 'medium',
+                        theme: { primaryColor: '#206bc4' },
+                        onSuccess: function (d) { note('onSuccess', d); say('success', 'Liên kết thành công' + (d && d.vaAccountNumber ? ': tài khoản nhận ' + d.vaAccountNumber : '') + '. Tải lại trang để thấy ở mục 2; webhook bank-link sẽ hiện ở mục 4.'); },
+                        onFailed: function (d) { note('onFailed', d); say('danger', 'Liên kết không thành công: ' + ((d && (d.errorMessage || d.errorCode)) || 'không rõ lý do')); },
+                        onCancelled: function (d) { note('onCancelled', d); say('warning', 'Đã đóng SDK, chưa liên kết.'); },
+                        onError: function (d) { note('onError', d); say('danger', 'SDK báo lỗi hệ thống.'); },
+                        onClose: function () { note('onClose'); }
+                    });
+                    note('Mở phiên', { mode: mode });
+                    if (mode === 'inline') {
+                        inline.hidden = false;
+                        inline.innerHTML = '';
+                        sdk.Url.Open(s.url, { containerId: inline.id });
+                    } else {
+                        sdk.Url.Open(s.url);
+                    }
+                    say('info', 'Đã mở SDK. Thao tác trong màn hình của Tingee.');
+                });
+            })
+            .catch(function (e) { say('danger', e.message || 'Không mở được SDK.'); })
+            .then(function () { button.disabled = false; });
+    }, true);
+
     init();
     document.addEventListener('ta:load', init);
     document.addEventListener('ta:before-swap', stopAll);
