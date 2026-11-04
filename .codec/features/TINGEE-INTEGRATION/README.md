@@ -58,3 +58,4 @@ Database sẵn sàng cho phần thanh toán (verify PASS). Tiếp theo: operator
 | `TINGEE-INTEGRATION-CHG-20261104T115022Z-3236BF` | 2026-11-04 | Customer Portal: logo ngân hàng trên trang chọn ngân hàng liên kết | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |
 | `TINGEE-INTEGRATION-CHG-20261104T120927Z-868C7E` | 2026-11-04 | Customer Portal: chọn ngân hàng chỉ bằng logo; quy tắc hover cam nhạt cho ô trắng bấm được | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |
 | `TINGEE-INTEGRATION-CHG-20261104T124547Z-45D0B5` | 2026-11-04 | E-invoice Sandbox in Admin: provider accounts, templates, draft/issue, download and email via Tingee e-invoice API | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |
+| `TINGEE-INTEGRATION-CHG-20261104T154552Z-A2ACAA` | 2026-11-04 | Tingee Sandbox: thử Bank Link SDK (create-bank-link-session, popup/nhúng, callback) | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |
