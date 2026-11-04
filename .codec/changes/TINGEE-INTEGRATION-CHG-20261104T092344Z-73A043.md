@@ -31,7 +31,7 @@ Lần 2 (operator, ảnh "còn 15:00" đứng yên): "phải đếm giây lùi r
 
 ## Publish
 - portal (TAPortal.Web → TA.Portal, H:\WEBDEPLOYED\T.A\portal_released): DEPLOYED 2026-11-04 16:26 (UTC+7), commit e7a46dc, artifact SHA256 525ef8f755ab68e8d437e82fec1254772687d238738c7027363eb94dc6bab1b1, package 9159EF8073B3D6297E4C033C38AF9CF81024D5A19F80ACF94FEB5CA20C00532F; backup C:\TADeploy\backups\portal-20261104-162611; health HTTP 200.
-- portal lần 2 (khoá QR khi hết hạn): DEPLOYED 2026-11-04 16:33 (UTC+7), commit 5138179, artifact SHA256 ece5a424fe016d079c275734a7c82ea2cd3738e653ff05312341ee7605ff8e44, package A762A843FBE81464980BA792D6004B581471BDC0ECC6526B162D925ECB617C00; backup C:\TADeployackups\portal-20261104-163349; health HTTP 200.
+- portal lần 2 (khoá QR khi hết hạn): DEPLOYED 2026-11-04 16:33 (UTC+7), commit 5138179, artifact SHA256 ece5a424fe016d079c275734a7c82ea2cd3738e653ff05312341ee7605ff8e44, package A762A843FBE81464980BA792D6004B581471BDC0ECC6526B162D925ECB617C00; backup C:\TADeploy\backups\portal-20261104-163349; health HTTP 200.
 
 ## Git
 - Branch: feature/customer-portal-mvp01
