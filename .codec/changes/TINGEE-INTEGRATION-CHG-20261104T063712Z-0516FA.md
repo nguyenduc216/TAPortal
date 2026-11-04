@@ -4,7 +4,7 @@
 - Change ID: `TINGEE-INTEGRATION-CHG-20261104T063712Z-0516FA`
 - Created UTC: 2026-11-04T06:37:12.278468+00:00
 - Tiêu đề: Sandbox: QR card beside sections 1-2; short webhook addresses with copy buttons
-- Trạng thái: IMPLEMENTED / TESTS_PASS
+- Trạng thái: DEPLOYED (portal, invoice)
 
 ## Yêu cầu và phạm vi
 Operator (2026-11-04): đưa mục 3 (Tạo QR thử) lên cùng hàng với mục 1 và 2; các URL webhook khai báo gọn lại (cắt ngắn, thêm nút copy; bấm copy thì icon đổi sang xanh lá và hiện tooltip "Đã copy").
@@ -27,15 +27,13 @@ Operator (2026-11-04): đưa mục 3 (Tạo QR thử) lên cùng hàng với m�
 - Build Release 0 lỗi; Safe tests 351/351 (working tree). Giao diện chưa xem bằng trình duyệt trước deploy.
 
 ## Publish
-- Project:
-- Destination (chỉ từ config):
-- Trạng thái: NOT_PUBLISHED
-- Artifact SHA256:
-- Smoke test:
+- Trạng thái: DEPLOYED qua `deploy/windows/Deploy-TARemote.ps1` (audit PASS), source a75859b.
+- portal: artifact a8653aaaf8a27af78459dc5a7968faccf5ebd9ae4cd4dfb80f5b4bfdae1e904b, package E8F8FCE7BDF40F3DB143D970D349893574D46F652067479D16F6885FEB5C81CE, backup C:\TADeploy\backups\portal-20261104-133943, health 200.
+- invoice: artifact 53decc6b8230aebf94785a0e91dec1d3a46431f25130ead20e11467a60678411, package E7084BC8F2865AFAF285333DBC60E7226CD1AF7D6E06AB02DE43662022B7B199, backup C:\TADeploy\backups\invoice-20261104-133952, health 200.
 
 ## Git
-- Branch:
-- Commit SHA:
+- Branch: feature/customer-portal-mvp01
+- Commit SHA: a75859b (source)
 - PR:
 - Merge: PENDING_APPROVAL
 - Merge SHA:
