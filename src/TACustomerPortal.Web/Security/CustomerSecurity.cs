@@ -8,6 +8,9 @@ using TACustomerPortal.Web.Services;
 namespace TACustomerPortal.Web.Security;
 public static class CustomerIdentity
 {
+    /// <summary>Set after an administrator reset the password: until it is changed only the change-password page is served.</summary>
+    public const string MustChangePasswordClaim = "must_change_password";
+
     public static string Stamp(string hash) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(hash)));
     public static ClaimsPrincipal Create(CustomerUser user, Guid? customer = null)
     {
@@ -18,6 +21,8 @@ public static class CustomerIdentity
             new("display_name", user.DisplayName),
             new("password_stamp", Stamp(user.PasswordHash))
         };
+        if (user.MustChangePassword)
+            claims.Add(new(MustChangePasswordClaim, "1"));
         if (customer.HasValue)
             claims.Add(new("customer_id", customer.Value.ToString()));
         return new(new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme));
@@ -53,6 +58,23 @@ public sealed class CustomerCookieEvents(ICustomerStore store) : CookieAuthentic
         context.RejectPrincipal();
         await context.HttpContext.SignOutAsync();
     }
+}
+
+public static class MustChangePasswordGate
+{
+    private static readonly string[] Allowed = ["/account/change-password", "/account/logout", "/account/error", "/account/access-denied", "/account/login"];
+
+    /// <summary>A signed-in user whose password was reset by T.A is sent to "Đổi mật khẩu" for every other page.</summary>
+    public static IApplicationBuilder UseMustChangePasswordGate(this IApplicationBuilder app) => app.Use(async (context, next) =>
+    {
+        if (context.User.HasClaim(CustomerIdentity.MustChangePasswordClaim, "1")
+            && !Allowed.Any(p => context.Request.Path.StartsWithSegments(p, StringComparison.OrdinalIgnoreCase)))
+        {
+            context.Response.Redirect(context.Request.PathBase + "/account/change-password");
+            return;
+        }
+        await next();
+    });
 }
 
 public interface ICurrentCustomerContext

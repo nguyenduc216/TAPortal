@@ -192,6 +192,29 @@ public sealed class SafePortalTests : IDisposable
         Assert.Equal(HttpStatusCode.Redirect, (await Login(password: "Changed-only!123")).StatusCode);
     }
 
+    [Fact]
+    public async Task ResetPasswordForcesAChangeBeforeAnythingElse()
+    {
+        store.User = store.User with { MustChangePassword = true };
+        var login = await Login();
+        Assert.Equal(HttpStatusCode.Redirect, login.StatusCode);
+        Assert.EndsWith("/account/change-password", login.Headers.Location!.OriginalString);
+        foreach (var path in new[] { "/", "/profile/company", "/account/select-customer" })
+        {
+            var blocked = await client.GetAsync(path);
+            Assert.Equal(HttpStatusCode.Redirect, blocked.StatusCode);
+            Assert.EndsWith("/account/change-password", blocked.Headers.Location!.OriginalString);
+        }
+        var page = WebUtility.HtmlDecode(await client.GetStringAsync("/account/change-password"));
+        Assert.Contains("data-cp-must-change", page);
+
+        var changed = await Post("/account/change-password", new() { ["CurrentPassword"] = Password, ["NewPassword"] = "Changed-only!123", ["ConfirmPassword"] = "Changed-only!123" }, "/account/change-password");
+        LoginRedirect(changed);
+        Assert.False(store.User.MustChangePassword);
+        Assert.Equal("/", (await Login(password: "Changed-only!123")).Headers.Location!.OriginalString);   // normal sign-in again
+        Assert.Equal(HttpStatusCode.OK, (await client.GetAsync("/")).StatusCode);
+    }
+
     [Theory]
     [InlineData("wrong-current")]
     [InlineData("weak")]
@@ -313,7 +336,7 @@ public sealed class SafePortalTests : IDisposable
         public Task<bool> ChangePassword(Guid id, string oldHash, string newHash)
         {
             if (RejectPasswordWrite || !UserActive || id != User.Id || User.PasswordHash != oldHash) return Task.FromResult(false);
-            User = User with { PasswordHash = newHash }; PasswordWrites++; return Task.FromResult(true);
+            User = User with { PasswordHash = newHash, MustChangePassword = false }; PasswordWrites++; return Task.FromResult(true);
         }
         public Task TouchLogin(Guid id) { LoginTouches++; return Task.CompletedTask; }
     }

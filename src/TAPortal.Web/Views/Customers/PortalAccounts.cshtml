@@ -13,6 +13,15 @@
     var vi = System.Globalization.CultureInfo.GetCultureInfo("vi-VN");
 }
 <partial name="_Workspace" model="ws" />
+@if (TempData["TempPassword"] is string temporary && TempData["TempPasswordUser"] is string resetUser)
+{
+    <div class="ta-alert ta-alert--warning mb-3" role="status" data-ta-temp-password>@UiIcon.Render("key")<div class="ta-alert__body">
+        <strong>Đã đặt lại mật khẩu cho @resetUser.</strong> Mật khẩu tạm (chỉ hiện một lần, hãy gửi riêng cho khách hàng):
+        <div class="d-flex align-items-center gap-2 my-2"><code class="fs-3 px-2 py-1" id="tempPassword" style="user-select:all">@temporary</code>
+            <button type="button" class="btn btn-sm" onclick="navigator.clipboard.writeText(document.getElementById('tempPassword').textContent).then(()=>{this.lastElementChild.textContent='Đã chép'})">@UiIcon.Render("checks")<span>Chép</span></button></div>
+        Khách hàng đăng nhập Customer Portal bằng mật khẩu này và phải đổi mật khẩu mới ngay lần đăng nhập đầu. Các phiên đăng nhập cũ của tài khoản đã kết thúc.
+    </div></div>
+}
 <section class="card ta-table-card" aria-label="Tài khoản Customer Portal của @c.Code">
     <div class="ta-table-toolbar">
         <div class="ta-search">@UiIcon.Render("search")<input class="form-control" type="search" aria-label="Tìm tài khoản" placeholder="Tìm theo họ tên, tên đăng nhập, email..." oninput="taFilterRows(this.value,'portalAccountsTable')" /></div>
@@ -49,12 +58,16 @@
                         </td>
                         <td data-label="Quyền truy cập"><span class="ta-badge @(effect.Effective ? "ta-badge--success" : r.Active ? "ta-badge--warning" : "ta-badge--neutral")">@effect.Label</span>@if (effect.Reason is not null) {<div class="small mt-1" style="color:var(--ta-danger-text)">Lý do: @effect.Reason</div>}</td>
                         <td class="ta-nowrap" data-label="Đăng nhập gần nhất">@(r.LastLogin?.ToString("dd/MM/yyyy HH:mm") ?? "—")</td>
-                        <td class="ta-col-actions">
+                        <td class="ta-col-actions"><div class="d-flex gap-1 justify-content-end flex-wrap">
+                            <form asp-action="ResetPortalPassword" asp-route-id="@c.Id" method="post" onsubmit="return confirm('Đặt lại mật khẩu cho tài khoản này? Mật khẩu hiện tại sẽ không dùng được nữa.')">
+                                <input type="hidden" name="userId" value="@r.UserId" />
+                                <button type="submit" class="btn btn-sm" title="Tạo mật khẩu tạm; khách hàng phải đổi khi đăng nhập" data-ta-reset-password>@UiIcon.Render("key")<span>Đặt lại mật khẩu</span></button>
+                            </form>
                             <form asp-action="SetPortalAccountActive" asp-route-id="@c.Id" method="post">
                                 <input type="hidden" name="userId" value="@r.UserId" /><input type="hidden" name="active" value="@((!r.Active).ToString())" />
                                 <button type="submit" class="btn btn-sm @(r.Active ? "btn-outline-danger" : "btn-outline-primary")" disabled="@(!r.Active && !ws.Operational)">@UiIcon.Render(r.Active ? "lock" : "lock-open")<span>@(r.Active ? "Thu hồi" : "Kích hoạt lại")</span></button>
                             </form>
-                        </td>
+                        </div></td>
                     </tr>
                 }
                 </tbody>

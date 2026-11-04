@@ -115,6 +115,35 @@ ELSE INSERT dbo.CustomerPortalMemberships(Id,UserId,CustomerId,PortalRole,IsActi
         await tx.CommitAsync();
     }
 
+    /// <summary>
+    /// Sets a new password hash and MustChangePassword=1 (migration 015) for a member of this customer. TA staff accounts
+    /// (any dbo.UserRoles row) are never reset here. Audited in the same transaction without password data.
+    /// Returns false when the user is not a non-staff member of the customer.
+    /// </summary>
+    public async Task<bool> ResetPassword(Guid userId, Guid customerId, string hash, Guid actor)
+    {
+        await using var cn = Connection();
+        await cn.OpenAsync();
+        await using var tx = (SqlTransaction)await cn.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
+        await RequireSystemAdmin(cn, tx, actor);
+        await using var cmd = new SqlCommand("""
+UPDATE u SET PasswordHash=@hash,MustChangePassword=1,UpdatedAt=SYSUTCDATETIME(),UpdatedBy=@actor
+FROM dbo.Users u
+WHERE u.Id=@u AND u.IsDeleted=0
+AND EXISTS(SELECT 1 FROM dbo.CustomerPortalMemberships m WHERE m.UserId=u.Id AND m.CustomerId=@c)
+AND NOT EXISTS(SELECT 1 FROM dbo.UserRoles ur WHERE ur.UserId=u.Id)
+""", cn, tx);
+        cmd.Parameters.AddWithValue("@hash", hash);
+        cmd.Parameters.AddWithValue("@actor", actor);
+        cmd.Parameters.AddWithValue("@u", userId);
+        cmd.Parameters.AddWithValue("@c", customerId);
+        if (await cmd.ExecuteNonQueryAsync() != 1) return false;
+        await AuditSql.WriteOrThrowAsync(cn, tx, AuditPolicy.RequireDurable(configuration), actor, "CUSTOMER_PORTAL_PASSWORD_RESET", "dbo.Users", $"{userId}:{customerId}",
+            "{}", AuditSql.Json(("mustChangePassword", true)), null);
+        await tx.CommitAsync();
+        return true;
+    }
+
     public async Task SetActive(Guid userId, Guid customerId, bool active, Guid actor)
     {
         await using var cn = Connection();

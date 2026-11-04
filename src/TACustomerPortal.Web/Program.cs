@@ -83,6 +83,7 @@ app.UseRouting();
 app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseMustChangePasswordGate();
 app.MapControllerRoute("default", "{controller=Dashboard}/{action=Index}/{id?}");
 app.Run();
 public partial class Program

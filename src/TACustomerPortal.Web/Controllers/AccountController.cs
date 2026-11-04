@@ -72,6 +72,8 @@ public sealed class AccountController(ICustomerStore store, PasswordService pass
             // The "last sign-in" timestamp is informational: failing to write it must not undo a successful sign-in.
             logger.LogWarning(ex, "CUSTOMER_LOGIN_TOUCH_FAILED user {UserId} sql error {SqlNumber}", user.Id, (ex as SqlException)?.Number);
         }
+        if (user.MustChangePassword)
+            return RedirectToAction(nameof(ChangePassword));
         // Path-base aware (the portal may run under an IIS virtual directory).
         return memberships.Count == 1 ? LocalRedirect(Url.Content("~/")) : RedirectToAction(nameof(SelectCustomer));
     }

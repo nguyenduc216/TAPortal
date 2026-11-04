@@ -386,6 +386,39 @@ public sealed partial class CustomersController(PortalDb db, ICustomerAdminStore
         return RedirectToAction(nameof(PortalAccounts), new { id });
     }
 
+    /// <summary>
+    /// Resets a Customer Portal password to a random temporary one shown once to the administrator, who hands it to the
+    /// customer; the customer must change it at the next sign-in. Existing sessions end (the password stamp changes).
+    /// </summary>
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ResetPortalPassword(Guid id, [FromForm] Guid userId)
+    {
+        if (await customers.GetAsync(id) is null) return NotFound();
+        if (ActorOrNull() is not Guid actor) return Forbid();
+        try
+        {
+            var member = (await portal.ListAsync(actor, id)).FirstOrDefault(r => r.UserId == userId && r.CustomerId == id);
+            if (member is null || !(await portal.CandidateUsersAsync()).Any(u => u.Id == userId))
+            {
+                TempData["Error"] = member is null ? "Tài khoản này không có quyền truy cập khách hàng hiện tại." : "Không đặt lại mật khẩu tài khoản nhân viên TA ở đây; dùng màn hình Người dùng.";
+                return RedirectToAction(nameof(PortalAccounts), new { id });
+            }
+            var temporary = PasswordPolicy.GenerateTemporary();
+            if (!await portal.ResetPasswordAsync(userId, id, passwords.Hash(temporary), actor))
+            {
+                TempData["Error"] = "Không đặt lại được mật khẩu: tài khoản không còn thuộc khách hàng này hoặc là tài khoản nhân viên TA.";
+                return RedirectToAction(nameof(PortalAccounts), new { id });
+            }
+            logger.LogInformation("CUSTOMER_PORTAL_PASSWORD_RESET customer={CustomerId} user={UserId} actor={Actor}", id, userId, actor);
+            TempData["TempPasswordUser"] = member.Username;
+            TempData["TempPassword"] = temporary;
+        }
+        catch (UnauthorizedAccessException) { return Forbid(); }
+        catch (AuditUnavailableException) { TempData["Error"] = AuditUnavailableMessage; }
+        return RedirectToAction(nameof(PortalAccounts), new { id });
+    }
+
     private const string AuditUnavailableMessage = "Không thể ghi nhật ký audit (dbo.AuditLogs) nên thay đổi đã bị hủy. Liên hệ quản trị cơ sở dữ liệu.";
 
     internal const string StaffAccountMessage = "Tài khoản nhân viên TA (có vai trò TAPortal) không được cấp quyền truy cập Customer Portal.";

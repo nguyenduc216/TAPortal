@@ -157,6 +157,50 @@ public sealed class SafeCustomerWorkspaceTests
     }
 
     [Fact]
+    public async Task PasswordResetShowsATemporaryPasswordOnceAndOnlyForThisCustomersNonStaffMembers()
+    {
+        using var f = Factory("SYS_ADMIN", out var portal);
+        var c = Client(f);
+        var token = await Token(c, $"/customers/portalaccounts/{A}");
+        var reset = await Post(c, $"/customers/resetportalpassword/{A}", token, new() { ["userId"] = UserA.ToString() });
+        Assert.Equal($"/Customers/PortalAccounts/{A}", reset.Headers.Location!.OriginalString);
+        var (user, customer, hash) = Assert.Single(portal.Resets);
+        Assert.Equal((UserA, A), (user, customer));
+        Assert.StartsWith("PBKDF2$", hash);
+
+        var page = WebUtility.HtmlDecode(await c.GetStringAsync($"/customers/portalaccounts/{A}"));
+        Assert.Contains("data-ta-temp-password", page);
+        Assert.Contains("Đã đặt lại mật khẩu cho user.a", page);
+        var temporary = System.Text.RegularExpressions.Regex.Match(page, "id=\"tempPassword\"[^>]*>([^<]+)<").Groups[1].Value;
+        Assert.True(new PasswordService().Verify(temporary, hash));
+        Assert.True(PasswordPolicy.Validate(temporary).IsValid);
+        Assert.DoesNotContain("data-ta-temp-password", WebUtility.HtmlDecode(await c.GetStringAsync($"/customers/portalaccounts/{A}")));   // shown once
+
+        await Post(c, $"/customers/resetportalpassword/{A}", token, new() { ["userId"] = UserB.ToString() });       // member of customer B only
+        await Post(c, $"/customers/resetportalpassword/{A}", token, new() { ["userId"] = RevokedUser.ToString() }); // not a portal candidate (staff)
+        Assert.Single(portal.Resets);
+    }
+
+    [Theory]
+    [InlineData("VIEWER")]
+    [InlineData("OWNER")]
+    public async Task OnlySystemAdminsCanResetPortalPasswords(string role)
+    {
+        using var f = Factory(role, out var portal);
+        var r = await Client(f).PostAsync($"/customers/resetportalpassword/{A}", new FormUrlEncodedContent(new Dictionary<string, string> { ["userId"] = UserA.ToString() }));
+        Assert.NotEqual(HttpStatusCode.Redirect, r.StatusCode);
+        Assert.Empty(portal.Resets);
+    }
+
+    [Fact]
+    public void TemporaryPasswordsSatisfyThePolicyAndDiffer()
+    {
+        var all = Enumerable.Range(0, 50).Select(_ => PasswordPolicy.GenerateTemporary()).ToList();
+        Assert.All(all, p => Assert.True(PasswordPolicy.Validate(p).IsValid && p.Length == 12));
+        Assert.Equal(50, all.Distinct().Count());
+    }
+
+    [Fact]
     public async Task AssignCreateAndRevokeAreScopedToTheRouteCustomerAndReturnToItsTab()
     {
         using var f = Factory("SYS_ADMIN", out var portal);
@@ -373,6 +417,8 @@ public sealed class SafeCustomerWorkspaceTests
         });
         public Task SaveAsync(MembershipInput input, Guid actor, string? passwordHash) { Saved.Add((input, passwordHash)); return Task.CompletedTask; }
         public Task SetActiveAsync(Guid userId, Guid customerId, bool active, Guid actor) { Toggled.Add((userId, customerId, active)); return Task.CompletedTask; }
+        public List<(Guid User, Guid Customer, string Hash)> Resets { get; } = [];
+        public Task<bool> ResetPasswordAsync(Guid userId, Guid customerId, string passwordHash, Guid actor) { Resets.Add((userId, customerId, passwordHash)); return Task.FromResult(true); }
         // Candidates exclude TA staff (StaffUser holds a TAPortal role in the real store).
         public Task<List<AdminModels.PortalUser>> CandidateUsersAsync() => Task.FromResult(new List<AdminModels.PortalUser>
         {

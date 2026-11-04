@@ -30,3 +30,4 @@ Local Customer Portal artifact PUBLISHED to the conventional target. Release bui
 
 ## Checkpoint 4 - current status
 CHECKPOINT_4A: PASS (existing artifact integrity, isolated localhost startup and 10 anonymous GET checks). CHECKPOINT_4B: PENDING_OPERATOR; UAT-01 through UAT-09 NOT_RUN. CUSTOMER_PORTAL_MVP01: NOT_YET_ACCEPTED. Runtime process stopped, artifact unchanged, no republish or SQL access; database NOT_VERIFIED for this checkpoint. No application source changes. See latest report and docs/customer-portal-checkpoint4-uat.md. Prior entries remain historical.
+| `CUSTOMER-PORTAL-FOUNDATION-CHG-20261104T052602Z-922EA0` | 2026-11-04 | Admin resets a Customer Portal password; customer must change it at next sign-in | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |

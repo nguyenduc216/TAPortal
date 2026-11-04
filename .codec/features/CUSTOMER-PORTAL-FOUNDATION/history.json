@@ -233,5 +233,15 @@
       "HTTPS/browser/CDN and authenticated cache verification",
       "Operator acceptance decision"
     ]
+  },
+  {
+    "change_id": "CUSTOMER-PORTAL-FOUNDATION-CHG-20261104T052602Z-922EA0",
+    "created_at": "2026-11-04T05:26:02.611061+00:00",
+    "title": "Admin resets a Customer Portal password; customer must change it at next sign-in",
+    "status": "IMPLEMENTED / TESTS_PASS",
+    "commit_sha": null,
+    "migration_status": "015 DRY_RUN_PASS 2026-11-04T05:29Z (real run pending)",
+    "publish_status": "DEPLOY_PENDING",
+    "merge_status": "PENDING_APPROVAL"
   }
 ]

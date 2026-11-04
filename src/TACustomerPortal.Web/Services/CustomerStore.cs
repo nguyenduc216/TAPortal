@@ -1,7 +1,7 @@
 using Microsoft.Data.SqlClient;
 
 namespace TACustomerPortal.Web.Services;
-public sealed record CustomerUser(Guid Id, string Username, string DisplayName, string? Email, string PasswordHash);
+public sealed record CustomerUser(Guid Id, string Username, string DisplayName, string? Email, string PasswordHash, bool MustChangePassword = false);
 public sealed record CustomerMembership(Guid CustomerId, string Code, string Name, string? TaxCode, string? Email, string? Phone, string? Address, string Role);
 public interface ICustomerStore
 {
@@ -19,10 +19,10 @@ public sealed class CustomerStore(IConfiguration configuration) : ICustomerStore
     {
         await using var cn = Connection();
         await cn.OpenAsync();
-        await using var cmd = new SqlCommand("SELECT Id,Username,DisplayName,Email,PasswordHash FROM dbo.Users WHERE " + predicate + " AND IsDeleted=0 AND IsActive=1 AND Status='ACTIVE'", cn);
+        await using var cmd = new SqlCommand("SELECT Id,Username,DisplayName,Email,PasswordHash,MustChangePassword FROM dbo.Users WHERE " + predicate + " AND IsDeleted=0 AND IsActive=1 AND Status='ACTIVE'", cn);
         cmd.Parameters.AddWithValue("@value", value);
         await using var r = await cmd.ExecuteReaderAsync();
-        return await r.ReadAsync() ? new(r.GetGuid(0), r.GetString(1), r.GetString(2), r.IsDBNull(3) ? null : r.GetString(3), r.IsDBNull(4) ? "" : r.GetString(4)) : null;
+        return await r.ReadAsync() ? new(r.GetGuid(0), r.GetString(1), r.GetString(2), r.IsDBNull(3) ? null : r.GetString(3), r.IsDBNull(4) ? "" : r.GetString(4), r.GetBoolean(5)) : null;
     }
 
     public Task<CustomerUser?> FindUser(string username) => ReadUser("NormalizedUsername=@value", username.Trim().ToUpperInvariant());
@@ -50,7 +50,7 @@ AND u.IsActive=1 AND u.IsDeleted=0 AND u.Status='ACTIVE' ORDER BY c.Name
     {
         await using var cn = Connection();
         await cn.OpenAsync();
-        await using var cmd = new SqlCommand("UPDATE dbo.Users SET PasswordHash=@new,UpdatedAt=SYSUTCDATETIME(),UpdatedBy=@id WHERE Id=@id AND PasswordHash=@old AND IsActive=1 AND IsDeleted=0 AND Status='ACTIVE'", cn);
+        await using var cmd = new SqlCommand("UPDATE dbo.Users SET PasswordHash=@new,MustChangePassword=0,UpdatedAt=SYSUTCDATETIME(),UpdatedBy=@id WHERE Id=@id AND PasswordHash=@old AND IsActive=1 AND IsDeleted=0 AND Status='ACTIVE'", cn);
         cmd.Parameters.AddWithValue("@id", id);
         cmd.Parameters.AddWithValue("@old", oldHash);
         cmd.Parameters.AddWithValue("@new", newHash);

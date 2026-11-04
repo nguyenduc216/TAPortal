@@ -19,6 +19,20 @@ public static class PasswordPolicy
             return (false, "Mật khẩu phải có ít nhất một ký tự đặc biệt.");
         return (true, string.Empty);
     }
+
+    // No look-alike characters (0/O, 1/l/I) so the password can be read out or typed from a message.
+    private const string Upper = "ABCDEFGHJKLMNPQRSTUVWXYZ", Lower = "abcdefghijkmnpqrstuvwxyz", Digits = "23456789", Special = "@#$%&*!?";
+
+    /// <summary>A random 12-character password that satisfies <see cref="Validate"/>: handed to a user once, to be changed.</summary>
+    public static string GenerateTemporary()
+    {
+        const string all = Upper + Lower + Digits + Special;
+        var chars = new List<char> { Pick(Upper), Pick(Lower), Pick(Digits), Pick(Special) };
+        while (chars.Count < 12) chars.Add(Pick(all));
+        return new string(chars.OrderBy(_ => RandomNumberGenerator.GetInt32(int.MaxValue)).ToArray());
+
+        static char Pick(string set) => set[RandomNumberGenerator.GetInt32(set.Length)];
+    }
 }
 
 public sealed class PasswordService

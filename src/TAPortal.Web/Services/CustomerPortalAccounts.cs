@@ -13,6 +13,8 @@ public interface ICustomerPortalAccounts
     Task<List<MembershipAdminRow>> ListAllAsync(Guid actor);
     Task SaveAsync(MembershipInput input, Guid actor, string? passwordHash);
     Task SetActiveAsync(Guid userId, Guid customerId, bool active, Guid actor);
+    // New password hash + "must change at next sign-in"; false when the user is not a non-staff member of the customer.
+    Task<bool> ResetPasswordAsync(Guid userId, Guid customerId, string passwordHash, Guid actor);
     // Accounts that may be granted Customer Portal access: TA staff are excluded. A TA staff account is a user that holds
     // at least one TAPortal role (dbo.UserRoles); there is no user-type column, see the change record.
     Task<List<PortalUser>> CandidateUsersAsync();
@@ -25,6 +27,7 @@ public sealed class SqlCustomerPortalAccounts(MembershipAdminStore store, Portal
     public Task<List<MembershipAdminRow>> ListAllAsync(Guid actor) => store.List(actor, null);
     public Task SaveAsync(MembershipInput input, Guid actor, string? passwordHash) => store.Save(input, actor, passwordHash);
     public Task SetActiveAsync(Guid userId, Guid customerId, bool active, Guid actor) => store.SetActive(userId, customerId, active, actor);
+    public Task<bool> ResetPasswordAsync(Guid userId, Guid customerId, string passwordHash, Guid actor) => store.ResetPassword(userId, customerId, passwordHash, actor);
     public Task<List<CustomerRow>> CustomersAsync() => db.GetCustomersAsync();
 
     public async Task<List<PortalUser>> CandidateUsersAsync() => PortalCandidates.Filter(await db.GetUsersAsync(), await db.GetUserRoleMapAsync());
