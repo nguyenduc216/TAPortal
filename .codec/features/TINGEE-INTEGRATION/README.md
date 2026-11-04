@@ -55,3 +55,4 @@ Database sẵn sàng cho phần thanh toán (verify PASS). Tiếp theo: operator
 | `TINGEE-INTEGRATION-CHG-20261104T080429Z-668347` | 2026-11-04 | Webhook API key authentication and a health/status page for the webhook site | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |
 | `TINGEE-INTEGRATION-CHG-20261104T092344Z-73A043` | 2026-11-04 | Sandbox: đếm ngược thời gian hết hạn QR động | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |
 | `TINGEE-INTEGRATION-CHG-20261104T105303Z-FCDC7B` | 2026-11-04 | Customer Portal: không hiển thị tên đối tác (Tingee/HENO); thông báo khi chưa cấu hình liên kết ngân hàng | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |
+| `TINGEE-INTEGRATION-CHG-20261104T115022Z-3236BF` | 2026-11-04 | Customer Portal: logo ngân hàng trên trang chọn ngân hàng liên kết | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |
