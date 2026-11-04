@@ -4,7 +4,7 @@
 - Change ID: `TINGEE-INTEGRATION-CHG-20261104T092344Z-73A043`
 - Created UTC: 2026-11-04T09:23:44.190498+00:00
 - Tiêu đề: Sandbox: đếm ngược thời gian hết hạn QR động
-- Trạng thái: IMPLEMENTED / TESTS_PASS
+- Trạng thái: DEPLOYED
 
 ## Yêu cầu và phạm vi
 Operator (2026-11-04, ảnh mục 3 Sandbox): "Bổ sung phần đếm giây lùi để còn biết bao nhiêu giây" cho QR động.
@@ -25,15 +25,11 @@ Operator (2026-11-04, ảnh mục 3 Sandbox): "Bổ sung phần đếm giây lù
 - Safe tests 363/363 (working tree).
 
 ## Publish
-- Project:
-- Destination (chỉ từ config):
-- Trạng thái: NOT_PUBLISHED
-- Artifact SHA256:
-- Smoke test:
+- portal (TAPortal.Web → TA.Portal, H:\WEBDEPLOYED\T.A\portal_released): DEPLOYED 2026-11-04 16:26 (UTC+7), commit e7a46dc, artifact SHA256 525ef8f755ab68e8d437e82fec1254772687d238738c7027363eb94dc6bab1b1, package 9159EF8073B3D6297E4C033C38AF9CF81024D5A19F80ACF94FEB5CA20C00532F; backup C:\TADeploy\backups\portal-20261104-162611; health HTTP 200.
 
 ## Git
-- Branch:
-- Commit SHA:
+- Branch: feature/customer-portal-mvp01
+- Commit SHA: e7a46dc (source)
 - PR:
 - Merge: PENDING_APPROVAL
 - Merge SHA:

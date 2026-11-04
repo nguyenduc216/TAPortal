@@ -277,10 +277,10 @@
     "change_id": "TINGEE-INTEGRATION-CHG-20261104T092344Z-73A043",
     "created_at": "2026-11-04T09:23:44.190498+00:00",
     "title": "Sandbox: đếm ngược thời gian hết hạn QR động",
-    "status": "IMPLEMENTED / TESTS_PASS",
-    "commit_sha": null,
+    "status": "DEPLOYED",
+    "commit_sha": "e7a46dc",
     "migration_status": "NONE_REQUIRED",
-    "publish_status": "DEPLOY_PENDING",
+    "publish_status": "DEPLOYED",
     "merge_status": "PENDING_APPROVAL"
   }
 ]
