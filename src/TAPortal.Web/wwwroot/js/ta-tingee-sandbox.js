@@ -56,17 +56,21 @@
 
     var status = document.querySelector('[data-ta-sandbox-qr-status]');
     var countdown = document.querySelector('[data-ta-qr-countdown]');
-    var countdownTimer = null;
+    var countdownTimer = null, timer = null, expired = false;
     if (countdown) {
-        // Seconds left until the QR expires (from the server's UTC expiry), so the operator knows how long the test can still be paid.
-        var expiresAt = Date.parse(countdown.getAttribute('data-expires'));
+        // Seconds left until the QR expires, counted from the server's figure at page load (independent of this PC's clock).
+        // At 0 the QR is locked (blurred, "QR đã hết hạn") and the status polling stops.
+        var image = document.querySelector('[data-ta-qr-image]');
+        var expiresAt = Date.now() + (Number(countdown.getAttribute('data-seconds-left')) || 0) * 1000;
         var tick = function () {
             var left = Math.max(0, Math.ceil((expiresAt - Date.now()) / 1000));
             countdown.textContent = left > 0 ? 'còn ' + Math.floor(left / 60) + ':' + String(left % 60).padStart(2, '0') : 'đã hết hạn';
             countdown.classList.toggle('is-low', left > 0 && left <= 60);
             countdown.classList.toggle('is-over', left === 0);
             if (left === 0) {
+                expired = true;
                 clearInterval(countdownTimer);
+                if (image) image.classList.add('is-locked');
                 if (status && status.classList.contains('ta-alert--info')) {
                     clearInterval(timer);
                     status.classList.remove('ta-alert--info');
@@ -75,11 +79,12 @@
                 }
             }
         };
-        if (!isNaN(expiresAt)) { tick(); countdownTimer = setInterval(tick, 1000); }
+        tick();
+        countdownTimer = setInterval(tick, 1000);
     }
-    if (status) {
+    if (status && !expired) {
         var text = status.querySelector('[data-ta-sandbox-qr-status-text]');
-        var timer = setInterval(function () {
+        timer = setInterval(function () {
             fetch(status.getAttribute('data-url'), { headers: { 'Accept': 'application/json' }, credentials: 'same-origin' })
                 .then(function (r) { return r.json(); })
                 .then(function (s) {
@@ -93,7 +98,9 @@
                         text.textContent = 'ĐÃ NHẬN ĐỦ TIỀN: ' + money.format(paid) + 'đ (' + s.payments + ' lần), lúc ' + s.checkedAt;
                         clearInterval(timer);
                         clearInterval(countdownTimer);
-                        if (countdown) { countdown.textContent = 'đã thanh toán'; countdown.classList.remove('is-low', 'is-over'); }
+                        if (countdown) { countdown.textContent = 'đã thanh toán'; countdown.classList.remove('is-low', 'is-over'); countdown.classList.add('is-paid'); }
+                        var paidImage = document.querySelector('[data-ta-qr-image]');
+                        if (paidImage) { paidImage.classList.add('is-locked', 'is-paid'); paidImage.querySelector('[data-ta-qr-lock-text]').textContent = 'Đã thanh toán'; }
                     }
                 })
                 .catch(function () { text.textContent = 'Mất kết nối, đang thử lại…'; });

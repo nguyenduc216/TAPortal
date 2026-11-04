@@ -1,6 +1,7 @@
 @using TAPortal.Integrations.Tingee
 @using TAPortal.Web.Controllers
 @model TingeeSandboxVm
+@inject TimeProvider Clock
 @{
     ViewData["Title"] = "Tingee Sandbox";
     var cfg = Model.Config;
@@ -29,7 +30,9 @@
     .tg-otp__input { font-size: 1.5rem !important; letter-spacing: .35em; font-variant-numeric: tabular-nums; }
     .tg-step { display: inline-block; padding: .1rem .5rem; margin-left: .5rem; border-radius: 1rem; font-size: .75rem; font-weight: 600; background: #f59f00; color: #fff; vertical-align: middle; }
     .tg-countdown{display:inline-block;margin-left:.35rem;padding:0 .5rem;border-radius:999px;background:#e7f1ff;color:#1c5fb8;font-weight:600;font-variant-numeric:tabular-nums}
-    .tg-countdown.is-low{background:#fff4e5;color:#b35c00}.tg-countdown.is-over{background:#fdecec;color:#c92a2a}
+    .tg-countdown.is-low{background:#fff4e5;color:#b35c00}.tg-countdown.is-over{background:#fdecec;color:#c92a2a}.tg-countdown.is-paid{background:#e6f6ea;color:#2b8a3e}
+    .tg-qr{position:relative}.tg-qr__lock{display:none;position:absolute;inset:0;flex-direction:column;align-items:center;justify-content:center;gap:.35rem;background:rgba(255,255,255,.82);color:#c92a2a;font-weight:700;text-align:center;border-radius:8px}
+    .tg-qr.is-locked svg{filter:blur(4px) grayscale(1);opacity:.35}.tg-qr.is-locked .tg-qr__lock{display:flex}.tg-qr.is-paid .tg-qr__lock{color:#2b8a3e}
     @@keyframes tg-otp-pulse { 0% { box-shadow: 0 0 0 0 rgba(245, 159, 0, .55); } 100% { box-shadow: 0 0 0 .9rem rgba(245, 159, 0, 0); } }
     @@media (prefers-reduced-motion: reduce) { .tg-otp__icon { animation: none; } }
     .tg-hook { display: flex; align-items: center; gap: .5rem; margin-bottom: .375rem; }
@@ -174,7 +177,7 @@
             @if (Model.Qr is { } qr)
             {
                 <div class="d-flex gap-3 flex-wrap mb-3" data-ta-sandbox-qr-result>
-                    <div style="width:200px;max-width:100%">@Html.Raw(qr.Svg)</div>
+                    <div class="tg-qr" style="width:200px;max-width:100%" data-ta-qr-image>@Html.Raw(qr.Svg)<div class="tg-qr__lock" aria-hidden="true">@UiIcon.Render("clock")<span data-ta-qr-lock-text>QR đã hết hạn</span></div></div>
                     <dl class="ta-dl">
                         <dt>Loại</dt><dd>@(qr.Type == "dynamic" ? "QR động (Tingee theo dõi)" : "QR tĩnh VietQR")</dd>
                         <dt>Ngân hàng</dt><dd>@qr.BankName</dd>
@@ -182,8 +185,8 @@
                         <dt>Số tiền</dt><dd>@Money(qr.Amount)</dd>
                         <dt>Nội dung</dt><dd>@(qr.Purpose ?? "—")</dd>
                         @if (qr.ExpiresAtUtc is DateTime exp) {
-                            var left = (int)Math.Max(0, Math.Ceiling((exp - DateTime.UtcNow).TotalSeconds));
-                            <dt>Hết hạn</dt><dd>@exp.AddHours(7).ToString("HH:mm dd/MM") <span class="tg-countdown" data-ta-qr-countdown data-expires="@exp.ToString("o", System.Globalization.CultureInfo.InvariantCulture)">còn @(left / 60):@((left % 60).ToString("00"))</span></dd>}
+                            var left = (int)Math.Max(0, Math.Ceiling((exp - Clock.GetUtcNow().UtcDateTime).TotalSeconds));
+                            <dt>Hết hạn</dt><dd>@exp.AddHours(7).ToString("HH:mm dd/MM") <span class="tg-countdown" data-ta-qr-countdown data-seconds-left="@left" aria-live="off">còn @(left / 60):@((left % 60).ToString("00"))</span></dd>}
                     </dl>
                 </div>
                 @if (qr.Type == "dynamic" && qr.QrAccount is not null && qr.BillId is not null)

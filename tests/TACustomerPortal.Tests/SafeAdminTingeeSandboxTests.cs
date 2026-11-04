@@ -149,7 +149,8 @@ public sealed class SafeAdminTingeeSandboxTests
         Assert.Contains("data-ta-sandbox-qr-result", html);
         Assert.Contains("<svg", html);
         Assert.Contains("/TingeeSandbox/QrStatus?qrAccount=QRACC&billId=BILL1", html);
-        Assert.Contains("data-ta-qr-countdown", html);
+        Assert.Contains("data-ta-qr-countdown data-seconds-left=\"900\"", html);
+        Assert.Contains("data-ta-qr-image", html);
         var q = Assert.Single(tingee.Qrs);
         Assert.Equal(("970422", "963123456789", 2000m, TingeeQrTypes.OneTime, "TA TEST", 15), (q.BankBin, q.VaAccountNumber, q.Amount, q.QrCodeType, q.Purpose, q.ExpireInMinute));
 

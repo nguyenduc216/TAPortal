@@ -10,6 +10,11 @@
 Operator (2026-11-04, ảnh mục 3 Sandbox): "Bổ sung phần đếm giây lùi để còn biết bao nhiêu giây" cho QR động.
 - Dòng "Hết hạn" có nhãn `còn m:ss` (`data-ta-qr-countdown`, `data-expires` = hạn UTC ISO), cập nhật mỗi giây; còn ≤60 giây đổi màu cam; hết hạn đổi đỏ "đã hết hạn", dừng kiểm tra trạng thái và báo "QR đã hết hạn, chưa nhận đủ tiền"; nhận đủ tiền thì nhãn thành "đã thanh toán".
 
+Lần 2 (operator, ảnh "còn 15:00" đứng yên): "phải đếm giây lùi realtime, hết về 0 thì khoá QR và ra thông báo hết hạn".
+- Đếm từ số giây còn lại do server tính lúc render (`data-seconds-left`, dùng `TimeProvider` của app), không phụ thuộc đồng hồ máy người dùng.
+- Về 0: ảnh QR bị làm mờ + lớp phủ "QR đã hết hạn" (`data-ta-qr-image` `.is-locked`), dừng kiểm tra trạng thái, báo vàng hết hạn; mở lại trang khi đã hết hạn thì khoá ngay, không gọi kiểm tra. Nhận đủ tiền: lớp phủ xanh "Đã thanh toán".
+- Kiểm tra logic JS bằng DOM giả (node): đếm 2→1→"đã hết hạn", khoá QR, 0 lần gọi trạng thái khi đã hết hạn lúc tải.
+
 ## File thay đổi (relative path, thao tác ADD/MODIFY/DELETE)
 - MODIFY `src/TAPortal.Web/Views/TingeeSandbox/Index.cshtml`, `src/TAPortal.Web/wwwroot/js/ta-tingee-sandbox.js` (deploy portal).
 - MODIFY `tests/TACustomerPortal.Tests/SafeAdminTingeeSandboxTests.cs`.
