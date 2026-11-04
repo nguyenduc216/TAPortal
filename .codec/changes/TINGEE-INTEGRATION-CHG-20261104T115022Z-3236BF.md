@@ -4,7 +4,7 @@
 - Change ID: `TINGEE-INTEGRATION-CHG-20261104T115022Z-3236BF`
 - Created UTC: 2026-11-04T11:50:22.421170+00:00
 - Tiêu đề: Customer Portal: logo ngân hàng trên trang chọn ngân hàng liên kết
-- Trạng thái: IMPLEMENTED / TESTS_PASS
+- Trạng thái: DEPLOYED
 
 ## Yêu cầu và phạm vi
 Operator (2026-11-04): "Kiểm tra xem logo ngân hàng đã làm xong chưa thì commit và deployed luôn". Phần việc do một agent khác làm, chưa commit; kiểm tra thấy hoàn chỉnh nên commit theo yêu cầu của operator.
@@ -26,15 +26,11 @@ Operator (2026-11-04): "Kiểm tra xem logo ngân hàng đã làm xong chưa th�
 - Safe tests 388/388 (working tree); logo + payments 33/33.
 
 ## Publish
-- Project:
-- Destination (chỉ từ config):
-- Trạng thái: NOT_PUBLISHED
-- Artifact SHA256:
-- Smoke test:
+- invoice (TACustomerPortal.Web → TA.Invoice): DEPLOYED 2026-11-04 18:52 (UTC+7), commit 63da984, artifact SHA256 690d742b976df9baae2d42a61910176e5810384f92085b5490293e2a62866d00, package AC359C3C0F0520559B5563A625D05D333B11C41D7F65D6CC168D030B14D29CA0; backup C:\TADeploy\backups\invoice-20261104-185221; health HTTP 200.
 
 ## Git
-- Branch:
-- Commit SHA:
+- Branch: feature/customer-portal-mvp01
+- Commit SHA: 63da984 (source)
 - PR:
 - Merge: PENDING_APPROVAL
 - Merge SHA:
