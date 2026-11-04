@@ -347,10 +347,10 @@
     "change_id": "TINGEE-INTEGRATION-CHG-20261104T172006Z-EE62CC",
     "created_at": "2026-11-04T17:20:06.278874+00:00",
     "title": "Customer Portal: bank logo opens the Bank Link popup (SDK); Sync adds accounts linked there",
-    "status": "IMPLEMENTED",
-    "commit_sha": null,
+    "status": "DEPLOYED",
+    "commit_sha": "c7949c8daecd54630a2c81cf8e25de684bc6d962",
     "migration_status": "NOT_APPLICABLE",
-    "publish_status": "NOT_PUBLISHED",
+    "publish_status": "DEPLOYED invoice",
     "merge_status": "PENDING_APPROVAL"
   }
 ]
