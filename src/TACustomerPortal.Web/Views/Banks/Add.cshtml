@@ -22,7 +22,7 @@
         <nav class="cp-bank-pick" aria-label="Chọn ngân hàng">
             @foreach (var b in TingeeBankCatalog.Banks)
             {
-                <a asp-action="Add" asp-route-bin="@b.Bin" aria-current="@(b.Bin == bank?.Bin ? "true" : null)"><img src="~/images/banks/@(b.Code.ToLowerInvariant()).png" alt="" width="120" height="45" loading="lazy" asp-append-version="true" /><span>@b.Name</span></a>
+                <a asp-action="Add" asp-route-bin="@b.Bin" aria-current="@(b.Bin == bank?.Bin ? "true" : null)" title="@b.Name"><img src="~/images/banks/@(b.Code.ToLowerInvariant()).png" alt="@b.Name" width="120" height="45" loading="lazy" asp-append-version="true" /></a>
             }
         </nav>
     </div>

@@ -83,3 +83,7 @@ Supersedes earlier clauses that forbid agents from deploying or touching IIS, fo
 - Text that comes from a partner (API error messages, notes from the shared bank catalog) is shown only through `PartnerText.Scrub` (`src/TACustomerPortal.Web/Services/PartnerText.cs`); `Flash()` already scrubs. Add any new partner to `PartnerText.Names` and its pattern.
 - Code identifiers, namespaces, SQL table names, server logs and the Admin portal (`TAPortal.Web`) are not affected.
 - Enforced by `SafeCustomerPartnerNeutralityTests` (views and string literals) and `SafeCustomerPaymentsTests.PaymentPagesNeverNamePartners` (rendered pages); a new customer page with partner data must be added to that test.
+
+## CUSTOMER PORTAL HOVER RULE (2026-11-04, operator rule)
+- Every clickable white box in `TACustomerPortal.Web` (card links `a.cp-card`, picker tiles such as `.cp-bank-pick a`, company and filter tiles, package cards `.cp-plan`) turns light orange on hover: `background: var(--cp-hover-bg)` and `border-color: var(--cp-hover-line)` (tokens in `wwwroot/css/customer.css`). New clickable boxes use the same tokens. Enforced by `SafeCustomerPartnerNeutralityTests.ClickableWhiteBoxesTurnLightOrangeOnHover`.
+- The bank picker shows logos only; the bank name stays in `alt` and `title` for screen readers and tooltips.

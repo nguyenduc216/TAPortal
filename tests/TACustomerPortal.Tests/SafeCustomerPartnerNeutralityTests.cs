@@ -66,6 +66,21 @@ public sealed class SafeCustomerPartnerNeutralityTests
         Assert.Equal(string.Empty, PartnerText.Scrub(null));
     }
 
+    // Operator rule: clickable white boxes turn light orange on hover (tokens --cp-hover-bg / --cp-hover-line).
+    [Fact]
+    public void ClickableWhiteBoxesTurnLightOrangeOnHover()
+    {
+        var css = File.ReadAllText(Path.Combine(Web(), "wwwroot", "css", "customer.css"));
+        Assert.Matches(@"--cp-hover-bg:\s*#FFF4E5", css);
+        foreach (var selector in new[] { "a.cp-card:hover", ".cp-bank-pick a:hover", ".cp-company:hover", ".cp-filter:not([aria-current=\"page\"]):hover" })
+            Assert.Matches(Regex.Escape(selector) + @"[^{]*\{[^}]*background:\s*var\(--cp-hover-bg\)", css);
+        var plans = File.ReadAllText(Path.Combine(Web(), "Views", "ServicePackages", "Index.cshtml"));
+        Assert.Contains(".cp-plan:hover { background: var(--cp-hover-bg);", plans);
+        var banks = File.ReadAllText(Path.Combine(Web(), "Views", "Banks", "Add.cshtml"));
+        Assert.Contains("alt=\"@b.Name\"", banks);
+        Assert.DoesNotContain("<span>@b.Name</span>", banks);
+    }
+
     private static string Web()
     {
         for (var dir = new DirectoryInfo(AppContext.BaseDirectory); dir is not null; dir = dir.Parent)
