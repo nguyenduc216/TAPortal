@@ -4,7 +4,7 @@
 - Change ID: `CUSTOMER-PORTAL-FOUNDATION-CHG-20261104T155401Z-13E2DF`
 - Created UTC: 2026-11-04T15:54:01.655240+00:00
 - Tiêu đề: Gói dịch vụ: sửa lỗi trùng tên cột DisplayName trong danh sách giao dịch mua gói
-- Trạng thái: IMPLEMENTED
+- Trạng thái: DEPLOYED
 
 ## Yêu cầu và phạm vi
 Operator (2026-11-04, ảnh chụp Admin "Giao dịch mua gói"): trang báo "Không đọc được dữ liệu gói dịch vụ". Log production: `SqlException: The column 'DisplayName' was specified multiple times for 'x'` (SERVICE_PURCHASES_UNAVAILABLE). Danh sách giao dịch bọc câu SELECT trong bảng dẫn xuất `x`, mà câu SELECT có 3 cột `DisplayName` (người yêu cầu/xác nhận/hủy) và `Code`/`Name` không alias. Lỗi cũng ảnh hưởng lịch sử mua gói ở Customer Portal (cùng hàm PurchasesAsync).

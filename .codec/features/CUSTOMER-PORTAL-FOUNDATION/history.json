@@ -278,10 +278,10 @@
     "change_id": "CUSTOMER-PORTAL-FOUNDATION-CHG-20261104T155401Z-13E2DF",
     "created_at": "2026-11-04T15:54:01.655240+00:00",
     "title": "Gói dịch vụ: sửa lỗi trùng tên cột DisplayName trong danh sách giao dịch mua gói",
-    "status": "IMPLEMENTED",
+    "status": "DEPLOYED",
     "commit_sha": "cdc3432",
     "migration_status": "NOT_APPLICABLE",
-    "publish_status": "NOT_PUBLISHED",
+    "publish_status": "DEPLOYED",
     "merge_status": "PENDING_APPROVAL"
   }
 ]
