@@ -104,6 +104,36 @@ public sealed class SafeCustomerPaymentsTests
     }
 
     [Fact]
+    public async Task NewCustomerCodesAreNumberedAutomatically()
+    {
+        using var f = Factory("OWNER", out var store, out _);
+        var c = Client(f);
+        Assert.Contains("value=\"KH001\"", await c.GetStringAsync("/contacts/create"));   // first customer
+        store.Contacts.Add((A, Contact(Guid.NewGuid(), "KH007", "Cũ")));
+        store.Contacts.Add((A, Contact(Guid.NewGuid(), "VIP01", "Khác")));
+        store.Contacts.Add((B, Contact(Guid.NewGuid(), "KH050", "Doanh nghiệp khác")));
+        Assert.Contains("value=\"KH008\"", await c.GetStringAsync("/contacts/create"));
+        var token = await Token(c, "/contacts/create");
+
+        // Left empty: the next code is taken.
+        Assert.Equal(HttpStatusCode.Redirect, (await Post(c, "/contacts/create", token, new() { ["Code"] = "", ["Name"] = "Chị Hoa" })).StatusCode);
+        Assert.Equal("KH008", store.Contacts.Single(x => x.Contact.Name == "Chị Hoa").Contact.Code);
+
+        // The suggested code was taken meanwhile: refused, with the next free one suggested.
+        var taken = await Post(c, "/contacts/create", token, new() { ["Code"] = "KH008", ["Name"] = "Anh Nam" });
+        Assert.Equal(HttpStatusCode.BadRequest, taken.StatusCode);
+        var html = WebUtility.HtmlDecode(await taken.Content.ReadAsStringAsync());
+        Assert.Contains("value=\"KH009\"", html);
+        Assert.Contains("Mã khách hàng đã được dùng (KH008)", html);
+
+        // A code typed by hand is kept; editing never renumbers.
+        Assert.Equal(HttpStatusCode.Redirect, (await Post(c, "/contacts/create", token, new() { ["Code"] = "vip02", ["Name"] = "Anh Nam" })).StatusCode);
+        Assert.Equal("VIP02", store.Contacts.Single(x => x.Contact.Name == "Anh Nam").Contact.Code);
+        var id = store.Contacts.Single(x => x.Contact.Name == "Anh Nam").Contact.Id;
+        Assert.Equal(HttpStatusCode.BadRequest, (await Post(c, $"/contacts/edit/{id}", token, new() { ["Code"] = "", ["Name"] = "Anh Nam" })).StatusCode);
+    }
+
+    [Fact]
     public async Task NavigationOffersThePaymentsModules()
     {
         using var f = Factory("OWNER", out _, out _);

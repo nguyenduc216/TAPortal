@@ -19,7 +19,7 @@ public sealed class ContactsController(ICurrentCustomerContext customer, IPaymen
     public async Task<IActionResult> Create()
     {
         if (await Current() is not { } m) return SelectCustomer();
-        return CanManage(m) ? View("Edit", new ContactInput()) : Forbid();
+        return CanManage(m) ? View("Edit", new ContactInput { Code = NextCode(await store.ContactsAsync(m.CustomerId)) }) : Forbid();
     }
 
     [HttpGet]
@@ -43,6 +43,13 @@ public sealed class ContactsController(ICurrentCustomerContext customer, IPaymen
         if (!CanManage(m)) return Forbid();
         if (input.Id != Guid.Empty && await store.ContactAsync(m.CustomerId, input.Id) is null) return NotFound();
         input.Code = input.Code?.Trim().ToUpperInvariant() ?? "";
+        var creating = input.Id == Guid.Empty;
+        if (creating && input.Code.Length == 0)
+        {
+            // Left empty on a new customer: the next free code is taken.
+            input.Code = NextCode(await store.ContactsAsync(m.CustomerId));
+            ModelState.Remove(nameof(input.Code));
+        }
         if (ModelState.IsValid)
         {
             var contact = new Contact(input.Id, input.Code, input.Name.Trim(), Blank(input.LegalName), Blank(input.TaxCode), Blank(input.Phone), Blank(input.Email), Blank(input.Address), Blank(input.Note), true);
@@ -51,7 +58,14 @@ public sealed class ContactsController(ICurrentCustomerContext customer, IPaymen
                 Flash(input.Id == Guid.Empty ? $"Đã thêm khách hàng {contact.Name}." : $"Đã cập nhật khách hàng {contact.Name}.");
                 return RedirectToAction(nameof(Index));
             }
-            ModelState.AddModelError(nameof(input.Code), "Mã khách hàng đã được dùng.");
+            var taken = input.Code;
+            if (creating)
+            {
+                // Another user may have saved the suggested code meanwhile: suggest the next free one.
+                input.Code = NextCode(await store.ContactsAsync(m.CustomerId));
+                ModelState.Remove(nameof(input.Code));
+            }
+            ModelState.AddModelError(nameof(input.Code), creating ? $"Mã khách hàng đã được dùng ({taken}). Đã đề xuất mã mới {input.Code}, bấm Lưu để dùng mã này." : "Mã khách hàng đã được dùng.");
         }
         Response.StatusCode = StatusCodes.Status400BadRequest;
         return View("Edit", input);
@@ -66,6 +80,16 @@ public sealed class ContactsController(ICurrentCustomerContext customer, IPaymen
         await store.SetContactActiveAsync(m.CustomerId, id, active, Actor);
         Flash(active ? $"Đã kích hoạt lại {c.Name}." : $"Đã ngừng sử dụng {c.Name}. Đơn hàng cũ vẫn giữ thông tin.");
         return RedirectToAction(nameof(Index));
+    }
+
+    /// <summary>Next automatic customer code: KH + one more than the highest KH number in use (inactive ones included), at least 3 digits.</summary>
+    internal static string NextCode(IEnumerable<Contact> contacts)
+    {
+        var numbers = contacts.Select(c => System.Text.RegularExpressions.Regex.Match(c.Code, "^KH(\\d{1,9})$", System.Text.RegularExpressions.RegexOptions.IgnoreCase))
+            .Where(x => x.Success).Select(x => x.Groups[1].Value).ToList();
+        var next = numbers.Count == 0 ? 1 : numbers.Max(long.Parse) + 1;
+        var width = Math.Max(3, numbers.Count == 0 ? 0 : numbers.Max(n => n.Length));
+        return "KH" + next.ToString(System.Globalization.CultureInfo.InvariantCulture).PadLeft(width, '0');
     }
 
     private static string? Blank(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
