@@ -377,6 +377,9 @@ public sealed class SafeAdminTingeeSandboxTests
         return c.PostAsync(path, new FormUrlEncodedContent(data));
     }
 
+    /// <summary>The sandbox test host (Direct mode, Tingee production URL, fakes, no SQL) for other Admin Tingee page tests.</summary>
+    internal static WebApplicationFactory<admin::Program> Host(bool configured = true, bool admin = true) => Factory(out _, out _, configured: configured, admin: admin);
+
     private static HttpClient Client(WebApplicationFactory<admin::Program> f) =>
         f.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false, BaseAddress = new Uri("https://localhost"), HandleCookies = true });
 

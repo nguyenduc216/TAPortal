@@ -1,0 +1,332 @@
+@using TAPortal.Integrations.Tingee
+@model TingeeInvoiceSandboxVm
+@{
+    ViewData["Title"] = "Hóa đơn Sandbox";
+    var cfg = Model.Config;
+    var ready = cfg.Configured && Model.ScopeLabel is not null;
+    var mid = Model.SelectedMerchant;
+    var inv = Model.Invoice;
+    var acc = Model.AccountInput;
+    var accounts = Model.Accounts ?? [];
+    var accountOpen = Model.Dialog == TingeeInvoiceSandboxDialogs.Account;
+    var errors = ViewData.ModelState[string.Empty]?.Errors.Select(e => e.ErrorMessage).ToList() ?? [];
+    var fieldErrors = ViewData.ModelState.Where(kv => kv.Key.Length > 0).SelectMany(kv => kv.Value!.Errors.Select(e => e.ErrorMessage)).ToList();
+    errors.AddRange(fieldErrors);
+    var inv0 = System.Globalization.CultureInfo.InvariantCulture;
+    string AccountLabel(TingeeInvoiceAccount a) => $"#{a.Id} — {TingeeInvoiceProviders.Name(a.Provider)} — MST {a.TaxCode}{(a.IsDefault ? " (mặc định)" : "")}";
+}
+
+<style>
+    .tg-inv-lines td { vertical-align: top; }
+    .tg-inv-lines input, .tg-inv-lines select { min-width: 5rem; }
+    .tg-inv-pdf { width: 100%; height: 70vh; border: 1px solid var(--tblr-border-color, #dadfe5); border-radius: .5rem; background: #f6f8fb; }
+    .tg-inv-tpl { cursor: pointer; }
+</style>
+
+@if (!accountOpen && errors.Count > 0)
+{
+    <div class="ta-alert ta-alert--danger mb-3" role="alert" data-ta-invoice-errors>@UiIcon.Render("alert-circle")<div class="ta-alert__body">@foreach (var e in errors) {<div>@e</div>}</div></div>
+}
+
+<div class="ta-alert @(cfg.Production ? "ta-alert--warning" : "ta-alert--info") mb-3" role="note" data-ta-invoice-env>
+    @UiIcon.Render(cfg.Production ? "alert-triangle" : "info-circle")
+    <div class="ta-alert__body">
+        @if (cfg.Production)
+        {
+            <span data-ta-invoice-production>Đang kết nối <strong>Tingee production</strong> (@cfg.BaseUrl).</span>
+        }
+        else
+        {
+            <span>Đang kết nối <code>@cfg.BaseUrl</code>.</span>
+        }
+        "Tạo nháp" chỉ xem trước PDF, không có giá trị pháp lý. "Phát hành" ký và gửi hóa đơn lên cơ quan thuế bằng tài khoản nhà cung cấp đã kết nối —
+        với tài khoản thật đó là <strong>hóa đơn thật</strong>; chỉ phát hành khi dùng tài khoản demo/test của nhà cung cấp.
+    </div>
+</div>
+
+<div class="ta-ws-grid">
+    <section class="card" aria-labelledby="ivConfig" data-ta-invoice-config>
+        <div class="card-header"><h2 class="card-title" id="ivConfig">@UiIcon.Render("settings")1. Cấu hình</h2></div>
+        <div class="card-body">
+            <dl class="ta-dl">
+                <dt>Khóa API</dt><dd>@if (cfg.Configured) {<span class="ta-badge ta-badge--success">Đã cấu hình</span>} else {<span class="ta-badge ta-badge--danger" data-ta-invoice-unconfigured>Chưa cấu hình</span>}</dd>
+                <dt>Chế độ</dt><dd>@if (cfg.Direct) {<span class="ta-badge ta-badge--neutral">Direct (Merchant thường)</span>} else {<span class="ta-badge ta-badge--success">Master Merchant</span>}</dd>
+                @if (!cfg.Direct)
+                {
+                    <dt>Merchant con</dt><dd>@if (Model.ScopeLabel is not null) {<span data-ta-invoice-scope>@Model.ScopeLabel</span>} else {<span class="ta-badge ta-badge--danger">Chưa chọn</span>}</dd>
+                }
+                <dt>Môi trường</dt><dd><span class="ta-badge @(cfg.Production ? "ta-badge--warning" : "ta-badge--neutral")">@(cfg.Production ? "Production" : "UAT / khác")</span></dd>
+            </dl>
+            @if (!cfg.Direct && cfg.Configured && Model.Merchants.Count > 0)
+            {
+                <form asp-action="Index" method="get" class="mt-3" data-ta-invoice-merchant-picker>
+                    <label class="form-label" for="merchant">Merchant con để test</label>
+                    <select class="form-select" id="merchant" name="merchant" onchange="this.form.submit()">
+                        <option value="">— Chọn —</option>
+                        @foreach (var m in Model.Merchants) { <option value="@m.MerchantId" selected="@(m.MerchantId == mid)">@m.CustomerName (@m.CustomerCode) — #@m.MerchantId</option> }
+                    </select>
+                    <noscript><button class="btn btn-sm mt-2" type="submit">Chọn</button></noscript>
+                </form>
+            }
+            @if (Model.ScopeError is not null && cfg.Configured)
+            {
+                <div class="ta-alert ta-alert--warning mt-3 mb-0" role="note" data-ta-invoice-scope-error>@UiIcon.Render("alert-triangle")<div class="ta-alert__body">@Model.ScopeError</div></div>
+            }
+            @if (!cfg.Configured)
+            {
+                <p class="form-hint mt-3 mb-0">Dùng chung khóa Tingee với trang <a asp-controller="TingeeSandbox" asp-action="Index">Tingee Sandbox</a> (mục <code>"Tingee"</code> trong <code>appsettings.json</code> của site Portal).</p>
+            }
+            <p class="form-hint mt-3 mb-0">Luồng: kết nối tài khoản nhà cung cấp → lấy mẫu hóa đơn → tạo nháp → phát hành → tải PDF / gửi email.</p>
+        </div>
+    </section>
+
+    <section class="card" aria-labelledby="ivAccounts" data-ta-invoice-accounts>
+        <div class="card-header d-flex justify-content-between align-items-center gap-2">
+            <h2 class="card-title" id="ivAccounts">@UiIcon.Render("building")2. Tài khoản nhà cung cấp hóa đơn</h2>
+            <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#ivAccount" disabled="@(!ready)" data-ta-invoice-add-account>@UiIcon.Render("plus")<span>Kết nối tài khoản</span></button>
+        </div>
+        <div class="card-body">
+            @if (!ready)
+            {
+                <p class="text-secondary mb-0">Cấu hình khóa API@(cfg.Direct ? "" : " và chọn merchant con") để xem tài khoản.</p>
+            }
+            else if (Model.AccountsError is not null)
+            {
+                <div class="ta-alert ta-alert--danger mb-0" role="alert" data-ta-invoice-accounts-failed>@UiIcon.Render("alert-circle")<div class="ta-alert__body">Kết nối Tingee lỗi: @Model.AccountsError</div></div>
+            }
+            else if (accounts.Count == 0)
+            {
+                <p class="mb-0" data-ta-invoice-accounts-empty><span class="ta-badge ta-badge--success">Kết nối OK</span> Chưa có tài khoản nhà cung cấp nào. Bấm "Kết nối tài khoản".</p>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-sm mb-0" data-ta-invoice-account-list>
+                        <thead><tr><th>ID</th><th>Nhà cung cấp</th><th>MST</th><th>Đăng nhập</th><th>Trạng thái</th><th></th></tr></thead>
+                        <tbody>
+                            @foreach (var a in accounts)
+                            {
+                                <tr>
+                                    <td><span class="ta-code">#@a.Id</span></td>
+                                    <td>@TingeeInvoiceProviders.Name(a.Provider)</td>
+                                    <td>@a.TaxCode</td>
+                                    <td>@a.Username</td>
+                                    <td>@if (a.IsDefault) {<span class="ta-badge ta-badge--success">Mặc định</span>} @if (!a.IsActive) {<span class="ta-badge ta-badge--neutral">Tạm ngưng</span>}</td>
+                                    <td class="text-end text-nowrap">
+                                        <form asp-action="Templates" method="post" class="d-inline-flex gap-1 align-items-center">
+                                            <input type="hidden" name="merchant" value="@mid" /><input type="hidden" name="accountId" value="@a.Id" />
+                                            @if (a.Provider == TingeeInvoiceProviders.HiLo) {<div class="ta-input-icon">@UiIcon.Render("hash")<input class="form-control form-control-sm" style="width:6rem" name="invoiceNoToCheck" type="number" min="1" value="1" title="Số hóa đơn cần kiểm tra (HiLo)" aria-label="Số hóa đơn cần kiểm tra" /></div>}
+                                            <button class="btn btn-sm" type="submit" disabled="@(a.Provider == TingeeInvoiceProviders.Bkav)" title="@(a.Provider == TingeeInvoiceProviders.Bkav ? "BKAV không hỗ trợ lấy mẫu: tự nhập mẫu số và ký hiệu" : "Lấy mẫu hóa đơn")" data-ta-loading data-ta-loading-text="Đang lấy...">@UiIcon.Render("file-text")<span>Lấy mẫu</span></button>
+                                        </form>
+                                        <form asp-action="DeleteAccount" method="post" class="d-inline" onsubmit="return confirm('Xóa tài khoản nhà cung cấp #@a.Id trên Tingee?')">
+                                            <input type="hidden" name="merchant" value="@mid" /><input type="hidden" name="id" value="@a.Id" />
+                                            <button class="btn btn-outline-danger btn-sm" type="submit" title="Xóa tài khoản">@UiIcon.Render("trash")</button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            @if (Model.Templates is { } templates)
+            {
+                <div class="mt-3" data-ta-invoice-templates>
+                    <p class="mb-2"><strong>Mẫu hóa đơn@(Model.TemplatesAccount is > 0 ? $" của tài khoản #{Model.TemplatesAccount}" : "")</strong> — bấm "Dùng" để điền vào mục 3.</p>
+                    @if (templates.Count == 0)
+                    {
+                        <p class="text-secondary mb-0">Nhà cung cấp chưa trả về mẫu nào: đăng ký mẫu hóa đơn tại nhà cung cấp trước.</p>
+                    }
+                    else
+                    {
+                        <table class="table table-sm mb-0">
+                            <thead><tr><th>Mẫu số</th><th>Ký hiệu</th><th>Còn lại</th><th></th></tr></thead>
+                            <tbody>
+                                @foreach (var t in templates)
+                                {
+                                    <tr><td>@t.InvoicePattern</td><td>@t.InvoiceSeries</td><td>@(t.Quota?.ToString("#,##0") ?? "—")</td>
+                                        <td class="text-end"><button type="button" class="btn btn-sm tg-inv-tpl" data-ta-invoice-use-template data-pattern="@t.InvoicePattern" data-series="@t.InvoiceSeries">Dùng</button></td></tr>
+                                }
+                            </tbody>
+                        </table>
+                    }
+                </div>
+            }
+        </div>
+    </section>
+</div>
+
+<section class="card mt-3" aria-labelledby="ivInvoice" data-ta-invoice-form>
+    <div class="card-header"><h2 class="card-title" id="ivInvoice">@UiIcon.Render("file-invoice")3. Hóa đơn thử</h2></div>
+    <div class="card-body">
+        @if (Model.Issued is { } issued)
+        {
+            <div class="ta-alert ta-alert--success mb-3" role="status" data-ta-invoice-issued>@UiIcon.Render("circle-check")
+                <div class="ta-alert__body">
+                    <div><strong>Đã phát hành</strong> — mã <span class="ta-code">@issued.InvoiceCode</span>@if (!string.IsNullOrWhiteSpace(issued.InvoiceNumber)) {<span>, số hóa đơn <strong>@issued.InvoiceNumber</strong></span>}</div>
+                    @if (!string.IsNullOrWhiteSpace(issued.CodeOfTax)) {<div>Mã cơ quan thuế: <span class="ta-code">@issued.CodeOfTax</span></div>}
+                    @if (!string.IsNullOrWhiteSpace(issued.ReservationCode)) {<div>Mã tra cứu: <span class="ta-code">@issued.ReservationCode</span></div>}
+                    @if (Uri.TryCreate(issued.Url, UriKind.Absolute, out var lookup) && (lookup.Scheme == Uri.UriSchemeHttps || lookup.Scheme == Uri.UriSchemeHttp)) {<div><a href="@lookup" target="_blank" rel="noopener noreferrer">Tra cứu hóa đơn tại nhà cung cấp</a></div>}
+                    <form asp-action="Download" method="post" target="_blank" class="mt-2 d-inline-block">
+                        <input type="hidden" name="merchant" value="@mid" /><input type="hidden" name="invoiceCode" value="@issued.InvoiceCode" /><input type="hidden" name="view" value="true" />
+                        <button class="btn btn-sm" type="submit">@UiIcon.Render("file-text")<span>Xem PDF</span></button>
+                    </form>
+                </div>
+            </div>
+        }
+        @if (Model.Draft is { } draft)
+        {
+            <div class="mb-3" data-ta-invoice-draft>
+                <div class="d-flex justify-content-between align-items-center mb-2 gap-2 flex-wrap">
+                    <span><span class="ta-badge ta-badge--neutral">Bản nháp</span> mã <span class="ta-code">@draft.InvoiceCode</span> — chưa phát hành, không có giá trị pháp lý.</span>
+                    <a class="btn btn-sm" download="@(draft.InvoiceCode)-nhap.pdf" href="data:application/pdf;base64,@draft.PdfBase64">@UiIcon.Render("device-floppy")<span>Tải PDF nháp</span></a>
+                </div>
+                <iframe class="tg-inv-pdf" title="Hóa đơn nháp @draft.InvoiceCode" data-ta-invoice-pdf data-pdf="@draft.PdfBase64"></iframe>
+            </div>
+        }
+        <form method="post" id="ivInvoiceForm">
+            <input type="hidden" name="merchant" value="@mid" />
+            <div class="row g-2 mb-3">
+                <div class="col-md-4"><label class="form-label" for="Invoice_AccountId">Tài khoản nhà cung cấp</label>
+                    <select class="form-select" id="Invoice_AccountId" name="Invoice.AccountId">
+                        <option value="">Tài khoản mặc định</option>
+                        @foreach (var a in accounts) { <option value="@a.Id" selected="@(a.Id == inv.AccountId)">@AccountLabel(a)</option> }
+                    </select></div>
+                <div class="col-sm-6 col-md-2"><label class="form-label required" for="Invoice_Pattern">Mẫu số</label><div class="ta-input-icon">@UiIcon.Render("file-text")<input class="form-control" id="Invoice_Pattern" name="Invoice.Pattern" value="@inv.Pattern" maxlength="20" required /></div></div>
+                <div class="col-sm-6 col-md-2"><label class="form-label required" for="Invoice_Series">Ký hiệu</label><div class="ta-input-icon">@UiIcon.Render("hash")<input class="form-control" id="Invoice_Series" name="Invoice.Series" value="@inv.Series" maxlength="20" required /></div></div>
+                <div class="col-sm-6 col-md-2"><label class="form-label required" for="Invoice_Code">Mã hóa đơn</label><div class="ta-input-icon">@UiIcon.Render("hash")<input class="form-control" id="Invoice_Code" name="Invoice.Code" value="@inv.Code" maxlength="40" required /></div></div>
+                <div class="col-sm-6 col-md-2"><label class="form-label required" for="Invoice_Date">Ngày lập</label><div class="ta-input-icon">@UiIcon.Render("calendar")<input class="form-control" id="Invoice_Date" name="Invoice.Date" type="date" value="@inv.Date?.ToString("yyyy-MM-dd", inv0)" required /></div></div>
+                <div class="col-sm-6 col-md-3"><label class="form-label" for="Invoice_BuyerTaxCode">MST người mua</label><div class="ta-input-icon">@UiIcon.Render("receipt-tax")<input class="form-control" id="Invoice_BuyerTaxCode" name="Invoice.BuyerTaxCode" value="@inv.BuyerTaxCode" maxlength="14" inputmode="numeric" /></div></div>
+                <div class="col-sm-6 col-md-3"><label class="form-label" for="Invoice_BuyerName">Người mua</label><div class="ta-input-icon">@UiIcon.Render("user")<input class="form-control" id="Invoice_BuyerName" name="Invoice.BuyerName" value="@inv.BuyerName" maxlength="150" /></div></div>
+                <div class="col-md-6"><label class="form-label" for="Invoice_BuyerLegalName">Tên đơn vị mua</label><div class="ta-input-icon">@UiIcon.Render("building")<input class="form-control" id="Invoice_BuyerLegalName" name="Invoice.BuyerLegalName" value="@inv.BuyerLegalName" maxlength="250" /></div></div>
+                <div class="col-md-6"><label class="form-label" for="Invoice_BuyerAddress">Địa chỉ</label><div class="ta-input-icon">@UiIcon.Render("map-pin")<input class="form-control" id="Invoice_BuyerAddress" name="Invoice.BuyerAddress" value="@inv.BuyerAddress" maxlength="300" /></div></div>
+                <div class="col-sm-6 col-md-3"><label class="form-label" for="Invoice_BuyerEmail">Email người mua</label><div class="ta-input-icon">@UiIcon.Render("mail")<input class="form-control" id="Invoice_BuyerEmail" name="Invoice.BuyerEmail" type="email" value="@inv.BuyerEmail" maxlength="150" /></div></div>
+                <div class="col-sm-6 col-md-3"><label class="form-label" for="Invoice_PaymentMethod">Hình thức thanh toán</label>
+                    <select class="form-select" id="Invoice_PaymentMethod" name="Invoice.PaymentMethod">
+                        <option value="2" selected="@(inv.PaymentMethod == 2)">Chuyển khoản</option>
+                        <option value="1" selected="@(inv.PaymentMethod == 1)">Tiền mặt</option>
+                        <option value="3" selected="@(inv.PaymentMethod == 3)">Tiền mặt/Chuyển khoản</option>
+                    </select></div>
+                <div class="col-12"><label class="form-label" for="Invoice_Note">Ghi chú</label><div class="ta-input-icon">@UiIcon.Render("file-text")<input class="form-control" id="Invoice_Note" name="Invoice.Note" value="@inv.Note" maxlength="250" /></div></div>
+            </div>
+            <div class="table-responsive mb-3">
+                <table class="table table-sm tg-inv-lines mb-0" data-ta-invoice-lines>
+                    <thead><tr><th>Hàng hóa / dịch vụ</th><th>ĐVT</th><th>Số lượng</th><th>Đơn giá (đ)</th><th>Thuế suất</th></tr></thead>
+                    <tbody>
+                        @for (var i = 0; i < inv.Lines.Count; i++)
+                        {
+                            var l = inv.Lines[i];
+                            <tr>
+                                <td><div class="ta-input-icon">@UiIcon.Render("package")<input class="form-control form-control-sm" name="Invoice.Lines[@i].Name" value="@l.Name" maxlength="300" aria-label="Tên hàng dòng @(i + 1)" /></div></td>
+                                <td><div class="ta-input-icon">@UiIcon.Render("hash")<input class="form-control form-control-sm" name="Invoice.Lines[@i].Unit" value="@l.Unit" maxlength="50" aria-label="Đơn vị tính dòng @(i + 1)" /></div></td>
+                                <td><div class="ta-input-icon">@UiIcon.Render("hash")<input class="form-control form-control-sm" name="Invoice.Lines[@i].Quantity" type="number" min="0" step="any" value="@l.Quantity.ToString("0.####", inv0)" aria-label="Số lượng dòng @(i + 1)" /></div></td>
+                                <td><div class="ta-input-icon">@UiIcon.Render("hash")<input class="form-control form-control-sm" name="Invoice.Lines[@i].UnitPrice" type="number" min="0" step="any" value="@l.UnitPrice.ToString("0.####", inv0)" aria-label="Đơn giá dòng @(i + 1)" /></div></td>
+                                <td><select class="form-select form-select-sm" name="Invoice.Lines[@i].TaxRate" aria-label="Thuế suất dòng @(i + 1)">
+                                    @foreach (var (code, label) in TingeeTaxRates.All) { <option value="@code" selected="@(code == l.TaxRate)">@label</option> }
+                                </select></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+                <div class="form-hint mt-1">Dòng để trống tên sẽ bị bỏ qua. Tingee tự tính tiền thuế và tổng tiền.</div>
+            </div>
+            <div class="d-flex gap-2 flex-wrap align-items-center">
+                <button class="btn btn-primary" type="submit" formaction="@Url.Action("Draft")" disabled="@(!ready)" data-ta-loading data-ta-loading-text="Đang tạo...">@UiIcon.Render("eye")<span>Tạo nháp (xem PDF)</span></button>
+                <label class="form-check mb-0 ms-md-3"><input class="form-check-input" type="checkbox" name="Invoice.ConfirmIssue" value="true" data-ta-invoice-confirm /><span class="form-check-label">Tôi hiểu "Phát hành" tạo hóa đơn điện tử thật, không xóa được</span></label>
+                <button class="btn btn-danger" type="submit" formaction="@Url.Action("Issue")" disabled="@(!ready)" data-ta-invoice-issue data-ta-loading data-ta-loading-text="Đang phát hành...">@UiIcon.Render("file-invoice")<span>Phát hành</span></button>
+            </div>
+        </form>
+    </div>
+</section>
+
+<section class="card mt-3" aria-labelledby="ivLookup" data-ta-invoice-lookup>
+    <div class="card-header"><h2 class="card-title" id="ivLookup">@UiIcon.Render("search")4. Tải / gửi email hóa đơn đã phát hành</h2></div>
+    <div class="card-body">
+        <div class="row g-3">
+            <form asp-action="Download" method="post" target="_blank" class="col-md-6">
+                <input type="hidden" name="merchant" value="@mid" />
+                <label class="form-label required" for="dlCode">Mã hóa đơn</label>
+                <div class="d-flex gap-2"><div class="ta-input-icon flex-grow-1">@UiIcon.Render("hash")<input class="form-control" id="dlCode" name="invoiceCode" value="@Model.Issued?.InvoiceCode" maxlength="40" required /></div>
+                    <button class="btn" type="submit" name="view" value="true" disabled="@(!ready)">@UiIcon.Render("eye")<span>Xem</span></button>
+                    <button class="btn" type="submit" name="view" value="false" disabled="@(!ready)">@UiIcon.Render("device-floppy")<span>Tải</span></button></div>
+            </form>
+            <form asp-action="SendEmail" method="post" class="col-md-6">
+                <input type="hidden" name="merchant" value="@mid" />
+                <div class="row g-2">
+                    <div class="col-sm-5"><label class="form-label required" for="emCode">Mã hóa đơn</label><div class="ta-input-icon">@UiIcon.Render("hash")<input class="form-control" id="emCode" name="invoiceCode" value="@Model.Issued?.InvoiceCode" maxlength="40" required /></div></div>
+                    <div class="col-sm-7"><label class="form-label required" for="emTo">Email người nhận</label>
+                        <div class="d-flex gap-2"><div class="ta-input-icon flex-grow-1">@UiIcon.Render("mail")<input class="form-control" id="emTo" name="email" type="email" maxlength="150" required /></div><button class="btn" type="submit" disabled="@(!ready)" data-ta-loading data-ta-loading-text="Đang gửi...">@UiIcon.Render("mail")<span>Gửi</span></button></div></div>
+                </div>
+                <div class="form-hint mt-1">Chỉ XCyber và MISA gửi email qua Tingee; HiLo, SInvoice, BKAV: tải PDF rồi tự gửi.</div>
+            </form>
+        </div>
+    </div>
+</section>
+
+@* ---- Popup: connect a provider account ---- *@
+<div class="modal modal-blur fade" id="ivAccount" tabindex="-1" aria-labelledby="ivAccountTitle" aria-hidden="true" data-ta-open="@(accountOpen ? "true" : "false")" data-ta-invoice-account-dialog>
+    <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+        <div class="modal-header">
+            <h2 class="modal-title" id="ivAccountTitle">@UiIcon.Render("building")<span>Kết nối tài khoản nhà cung cấp hóa đơn</span></h2>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+        </div>
+        <div class="modal-body">
+            @if (accountOpen && errors.Count > 0)
+            {
+                <div class="ta-alert ta-alert--danger mb-3" role="alert" data-ta-invoice-errors>@UiIcon.Render("alert-circle")<div class="ta-alert__body">@foreach (var e in errors) {<div>@e</div>}</div></div>
+            }
+            <form asp-action="SaveAccount" method="post" id="ivAccountForm" autocomplete="off">
+                <input type="hidden" name="merchant" value="@mid" />
+                <div class="mb-2"><label class="form-label required" for="Account_Provider">Nhà cung cấp</label>
+                    <select class="form-select" id="Account_Provider" name="Account.Provider" required>
+                        <option value="">— Chọn —</option>
+                        @foreach (var (code, name) in TingeeInvoiceProviders.Known)
+                        {
+                            var offered = Model.Providers.FirstOrDefault(p => p.Code == code);
+                            <option value="@code" selected="@(code == acc.Provider)">@name@(offered?.Description is { Length: > 0 } d ? $" — {d}" : "")</option>
+                        }
+                    </select></div>
+                <div class="mb-2"><label class="form-label" for="Account_Id">Cập nhật tài khoản</label>
+                    <select class="form-select" id="Account_Id" name="Account.Id">
+                        <option value="">Tạo tài khoản mới</option>
+                        @foreach (var a in accounts) { <option value="@a.Id" selected="@(a.Id == acc.Id)">@AccountLabel(a)</option> }
+                    </select></div>
+                <div class="mb-2"><label class="form-label required" for="Account_TaxCode">Mã số thuế đơn vị bán</label><div class="ta-input-icon">@UiIcon.Render("receipt-tax")<input class="form-control" id="Account_TaxCode" name="Account.TaxCode" value="@acc.TaxCode" inputmode="numeric" maxlength="14" required /></div></div>
+                <div class="mb-2"><label class="form-label required" for="Account_Username">Tên đăng nhập tại nhà cung cấp</label><div class="ta-input-icon">@UiIcon.Render("user")<input class="form-control" id="Account_Username" name="Account.Username" value="@acc.Username" maxlength="150" autocomplete="off" required /></div></div>
+                <div class="mb-2"><label class="form-label required" for="Account_Password">Mật khẩu tại nhà cung cấp</label><div class="ta-input-icon">@UiIcon.Render("key")<input class="form-control" id="Account_Password" name="Account.Password" type="password" maxlength="200" autocomplete="new-password" required /></div>
+                    <div class="form-hint">Chỉ gửi sang Tingee (Tingee lưu mã hóa) — T.A Portal không lưu mật khẩu này.</div></div>
+                <label class="form-check mb-0"><input class="form-check-input" type="checkbox" name="Account.IsDefault" value="true" checked="@acc.IsDefault" /><input type="hidden" name="Account.IsDefault" value="false" /><span class="form-check-label">Đặt làm tài khoản mặc định</span></label>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn me-auto" data-bs-dismiss="modal">@UiIcon.Render("x")<span>Đóng</span></button>
+            <button class="btn btn-primary" type="submit" form="ivAccountForm" disabled="@(!ready)" data-ta-loading data-ta-loading-text="Đang kiểm tra...">@UiIcon.Render("check")<span>Kết nối</span></button>
+        </div>
+    </div></div>
+</div>
+
+<script>
+    (function () {
+        // Draft PDF: shown from a blob URL (data: URLs are blocked in frames by some browsers).
+        var frame = document.querySelector('[data-ta-invoice-pdf]');
+        if (frame) {
+            try {
+                var raw = atob(frame.getAttribute('data-pdf')), bytes = new Uint8Array(raw.length);
+                for (var i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
+                frame.src = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));
+            } catch (e) { frame.replaceWith(document.createTextNode('Không hiển thị được PDF; dùng nút "Tải PDF nháp".')); }
+        }
+        document.querySelectorAll('[data-ta-invoice-use-template]').forEach(function (b) {
+            b.addEventListener('click', function () {
+                document.getElementById('Invoice_Pattern').value = b.getAttribute('data-pattern') || '';
+                document.getElementById('Invoice_Series').value = b.getAttribute('data-series') || '';
+                document.getElementById('ivInvoiceForm').scrollIntoView({ behavior: 'smooth' });
+            });
+        });
+        var confirmBox = document.querySelector('[data-ta-invoice-confirm]'), issue = document.querySelector('[data-ta-invoice-issue]');
+        if (confirmBox && issue && !issue.disabled) {
+            var sync = function () { issue.disabled = !confirmBox.checked; };
+            confirmBox.addEventListener('change', sync); sync();
+        }
+    })();
+</script>

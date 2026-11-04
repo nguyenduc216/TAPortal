@@ -17,6 +17,7 @@ public static class IntegrationsServiceCollectionExtensions
         else services.TryAddSingleton<ITingeeCallLog, SqlTingeeCallLog>();
         services.AddHttpClient<TingeeClient>(client => client.Timeout = TimeSpan.FromSeconds(30));
         services.TryAddScoped<ITingeeApi, TingeeApi>();
+        services.TryAddScoped<ITingeeInvoiceApi, TingeeInvoiceApi>();
         return services;
     }
 }
