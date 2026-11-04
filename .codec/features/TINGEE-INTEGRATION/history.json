@@ -212,5 +212,15 @@
     "migration_status": "014 EXECUTED 2026-11-04T04:03Z (dry-run PASS, verify PASS)",
     "publish_status": "DEPLOYED portal + invoice 910726e",
     "merge_status": "PENDING_APPROVAL"
+  },
+  {
+    "change_id": "TINGEE-INTEGRATION-CHG-20261104T042150Z-621434",
+    "created_at": "2026-11-04T04:21:50.413424+00:00",
+    "title": "VietinBank personal/household links send the mobile number",
+    "status": "IMPLEMENTED / TESTS_PASS",
+    "commit_sha": null,
+    "migration_status": "NONE_REQUIRED",
+    "publish_status": "DEPLOY_PENDING",
+    "merge_status": "PENDING_APPROVAL"
   }
 ]

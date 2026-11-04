@@ -64,8 +64,10 @@ public static class TingeeBankCatalog
         Bank("970415", "CTG", "VietinBank", AllTypes, t => t == TingeeAccountTypes.Business
             ? Rule(t, [TingeeBankField.AccountNumber, TingeeBankField.VaSuffix, TingeeBankField.MerchantName], dynamicQr: true, root: false,
                 note: "VietinBank không gửi nội dung chuyển khoản trong thông báo giao dịch.")
-            : Rule(t, [TingeeBankField.AccountNumber, TingeeBankField.AccountName, TingeeBankField.Identity], dynamicQr: false, root: true,
-                note: "VietinBank không gửi nội dung chuyển khoản trong thông báo giao dịch.")),
+            // The docs list mobile as optional for CTG, but without it VietinBank rejects personal links with 400
+            // "Verify string error ... Verify string is invalid" (2026-11-04, operator report): always send it.
+            : Rule(t, [TingeeBankField.AccountNumber, TingeeBankField.AccountName, TingeeBankField.Identity, TingeeBankField.Mobile], dynamicQr: false, root: true,
+                note: "Số điện thoại phải là số đăng ký với VietinBank. VietinBank không gửi nội dung chuyển khoản trong thông báo giao dịch.")),
         Bank("970422", "MBB", "MB Bank", AllTypes, t => Rule(t, t == TingeeAccountTypes.Business ? [TingeeBankField.AccountNumber, TingeeBankField.AccountName, TingeeBankField.Mobile] : Personalish(),
             dynamicQr: true, root: false, note: t == TingeeAccountTypes.Business ? "Tài khoản doanh nghiệp MB cần T.A/Tingee cấu hình trước." : null)),
         Bank("970432", "VPB", "VPBank", AllTypes, t => Rule(t, t == TingeeAccountTypes.Business ? [TingeeBankField.AccountNumber, TingeeBankField.AccountName] : [TingeeBankField.AccountNumber, TingeeBankField.AccountName, TingeeBankField.Identity],

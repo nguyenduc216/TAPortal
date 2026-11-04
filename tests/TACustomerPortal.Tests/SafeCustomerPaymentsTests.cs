@@ -72,6 +72,10 @@ public sealed class SafeCustomerPaymentsTests
         Assert.False(TingeeBankCatalog.Find("970430")!.Rule(TingeeAccountTypes.Personal).VaSupported);   // PGBank
         Assert.True(TingeeBankCatalog.Find("970416")!.Rule(TingeeAccountTypes.Business).Required.Contains(TingeeBankField.AcbUserId));
         Assert.DoesNotContain(TingeeBankField.Identity, TingeeBankCatalog.Find("970418")!.Rule(TingeeAccountTypes.Business).Required);
+        // VietinBank personal/household: mobile is sent although the docs call it optional (400 "Verify string error" without it).
+        Assert.Contains(TingeeBankField.Mobile, TingeeBankCatalog.Find("970415")!.Rule(TingeeAccountTypes.Personal).Required);
+        Assert.Contains(TingeeBankField.Mobile, TingeeBankCatalog.Find("970415")!.Rule(TingeeAccountTypes.Household).Required);
+        Assert.DoesNotContain(TingeeBankField.Mobile, TingeeBankCatalog.Find("970415")!.Rule(TingeeAccountTypes.Business).Required);
     }
 
     // ---- access ----------------------------------------------------------------------------------------
