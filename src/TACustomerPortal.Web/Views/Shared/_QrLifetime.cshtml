@@ -1,0 +1,16 @@
+@model QrLifetimeField
+@* QR lifetime as days + hours + minutes; the controller adds them up (QrLifetime.Apply) into the minutes field named Model.Prefix + "Minutes". *@
+@{
+    var (d, h, m) = QrLifetime.Split(Model.Minutes);
+    var key = Model.Prefix + "Minutes";
+}
+<div class="cp-field" style="@(Model.Last ? "margin-bottom:0" : null)">
+    <label class="cp-label" for="@(Model.Prefix)Days">@Model.Label</label>
+    <div class="cp-duration" data-cp-duration>
+        <div class="cp-input-wrap">@UiIcon.Render("calendar")<input class="cp-input" id="@(Model.Prefix)Days" name="@(Model.Prefix)Days" type="number" min="0" max="30" value="@d" inputmode="numeric" aria-label="Số ngày" disabled="@Model.Disabled" /><span class="cp-duration__unit">ngày</span></div>
+        <div class="cp-input-wrap">@UiIcon.Render("clock")<input class="cp-input" id="@(Model.Prefix)Hours" name="@(Model.Prefix)Hours" type="number" min="0" max="23" value="@h" inputmode="numeric" aria-label="Số giờ" disabled="@Model.Disabled" /><span class="cp-duration__unit">giờ</span></div>
+        <div class="cp-input-wrap">@UiIcon.Render("clock")<input class="cp-input" id="@(Model.Prefix)Mins" name="@(Model.Prefix)Mins" type="number" min="0" max="59" value="@m" inputmode="numeric" aria-label="Số phút" disabled="@Model.Disabled" /><span class="cp-duration__unit">phút</span></div>
+    </div>
+    <div class="cp-hint">Tổng: <span data-cp-duration-total>@QrLifetime.Text(Model.Minutes)</span> · tối đa 30 ngày.</div>
+    <div class="cp-error">@Html.ValidationMessage(key)@Html.ValidationMessage(Model.Prefix + "Days")@Html.ValidationMessage(Model.Prefix + "Hours")@Html.ValidationMessage(Model.Prefix + "Mins")</div>
+</div>

@@ -32,7 +32,7 @@
             <div class="cp-card__foot">
                 <a class="cp-btn cp-btn--ghost" asp-action="Index">@UiIcon.Render("arrow-left")<span>Danh sách đơn</span></a>
                 @if (open || Model.Status == OrderStatus.Expired) {<form method="post" asp-action="Refresh" asp-route-id="@o.Id"><button class="cp-btn cp-btn--ghost" type="submit">@UiIcon.Render("refresh")<span>Kiểm tra thanh toán</span></button></form>}
-                @if (canIssue) {<form method="post" asp-action="IssueQr" asp-route-id="@o.Id"><button class="cp-btn cp-btn--primary" type="submit">@UiIcon.Render("qrcode")<span>Tạo QR @(o.PaidAmount > 0 ? "cho số còn lại" : "")</span></button></form>}
+                @if (canIssue) {<form method="post" asp-action="IssueQr" asp-route-id="@o.Id" class="cp-inline-form">@if (Model.Banks.Count > 1) {<select class="cp-input cp-input--plain" name="bankAccountId" aria-label="Tài khoản nhận tiền" data-cp-issue-bank>@foreach (var b in Model.Banks) {<option value="@b.Id" selected="@(b.Id == (Model.Bank is { IsActive: true } cur ? cur.Id : Model.Banks[0].Id))">@PaymentText.BankOption(b)</option>}</select>}<button class="cp-btn cp-btn--primary" type="submit">@UiIcon.Render("qrcode")<span>Tạo QR @(o.PaidAmount > 0 ? "cho số còn lại" : "")</span></button></form>}
                 @if (Model.CanManage && OrderStatus.IsOpen(o.Status) && o.PaidAmount == 0) {<form method="post" asp-action="Cancel" asp-route-id="@o.Id" style="margin-left:auto" onsubmit="return confirm('Hủy đơn @o.OrderNo? Mã QR sẽ không còn dùng được.')"><button class="cp-btn cp-btn--danger" type="submit">@UiIcon.Render("ban")<span>Hủy đơn</span></button></form>}
             </div>
         </section>

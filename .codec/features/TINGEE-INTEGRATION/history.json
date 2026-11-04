@@ -372,5 +372,15 @@
     "migration_status": "NOT_APPLICABLE",
     "publish_status": "DEPLOYED invoice",
     "merge_status": "PENDING_APPROVAL"
+  },
+  {
+    "change_id": "TINGEE-INTEGRATION-CHG-20261104T185412Z-3684CE",
+    "created_at": "2026-11-04T18:54:12.603694+00:00",
+    "title": "Customer Portal: choose receiving account when issuing an order QR; QR lifetime in days/hours/minutes",
+    "status": "IMPLEMENTED",
+    "commit_sha": null,
+    "migration_status": "NOT_APPLICABLE",
+    "publish_status": "NOT_PUBLISHED",
+    "merge_status": "PENDING_APPROVAL"
   }
 ]

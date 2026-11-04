@@ -29,16 +29,11 @@ else if (Model.Banks.Count == 0)
             <div class="cp-field">
                 <label class="cp-label" for="BankAccountId">Tài khoản nhận tiền</label>
                 <select class="cp-input cp-input--plain" id="BankAccountId" name="BankAccountId" required>
-                    @foreach (var b in Model.Banks) {<option value="@b.Id" selected="@(b.Id == i.BankAccountId)">@b.BankName — @b.ReceiveAccount @(TingeeBankCatalog.SupportsDynamicQr(b.BankBin, b.AccountType) ? "(QR động)" : "(QR tĩnh)")</option>}
+                    @foreach (var b in Model.Banks) {<option value="@b.Id" selected="@(b.Id == i.BankAccountId)">@PaymentText.BankOption(b)</option>}
                 </select>
                 <div class="cp-error">@Html.ValidationMessage("BankAccountId")</div>
             </div>
-            <div class="cp-field">
-                <label class="cp-label" for="QrExpireMinutes">Thời hạn QR (phút)</label>
-                <div class="cp-input-wrap">@UiIcon.Render("clock")<input class="cp-input" id="QrExpireMinutes" name="QrExpireMinutes" type="number" min="1" max="43200" value="@i.QrExpireMinutes" required /></div>
-                <div class="cp-hint">1440 = 1 ngày; tối đa 43.200 (30 ngày).</div>
-                <div class="cp-error">@Html.ValidationMessage("QrExpireMinutes")</div>
-            </div>
+            @await Html.PartialAsync("_QrLifetime", new QrLifetimeField("QrExpire", "Thời hạn QR", i.QrExpireMinutes))
             <div class="cp-field cp-span">
                 <label class="cp-label" for="Description">Mô tả</label>
                 <div class="cp-input-wrap">@UiIcon.Render("file-text")<input class="cp-input" id="Description" name="Description" value="@i.Description" maxlength="500" /></div>

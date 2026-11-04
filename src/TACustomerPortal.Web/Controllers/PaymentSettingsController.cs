@@ -20,6 +20,8 @@ public sealed class PaymentSettingsController(ICurrentCustomerContext customer, 
     {
         if (await Current() is not { } m) return SelectCustomer();
         if (!CanManage(m)) return Forbid();
+        input.DefaultQrExpireMinutes = QrLifetime.Apply(ModelState, nameof(input.DefaultQrExpireMinutes), input.DefaultQrExpireMinutes,
+            input.DefaultQrExpireDays, input.DefaultQrExpireHours, input.DefaultQrExpireMins);
         if (!ModelState.IsValid)
         {
             Response.StatusCode = StatusCodes.Status400BadRequest;

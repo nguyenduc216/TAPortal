@@ -39,6 +39,7 @@ public sealed class OrdersController(ICurrentCustomerContext customer, IPaymentS
     {
         if (await Current() is not { } m) return SelectCustomer();
         if (!CanManage(m)) return Forbid();
+        input.QrExpireMinutes = QrLifetime.Apply(ModelState, nameof(input.QrExpireMinutes), input.QrExpireMinutes, input.QrExpireDays, input.QrExpireHours, input.QrExpireMins);
         var merchant = await store.MerchantIdAsync(m.CustomerId);
         if (merchant is null) ModelState.AddModelError(string.Empty, "Doanh nghiệp chưa được T.A kích hoạt dịch vụ thanh toán.");
         var bank = input.BankAccountId is Guid bankId ? await store.BankAccountAsync(m.CustomerId, bankId) : null;
@@ -69,7 +70,8 @@ public sealed class OrdersController(ICurrentCustomerContext customer, IPaymentS
         var bank = order.BankAccountId is Guid b ? await store.BankAccountAsync(m.CustomerId, b) : null;
         var contact = order.ContactId is Guid c ? await store.ContactAsync(m.CustomerId, c) : null;
         var qr = order.QrPayload is not null && status is OrderStatus.Awaiting or OrderStatus.Partial ? QrImage.Svg(order.QrPayload) : null;
-        return View(new OrderDetailsVm(m, CanManage(m), order, status, bank, contact, qr, now));
+        var banks = (await store.BankAccountsAsync(m.CustomerId)).Where(x => x.IsActive && x.ReceiveAccount is not null).ToList();
+        return View(new OrderDetailsVm(m, CanManage(m), order, status, bank, contact, qr, now, banks));
     }
 
     /// <summary>Lightweight status for the details page to poll while the QR is open.</summary>
@@ -94,8 +96,9 @@ public sealed class OrdersController(ICurrentCustomerContext customer, IPaymentS
         return RedirectToAction(nameof(Details), new { id });
     }
 
+    /// <summary>(Re)issues the QR of a draft or expired order; bankAccountId switches the receiving account before that.</summary>
     [HttpPost]
-    public async Task<IActionResult> IssueQr(Guid id)
+    public async Task<IActionResult> IssueQr(Guid id, Guid? bankAccountId)
     {
         if (await Current() is not { } m) return SelectCustomer();
         if (!CanManage(m)) return Forbid();
@@ -108,13 +111,14 @@ public sealed class OrdersController(ICurrentCustomerContext customer, IPaymentS
             Flash("Chỉ tạo lại QR cho đơn chưa có QR hoặc đã hết hạn và còn tiền phải thu.", error: true);
             return RedirectToAction(nameof(Details), new { id });
         }
-        var bank = order.BankAccountId is Guid b ? await store.BankAccountAsync(m.CustomerId, b) : null;
-        if (bank is null || await store.MerchantIdAsync(m.CustomerId) is not long merchantId)
+        var chosen = bankAccountId ?? order.BankAccountId;
+        var bank = chosen is Guid b ? await store.BankAccountAsync(m.CustomerId, b) : null;
+        if (bank is null || !bank.IsActive || bank.ReceiveAccount is null || await store.MerchantIdAsync(m.CustomerId) is not long merchantId)
         {
-            Flash("Tài khoản nhận tiền của đơn không còn hoạt động.", error: true);
+            Flash("Tài khoản nhận tiền không còn hoạt động. Vui lòng chọn tài khoản khác.", error: true);
             return RedirectToAction(nameof(Details), new { id });
         }
-        var result = await payments.IssueQrAsync(m.CustomerId, merchantId, order with { Status = status }, bank, Actor);
+        var result = await payments.IssueQrAsync(m.CustomerId, merchantId, order with { Status = status, BankAccountId = bank.Id }, bank, Actor);
         Flash(result.Error ?? $"Đã tạo QR mới cho số tiền còn lại {PaymentText.Money(order.Remaining)}.", error: result.Error is not null);
         return RedirectToAction(nameof(Details), new { id });
     }

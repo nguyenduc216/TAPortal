@@ -144,3 +144,13 @@ document.addEventListener("click", event => {
         .catch(e => say(e.message && e.message !== "load" ? e.message : "Không mở được cửa sổ liên kết. Vui lòng thử lại.", "error"))
         .finally(() => { if (status.classList.contains("cp-alert")) delete card.dataset.busy; });
 }, true);
+// QR lifetime (_QrLifetime partial): shows the total of days/hours/minutes as it is typed. The server adds them up again.
+document.addEventListener("input", event => {
+    const box = event.target.closest("[data-cp-duration]");
+    const total = box?.parentElement.querySelector("[data-cp-duration-total]");
+    if (!total) return;
+    const [d, h, m] = [...box.querySelectorAll("input")].map(i => Math.max(0, parseInt(i.value, 10) || 0));
+    const parts = [d && d + " ngày", h && h + " giờ", m && m + " phút"].filter(Boolean);
+    const minutes = d * 1440 + h * 60 + m;
+    total.textContent = (parts.length ? parts.join(" ") : "0 phút") + (minutes > 43200 ? " (quá 30 ngày)" : minutes < 1 ? " (tối thiểu 1 phút)" : "");
+});

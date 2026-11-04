@@ -71,8 +71,13 @@ public sealed class OrderInput
     [StringLength(500, ErrorMessage = "Mô tả tối đa 500 ký tự.")]
     public string? Description { get; set; }
 
-    [Range(1, 43200, ErrorMessage = "Thời hạn QR từ 1 đến 43.200 phút (30 ngày).")]
+    [Range(1, 43200, ErrorMessage = QrLifetime.RangeMessage)]
     public int QrExpireMinutes { get; set; } = 1440;
+
+    // The form asks days/hours/minutes; when any is posted they replace QrExpireMinutes (QrLifetime.Apply).
+    [Range(0, 30, ErrorMessage = "Số ngày từ 0 đến 30.")] public int? QrExpireDays { get; set; }
+    [Range(0, 23, ErrorMessage = "Số giờ từ 0 đến 23.")] public int? QrExpireHours { get; set; }
+    [Range(0, 59, ErrorMessage = "Số phút từ 0 đến 59.")] public int? QrExpireMins { get; set; }
 
     public bool AutoIssueInvoice { get; set; } = true;
 
@@ -88,20 +93,66 @@ public sealed class OrderLineInput
     public string TaxRate { get; set; } = "0";
 }
 
-public sealed record OrderDetailsVm(CustomerMembership Customer, bool CanManage, Order Order, string Status, BankAccount? Bank, Contact? Contact, string? QrSvg, DateTime UtcNow);
+/// <summary>Banks: the active receiving accounts offered when (re)issuing the QR of a draft or expired order.</summary>
+public sealed record OrderDetailsVm(CustomerMembership Customer, bool CanManage, Order Order, string Status, BankAccount? Bank, Contact? Contact, string? QrSvg, DateTime UtcNow,
+    IReadOnlyList<BankAccount> Banks);
 
 public sealed class PaymentSettingsInput
 {
     public bool AutoIssueInvoiceDefault { get; set; } = true;
 
-    [Range(1, 43200, ErrorMessage = "Thời hạn QR từ 1 đến 43.200 phút (30 ngày).")]
+    [Range(1, 43200, ErrorMessage = QrLifetime.RangeMessage)]
     public int DefaultQrExpireMinutes { get; set; } = 1440;
+
+    [Range(0, 30, ErrorMessage = "Số ngày từ 0 đến 30.")] public int? DefaultQrExpireDays { get; set; }
+    [Range(0, 23, ErrorMessage = "Số giờ từ 0 đến 23.")] public int? DefaultQrExpireHours { get; set; }
+    [Range(0, 59, ErrorMessage = "Số phút từ 0 đến 59.")] public int? DefaultQrExpireMins { get; set; }
+}
+
+/// <summary>Model of the shared _QrLifetime partial: fields Prefix+"Days"/"Hours"/"Mins", errors under Prefix+"Minutes".</summary>
+public sealed record QrLifetimeField(string Prefix, string Label, int Minutes, bool Disabled = false, bool Last = false);
+
+/// <summary>QR lifetime entered as days + hours + minutes and stored as minutes (1 minute to 30 days).</summary>
+public static class QrLifetime
+{
+    public const int MaxMinutes = 43200;
+    public const string RangeMessage = "Thời hạn QR từ 1 phút đến 30 ngày.";
+
+    public static (int Days, int Hours, int Minutes) Split(int minutes) => (minutes / 1440, minutes % 1440 / 60, minutes % 60);
+
+    /// <summary>"1 ngày 2 giờ 30 phút"; zero parts are left out.</summary>
+    public static string Text(int minutes)
+    {
+        var (d, h, m) = Split(minutes);
+        var parts = new List<string>();
+        if (d > 0) parts.Add($"{d} ngày");
+        if (h > 0) parts.Add($"{h} giờ");
+        if (m > 0 || parts.Count == 0) parts.Add($"{m} phút");
+        return string.Join(" ", parts);
+    }
+
+    /// <summary>
+    /// When any of the day/hour/minute fields was posted, their total replaces the minutes field (<paramref name="key"/>)
+    /// and is range-checked under that key. Forms that post only the minutes are left as they are.
+    /// </summary>
+    public static int Apply(Microsoft.AspNetCore.Mvc.ModelBinding.ModelStateDictionary state, string key, int minutes, int? days, int? hours, int? mins)
+    {
+        if (days is null && hours is null && mins is null) return minutes;
+        var total = (days ?? 0) * 1440 + (hours ?? 0) * 60 + (mins ?? 0);
+        state.Remove(key);
+        if (total is < 1 or > MaxMinutes) state.AddModelError(key, RangeMessage);
+        return total;
+    }
 }
 
 public sealed record PaymentSettingsVm(CustomerMembership Customer, bool CanManage, PaymentSettingsInput Input);
 
 public static class PaymentText
 {
+    /// <summary>Receiving account in a select: "VietinBank — 104005395693 (QR động) · mặc định".</summary>
+    public static string BankOption(BankAccount b) =>
+        $"{b.BankName} — {b.ReceiveAccount} ({(TingeeBankCatalog.SupportsDynamicQr(b.BankBin, b.AccountType) ? "QR động" : "QR tĩnh")}){(b.IsDefault ? " · mặc định" : "")}";
+
     public static (string Label, string Css) BankStatus(string status) => status switch
     {
         Services.BankStatus.Active => ("Đang hoạt động", "cp-badge--green"),

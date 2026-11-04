@@ -590,6 +590,81 @@ public sealed class SafeCustomerPaymentsTests
         Assert.Equal(HttpStatusCode.BadRequest, invalid.StatusCode);
     }
 
+    [Fact]
+    public async Task QrLifetimeIsEnteredInDaysHoursAndMinutes()
+    {
+        using var f = Factory("OWNER", out var store, out var tingee);
+        store.Merchants[A] = 9001;
+        var bank = Bank("970422", BankStatus.Active) with { VaAccountNumber = "VQR1" };
+        store.Banks.Add((A, bank));
+        var c = Client(f);
+        var page = WebUtility.HtmlDecode(await c.GetStringAsync("/paymentsettings"));   // default 1440 min = 1 day
+        Assert.Matches("name=\"DefaultQrExpireDays\"[^>]*value=\"1\"", page);
+        Assert.Matches("name=\"DefaultQrExpireHours\"[^>]*value=\"0\"", page);
+        Assert.Contains("Tổng: <span data-cp-duration-total>1 ngày</span>", page);
+
+        var token = await Token(c, "/paymentsettings");
+        Assert.Equal(HttpStatusCode.Redirect, (await Post(c, "/paymentsettings", token, new()
+            { ["AutoIssueInvoiceDefault"] = "true", ["DefaultQrExpireDays"] = "2", ["DefaultQrExpireHours"] = "3", ["DefaultQrExpireMins"] = "15" })).StatusCode);
+        Assert.Equal(2 * 1440 + 3 * 60 + 15, (await store.SettingsAsync(A)).DefaultQrExpireMinutes);
+        foreach (var bad in new[] { ("31", "0", "0"), ("30", "0", "1"), ("0", "0", "0"), ("0", "24", "0") })
+        {
+            var r = await Post(c, "/paymentsettings", token, new() { ["DefaultQrExpireDays"] = bad.Item1, ["DefaultQrExpireHours"] = bad.Item2, ["DefaultQrExpireMins"] = bad.Item3 });
+            Assert.Equal(HttpStatusCode.BadRequest, r.StatusCode);
+        }
+        Assert.Equal(3075, (await store.SettingsAsync(A)).DefaultQrExpireMinutes);
+
+        var create = WebUtility.HtmlDecode(await c.GetStringAsync("/orders/create"));
+        Assert.Contains("2 ngày 3 giờ 15 phút", create);
+        var order = Lines(bank.Id, "10000");
+        order.Remove("QrExpireMinutes");
+        order["QrExpireDays"] = "0"; order["QrExpireHours"] = "1"; order["QrExpireMins"] = "30";
+        Assert.Equal(HttpStatusCode.Redirect, (await Post(c, "/orders/create", await Token(c, "/orders/create"), order)).StatusCode);
+        Assert.Equal(90, store.Orders.Single().Order.QrExpireMinutes);
+        Assert.Equal(90, tingee.DynamicQrRequests.Single().ExpireInMinute);
+    }
+
+    [Fact]
+    public async Task TheDefaultAccountIsPreselectedAndADraftOrderCanSwitchAccountBeforeIssuingTheQr()
+    {
+        using var f = Factory("OWNER", out var store, out var tingee);
+        store.Merchants[A] = 9001;
+        var mb = Bank("970422", BankStatus.Active, TingeeAccountTypes.Business) with { VaAccountNumber = "VQRMB" };
+        var vtb = Bank("970415", BankStatus.Active) with { VaAccountNumber = "104005395693", IsDefault = true };
+        store.Banks.Add((A, mb));
+        store.Banks.Add((A, vtb));
+        var c = Client(f);
+        var create = WebUtility.HtmlDecode(await c.GetStringAsync("/orders/create"));
+        Assert.Matches($"<option value=\"{vtb.Id}\" selected=\"selected\">[^<]*· mặc định</option>", create);
+
+        // Created on MB, the QR failed: the details page offers both accounts and "Tạo QR" uses the one picked.
+        tingee.QrError = new TingeeApiException("400", "Purpose of transaction is wrong format");
+        var token = await Token(c, "/orders/create");
+        await Post(c, "/orders/create", token, Lines(mb.Id, "2000"));
+        var order = store.Orders.Single().Order;
+        Assert.Equal((OrderStatus.Draft, mb.Id), (order.Status, order.BankAccountId));
+        var details = WebUtility.HtmlDecode(await c.GetStringAsync($"/orders/details/{order.Id}"));
+        Assert.Contains("name=\"bankAccountId\"", details);
+        Assert.Matches($"<option value=\"{mb.Id}\" selected=\"selected\">", details);
+
+        tingee.QrError = null;
+        await Post(c, $"/orders/issueqr/{order.Id}", token, new() { ["bankAccountId"] = vtb.Id.ToString() });
+        var issued = store.Orders.Single().Order;
+        Assert.Equal((OrderStatus.Awaiting, vtb.Id), (issued.Status, issued.BankAccountId));
+        var sent = Assert.Single(tingee.StaticQrRequests);   // VietinBank personal: static QR
+        Assert.Equal(("970415", "104005395693"), (sent.BankBin, sent.AccountNumber));
+
+        // An account of another company is refused.
+        var foreign = Bank("970418", BankStatus.Active) with { VaAccountNumber = "OTHER" };
+        store.Banks.Add((B, foreign));
+        var expired = store.Orders.Single().Order with { Status = OrderStatus.Expired, ExpiresAt = DateTime.UtcNow.AddMinutes(-1) };
+        store.Orders[0] = (A, expired);
+        await Post(c, $"/orders/issueqr/{order.Id}", token, new() { ["bankAccountId"] = foreign.Id.ToString() });
+        Assert.Single(tingee.StaticQrRequests);
+        Assert.Empty(tingee.DynamicQrRequests);
+        Assert.Equal(vtb.Id, store.Orders.Single().Order.BankAccountId);
+    }
+
     // ---- helpers ---------------------------------------------------------------------------------------
     private static Dictionary<string, string> Lines(Guid bank, string price) => new()
     {

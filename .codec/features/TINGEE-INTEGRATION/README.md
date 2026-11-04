@@ -63,3 +63,4 @@ Database sẵn sàng cho phần thanh toán (verify PASS). Tiếp theo: operator
 | `TINGEE-INTEGRATION-CHG-20261104T172006Z-EE62CC` | 2026-11-04 | Customer Portal: bank logo opens the Bank Link popup (SDK); Sync adds accounts linked there | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |
 | `TINGEE-INTEGRATION-CHG-20261104T182406Z-ECDCF6` | 2026-11-04 | Customer Portal: automatic customer codes (KH001, KH002...) | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |
 | `TINGEE-INTEGRATION-CHG-20261104T183759Z-3C176A` | 2026-11-04 | Customer Portal: QR transfer content without '-' (fix 400 Purpose of transaction is wrong format) | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |
+| `TINGEE-INTEGRATION-CHG-20261104T185412Z-3684CE` | 2026-11-04 | Customer Portal: choose receiving account when issuing an order QR; QR lifetime in days/hours/minutes | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |

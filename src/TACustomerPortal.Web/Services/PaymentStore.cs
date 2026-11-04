@@ -273,13 +273,13 @@ OUTPUT inserted.Id VALUES(@c,@no,@contact,@bank,@desc,@amount,'DRAFT',@expire,@i
     {
         await using var cn = await Open();
         await using var cmd = Command(cn, """
-UPDATE dbo.CustomerOrders SET PaidAmount=@paid,Status=@status,QrType=@qrType,QrPayload=@payload,QrAccount=@qrAccount,BillId=@bill,ExpiresAt=@expires,LastError=@error,
+UPDATE dbo.CustomerOrders SET BankAccountId=@bank,PaidAmount=@paid,Status=@status,QrType=@qrType,QrPayload=@payload,QrAccount=@qrAccount,BillId=@bill,ExpiresAt=@expires,LastError=@error,
  InvoiceStatus=CASE WHEN @status='PAID' AND AutoIssueInvoice=1 AND InvoiceStatus='NONE' THEN 'PENDING' ELSE InvoiceStatus END,
  PaidAt=CASE WHEN @status='PAID' AND PaidAt IS NULL THEN SYSUTCDATETIME() ELSE PaidAt END,
  CancelledAt=CASE WHEN @status='CANCELLED' AND CancelledAt IS NULL THEN SYSUTCDATETIME() ELSE CancelledAt END,
  UpdatedAt=SYSUTCDATETIME(),UpdatedBy=@actor
 WHERE CustomerId=@c AND Id=@id
-""", ("@c", customerId), ("@id", o.Id), ("@paid", o.PaidAmount), ("@status", o.Status), ("@qrType", o.QrType), ("@payload", o.QrPayload), ("@qrAccount", o.QrAccount),
+""", ("@c", customerId), ("@id", o.Id), ("@bank", o.BankAccountId), ("@paid", o.PaidAmount), ("@status", o.Status), ("@qrType", o.QrType), ("@payload", o.QrPayload), ("@qrAccount", o.QrAccount),
             ("@bill", o.BillId), ("@expires", o.ExpiresAt), ("@error", o.LastError), ("@actor", actor));
         await cmd.ExecuteNonQueryAsync();
     }
