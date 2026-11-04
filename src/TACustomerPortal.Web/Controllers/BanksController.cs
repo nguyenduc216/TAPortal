@@ -83,7 +83,7 @@ public sealed partial class BanksController(ICurrentCustomerContext customer, IP
 
         TingeeCreateVaResult result;
         try { result = await tingee.CreateVaAsync(request); }
-        catch (TingeeApiException ex) { return Fail($"Ngân hàng/Tingee từ chối liên kết (mã {ex.Code}): {ex.TingeeMessage}"); }
+        catch (TingeeApiException ex) { return Fail($"Ngân hàng/Tingee từ chối liên kết (mã {ex.Code}): {ex.TingeeMessage}{(ex.LogCode is null ? "" : $" — Mã log: {ex.LogCode}")}"); }
         catch (HttpRequestException ex) { logger.LogWarning(ex, "Tingee unreachable (create-va) for customer {CustomerId}.", m.CustomerId); return Fail("Không kết nối được Tingee. Vui lòng thử lại sau."); }
 
         var now = clock.GetUtcNow().UtcDateTime;

@@ -307,7 +307,10 @@ public sealed partial class TingeeSandboxController(
     private string AbsoluteHook(string kind) => $"{Request.Scheme}://{Request.Host}{Request.PathBase}/hooks/tingee/{kind}";
 
     /// <summary>Message for expected Tingee/network failures; null lets anything else propagate as a real error.</summary>
-    private string? Explain(Exception ex, string operation)
+    private string? Explain(Exception ex, string operation) =>
+        Describe(ex, operation) is string message ? message + (TingeeLogCode.Of(ex) is string code ? $" — Mã log: {code} (tra cứu tại Tingee log)" : "") : null;
+
+    private string? Describe(Exception ex, string operation)
     {
         switch (ex)
         {

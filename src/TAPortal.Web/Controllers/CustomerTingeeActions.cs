@@ -39,7 +39,7 @@ public sealed partial class CustomersController
             var created = await api.CreateMerchantAsync(new TingeeCreateMerchantRequest(input.Name.Trim(), input.PhoneNumber, Blank(input.Email), Code: Blank(input.Code), FullAddress: Blank(customer.Address)));
             merchantId = created.MerchantId;
         }
-        catch (TingeeApiException ex) { return TingeeError(id, $"Tingee từ chối tạo tài khoản (mã {ex.Code}): {ex.TingeeMessage}"); }
+        catch (TingeeApiException ex) { return TingeeError(id, $"Tingee từ chối tạo tài khoản (mã {ex.Code}): {ex.TingeeMessage}{(ex.LogCode is null ? "" : $" — Mã log: {ex.LogCode}")}"); }
         catch (HttpRequestException ex) { logger.LogWarning(ex, "Tingee unreachable creating merchant for {CustomerId}.", id); return TingeeError(id, "Không kết nối được Tingee. Vui lòng thử lại sau."); }
 
         var outcome = await SafeLink(new(id, merchantId, Blank(input.Code), input.PhoneNumber, Blank(input.Email), "CREATED", DateTime.UtcNow), tingee, actor);
@@ -69,7 +69,7 @@ public sealed partial class CustomersController
             // Master Merchant: only a child merchant that Tingee actually has may be linked (a phone number typed here is not one).
             TingeeMerchantItem? found;
             try { found = (await api.GetMerchantsAsync()).Items.FirstOrDefault(m => m.Id == merchantId); }
-            catch (TingeeApiException ex) { return TingeeError(id, $"Không kiểm tra được merchant trên Tingee (mã {ex.Code}): {ex.TingeeMessage}"); }
+            catch (TingeeApiException ex) { return TingeeError(id, $"Không kiểm tra được merchant trên Tingee (mã {ex.Code}): {ex.TingeeMessage}{(ex.LogCode is null ? "" : $" — Mã log: {ex.LogCode}")}"); }
             catch (HttpRequestException ex) { logger.LogWarning(ex, "Tingee unreachable verifying merchant {MerchantId}.", merchantId); return TingeeError(id, "Không kết nối được Tingee để kiểm tra merchant. Vui lòng thử lại sau."); }
             if (found is null)
                 return TingeeError(id, $"Tingee không có merchant con #{merchantId} của T.A, nên chưa liên kết. Merchant ID là số do Tingee cấp, không phải số điện thoại; nếu khách hàng chưa có merchant, dùng \"Tạo tài khoản Tingee qua API\".");

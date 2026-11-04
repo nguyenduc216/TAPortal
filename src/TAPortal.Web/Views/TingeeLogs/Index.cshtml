@@ -1,0 +1,77 @@
+@using TAPortal.Integrations.Tingee
+@using TAPortal.Web.Controllers
+@model TingeeLogsVm
+@{
+    var f = Model.Found;
+    string Path(string url) => Uri.TryCreate(url, UriKind.Absolute, out var u) ? u.AbsolutePath : url;
+    string Badge(TingeeCallLogEntry e) => e.ResponseCode == "00" ? "ta-badge--success" : "ta-badge--danger";
+}
+@section Scripts { <script src="~/js/ta-tingee-sandbox.js" asp-append-version="true"></script> }
+
+<section class="card mb-3" aria-labelledby="logSearch">
+    <div class="card-header"><h2 class="card-title" id="logSearch">@UiIcon.Render("search")Tra cứu log gọi Tingee</h2></div>
+    <div class="card-body">
+        <p class="text-secondary">Mỗi lần TAPortal/Customer gọi Tingee đều được ghi lại (header, body gửi đi, phản hồi của Tingee). Mã log hiện cùng thông báo lỗi; nhập mã để xem và chép nội dung gửi Tingee hỗ trợ. Không lưu Secret Key.</p>
+        <form method="get" asp-action="Index" class="d-flex flex-wrap gap-2 align-items-end" data-ta-log-search>
+            <div><label class="form-label" for="code">Mã log</label><div class="ta-input-icon">@UiIcon.Render("hash")<input class="form-control" id="code" name="code" value="@Model.Code" placeholder="TG2611..." maxlength="32" /></div></div>
+            <div><label class="form-label" for="path">API (lọc danh sách)</label><div class="ta-input-icon">@UiIcon.Render("list-tree")<input class="form-control" id="path" name="path" value="@Model.Path" placeholder="create-va" maxlength="200" /></div></div>
+            <label class="form-check mb-2"><input class="form-check-input" type="checkbox" name="failed" value="true" checked="@Model.FailedOnly" /> <span class="form-check-label">Chỉ lỗi</span></label>
+            <button class="btn btn-primary" type="submit">@UiIcon.Render("search")<span>Tìm</span></button>
+            <a class="btn" asp-controller="TingeeSandbox" asp-action="Index">@UiIcon.Render("arrow-left")<span>Tingee Sandbox</span></a>
+        </form>
+    </div>
+</section>
+
+@if (Model.Error is not null)
+{
+    <div class="ta-alert ta-alert--warning mb-3" role="alert" data-ta-log-error>@UiIcon.Render("alert-triangle")<div class="ta-alert__body">@Model.Error</div></div>
+}
+
+@if (f is not null)
+{
+    <section class="card mb-3" aria-labelledby="logDetail" data-ta-log-detail>
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h2 class="card-title" id="logDetail">@UiIcon.Render("file-text")Log @f.LogCode <span class="ta-badge @Badge(f)">@(f.ResponseCode ?? "lỗi")</span></h2>
+            <button class="btn btn-sm" type="button" data-ta-copy="#logReport">@UiIcon.Render("checks")<span>Chép nội dung gửi Tingee</span></button>
+        </div>
+        <div class="card-body">
+            <dl class="ta-dl">
+                <dt>Thời gian</dt><dd>@f.CreatedAtUtc.AddHours(7).ToString("dd/MM/yyyy HH:mm:ss.fff") (UTC+7) — @f.DurationMs ms</dd>
+                <dt>Request</dt><dd><code>@f.Method @f.Url</code></dd>
+                <dt>Phản hồi</dt><dd>HTTP @(f.HttpStatus?.ToString() ?? "—") · mã @(f.ResponseCode ?? "—") · @(f.ResponseMessage ?? f.Error ?? "—")</dd>
+            </dl>
+            <pre class="border rounded p-2 mb-0" id="logReport" style="white-space:pre-wrap;word-break:break-all;max-height:28rem;overflow:auto" data-ta-log-report>@TingeeLogsController.Report(f)</pre>
+        </div>
+    </section>
+}
+
+<section class="card" aria-labelledby="logRecent">
+    <div class="card-header"><h2 class="card-title" id="logRecent">@UiIcon.Render("history")50 lần gọi gần nhất</h2></div>
+    <div class="card-body">
+        @if (Model.Recent.Count == 0)
+        {
+            <p class="text-secondary mb-0" data-ta-log-empty>Chưa có log.</p>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-sm mb-0" data-ta-log-list>
+                    <thead><tr><th>Mã log</th><th>Thời gian</th><th>API</th><th>Kết quả</th><th>Thông báo</th><th>ms</th></tr></thead>
+                    <tbody>
+                        @foreach (var e in Model.Recent)
+                        {
+                            <tr>
+                                <td><a asp-action="Index" asp-route-code="@e.LogCode" asp-route-path="@Model.Path" asp-route-failed="@(Model.FailedOnly ? "true" : null)"><code>@e.LogCode</code></a></td>
+                                <td>@e.CreatedAtUtc.AddHours(7).ToString("HH:mm:ss dd/MM")</td>
+                                <td>@e.Method @Path(e.Url)</td>
+                                <td><span class="ta-badge @Badge(e)">@(e.ResponseCode ?? (e.HttpStatus?.ToString() ?? "lỗi"))</span></td>
+                                <td>@(e.ResponseMessage ?? e.Error ?? "")</td>
+                                <td>@e.DurationMs</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</section>

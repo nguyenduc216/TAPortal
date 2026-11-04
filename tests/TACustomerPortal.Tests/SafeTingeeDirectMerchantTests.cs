@@ -68,6 +68,40 @@ public sealed class SafeTingeeDirectMerchantTests
     }
 
     [Fact]
+    public async Task EveryCallIsLoggedAsSentAndFailuresCarryTheLogCode()
+    {
+        var log = new Log();
+        var handler = new Fixed("{\"code\":\"400\",\"message\":\"Verify string error\",\"data\":null}");
+        var ex = await Assert.ThrowsAsync<TingeeApiException>(() => Api("Master", handler, log: log).CreateVaAsync(new TingeeCreateVaRequest { MerchantId = 5, BankBin = "970415", AccountName = "NGUYEN VAN A" }));
+        var entry = Assert.Single(log.Entries);
+        Assert.Equal(ex.LogCode, entry.LogCode);
+        Assert.Matches("^TG[0-9]{12}[0-9A-F]{6}$", entry.LogCode);
+        Assert.Equal(entry.LogCode, TingeeLogCode.Of(ex));
+        Assert.Equal(("POST", "https://open-api.tingee.vn/v1/create-va", "id", "400", (int?)200), (entry.Method, entry.Url, entry.ClientId, entry.ResponseCode, entry.HttpStatus));
+        Assert.Contains("\"accountName\":\"NGUYEN VAN A\"", entry.RequestBody);
+        Assert.Equal(TingeeSignature.Sign(entry.RequestTimestamp!, entry.RequestBody, "secret"), entry.Signature);
+        Assert.Contains("Verify string error", entry.ResponseBody);
+        Assert.DoesNotContain("secret", entry.RequestBody + entry.ResponseBody);
+    }
+
+    [Fact]
+    public async Task NetworkFailuresAreLoggedWithTheirLogCode()
+    {
+        var log = new Log();
+        var ex = await Assert.ThrowsAsync<HttpRequestException>(() => Api("Master", new Broken(), log: log).GetVaPageAsync(5));
+        var entry = Assert.Single(log.Entries);
+        Assert.Equal(entry.LogCode, TingeeLogCode.Of(ex));
+        Assert.Contains("HttpRequestException", entry.Error);
+        Assert.Null(entry.ResponseCode);
+    }
+
+    [Theory]
+    [InlineData(" tg261104101500abcdef ", "TG261104101500ABCDEF")]
+    [InlineData("x'--", null)]
+    [InlineData("", null)]
+    public void LogCodesAreNormalized(string input, string? expected) => Assert.Equal(expected, TingeeLogCode.Normalize(input));
+
+    [Fact]
     public void ModeDefaultsToMaster()
     {
         Assert.False(new TingeeOptions().IsDirectMerchant);
@@ -75,10 +109,24 @@ public sealed class SafeTingeeDirectMerchantTests
         Assert.True(Api("Direct", new Recorder()).IsDirectMerchant);
     }
 
-    private static TingeeApi Api(string mode, HttpMessageHandler handler, long? ownMerchantId = null)
+    private static TingeeApi Api(string mode, HttpMessageHandler handler, long? ownMerchantId = null, ITingeeCallLog? log = null)
     {
-        var options = Options.Create(new TingeeOptions { ClientId = "id", SecretKey = "secret", Mode = mode, MerchantId = ownMerchantId });
-        return new TingeeApi(new TingeeClient(new HttpClient(handler), options, TimeProvider.System), options);
+        var options = Options.Create(new TingeeOptions { ClientId = "id", SecretKey = "secret", Mode = mode, MerchantId = ownMerchantId, BaseUrl = TingeeOptions.ProductionBaseUrl });
+        return new TingeeApi(new TingeeClient(new HttpClient(handler), options, TimeProvider.System, log), options);
+    }
+
+    private sealed class Log : ITingeeCallLog
+    {
+        public List<TingeeCallLogEntry> Entries { get; } = [];
+        public Task WriteAsync(TingeeCallLogEntry entry, CancellationToken ct = default) { Entries.Add(entry); return Task.CompletedTask; }
+        public Task<TingeeCallLogEntry?> FindAsync(string logCode, CancellationToken ct = default) => throw new NotSupportedException();
+        public Task<IReadOnlyList<TingeeCallLogEntry>> RecentAsync(int take, string? path, bool failedOnly, CancellationToken ct = default) => throw new NotSupportedException();
+    }
+
+    private sealed class Broken : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) =>
+            throw new HttpRequestException("connection refused");
     }
 
     private sealed class Fixed(string body) : HttpMessageHandler

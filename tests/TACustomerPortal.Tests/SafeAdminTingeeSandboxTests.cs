@@ -66,6 +66,37 @@ public sealed class SafeAdminTingeeSandboxTests
     }
 
     [Fact]
+    public async Task ErrorsShowTheLogCodeAndTheLogPageFindsTheRequestByIt()
+    {
+        using var f = Factory(out var tingee, out _, out var logs);
+        tingee.ListError = new TingeeApiException("400", "Verify string error") { LogCode = "TG261104101500ABCDEF" };
+        logs.Entries.Add(new TingeeCallLogEntry
+        {
+            LogCode = "TG261104101500ABCDEF", Method = "POST", Url = "https://open-api.tingee.vn/v1/create-va", ClientId = "sandbox-client",
+            RequestTimestamp = "20261104171500123", Signature = "abc123", RequestBody = "{\"accountName\":\"NGUYEN VAN A\"}",
+            HttpStatus = 200, ResponseCode = "400", ResponseMessage = "Verify string error", ResponseBody = "{\"code\":\"400\"}", DurationMs = 321, CreatedAtUtc = DateTime.UtcNow
+        });
+        var c = Client(f);
+        Assert.Contains("Mã log: TG261104101500ABCDEF", WebUtility.HtmlDecode(await c.GetStringAsync("/tingeesandbox")));
+
+        var page = WebUtility.HtmlDecode(await c.GetStringAsync("/tingeelogs?code=tg261104101500abcdef"));
+        Assert.Contains("data-ta-log-detail", page);
+        Assert.Contains("x-signature: abc123", page);
+        Assert.Contains("Body: {\"accountName\":\"NGUYEN VAN A\"}", page);
+        Assert.Contains("data-ta-log-list", page);
+
+        Assert.Contains("Không tìm thấy log TG0000", WebUtility.HtmlDecode(await c.GetStringAsync("/tingeelogs?code=TG0000")));
+        Assert.Contains("Mã log không hợp lệ", WebUtility.HtmlDecode(await c.GetStringAsync("/tingeelogs?code=x%27--")));
+    }
+
+    [Fact]
+    public async Task NonAdminsCannotReadTheTingeeLog()
+    {
+        using var f = Factory(out _, out _, admin: false);
+        Assert.Equal(HttpStatusCode.Forbidden, (await Client(f).GetAsync("/tingeelogs")).StatusCode);
+    }
+
+    [Fact]
     public async Task MasterModeWithoutChildMerchantsExplainsHowToCreateOne()
     {
         using var f = Factory(out var tingee, out _, mode: "Master");
@@ -275,8 +306,12 @@ public sealed class SafeAdminTingeeSandboxTests
     private static HttpClient Client(WebApplicationFactory<admin::Program> f) =>
         f.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false, BaseAddress = new Uri("https://localhost"), HandleCookies = true });
 
-    private static WebApplicationFactory<admin::Program> Factory(out FakeTingee tingee, out MemoryInbox inbox, bool configured = true, string mode = "Direct", bool admin = true, string? merchantId = "9001", (long Id, string Code, string Name)[]? linked = null)
+    private static WebApplicationFactory<admin::Program> Factory(out FakeTingee tingee, out MemoryInbox inbox, bool configured = true, string mode = "Direct", bool admin = true, string? merchantId = "9001", (long Id, string Code, string Name)[]? linked = null) =>
+        Factory(out tingee, out inbox, out _, configured, mode, admin, merchantId, linked);
+
+    private static WebApplicationFactory<admin::Program> Factory(out FakeTingee tingee, out MemoryInbox inbox, out MemoryCallLog logs, bool configured = true, string mode = "Direct", bool admin = true, string? merchantId = "9001", (long Id, string Code, string Name)[]? linked = null)
     {
+        var l = logs = new MemoryCallLog();
         var t = tingee = new FakeTingee(configured);
         var i = inbox = new MemoryInbox();
         var settings = new Dictionary<string, string?> { ["Database:ConnectionString"] = "INVALID: tests must never use SQL", ["Tingee:BaseUrl"] = TingeeOptions.ProductionBaseUrl, ["Tingee:Mode"] = mode };
@@ -296,6 +331,8 @@ public sealed class SafeAdminTingeeSandboxTests
                 services.AddSingleton<AdminServices.ITingeeSandboxInbox>(i);
                 services.RemoveAll<AdminServices.ITingeeSandboxMerchants>();
                 services.AddSingleton<AdminServices.ITingeeSandboxMerchants>(new LinkedMerchants(linked ?? []));
+                services.RemoveAll<ITingeeCallLog>();
+                services.AddSingleton<ITingeeCallLog>(l);
                 services.AddSingleton(new TestRole(role));
                 services.AddAuthentication().AddScheme<AuthenticationSchemeOptions, TestAuthHandler>(TestScheme, _ => { });
                 services.PostConfigure<AuthenticationOptions>(o => { o.DefaultScheme = TestScheme; o.DefaultAuthenticateScheme = TestScheme; o.DefaultChallengeScheme = TestScheme; o.DefaultForbidScheme = TestScheme; });
@@ -303,6 +340,15 @@ public sealed class SafeAdminTingeeSandboxTests
     }
 
     public sealed record TestRole(string Role);
+
+    public sealed class MemoryCallLog : ITingeeCallLog
+    {
+        public List<TingeeCallLogEntry> Entries { get; } = [];
+        public Task WriteAsync(TingeeCallLogEntry entry, CancellationToken ct = default) { Entries.Add(entry); return Task.CompletedTask; }
+        public Task<TingeeCallLogEntry?> FindAsync(string logCode, CancellationToken ct = default) => Task.FromResult(Entries.FirstOrDefault(e => e.LogCode == logCode));
+        public Task<IReadOnlyList<TingeeCallLogEntry>> RecentAsync(int take, string? path, bool failedOnly, CancellationToken ct = default) =>
+            Task.FromResult<IReadOnlyList<TingeeCallLogEntry>>(Entries.AsEnumerable().Reverse().Take(take).ToList());
+    }
 
     public sealed class LinkedMerchants((long Id, string Code, string Name)[] linked) : AdminServices.ITingeeSandboxMerchants
     {

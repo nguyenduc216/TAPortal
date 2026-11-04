@@ -149,6 +149,8 @@ public sealed class TingeeApiException(string? code, string? message, string? de
     public string TingeeMessage { get; } = message ?? "";
     /// <summary>Raw Tingee error body (field-level validation details), for administrators only.</summary>
     public string? Details { get; } = details;
+    /// <summary>dbo.TingeeApiLogs code of the call that failed (request and response as sent), for Tingee support.</summary>
+    public string? LogCode { get; init; }
 }
 
 public interface ITingeeApi
@@ -215,11 +217,11 @@ public sealed class TingeeApi(TingeeClient client, Microsoft.Extensions.Options.
     private static T Data<T>(TingeeResponse<T> response, bool allowEmpty = false) where T : class, new()
     {
         Check(response);
-        return response.Data ?? (allowEmpty ? new T() : throw new TingeeApiException("EMPTY", "Tingee returned no data."));
+        return response.Data ?? (allowEmpty ? new T() : throw new TingeeApiException("EMPTY", "Tingee returned no data.") { LogCode = response.LogCode });
     }
 
     private static void Check<T>(TingeeResponse<T> response)
     {
-        if (!response.IsSuccess) throw new TingeeApiException(response.Code, response.Message, response.Raw);
+        if (!response.IsSuccess) throw new TingeeApiException(response.Code, response.Message, response.Raw) { LogCode = response.LogCode };
     }
 }

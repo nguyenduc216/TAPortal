@@ -46,3 +46,4 @@ Database sẵn sàng cho phần thanh toán (verify PASS). Tiếp theo: operator
 | `TINGEE-INTEGRATION-CHG-20261103T174253Z-B2EEA8` | 2026-11-03 | Verify an existing Tingee merchant id with Tingee before linking | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |
 | `TINGEE-INTEGRATION-CHG-20261103T175724Z-F1997E` | 2026-11-03 | Send non-ASCII JSON unescaped to Tingee (Invalid signature 97) | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |
 | `TINGEE-INTEGRATION-CHG-20261103T180623Z-6DB65E` | 2026-11-03 | Show Tingee error details; tax code for business bank links in the sandbox | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |
+| `TINGEE-INTEGRATION-CHG-20261104T040031Z-0CF9F3` | 2026-11-04 | Tingee API call log with log-code lookup (for Tingee support) | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |

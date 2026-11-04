@@ -1,6 +1,18 @@
 // Tingee Sandbox: polls the test QR's payment status (every 5 s) and refreshes the webhook list (every 10 s).
+// Tingee log: copies a call report to the clipboard.
 (function () {
     'use strict';
+
+    document.addEventListener('click', function (event) {
+        var button = event.target.closest('[data-ta-copy]');
+        var source = button && document.querySelector(button.getAttribute('data-ta-copy'));
+        if (!source) return;
+        var value = source.value !== undefined ? source.value : source.textContent;
+        var done = function () { var label = button.lastElementChild || button; var old = label.textContent; label.textContent = 'Đã chép'; setTimeout(function () { label.textContent = old; }, 1500); };
+        var fallback = function () { window.getSelection().selectAllChildren(source); document.execCommand('copy'); done(); };
+        if (navigator.clipboard) navigator.clipboard.writeText(value).then(done, fallback);
+        else fallback();
+    });
 
     var money = new Intl.NumberFormat('vi-VN');
 

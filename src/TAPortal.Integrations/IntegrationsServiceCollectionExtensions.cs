@@ -12,6 +12,9 @@ public static class IntegrationsServiceCollectionExtensions
         services.Configure<TingeeOptions>(configuration.GetSection(TingeeOptions.SectionName));
         services.TryAddSingleton(TimeProvider.System);
         services.TryAddSingleton<ITingeeWebhookInbox, UnavailableTingeeWebhookInbox>();
+        // Every outgoing Tingee call is recorded in dbo.TingeeApiLogs (migration 014) when a database is configured.
+        if (string.IsNullOrWhiteSpace(configuration["Database:ConnectionString"])) services.TryAddSingleton<ITingeeCallLog, NullTingeeCallLog>();
+        else services.TryAddSingleton<ITingeeCallLog, SqlTingeeCallLog>();
         services.AddHttpClient<TingeeClient>(client => client.Timeout = TimeSpan.FromSeconds(30));
         services.TryAddScoped<ITingeeApi, TingeeApi>();
         return services;
