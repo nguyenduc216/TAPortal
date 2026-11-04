@@ -19,9 +19,11 @@ public static class TingeeWebhookEndpoints
     public const long MaxBodyBytes = 64 * 1024;
     private static readonly object Success = new { code = "00", message = "Success" };
 
-    public static IEndpointRouteBuilder MapTingeeWebhooks(this IEndpointRouteBuilder app)
+    /// <summary>Maps the receivers under <paramref name="prefix"/> (default /tingee, the webhook site's path).</summary>
+    public static IEndpointRouteBuilder MapTingeeWebhooks(this IEndpointRouteBuilder app, string prefix = TingeeOptions.WebhookPathPrefix)
     {
-        var group = app.MapGroup("/hooks/tingee");
+        // Anonymous by design: every request is authenticated by the Tingee HMAC signature instead.
+        var group = app.MapGroup(prefix).AllowAnonymous();
         // Typed as Delegate so the IResult is written; a plain HttpContext lambda binds as RequestDelegate and drops it.
         group.MapPost("/payment", (Delegate)((HttpContext http) => ReceiveAsync(http, TingeeWebhookKind.Payment)));
         group.MapPost("/va-status", (Delegate)((HttpContext http) => ReceiveAsync(http, TingeeWebhookKind.VaStatus)));

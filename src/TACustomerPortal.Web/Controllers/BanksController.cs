@@ -11,7 +11,7 @@ namespace TACustomerPortal.Web.Controllers;
 
 // Bank accounts linked through Tingee with the customer's own form (no Tingee SDK): create-va → OTP confirm-va, or an
 // asynchronous bank-side confirmation (VCB/TPBank). Calls use T.A's Master Merchant key with the customer's merchantId.
-public sealed partial class BanksController(ICurrentCustomerContext customer, IPaymentStore store, ITingeeApi tingee, IConfiguration configuration, TimeProvider clock, ILogger<BanksController> logger)
+public sealed partial class BanksController(ICurrentCustomerContext customer, IPaymentStore store, ITingeeApi tingee, Microsoft.Extensions.Options.IOptions<TingeeOptions> tingeeOptions, TimeProvider clock, ILogger<BanksController> logger)
     : CustomerAreaController(customer)
 {
     private static readonly TimeSpan OtpLifetime = TimeSpan.FromMinutes(4);
@@ -54,7 +54,7 @@ public sealed partial class BanksController(ICurrentCustomerContext customer, IP
         var rule = bank.Rule(type);
         Normalize(input);
         Validate(rule, input);
-        var webhookUrl = configuration["Tingee:VaStatusWebhookUrl"];
+        var webhookUrl = tingeeOptions.Value.EffectiveVaStatusWebhookUrl;
         if (rule.AsyncResult && string.IsNullOrWhiteSpace(webhookUrl))
             ModelState.AddModelError(string.Empty, $"{bank.Name} gửi kết quả liên kết qua webhook nhưng T.A chưa cấu hình địa chỉ nhận (Tingee__VaStatusWebhookUrl).");
         if (!ModelState.IsValid) return Fail();

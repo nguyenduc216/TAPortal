@@ -68,7 +68,8 @@
       "script": "deploy/windows/Deploy-TARemote.ps1",
       "targets": {
         "portal": "TAPortal.Web",
-        "invoice": "TACustomerPortal.Web"
+        "invoice": "TACustomerPortal.Web",
+        "webhooks": "TAPortal.Webhooks"
       },
       "requires_operator_request": true,
       "server_backup_and_auto_rollback": true,

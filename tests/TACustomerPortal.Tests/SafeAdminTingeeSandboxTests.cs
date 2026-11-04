@@ -36,7 +36,7 @@ public sealed class SafeAdminTingeeSandboxTests
         var html = WebUtility.HtmlDecode(await Client(f).GetStringAsync("/tingeesandbox"));
         Assert.Contains("data-ta-sandbox-unconfigured", html);
         Assert.Contains("data-ta-sandbox-howto", html);
-        Assert.Contains("https://localhost/hooks/tingee/payment", html);
+        Assert.Contains("https://webhook.test/tingee/payment", html);
         Assert.Contains("\"Mode\": \"Master\"", html);
         Assert.Empty(tingee.Calls);
     }
@@ -250,8 +250,8 @@ public sealed class SafeAdminTingeeSandboxTests
         Assert.Contains("data-ta-sandbox-add-link", page);
         Assert.Matches("id=\"tgLink\"[^>]*data-ta-open=\"false\"", page);   // closed until asked for
         Assert.Contains("3. Tạo QR thử và chuyển tiền", page);
-        Assert.Contains("data-ta-copy-text=\"https://localhost/hooks/tingee/payment\"", page);   // short path shown, full address copied
-        Assert.Contains(">…/hooks/tingee/payment<", page);
+        Assert.Contains("data-ta-copy-text=\"https://webhook.test/tingee/payment\"", page);   // short path shown, full address copied
+        Assert.Contains(">…/tingee/payment<", page);
         Assert.Contains("4. Biến động nhận được", page);
         Assert.Matches("id=\"tgLink\"[^>]*data-ta-open=\"true\"", WebUtility.HtmlDecode(await c.GetStringAsync("/tingeesandbox?bin=970422&type=personal-account")));
 
@@ -318,13 +318,16 @@ public sealed class SafeAdminTingeeSandboxTests
         using var f = Factory(out _, out var inbox);
         var c = Client(f);
         var body = "{\"transactionCode\":\"FT26307ABC\",\"amount\":2000,\"content\":\"TA SANDBOX\",\"vaAccountNumber\":\"963123456789\",\"bankName\":\"MB\"}";
-        var unsigned = await c.PostAsync("/hooks/tingee/payment", new StringContent(body, Encoding.UTF8, "application/json"));
+        var unsigned = await c.PostAsync("/tingee/payment", new StringContent(body, Encoding.UTF8, "application/json"));
         Assert.Equal(HttpStatusCode.Unauthorized, unsigned.StatusCode);
         Assert.Empty(inbox.Saved);
 
-        var signed = await c.SendAsync(Signed("/hooks/tingee/payment", body));
+        var signed = await c.SendAsync(Signed("/tingee/payment", body));
         Assert.Equal(HttpStatusCode.OK, signed.StatusCode);
         Assert.Single(inbox.Saved);
+        var legacy = await c.SendAsync(Signed("/hooks/tingee/payment", body.Replace("FT26307ABC", "FT26307OLD")));   // old path until Tingee is switched
+        Assert.Equal(HttpStatusCode.OK, legacy.StatusCode);
+        Assert.Equal(2, inbox.Saved.Count);
 
         var list = WebUtility.HtmlDecode(await c.GetStringAsync("/tingeesandbox/webhooks"));
         Assert.Contains("FT26307ABC", list);
@@ -381,7 +384,7 @@ public sealed class SafeAdminTingeeSandboxTests
         var l = logs = new MemoryCallLog();
         var t = tingee = new FakeTingee(configured);
         var i = inbox = new MemoryInbox();
-        var settings = new Dictionary<string, string?> { ["Database:ConnectionString"] = "INVALID: tests must never use SQL", ["Tingee:BaseUrl"] = TingeeOptions.ProductionBaseUrl, ["Tingee:Mode"] = mode };
+        var settings = new Dictionary<string, string?> { ["Database:ConnectionString"] = "INVALID: tests must never use SQL", ["Tingee:BaseUrl"] = TingeeOptions.ProductionBaseUrl, ["Tingee:Mode"] = mode, ["Tingee:WebhookBaseUrl"] = "https://webhook.test/" };
         if (configured) { settings["Tingee:ClientId"] = "sandbox-client"; settings["Tingee:SecretKey"] = Secret; }
         if (merchantId is not null) settings["Tingee:MerchantId"] = merchantId;
         var role = admin ? "SYS_ADMIN" : "VIEWER";

@@ -57,7 +57,7 @@ public sealed class SafeTingeeIntegrationTests
     {
         var inbox = new MemoryInbox();
         using var f = Factory(inbox);
-        var response = await Post(f, "/hooks/tingee/payment", Body, Timestamp, BodySignature);
+        var response = await Post(f, "/tingee/payment", Body, Timestamp, BodySignature);
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Equal("{\"code\":\"00\",\"message\":\"Success\"}", await response.Content.ReadAsStringAsync());
         var saved = Assert.Single(inbox.Saved);
@@ -80,7 +80,7 @@ public sealed class SafeTingeeIntegrationTests
             "stale" => (Body, "20261030100000123", TingeeSignature.Sign("20261030100000123", Body, Secret)),
             _ => (Body, Timestamp, "")
         };
-        var response = await Post(f, "/hooks/tingee/va-status", body, timestamp, signature);
+        var response = await Post(f, "/tingee/va-status", body, timestamp, signature);
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
         Assert.Empty(inbox.Saved);
     }
@@ -89,11 +89,11 @@ public sealed class SafeTingeeIntegrationTests
     public async Task UnconfiguredOrFailingInboxNeverAcknowledgesSoTingeeRetries()
     {
         using (var f = Factory(new MemoryInbox { Fail = true }))
-            Assert.Equal(HttpStatusCode.ServiceUnavailable, (await Post(f, "/hooks/tingee/payment", Body, Timestamp, BodySignature)).StatusCode);
+            Assert.Equal(HttpStatusCode.ServiceUnavailable, (await Post(f, "/tingee/payment", Body, Timestamp, BodySignature)).StatusCode);
         using (var f = Factory(inbox: null))   // default UnavailableTingeeWebhookInbox
-            Assert.Equal(HttpStatusCode.ServiceUnavailable, (await Post(f, "/hooks/tingee/bank-link", Body, Timestamp, BodySignature)).StatusCode);
+            Assert.Equal(HttpStatusCode.ServiceUnavailable, (await Post(f, "/tingee/bank-link", Body, Timestamp, BodySignature)).StatusCode);
         using (var f = Factory(new MemoryInbox(), secret: ""))
-            Assert.Equal(HttpStatusCode.ServiceUnavailable, (await Post(f, "/hooks/tingee/payment", Body, Timestamp, BodySignature)).StatusCode);
+            Assert.Equal(HttpStatusCode.ServiceUnavailable, (await Post(f, "/tingee/payment", Body, Timestamp, BodySignature)).StatusCode);
     }
 
     [Fact]

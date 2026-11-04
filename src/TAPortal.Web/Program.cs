@@ -129,7 +129,10 @@ app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllerRoute(name: "default", pattern: "{controller=Home}/{action=Index}/{id?}");
-TAPortal.Integrations.Tingee.TingeeWebhookEndpoints.MapTingeeWebhooks(app);   // anonymous by design: authenticated by the Tingee HMAC signature
+// Tingee calls the webhook site (TAPortal.Webhooks, Tingee__WebhookBaseUrl). The Admin site keeps the same /tingee receivers,
+// and the old /hooks/tingee path only until Tingee's endpoint points at the webhook site.
+TAPortal.Integrations.Tingee.TingeeWebhookEndpoints.MapTingeeWebhooks(app);
+TAPortal.Integrations.Tingee.TingeeWebhookEndpoints.MapTingeeWebhooks(app, "/hooks/tingee");
 app.Run();
 public partial class Program
 {

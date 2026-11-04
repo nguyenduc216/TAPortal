@@ -15,7 +15,7 @@ namespace TAPortal.Web.Controllers;
 
 // Tingee Sandbox: T.A tests its Tingee account (ClientId/SecretKey in the Admin site's server configuration) end to end:
 // connection, bank account linking with OTP, a test QR whose payment status is polled from Tingee, and the webhooks Tingee
-// sends to /hooks/tingee/* on this site. With a Master Merchant key (Tingee__Mode=Master) every call acts on one child
+// sends to the webhook site (Tingee__WebhookBaseUrl + /tingee/*). With a Master Merchant key (Tingee__Mode=Master) every call acts on one child
 // merchant that is already linked to a customer in Admin; with a normal Merchant key (Direct) on T.A's own merchant.
 // Nothing is stored here except what Tingee itself sends to the webhook inbox.
 [Authorize(Policy = "SystemAdminOnly")]
@@ -49,7 +49,7 @@ public sealed partial class TingeeSandboxController(
         var rule = bank.Rule(type);
         foreach (var field in rule.Required)
             if (string.IsNullOrWhiteSpace(Value(input, field))) ModelState.AddModelError(string.Empty, $"Thiếu {FieldLabel(field)}.");
-        var vaStatusUrl = options.Value.VaStatusWebhookUrl;
+        var vaStatusUrl = options.Value.EffectiveVaStatusWebhookUrl;
         if (rule.AsyncResult && string.IsNullOrWhiteSpace(vaStatusUrl))
             ModelState.AddModelError(string.Empty, $"{bank.Name} gửi kết quả liên kết qua webhook: cần cấu hình Tingee__VaStatusWebhookUrl = {AbsoluteHook("va-status")} trước.");
         if (!ModelState.IsValid) return await Page(merchant, dialog: TingeeSandboxDialogs.Link, bankInput: input, status: StatusCodes.Status400BadRequest);
@@ -346,7 +346,7 @@ public sealed partial class TingeeSandboxController(
         var o = options.Value;
         var production = Uri.TryCreate(o.BaseUrl, UriKind.Absolute, out var u) && string.Equals(u.Host, new Uri(TingeeOptions.ProductionBaseUrl).Host, StringComparison.OrdinalIgnoreCase);
         return new(o.IsConfigured, o.IsDirectMerchant, o.BaseUrl, production, webhookInbox.IsAvailable,
-            AbsoluteHook("payment"), AbsoluteHook("va-status"), AbsoluteHook("bank-link"), o.VaStatusWebhookUrl, o.MerchantId is > 0 ? o.MerchantId : null);
+            AbsoluteHook("payment"), AbsoluteHook("va-status"), AbsoluteHook("bank-link"), o.EffectiveVaStatusWebhookUrl, o.MerchantId is > 0 ? o.MerchantId : null);
     }
 
     private string? Refusal()
@@ -355,7 +355,7 @@ public sealed partial class TingeeSandboxController(
         return o.IsConfigured ? null : "Chưa cấu hình Tingee__ClientId/Tingee__SecretKey cho site Portal.";
     }
 
-    private string AbsoluteHook(string kind) => $"{Request.Scheme}://{Request.Host}{Request.PathBase}/hooks/tingee/{kind}";
+    private string AbsoluteHook(string kind) => options.Value.WebhookUrl(kind);
 
     /// <summary>Message for expected Tingee/network failures; null lets anything else propagate as a real error.</summary>
     private string? Explain(Exception ex, string operation) =>
