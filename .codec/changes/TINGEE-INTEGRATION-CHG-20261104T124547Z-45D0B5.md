@@ -4,7 +4,7 @@
 - Change ID: `TINGEE-INTEGRATION-CHG-20261104T124547Z-45D0B5`
 - Created UTC: 2026-11-04T12:45:47.984272+00:00
 - Tiêu đề: E-invoice Sandbox in Admin: provider accounts, templates, draft/issue, download and email via Tingee e-invoice API
-- Trạng thái: IMPLEMENTED
+- Trạng thái: DEPLOYED
 
 ## Yêu cầu và phạm vi
 Operator (2026-11-04): kết nối hóa đơn điện tử qua Tingee cho khách hàng; trước hết đọc tài liệu xuất hóa đơn và tạo sandbox trên Portal (P6 của feature). Phần cài đặt hóa đơn cho khách hàng và tự xuất hóa đơn khi có giao dịch vào là các change sau.
@@ -43,7 +43,7 @@ Ngoài phạm vi (change sau): cài đặt hóa đơn ở Customer Portal, tự 
 
 ## Git
 - Branch: feature/customer-portal-mvp01
-- Commit SHA: xem hand-off
+- Commit SHA: 43f9b10
 - PR:
 - Merge: PENDING_APPROVAL
 - Merge SHA:

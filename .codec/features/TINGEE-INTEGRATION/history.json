@@ -317,20 +317,20 @@
     "change_id": "TINGEE-INTEGRATION-CHG-20261104T124547Z-45D0B5",
     "created_at": "2026-11-04T12:45:47.984272+00:00",
     "title": "E-invoice Sandbox in Admin: provider accounts, templates, draft/issue, download and email via Tingee e-invoice API",
-    "status": "IMPLEMENTED",
-    "commit_sha": null,
+    "status": "DEPLOYED",
+    "commit_sha": "43f9b10",
     "migration_status": "NOT_APPLICABLE",
-    "publish_status": "NOT_PUBLISHED",
+    "publish_status": "DEPLOYED",
     "merge_status": "PENDING_APPROVAL"
   },
   {
     "change_id": "TINGEE-INTEGRATION-CHG-20261104T154552Z-A2ACAA",
     "created_at": "2026-11-04T15:45:52.403786+00:00",
     "title": "Tingee Sandbox: thử Bank Link SDK (create-bank-link-session, popup/nhúng, callback)",
-    "status": "IMPLEMENTED",
+    "status": "DEPLOYED",
     "commit_sha": "8729d4c",
     "migration_status": "NOT_APPLICABLE",
-    "publish_status": "NOT_PUBLISHED",
+    "publish_status": "DEPLOYED",
     "merge_status": "PENDING_APPROVAL"
   }
 ]

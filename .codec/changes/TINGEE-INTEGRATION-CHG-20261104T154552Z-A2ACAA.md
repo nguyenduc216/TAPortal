@@ -4,7 +4,7 @@
 - Change ID: `TINGEE-INTEGRATION-CHG-20261104T154552Z-A2ACAA`
 - Created UTC: 2026-11-04T15:45:52.403786+00:00
 - Tiêu đề: Tingee Sandbox: thử Bank Link SDK (create-bank-link-session, popup/nhúng, callback)
-- Trạng thái: IMPLEMENTED
+- Trạng thái: DEPLOYED
 
 ## Yêu cầu và phạm vi
 Operator (2026-11-04): "Thêm thử SDK" — thử Bank Link SDK của Tingee (màn hình liên kết ngân hàng do Tingee hiển thị) trong Tingee Sandbox của Admin trước khi cân nhắc dùng cho khách hàng. Mục tiêu: xem màn hình có lộ tên/logo Tingee không (quy tắc trung lập đối tác ở Customer Portal) và thử `bank-config` cho tài khoản doanh nghiệp.
