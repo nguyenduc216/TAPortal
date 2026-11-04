@@ -4,11 +4,11 @@
 - Change ID: `TINGEE-INTEGRATION-CHG-20261104T105303Z-FCDC7B`
 - Created UTC: 2026-11-04T10:53:03.007955+00:00
 - Tiêu đề: Customer Portal: không hiển thị tên đối tác (Tingee/HENO); thông báo khi chưa cấu hình liên kết ngân hàng
-- Trạng thái: DEPLOYED (cấu hình Tingee cho site invoice: PENDING_OPERATOR)
+- Trạng thái: DEPLOYED
 
 ## Yêu cầu và phạm vi
 Operator (2026-11-04, ảnh trang Tài khoản ngân hàng của Todox): "khách hàng chưa tự liên kết tới tài khoản ngân hàng được, kiểm tra lại. và tạo rule bỏ tất cả các thông tin đối tác như tingee trên tất cả các chức năng trên hệ thống customer".
-- Nguyên nhân nút "Liên kết tài khoản" bị khoá: `appsettings.json` của site invoice (H:\WEBDEPLOYED\T.A\customer-portal) không có mục `Tingee` nên `ITingeeApi.IsConfigured=false` (Portal và site webhook đều có). Sửa cấu hình server cần operator đồng ý (chép khoá) — PENDING_OPERATOR.
+- Nguyên nhân nút "Liên kết tài khoản" bị khoá: `appsettings.json` của site invoice (H:\WEBDEPLOYED\T.A\customer-portal) không có mục `Tingee` nên `ITingeeApi.IsConfigured=false` (Portal và site webhook đều có). Operator đồng ý ("Yes, copy keys"); 2026-11-04 18:13 (UTC+7) đã chép BaseUrl, Mode, ClientId, SecretKey, WebhookBaseUrl từ cấu hình Portal sang cấu hình site invoice ngay trên server (không in giá trị), backup `appsettings.json.bak-20261104181340`, recycle pool TA.Customer (Started); /Account/Login 200.
 - Trang ngân hàng hiện thông báo "Dịch vụ liên kết ngân hàng đang được T.A cấu hình" khi thiếu cấu hình, thay vì nút bị khoá không lý do.
 - Quy tắc trung lập đối tác: mọi chữ khách hàng thấy không nêu Tingee/HENO; chữ từ đối tác đi qua `PartnerText.Scrub`; `Flash()` tự lọc. Ghi vào AGENTS.md mục "CUSTOMER PORTAL PARTNER NEUTRALITY".
 
