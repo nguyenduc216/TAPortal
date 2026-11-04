@@ -14,6 +14,28 @@
         form.querySelector('[data-ta-unlink-field="va-text"]').textContent = trigger.getAttribute('data-ta-unlink-va');
     });
 
+    // Webhook addresses: copy the full address; the button turns green with a check and a "Đã copy" tooltip for 2 s.
+    document.addEventListener('click', function (event) {
+        var button = event.target.closest('[data-ta-copy-text]');
+        if (!button) return;
+        var text = button.getAttribute('data-ta-copy-text');
+        var done = function () {
+            button.classList.add('is-copied');
+            var Tooltip = window.bootstrap && window.bootstrap.Tooltip;
+            var tip = Tooltip ? Tooltip.getOrCreateInstance(button, { title: 'Đã copy', trigger: 'manual', placement: 'top' }) : null;
+            if (tip) { tip.setContent({ '.tooltip-inner': 'Đã copy' }); tip.show(); }
+            clearTimeout(button._taCopyTimer);
+            button._taCopyTimer = setTimeout(function () { button.classList.remove('is-copied'); if (tip) tip.hide(); }, 2000);
+        };
+        var fallback = function () {
+            var area = document.createElement('textarea');
+            area.value = text; area.setAttribute('readonly', ''); area.style.position = 'fixed'; area.style.opacity = '0';
+            document.body.appendChild(area); area.select(); document.execCommand('copy'); area.remove(); done();
+        };
+        if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(text).then(done, fallback);
+        else fallback();
+    });
+
     document.addEventListener('shown.bs.modal', function (event) {
         var otp = event.target.querySelector('[data-ta-otp-input]');
         if (otp) otp.focus();

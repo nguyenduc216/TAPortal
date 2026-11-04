@@ -50,3 +50,4 @@ Database sẵn sàng cho phần thanh toán (verify PASS). Tiếp theo: operator
 | `TINGEE-INTEGRATION-CHG-20261104T042150Z-621434` | 2026-11-04 | VietinBank personal/household links send the mobile number | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |
 | `TINGEE-INTEGRATION-CHG-20261104T044529Z-3B92C7` | 2026-11-04 | MB business bank links send the tax code in identity, not taxCode | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |
 | `TINGEE-INTEGRATION-CHG-20261104T051600Z-8F5DE8` | 2026-11-04 | Tingee menu group; sandbox link/unlink popups with a clear OTP step | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |
+| `TINGEE-INTEGRATION-CHG-20261104T063712Z-0516FA` | 2026-11-04 | Sandbox: QR card beside sections 1-2; short webhook addresses with copy buttons | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |

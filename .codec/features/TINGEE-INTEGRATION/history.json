@@ -242,5 +242,15 @@
     "migration_status": "NONE_REQUIRED",
     "publish_status": "DEPLOYED portal 1b4436d",
     "merge_status": "PENDING_APPROVAL"
+  },
+  {
+    "change_id": "TINGEE-INTEGRATION-CHG-20261104T063712Z-0516FA",
+    "created_at": "2026-11-04T06:37:12.278468+00:00",
+    "title": "Sandbox: QR card beside sections 1-2; short webhook addresses with copy buttons",
+    "status": "IMPLEMENTED / TESTS_PASS",
+    "commit_sha": null,
+    "migration_status": "NONE_REQUIRED",
+    "publish_status": "DEPLOY_PENDING",
+    "merge_status": "PENDING_APPROVAL"
   }
 ]

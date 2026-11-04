@@ -30,6 +30,14 @@
     .tg-step { display: inline-block; padding: .1rem .5rem; margin-left: .5rem; border-radius: 1rem; font-size: .75rem; font-weight: 600; background: #f59f00; color: #fff; vertical-align: middle; }
     @@keyframes tg-otp-pulse { 0% { box-shadow: 0 0 0 0 rgba(245, 159, 0, .55); } 100% { box-shadow: 0 0 0 .9rem rgba(245, 159, 0, 0); } }
     @@media (prefers-reduced-motion: reduce) { .tg-otp__icon { animation: none; } }
+    .tg-hook { display: flex; align-items: center; gap: .5rem; margin-bottom: .375rem; }
+    .tg-hook__label { flex: none; width: 6.5rem; font-size: .8125rem; color: var(--tblr-secondary, #667382); }
+    .tg-hook__url { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .tg-copy { flex: none; padding: .25rem .4rem; line-height: 1; }
+    .tg-copy .tg-copy__done { display: none; }
+    .tg-copy.is-copied { color: #2fb344; border-color: #2fb344; }
+    .tg-copy.is-copied .tg-copy__idle { display: none; }
+    .tg-copy.is-copied .tg-copy__done { display: inline-block; }
 </style>
 
 @if (Model.Dialog is null && errors.Count > 0)
@@ -97,12 +105,18 @@
 }</code></pre>
                 </div>
             }
-            <p class="form-hint mt-3 mb-1">Khai báo địa chỉ nhận webhook trên trang quản trị Tingee (biến động số dư):</p>
-            <dl class="ta-dl mb-0" data-ta-sandbox-hooks>
-                <dt>Thanh toán</dt><dd><code>@cfg.PaymentWebhookUrl</code></dd>
-                <dt>Trạng thái VA</dt><dd><code>@cfg.VaStatusWebhookUrl</code></dd>
-                <dt>Liên kết NH</dt><dd><code>@cfg.BankLinkWebhookUrl</code></dd>
-            </dl>
+            <p class="form-hint mt-3 mb-2">Khai báo địa chỉ nhận webhook trên trang quản trị Tingee (biến động số dư):</p>
+            <div data-ta-sandbox-hooks>
+                @foreach (var (label, url) in new[] { ("Thanh toán", cfg.PaymentWebhookUrl), ("Trạng thái VA", cfg.VaStatusWebhookUrl), ("Liên kết NH", cfg.BankLinkWebhookUrl) })
+                {
+                    var shown = Uri.TryCreate(url, UriKind.Absolute, out var u) ? "…" + u.AbsolutePath : url;
+                    <div class="tg-hook">
+                        <span class="tg-hook__label">@label</span>
+                        <code class="tg-hook__url" title="@url">@shown</code>
+                        <button type="button" class="btn btn-sm tg-copy" data-ta-copy-text="@url" title="Chép địa chỉ" aria-label="Chép địa chỉ webhook @label">@UiIcon.Render("copy", "tg-copy__idle")@UiIcon.Render("check", "tg-copy__done")</button>
+                    </div>
+                }
+            </div>
         </div>
         <div class="card-footer d-flex gap-2 flex-wrap">
             <a class="btn" asp-action="Index" asp-route-merchant="@mid">@UiIcon.Render("refresh")<span>Kiểm tra kết nối</span></a>
@@ -151,60 +165,60 @@
             }
         </div>
     </section>
-</div>
 
-<section class="card mt-3" aria-labelledby="sbQr" data-ta-sandbox-qr>
-    <div class="card-header"><h2 class="card-title" id="sbQr">@UiIcon.Render("qrcode")3. Tạo QR thử và chuyển tiền</h2></div>
-    <div class="card-body">
-        @if (Model.Qr is { } qr)
-        {
-            <div class="d-flex gap-3 flex-wrap mb-3" data-ta-sandbox-qr-result>
-                <div style="width:220px">@Html.Raw(qr.Svg)</div>
-                <dl class="ta-dl">
-                    <dt>Loại</dt><dd>@(qr.Type == "dynamic" ? "QR động (Tingee theo dõi)" : "QR tĩnh VietQR")</dd>
-                    <dt>Ngân hàng</dt><dd>@qr.BankName</dd>
-                    <dt>Tài khoản nhận</dt><dd><span class="ta-code">@qr.Account</span></dd>
-                    <dt>Số tiền</dt><dd>@Money(qr.Amount)</dd>
-                    <dt>Nội dung</dt><dd>@(qr.Purpose ?? "—")</dd>
-                    @if (qr.ExpiresAtUtc is DateTime exp) {<dt>Hết hạn</dt><dd>@exp.AddHours(7).ToString("HH:mm dd/MM")</dd>}
-                </dl>
-            </div>
-            @if (qr.Type == "dynamic" && qr.QrAccount is not null && qr.BillId is not null)
+    <section class="card" aria-labelledby="sbQr" data-ta-sandbox-qr>
+        <div class="card-header"><h2 class="card-title" id="sbQr">@UiIcon.Render("qrcode")3. Tạo QR thử và chuyển tiền</h2></div>
+        <div class="card-body">
+            @if (Model.Qr is { } qr)
             {
-                <div class="ta-alert ta-alert--info" role="status" aria-live="polite" data-ta-sandbox-qr-status data-url="@Url.Action("QrStatus", new { qrAccount = qr.QrAccount, billId = qr.BillId, merchant = mid })">@UiIcon.Render("clock")<div class="ta-alert__body" data-ta-sandbox-qr-status-text>Đang chờ thanh toán… (tự kiểm tra mỗi 5 giây)</div></div>
-                <form asp-action="DeleteQr" method="post"><input type="hidden" name="merchant" value="@mid" /><input type="hidden" name="qrAccount" value="@qr.QrAccount" /><input type="hidden" name="billId" value="@qr.BillId" /><button class="btn btn-outline-danger btn-sm" type="submit">@UiIcon.Render("x")<span>Hủy QR</span></button></form>
+                <div class="d-flex gap-3 flex-wrap mb-3" data-ta-sandbox-qr-result>
+                    <div style="width:200px;max-width:100%">@Html.Raw(qr.Svg)</div>
+                    <dl class="ta-dl">
+                        <dt>Loại</dt><dd>@(qr.Type == "dynamic" ? "QR động (Tingee theo dõi)" : "QR tĩnh VietQR")</dd>
+                        <dt>Ngân hàng</dt><dd>@qr.BankName</dd>
+                        <dt>Tài khoản nhận</dt><dd><span class="ta-code">@qr.Account</span></dd>
+                        <dt>Số tiền</dt><dd>@Money(qr.Amount)</dd>
+                        <dt>Nội dung</dt><dd>@(qr.Purpose ?? "—")</dd>
+                        @if (qr.ExpiresAtUtc is DateTime exp) {<dt>Hết hạn</dt><dd>@exp.AddHours(7).ToString("HH:mm dd/MM")</dd>}
+                    </dl>
+                </div>
+                @if (qr.Type == "dynamic" && qr.QrAccount is not null && qr.BillId is not null)
+                {
+                    <div class="ta-alert ta-alert--info" role="status" aria-live="polite" data-ta-sandbox-qr-status data-url="@Url.Action("QrStatus", new { qrAccount = qr.QrAccount, billId = qr.BillId, merchant = mid })">@UiIcon.Render("clock")<div class="ta-alert__body" data-ta-sandbox-qr-status-text>Đang chờ thanh toán… (tự kiểm tra mỗi 5 giây)</div></div>
+                    <form asp-action="DeleteQr" method="post"><input type="hidden" name="merchant" value="@mid" /><input type="hidden" name="qrAccount" value="@qr.QrAccount" /><input type="hidden" name="billId" value="@qr.BillId" /><button class="btn btn-outline-danger btn-sm" type="submit">@UiIcon.Render("x")<span>Hủy QR</span></button></form>
+                }
+                else
+                {
+                    <p class="form-hint">QR tĩnh không có trạng thái riêng: tiền vào sẽ hiện ở mục 4 khi Tingee gửi webhook.</p>
+                }
             }
-            else
-            {
-                <p class="form-hint">QR tĩnh không có trạng thái riêng: tiền vào sẽ hiện ở mục 4 khi Tingee gửi webhook.</p>
-            }
-        }
-        <form asp-action="CreateQr" method="post">
-            <input type="hidden" name="merchant" value="@mid" />
-            <div class="row g-2 mb-2">
-                <div class="col-md-4"><label class="form-label required" for="Qr_Account">Tài khoản nhận tiền</label>
-                    <select class="form-select" id="Qr_Account" name="Qr.Account" required>
-                        <option value="">— Chọn —</option>
-                        @foreach (var a in conn?.Accounts ?? [])
-                        {
-                            var number = a.VaAccountNumber ?? a.AccountNumber;
-                            if (string.IsNullOrWhiteSpace(number)) { continue; }
-                            var key = $"{a.BankBin}|{number}|{a.AccountType}";
-                            <option value="@key" selected="@(key == Model.QrInput.Account)">@(TingeeBankCatalog.Find(a.BankBin)?.Name ?? a.BankBin) — @number</option>
-                        }
-                    </select></div>
-                <div class="col-md-2"><label class="form-label required" for="Qr_Amount">Số tiền (đ)</label><div class="ta-input-icon">@UiIcon.Render("report-money")<input class="form-control" id="Qr_Amount" name="Qr.Amount" type="number" min="1000" max="10000000" step="1000" value="@Model.QrInput.Amount.ToString("0", System.Globalization.CultureInfo.InvariantCulture)" required /></div></div>
-                <div class="col-md-3"><label class="form-label" for="Qr_Purpose">Nội dung</label><div class="ta-input-icon">@UiIcon.Render("file-text")<input class="form-control" id="Qr_Purpose" name="Qr.Purpose" value="@Model.QrInput.Purpose" maxlength="50" /></div></div>
-                <div class="col-md-3"><label class="form-label" for="Qr_Type">Loại QR</label>
-                    <select class="form-select" id="Qr_Type" name="Qr.Type">
-                        <option value="dynamic" selected="@(Model.QrInput.Type != "static")">QR động (theo dõi trạng thái)</option>
-                        <option value="static" selected="@(Model.QrInput.Type == "static")">QR tĩnh VietQR</option>
-                    </select></div>
-            </div>
-            <button class="btn btn-primary" type="submit" disabled="@(!ready || conn is not { Ok: true } || conn.Accounts.Count == 0)" data-ta-loading data-ta-loading-text="Đang tạo...">@UiIcon.Render("qrcode")<span>Tạo QR</span></button>
-        </form>
-    </div>
-</section>
+            <form asp-action="CreateQr" method="post">
+                <input type="hidden" name="merchant" value="@mid" />
+                <div class="row g-2 mb-3">
+                    <div class="col-12"><label class="form-label required" for="Qr_Account">Tài khoản nhận tiền</label>
+                        <select class="form-select" id="Qr_Account" name="Qr.Account" required>
+                            <option value="">— Chọn —</option>
+                            @foreach (var a in conn?.Accounts ?? [])
+                            {
+                                var number = a.VaAccountNumber ?? a.AccountNumber;
+                                if (string.IsNullOrWhiteSpace(number)) { continue; }
+                                var key = $"{a.BankBin}|{number}|{a.AccountType}";
+                                <option value="@key" selected="@(key == Model.QrInput.Account)">@(TingeeBankCatalog.Find(a.BankBin)?.Name ?? a.BankBin) — @number</option>
+                            }
+                        </select></div>
+                    <div class="col-sm-6"><label class="form-label required" for="Qr_Amount">Số tiền (đ)</label><div class="ta-input-icon">@UiIcon.Render("report-money")<input class="form-control" id="Qr_Amount" name="Qr.Amount" type="number" min="1000" max="10000000" step="1000" value="@Model.QrInput.Amount.ToString("0", System.Globalization.CultureInfo.InvariantCulture)" required /></div></div>
+                    <div class="col-12 order-last"><label class="form-label" for="Qr_Purpose">Nội dung</label><div class="ta-input-icon">@UiIcon.Render("file-text")<input class="form-control" id="Qr_Purpose" name="Qr.Purpose" value="@Model.QrInput.Purpose" maxlength="50" /></div></div>
+                    <div class="col-sm-6"><label class="form-label" for="Qr_Type">Loại QR</label>
+                        <select class="form-select" id="Qr_Type" name="Qr.Type">
+                            <option value="dynamic" selected="@(Model.QrInput.Type != "static")">QR động (theo dõi trạng thái)</option>
+                            <option value="static" selected="@(Model.QrInput.Type == "static")">QR tĩnh VietQR</option>
+                        </select></div>
+                </div>
+                <button class="btn btn-primary" type="submit" disabled="@(!ready || conn is not { Ok: true } || conn.Accounts.Count == 0)" data-ta-loading data-ta-loading-text="Đang tạo...">@UiIcon.Render("qrcode")<span>Tạo QR</span></button>
+            </form>
+        </div>
+    </section>
+</div>
 
 <section class="card mt-3" aria-labelledby="sbHooks">
     <div class="card-header d-flex justify-content-between align-items-center">

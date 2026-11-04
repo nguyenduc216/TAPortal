@@ -250,6 +250,8 @@ public sealed class SafeAdminTingeeSandboxTests
         Assert.Contains("data-ta-sandbox-add-link", page);
         Assert.Matches("id=\"tgLink\"[^>]*data-ta-open=\"false\"", page);   // closed until asked for
         Assert.Contains("3. Tạo QR thử và chuyển tiền", page);
+        Assert.Contains("data-ta-copy-text=\"https://localhost/hooks/tingee/payment\"", page);   // short path shown, full address copied
+        Assert.Contains(">…/hooks/tingee/payment<", page);
         Assert.Contains("4. Biến động nhận được", page);
         Assert.Matches("id=\"tgLink\"[^>]*data-ta-open=\"true\"", WebUtility.HtmlDecode(await c.GetStringAsync("/tingeesandbox?bin=970422&type=personal-account")));
 
