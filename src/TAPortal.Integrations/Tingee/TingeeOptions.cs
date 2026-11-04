@@ -49,5 +49,15 @@ public sealed class TingeeOptions
 
     public bool IsDirectMerchant => string.Equals(Mode, "Direct", StringComparison.OrdinalIgnoreCase);
 
-    public bool IsConfigured => !string.IsNullOrWhiteSpace(ClientId) && !string.IsNullOrWhiteSpace(SecretKey);
+    public bool IsProduction => Uri.TryCreate(BaseUrl, UriKind.Absolute, out var u) && string.Equals(u.Host, new Uri(ProductionBaseUrl).Host, StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>Bank Link web SDK script for the API environment: the production script for the production API, otherwise UAT.</summary>
+    public string BankLinkSdkScript => IsProduction ? "https://bank-link.tingee.vn/js/tingee-bank-link.js" : "https://uat-bank-link.tingee.vn/js/tingee-bank-link.js";
+
+    /// <summary>A Bank Link session URL is opened only when it is https on tingee.vn or a subdomain.</summary>
+    public static bool IsBankLinkSdkUrl(string? url) =>
+        Uri.TryCreate(url, UriKind.Absolute, out var u) && u.Scheme == Uri.UriSchemeHttps
+        && (u.Host.Equals("tingee.vn", StringComparison.OrdinalIgnoreCase) || u.Host.EndsWith(".tingee.vn", StringComparison.OrdinalIgnoreCase));
+
+    public bool IsConfigured =>!string.IsNullOrWhiteSpace(ClientId) && !string.IsNullOrWhiteSpace(SecretKey);
 }

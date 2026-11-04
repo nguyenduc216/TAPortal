@@ -88,3 +88,59 @@ const closeMenus = except => document.querySelectorAll("details[data-cp-menu][op
 document.addEventListener("ta:load", () => closeMenus(null));
 document.addEventListener("click", event => closeMenus(event.target.closest("details[data-cp-menu]")));
 document.addEventListener("keydown", event => { if (event.key === "Escape") closeMenus(null); });
+
+// Bank linking: a bank logo opens the partner's linking popup (its web SDK) instead of the step-by-step form. The server
+// opens the session (LinkSession: SDK URL + script); on success the hidden Sync form adds the new account to the list.
+// Capture phase, so the shell's soft navigation never follows the logo's fallback link.
+const sdkScripts = {};
+const loadBankLinkSdk = src => sdkScripts[src] ??= new Promise((resolve, reject) => {
+    const tag = document.createElement("script");
+    tag.src = src;
+    tag.async = true;
+    tag.onload = () => window.TingeeBankLink ? resolve(window.TingeeBankLink) : reject(new Error("load"));
+    tag.onerror = () => { delete sdkScripts[src]; reject(new Error("load")); };
+    document.head.appendChild(tag);
+});
+document.addEventListener("click", event => {
+    const logo = event.target.closest("[data-cp-banklink] [data-cp-bank]");
+    if (!logo || event.ctrlKey || event.metaKey || event.shiftKey || event.button !== 0) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const card = logo.closest(".cp-card");
+    const done = card.querySelector("[data-cp-banklink-done]");
+    const status = card.querySelector("[data-cp-banklink-status]");
+    const say = (text, tone) => {
+        status.hidden = false;
+        status.classList.toggle("cp-alert", tone === "error");
+        status.querySelector("[data-cp-banklink-text]").textContent = text;
+    };
+    if (card.dataset.busy === "true") return;
+    card.dataset.busy = "true";
+    card.querySelectorAll("[data-cp-bank]").forEach(a => a.removeAttribute("aria-current"));
+    logo.setAttribute("aria-current", "true");
+    say("Đang mở cửa sổ liên kết " + logo.title + "…");
+    const body = new FormData(done);
+    body.set("bin", logo.dataset.cpBank);
+    fetch(logo.closest("[data-cp-banklink]").dataset.cpBanklink, { method: "POST", body, credentials: "same-origin", headers: { "Accept": "application/json" } })
+        .then(r => r.json())
+        .then(s => {
+            if (!s.ok) throw new Error(s.error);
+            return loadBankLinkSdk(s.script).then(sdk => {
+                const color = getComputedStyle(document.documentElement).getPropertyValue("--cp-blue-600").trim() || "#206bc4";
+                let linked = false;
+                sdk.Setup({
+                    size: "medium",
+                    theme: { primaryColor: color },
+                    onSuccess: () => { linked = true; say("Liên kết thành công, đang cập nhật danh sách tài khoản…"); done.requestSubmit(); },
+                    onFailed: d => say("Liên kết không thành công" + (d && d.errorMessage ? ": " + d.errorMessage : ".") + " Bạn có thể chọn lại ngân hàng để thử lại.", "error"),
+                    onCancelled: () => say("Đã đóng cửa sổ liên kết, chưa có tài khoản nào được thêm."),
+                    onError: () => say("Cửa sổ liên kết gặp lỗi. Vui lòng thử lại sau.", "error"),
+                    onClose: () => { if (!linked) delete card.dataset.busy; }
+                });
+                sdk.Url.Open(s.url);
+                say("Hoàn tất các bước trong cửa sổ liên kết " + logo.title + ".");
+            });
+        })
+        .catch(e => say(e.message && e.message !== "load" ? e.message : "Không mở được cửa sổ liên kết. Vui lòng thử lại.", "error"))
+        .finally(() => { if (status.classList.contains("cp-alert")) delete card.dataset.busy; });
+}, true);

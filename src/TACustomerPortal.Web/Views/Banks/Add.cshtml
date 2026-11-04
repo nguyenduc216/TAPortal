@@ -3,11 +3,14 @@
 @{
     ViewData["Title"] = "Liên kết tài khoản";
     ViewData["Eyebrow"] = "Tài khoản ngân hàng";
-    ViewData["Subtitle"] = "Chọn ngân hàng và loại tài khoản; biểu mẫu chỉ hỏi những thông tin ngân hàng đó yêu cầu.";
+    ViewData["Subtitle"] = "Chọn ngân hàng để liên kết tài khoản nhận tiền của doanh nghiệp.";
     var bank = Model.Bank;
     var rule = Model.Rule;
     var i = Model.Input;
     bool Need(TingeeBankField f) => rule?.Required.Contains(f) == true;
+    // Bank Link popup: a logo opens the partner's linking window (account type is chosen there); the links below stay as fallback.
+    var popup = Model.Linked && Model.ApiConfigured;
+    string? sessionUrl = popup ? Url.Action("LinkSession") : null;
 }
 @functions {
     private Microsoft.AspNetCore.Html.IHtmlContent Error(string key) =>
@@ -19,12 +22,21 @@
 <section class="cp-card" style="margin-bottom:14px">
     <div class="cp-card__head"><span class="cp-blob">@UiIcon.Render("building-bank")</span><h2>1. Ngân hàng</h2></div>
     <div class="cp-card__body">
-        <nav class="cp-bank-pick" aria-label="Chọn ngân hàng">
+        @if (popup)
+        {
+            <p class="cp-hint" style="margin-top:0">Bấm vào ngân hàng để mở cửa sổ liên kết: chọn loại tài khoản, nhập thông tin và xác thực OTP ngay trong cửa sổ đó.</p>
+        }
+        <nav class="cp-bank-pick" aria-label="Chọn ngân hàng" @* data-* attributes are rendered even when null, so the popup marker is written only when linking is possible. *@@if (sessionUrl is not null) {<text>data-cp-banklink="@sessionUrl"</text>}>
             @foreach (var b in TingeeBankCatalog.Banks)
             {
-                <a asp-action="Add" asp-route-bin="@b.Bin" aria-current="@(b.Bin == bank?.Bin ? "true" : null)" title="@b.Name"><img src="~/images/banks/@(b.Code.ToLowerInvariant()).png" alt="@b.Name" width="120" height="45" loading="lazy" asp-append-version="true" /></a>
+                <a asp-action="Add" asp-route-bin="@b.Bin" aria-current="@(b.Bin == bank?.Bin ? "true" : null)" title="@b.Name" data-cp-bank="@b.Bin"><img src="~/images/banks/@(b.Code.ToLowerInvariant()).png" alt="@b.Name" width="120" height="45" loading="lazy" asp-append-version="true" /></a>
             }
         </nav>
+        @if (popup)
+        {
+            <aside class="cp-note" style="margin-top:14px" role="status" aria-live="polite" hidden data-cp-banklink-status>@UiIcon.Render("info-circle")<div data-cp-banklink-text></div></aside>
+            <form method="post" asp-action="Sync" hidden data-cp-banklink-done></form>
+        }
     </div>
 </section>
 @if (bank is not null)

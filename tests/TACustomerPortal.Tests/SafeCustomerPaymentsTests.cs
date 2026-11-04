@@ -1,6 +1,7 @@
 using System.Net;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.DataProtection;
@@ -282,6 +283,74 @@ public sealed class SafeCustomerPaymentsTests
         Assert.Contains("mã 1133", WebUtility.HtmlDecode(pages[^1]));
         foreach (var html in pages.Select(WebUtility.HtmlDecode))
             Assert.False(PartnerText.Mentions(Regex.Replace(html, "<script.*?</script>|<link[^>]*>", "", RegexOptions.Singleline)), Regex.Match(html, @"(?i).{0,80}(tingee|heno).{0,80}").Value);
+    }
+
+    // ---- bank link popup (SDK) -------------------------------------------------------------------------------
+    [Fact]
+    public async Task ABankLogoOpensTheLinkPopupSessionForTheCustomersMerchant()
+    {
+        using var f = Factory("OWNER", out var store, out var tingee);
+        var c = Client(f);
+        Assert.DoesNotContain("data-cp-banklink=", await c.GetStringAsync("/banks/add"));   // not activated: plain links only
+        store.Merchants[A] = 9001;
+        var html = await c.GetStringAsync("/banks/add");
+        Assert.Contains("data-cp-banklink=\"/Banks/LinkSession\"", html);
+        Assert.Contains("data-cp-bank=\"970422\"", html);
+        var token = await Token(c, "/banks/add");
+
+        var r = await Post(c, "/banks/linksession", token, new() { ["bin"] = "970422" });
+        var json = JsonDocument.Parse(await r.Content.ReadAsStringAsync()).RootElement;
+        Assert.True(json.GetProperty("ok").GetBoolean());
+        Assert.Equal(tingee.SessionUrl, json.GetProperty("url").GetString());
+        Assert.EndsWith("/js/tingee-bank-link.js", json.GetProperty("script").GetString());
+        var session = Assert.Single(tingee.Sessions);
+        Assert.Equal(9001, session.MerchantId);
+        Assert.Equal(TingeeBankLinkTypes.Link, session.Type);
+        Assert.Equal("MBB", session.BankName);
+        Assert.Null(session.BankAccountType);   // the popup asks for the account type
+        Assert.Contains(A.ToString(), session.Metadata);
+
+        var unknown = JsonDocument.Parse(await (await Post(c, "/banks/linksession", token, new() { ["bin"] = "000000" })).Content.ReadAsStringAsync()).RootElement;
+        Assert.False(unknown.GetProperty("ok").GetBoolean());
+        tingee.SessionUrl = "https://evil.example/link";
+        var foreign = JsonDocument.Parse(await (await Post(c, "/banks/linksession", token, new() { ["bin"] = "970422" })).Content.ReadAsStringAsync()).RootElement;
+        Assert.False(foreign.GetProperty("ok").GetBoolean());
+        tingee.SessionError = new TingeeApiException("1133", "Tingee: merchant không có quyền");
+        var failed = JsonDocument.Parse(await (await Post(c, "/banks/linksession", token, new() { ["bin"] = "970422" })).Content.ReadAsStringAsync()).RootElement;
+        Assert.Contains("mã 1133", failed.GetProperty("error").GetString());
+        Assert.False(PartnerText.Mentions(failed.GetProperty("error").GetString()!));
+        Assert.Equal(2, tingee.Sessions.Count);   // the foreign URL was created, then refused
+    }
+
+    [Fact]
+    public async Task ViewersCannotOpenTheLinkPopup()
+    {
+        using var f = Factory("VIEWER", out var store, out var tingee);
+        store.Merchants[A] = 9001;
+        var c = Client(f);
+        var r = await Post(c, "/banks/linksession", await Token(c, "/orders"), new() { ["bin"] = "970422" });
+        Assert.NotEqual(HttpStatusCode.OK, r.StatusCode);
+        Assert.Empty(tingee.Sessions);
+    }
+
+    [Fact]
+    public async Task SyncAddsAccountsLinkedInThePopup()
+    {
+        using var f = Factory("OWNER", out var store, out var tingee);
+        store.Merchants[A] = 9001;
+        store.Banks.Add((A, Bank("970436", BankStatus.Active, "business-account") with { VaAccountNumber = "VA-OLD" }));
+        tingee.VaItems.Add(new() { BankBin = "970436", AccountNumber = "0123456789", VaAccountNumber = "VA-OLD", Status = "active" });   // already listed
+        tingee.VaItems.Add(new() { BankBin = "970422", AccountType = "personal-account", AccountNumber = "999888", AccountName = "NGUYEN VAN B", VaAccountNumber = "VA-NEW", Status = "active", ShopId = 7 });
+        tingee.VaItems.Add(new() { BankBin = "970422", AccountNumber = "555", Status = "inactive" });
+        var c = Client(f);
+        var r = await Post(c, "/banks/sync", await Token(c, "/banks"), new());
+        Assert.Equal(HttpStatusCode.Redirect, r.StatusCode);
+        var added = Assert.Single(store.Banks, b => b.Account.VaAccountNumber == "VA-NEW").Account;
+        Assert.Equal(("MBB", "personal-account", BankStatus.Active, "999888", 7L), (added.BankCode, added.AccountType, added.Status, added.AccountNumber, added.ShopId ?? 0));
+        Assert.False(added.IsNotifyAccountNumber);
+        Assert.Equal(2, store.Banks.Count);
+        var page = WebUtility.HtmlDecode(await c.GetStringAsync("/banks"));
+        Assert.Contains("Đã thêm 1 tài khoản mới liên kết", page);
     }
 
     // ---- service packages --------------------------------------------------------------------------------
@@ -655,7 +724,8 @@ public sealed class SafeCustomerPaymentsTests
         }
         public Task<TingeeDeleteVaResult> DeleteVaAsync(long merchantId, string bankBin, string vaAccountNumber, CancellationToken ct = default) => Task.FromResult(new TingeeDeleteVaResult());
         public Task ConfirmDeleteVaAsync(long merchantId, string bankBin, string confirmId, string otp, CancellationToken ct = default) => Task.CompletedTask;
-        public Task<TingeePage<TingeeVaItem>> GetVaPageAsync(long merchantId, CancellationToken ct = default) => Task.FromResult(new TingeePage<TingeeVaItem>());
+        public List<TingeeVaItem> VaItems { get; } = [];
+        public Task<TingeePage<TingeeVaItem>> GetVaPageAsync(long merchantId, CancellationToken ct = default) => Task.FromResult(new TingeePage<TingeeVaItem> { Items = [.. VaItems] });
         public Task<TingeeDynamicQr> GenerateDynamicQrAsync(TingeeDynamicQrRequest request, CancellationToken ct = default)
         {
             if (QrError is not null) throw QrError;
@@ -670,6 +740,14 @@ public sealed class SafeCustomerPaymentsTests
         }
         public Task<TingeeQrStatus> GetDynamicQrStatusAsync(long merchantId, string qrAccount, string billId, CancellationToken ct = default) => Task.FromResult(Status);
         public Task DeleteDynamicQrAsync(long merchantId, string qrAccount, string billId, CancellationToken ct = default) { DeletedQrs.Add((qrAccount, billId)); return Task.CompletedTask; }
-        public Task<string> CreateBankLinkSessionAsync(TingeeBankLinkSessionRequest request, CancellationToken ct = default) => throw new NotSupportedException();
+        public List<TingeeBankLinkSessionRequest> Sessions { get; } = [];
+        public string SessionUrl { get; set; } = "https://uat-bank-link.tingee.vn/link?token=T1";
+        public TingeeApiException? SessionError { get; set; }
+        public Task<string> CreateBankLinkSessionAsync(TingeeBankLinkSessionRequest request, CancellationToken ct = default)
+        {
+            if (SessionError is not null) throw SessionError;
+            Sessions.Add(request);
+            return Task.FromResult(SessionUrl);
+        }
     }
 }

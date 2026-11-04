@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Mvc;
 using TACustomerPortal.Web.Models;
@@ -110,6 +111,37 @@ public sealed partial class BanksController(ICurrentCustomerContext customer, IP
                 break;
         }
         return RedirectToAction(nameof(Index));
+    }
+
+    /// <summary>
+    /// Picking a bank logo opens the partner's own linking popup (Bank Link SDK): account type, details and OTP are asked
+    /// there. Returns the session URL and the SDK script as JSON; when the popup reports success the page posts Sync, which
+    /// adds the new account from the partner's list. The Add form above stays as the fallback without JavaScript.
+    /// </summary>
+    [HttpPost]
+    public async Task<IActionResult> LinkSession(string? bin)
+    {
+        if (await Current() is not { } m) return SelectCustomer();
+        if (!CanManage(m)) return Forbid();
+        IActionResult Fail(string message) => Json(new { ok = false, error = PartnerText.Scrub(message) });
+        var bank = TingeeBankCatalog.Find(bin);
+        if (bank is null) return Fail("Vui lòng chọn ngân hàng.");
+        if (await store.MerchantIdAsync(m.CustomerId) is not long merchantId) return Fail("Doanh nghiệp chưa được T.A kích hoạt dịch vụ thanh toán.");
+        if (!tingee.IsConfigured) return Fail("Dịch vụ liên kết ngân hàng chưa sẵn sàng. Vui lòng liên hệ T.A.");
+        string url;
+        try
+        {
+            url = await tingee.CreateBankLinkSessionAsync(new TingeeBankLinkSessionRequest
+            {
+                MerchantId = merchantId, Type = TingeeBankLinkTypes.Link, BankName = bank.Code,
+                Metadata = JsonSerializer.Serialize(new { source = "ta-customer", customer = m.CustomerId, bank = bank.Code })
+            });
+        }
+        catch (TingeeApiException ex) { return Fail($"Chưa mở được màn hình liên kết (mã {ex.Code}): {ex.TingeeMessage}{(ex.LogCode is null ? "" : $" — Mã log: {ex.LogCode}")}"); }
+        catch (HttpRequestException ex) { logger.LogWarning(ex, "Tingee unreachable (create-bank-link-session) for customer {CustomerId}.", m.CustomerId); return Fail("Không kết nối được dịch vụ thanh toán. Vui lòng thử lại sau."); }
+        if (!TingeeOptions.IsBankLinkSdkUrl(url)) return Fail("Dịch vụ liên kết trả về địa chỉ không hợp lệ. Vui lòng liên hệ T.A.");
+        logger.LogInformation("BANK_LINK_SESSION customer={CustomerId} bank={Bank}", m.CustomerId, bank.Code);
+        return Json(new { ok = true, url, script = tingeeOptions.Value.BankLinkSdkScript });
     }
 
     [HttpGet]
@@ -233,7 +265,10 @@ public sealed partial class BanksController(ICurrentCustomerContext customer, IP
         return RedirectToAction(nameof(Index));
     }
 
-    /// <summary>Pulls the account list from Tingee to settle bank-side confirmations (until the VA-status webhook is processed).</summary>
+    /// <summary>
+    /// Pulls the account list from Tingee to settle bank-side confirmations (until the VA-status webhook is processed) and
+    /// adds active accounts linked in the SDK popup that are not listed here yet.
+    /// </summary>
     [HttpPost]
     public async Task<IActionResult> Sync()
     {
@@ -247,8 +282,20 @@ public sealed partial class BanksController(ICurrentCustomerContext customer, IP
         try
         {
             var remote = (await tingee.GetVaPageAsync(merchantId)).Items;
+            var locals = await store.BankAccountsAsync(m.CustomerId);
             var changed = 0;
-            foreach (var local in await store.BankAccountsAsync(m.CustomerId))
+            var added = 0;
+            foreach (var r in remote)
+            {
+                if (r.Status != "active" || TingeeBankCatalog.Find(r.BankBin) is not { } bank) continue;
+                if (locals.Any(l => l.Status != BankStatus.Deleted && l.BankBin == r.BankBin
+                    && ((r.VaAccountNumber is not null && l.VaAccountNumber == r.VaAccountNumber) || (r.AccountNumber is not null && l.AccountNumber == r.AccountNumber)))) continue;
+                await store.AddBankAccountAsync(m.CustomerId, new BankAccount(Guid.Empty, bank.Bin, bank.Code, bank.Name, r.AccountType ?? TingeeAccountTypes.Personal,
+                    r.AccountNumber, r.AccountName, r.VaAccountNumber ?? r.AccountNumber, r.VaAccountNumber is null, r.ShopId, BankStatus.Active,
+                    null, null, null, null, false, clock.GetUtcNow().UtcDateTime), Actor);
+                added++;
+            }
+            foreach (var local in locals)
             {
                 if (local.Status is not (BankStatus.PendingBank or BankStatus.Active)) continue;
                 var match = remote.FirstOrDefault(r => r.BankBin == local.BankBin
@@ -259,7 +306,8 @@ public sealed partial class BanksController(ICurrentCustomerContext customer, IP
                 await store.UpdateBankAccountAsync(m.CustomerId, local with { Status = status, VaAccountNumber = match.VaAccountNumber ?? local.VaAccountNumber, ShopId = match.ShopId ?? local.ShopId, ActionLink = status == BankStatus.Active ? null : local.ActionLink }, Actor);
                 changed++;
             }
-            Flash(changed == 0 ? "Trạng thái các tài khoản không có thay đổi." : $"Đã cập nhật trạng thái {changed} tài khoản.");
+            Flash(added > 0 ? $"Đã thêm {added} tài khoản mới liên kết{(changed > 0 ? $" và cập nhật trạng thái {changed} tài khoản" : "")}."
+                : changed == 0 ? "Trạng thái các tài khoản không có thay đổi." : $"Đã cập nhật trạng thái {changed} tài khoản.");
         }
         catch (TingeeApiException ex) { Flash($"Không đồng bộ được trạng thái (mã {ex.Code}): {ex.TingeeMessage}", error: true); }
         catch (HttpRequestException ex) { logger.LogWarning(ex, "Tingee unreachable (get-va-paging)."); Flash("Không kết nối được dịch vụ thanh toán. Vui lòng thử lại.", error: true); }
