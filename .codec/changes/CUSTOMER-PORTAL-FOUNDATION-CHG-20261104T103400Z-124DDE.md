@@ -26,7 +26,7 @@ Operator (2026-11-04): "xoá hết dữ liệu khách hàng trừ TVGPTA trên p
 - Dry-run (một transaction, sqlcmd -b, kiểm tra @@TRANCOUNT sau mỗi batch): xoá 10 liên hệ + 10 khách hàng → verify PASS → rollback khôi phục 10 + 10 → verify NOT_APPLIED → ROLLBACK, DRYRUN_TRANCOUNT=0; pre-check lặp lại không đổi.
 - Gates trên HEAD cb978c0 (worktree sạch): restore OK, build Release 0 lỗi 0 cảnh báo, Safe tests 353/353.
 - Backup COPY_ONLY + CHECKSUM: C:\Program Files\Microsoft SQL Server\MSSQL12.MSSQLSERVER2014\MSSQL\Backup\TAPortalSys-predeploy-20261104T103823Z.bak (5,1 MB; msdb: checksums=1, damaged=0). RESTORE VERIFYONLY bị từ chối vì TA_User không có quyền CREATE DATABASE (Msg 262), nên kiểm tra qua msdb và file trên đĩa; còn bản 20261103T143226Z.
-- Chạy thật 2026-11-04 10:38Z: xoá 10 liên hệ + 10 khách hàng; verify 023 VERIFY_STATUS=PASS (TVGPTA giữ, 0 khách hàng khác, bảng lưu 10/10). Portal health 200.
+- Chạy thật 2026-11-04 10:38Z: xoá 10 liên hệ + 10 khách hàng; verify 023 VERIFY_STATUS=PASS (TVGPTA giữ, 0 khách hàng khác, bảng lưu 10/10). Portal sau khi chạy: /Account/Login 200, / 302.
 - Execution: EXECUTED
 
 ## Test và kết quả
