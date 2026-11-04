@@ -28,6 +28,8 @@
     .tg-otp__title { font-weight: 700; font-size: 1.05rem; }
     .tg-otp__input { font-size: 1.5rem !important; letter-spacing: .35em; font-variant-numeric: tabular-nums; }
     .tg-step { display: inline-block; padding: .1rem .5rem; margin-left: .5rem; border-radius: 1rem; font-size: .75rem; font-weight: 600; background: #f59f00; color: #fff; vertical-align: middle; }
+    .tg-countdown{display:inline-block;margin-left:.35rem;padding:0 .5rem;border-radius:999px;background:#e7f1ff;color:#1c5fb8;font-weight:600;font-variant-numeric:tabular-nums}
+    .tg-countdown.is-low{background:#fff4e5;color:#b35c00}.tg-countdown.is-over{background:#fdecec;color:#c92a2a}
     @@keyframes tg-otp-pulse { 0% { box-shadow: 0 0 0 0 rgba(245, 159, 0, .55); } 100% { box-shadow: 0 0 0 .9rem rgba(245, 159, 0, 0); } }
     @@media (prefers-reduced-motion: reduce) { .tg-otp__icon { animation: none; } }
     .tg-hook { display: flex; align-items: center; gap: .5rem; margin-bottom: .375rem; }
@@ -179,7 +181,9 @@
                         <dt>Tài khoản nhận</dt><dd><span class="ta-code">@qr.Account</span></dd>
                         <dt>Số tiền</dt><dd>@Money(qr.Amount)</dd>
                         <dt>Nội dung</dt><dd>@(qr.Purpose ?? "—")</dd>
-                        @if (qr.ExpiresAtUtc is DateTime exp) {<dt>Hết hạn</dt><dd>@exp.AddHours(7).ToString("HH:mm dd/MM")</dd>}
+                        @if (qr.ExpiresAtUtc is DateTime exp) {
+                            var left = (int)Math.Max(0, Math.Ceiling((exp - DateTime.UtcNow).TotalSeconds));
+                            <dt>Hết hạn</dt><dd>@exp.AddHours(7).ToString("HH:mm dd/MM") <span class="tg-countdown" data-ta-qr-countdown data-expires="@exp.ToString("o", System.Globalization.CultureInfo.InvariantCulture)">còn @(left / 60):@((left % 60).ToString("00"))</span></dd>}
                     </dl>
                 </div>
                 @if (qr.Type == "dynamic" && qr.QrAccount is not null && qr.BillId is not null)

@@ -55,6 +55,28 @@
     var money = new Intl.NumberFormat('vi-VN');
 
     var status = document.querySelector('[data-ta-sandbox-qr-status]');
+    var countdown = document.querySelector('[data-ta-qr-countdown]');
+    var countdownTimer = null;
+    if (countdown) {
+        // Seconds left until the QR expires (from the server's UTC expiry), so the operator knows how long the test can still be paid.
+        var expiresAt = Date.parse(countdown.getAttribute('data-expires'));
+        var tick = function () {
+            var left = Math.max(0, Math.ceil((expiresAt - Date.now()) / 1000));
+            countdown.textContent = left > 0 ? 'còn ' + Math.floor(left / 60) + ':' + String(left % 60).padStart(2, '0') : 'đã hết hạn';
+            countdown.classList.toggle('is-low', left > 0 && left <= 60);
+            countdown.classList.toggle('is-over', left === 0);
+            if (left === 0) {
+                clearInterval(countdownTimer);
+                if (status && status.classList.contains('ta-alert--info')) {
+                    clearInterval(timer);
+                    status.classList.remove('ta-alert--info');
+                    status.classList.add('ta-alert--warning');
+                    status.querySelector('[data-ta-sandbox-qr-status-text]').textContent = 'QR đã hết hạn, chưa nhận đủ tiền. Tạo QR mới để thử tiếp.';
+                }
+            }
+        };
+        if (!isNaN(expiresAt)) { tick(); countdownTimer = setInterval(tick, 1000); }
+    }
     if (status) {
         var text = status.querySelector('[data-ta-sandbox-qr-status-text]');
         var timer = setInterval(function () {
@@ -70,6 +92,8 @@
                         status.classList.add('ta-alert--success');
                         text.textContent = 'ĐÃ NHẬN ĐỦ TIỀN: ' + money.format(paid) + 'đ (' + s.payments + ' lần), lúc ' + s.checkedAt;
                         clearInterval(timer);
+                        clearInterval(countdownTimer);
+                        if (countdown) { countdown.textContent = 'đã thanh toán'; countdown.classList.remove('is-low', 'is-over'); }
                     }
                 })
                 .catch(function () { text.textContent = 'Mất kết nối, đang thử lại…'; });
