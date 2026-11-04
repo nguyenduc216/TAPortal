@@ -238,8 +238,49 @@ public sealed class SafeCustomerPaymentsTests
         Assert.Contains("chưa được kích hoạt", WebUtility.HtmlDecode(await c.GetStringAsync("/banks")));
         var r = await Post(c, "/banks/add", await Token(c, "/banks"), new() { ["Bin"] = "970422", ["AccountType"] = "personal-account" });
         Assert.Equal(HttpStatusCode.BadRequest, r.StatusCode);
-        Assert.Contains("chưa được T.A kích hoạt thanh toán Tingee", WebUtility.HtmlDecode(await r.Content.ReadAsStringAsync()));
+        Assert.Contains("chưa được T.A kích hoạt dịch vụ thanh toán", WebUtility.HtmlDecode(await r.Content.ReadAsStringAsync()));
         Assert.Empty(tingee.CreateVaRequests);
+    }
+
+    [Fact]
+    public async Task WithoutPaymentKeysTheLinkButtonIsOffAndTheCustomerIsToldWhy()
+    {
+        using var f = Factory("OWNER", out var store, out var tingee);
+        store.Merchants[A] = 9001;
+        tingee.IsConfigured = false;
+        var html = WebUtility.HtmlDecode(await Client(f).GetStringAsync("/banks"));
+        Assert.Contains("data-cp-not-ready", html);
+        Assert.Contains("đang được T.A cấu hình", html);
+        Assert.DoesNotContain("href=\"/banks/add\"", html, StringComparison.OrdinalIgnoreCase);
+        tingee.IsConfigured = true;
+        html = WebUtility.HtmlDecode(await Client(f).GetStringAsync("/banks"));
+        Assert.DoesNotContain("data-cp-not-ready", html);
+        Assert.Contains("href=\"/Banks/Add\"", html, StringComparison.OrdinalIgnoreCase);
+    }
+
+    // Rule: customers never see partner names (PartnerText), in fixed texts or in errors relayed from the partner.
+    [Fact]
+    public async Task PaymentPagesNeverNamePartners()
+    {
+        using var f = Factory("OWNER", out var store, out var tingee);
+        var c = Client(f);
+        var pages = new List<string> { await c.GetStringAsync("/banks"), await c.GetStringAsync("/") };   // not linked yet
+        store.Merchants[A] = 9001;
+        tingee.IsConfigured = false;
+        pages.Add(await c.GetStringAsync("/banks"));
+        tingee.IsConfigured = true;
+        foreach (var path in new[] { "/banks", "/banks/add", "/banks/add?bin=970422&type=business-account", "/banks/add?bin=970436&type=business-account", "/orders", "/orders/create", "/contacts", "/paymentsettings" })
+            pages.Add(await c.GetStringAsync(path));
+        tingee.CreateVaError = new TingeeApiException("1133", "Tingee: merchant không có quyền, liên hệ support@tingee.vn");
+        var failed = await Post(c, "/banks/add", await Token(c, "/banks/add?bin=970422&type=personal-account"), new()
+        {
+            ["Bin"] = "970422", ["AccountType"] = "personal-account", ["AccountNumber"] = "0123456789", ["AccountName"] = "A", ["Identity"] = "001099012345", ["Mobile"] = "0912345678"
+        });
+        Assert.Equal(HttpStatusCode.BadRequest, failed.StatusCode);
+        pages.Add(await failed.Content.ReadAsStringAsync());
+        Assert.Contains("mã 1133", WebUtility.HtmlDecode(pages[^1]));
+        foreach (var html in pages.Select(WebUtility.HtmlDecode))
+            Assert.False(PartnerText.Mentions(Regex.Replace(html, "<script.*?</script>|<link[^>]*>", "", RegexOptions.Singleline)), Regex.Match(html, @"(?i).{0,80}(tingee|heno).{0,80}").Value);
     }
 
     // ---- orders ----------------------------------------------------------------------------------------
@@ -536,7 +577,7 @@ public sealed class SafeCustomerPaymentsTests
 
     public sealed class FakeTingee : ITingeeApi
     {
-        public bool IsConfigured => true;
+        public bool IsConfigured { get; set; } = true;
         public TingeeCreateVaResult CreateVaResult { get; set; } = new() { VaAccountNumber = "VA1", Status = "active" };
         public TingeeConfirmVaResult ConfirmVaResult { get; set; } = new();
         public TingeeApiException? ConfirmError { get; set; }
@@ -550,7 +591,8 @@ public sealed class SafeCustomerPaymentsTests
 
         public Task<TingeeMerchantCreated> CreateMerchantAsync(TingeeCreateMerchantRequest request, CancellationToken ct = default) => throw new NotSupportedException();
         public Task<TingeePage<TingeeMerchantItem>> GetMerchantsAsync(CancellationToken ct = default) => throw new NotSupportedException();
-        public Task<TingeeCreateVaResult> CreateVaAsync(TingeeCreateVaRequest request, CancellationToken ct = default) { CreateVaRequests.Add(request); return Task.FromResult(CreateVaResult); }
+        public TingeeApiException? CreateVaError { get; set; }
+        public Task<TingeeCreateVaResult> CreateVaAsync(TingeeCreateVaRequest request, CancellationToken ct = default) { if (CreateVaError is not null) throw CreateVaError; CreateVaRequests.Add(request); return Task.FromResult(CreateVaResult); }
         public Task<TingeeConfirmVaResult> ConfirmVaAsync(long merchantId, string bankBin, string confirmId, string otp, CancellationToken ct = default)
         {
             if (ConfirmError is not null) throw ConfirmError;

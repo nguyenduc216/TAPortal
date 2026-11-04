@@ -77,3 +77,9 @@ Supersedes earlier clauses that forbid agents from deploying or touching IIS, fo
 - If a migration is needed, run it first under `## AGENT MIGRATION EXECUTION`, then deploy.
 - A failed deploy that rolled back is reported as ROLLED_BACK with the server log path (`C:\TADeploy\logs\apply-<target>-<stamp>.log`); `-Rollback` restores the previous server backup on request.
 - Report per target: source commit SHA, artifact manifest SHA256, package SHA256, server result (DEPLOYED / ROLLED_BACK / FAILED), health URL result and UTC time, in the Codec change/report (`publish_status`). Never record secrets.
+
+## CUSTOMER PORTAL PARTNER NEUTRALITY (2026-11-04, operator rule)
+- Nothing a customer sees in `TACustomerPortal.Web` (views, page titles/subtitles, flash and validation messages, errors, emails, downloads) names T.A's integration partners: Tingee, its operator HENO, or their domains. Use neutral wording ("dịch vụ thanh toán", "liên kết ngân hàng") and say T.A provides the service.
+- Text that comes from a partner (API error messages, notes from the shared bank catalog) is shown only through `PartnerText.Scrub` (`src/TACustomerPortal.Web/Services/PartnerText.cs`); `Flash()` already scrubs. Add any new partner to `PartnerText.Names` and its pattern.
+- Code identifiers, namespaces, SQL table names, server logs and the Admin portal (`TAPortal.Web`) are not affected.
+- Enforced by `SafeCustomerPartnerNeutralityTests` (views and string literals) and `SafeCustomerPaymentsTests.PaymentPagesNeverNamePartners` (rendered pages); a new customer page with partner data must be added to that test.

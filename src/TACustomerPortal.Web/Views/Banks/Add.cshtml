@@ -45,7 +45,7 @@
         <div class="cp-card__head"><span class="cp-blob cp-blob--gold">@UiIcon.Render("key")</span><h2>3. Thông tin liên kết — @bank.Name, @TingeeAccountTypes.Label(Model.AccountType)</h2></div>
         <div class="cp-card__body">
             <div asp-validation-summary="ModelOnly" class="cp-alert" role="alert"></div>
-            @if (rule.Note is string note) {<aside class="cp-note" style="margin-bottom:14px">@UiIcon.Render("info-circle")<div>@note</div></aside>}
+            @if (rule.Note is string note) {<aside class="cp-note" style="margin-bottom:14px">@UiIcon.Render("info-circle")<div>@PartnerText.Scrub(note)</div></aside>}
             <input type="hidden" name="Bin" value="@bank.Bin" />
             <input type="hidden" name="AccountType" value="@Model.AccountType" />
             <div class="cp-form-grid">

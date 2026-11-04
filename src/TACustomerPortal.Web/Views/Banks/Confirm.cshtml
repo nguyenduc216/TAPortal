@@ -25,5 +25,5 @@
             <button class="cp-btn cp-btn--primary" type="submit" style="margin-left:auto">@UiIcon.Render("check")<span>@(Model.Deleting ? "Xác nhận hủy" : "Xác nhận")</span></button>
         </div>
     </form>
-    <aside class="cp-note" style="align-self:start">@UiIcon.Render("info-circle")<div>Tài khoản: <strong>@a.BankName</strong> @(a.AccountNumber ?? a.VaAccountNumber). Nếu mã hết hạn, hãy quay lại danh sách và thực hiện lại. T.A và Tingee không bao giờ hỏi mã OTP qua điện thoại.</div></aside>
+    <aside class="cp-note" style="align-self:start">@UiIcon.Render("info-circle")<div>Tài khoản: <strong>@a.BankName</strong> @(a.AccountNumber ?? a.VaAccountNumber). Nếu mã hết hạn, hãy quay lại danh sách và thực hiện lại. T.A không bao giờ hỏi mã OTP qua điện thoại.</div></aside>
 </div>

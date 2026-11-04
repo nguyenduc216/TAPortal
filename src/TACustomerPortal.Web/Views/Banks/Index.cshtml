@@ -3,10 +3,11 @@
 @{
     ViewData["Title"] = "Tài khoản ngân hàng";
     ViewData["Eyebrow"] = "Thanh toán";
-    ViewData["Subtitle"] = "Tài khoản nhận tiền của doanh nghiệp, liên kết qua Tingee để nhận thông báo giao dịch và tạo QR.";
+    ViewData["Subtitle"] = "Tài khoản nhận tiền của doanh nghiệp, liên kết để nhận thông báo giao dịch và tạo QR.";
     var canLink = Model.CanManage && Model.Linked && Model.ApiConfigured;
 }
 @if (!Model.Linked) { <partial name="_PaymentsNotLinked" /> }
+else if (!Model.ApiConfigured) { <aside class="cp-note" style="margin-bottom:14px" data-cp-not-ready>@UiIcon.Render("info-circle")<div><strong>Dịch vụ liên kết ngân hàng đang được T.A cấu hình.</strong> Bạn sẽ liên kết được tài khoản ngay khi T.A hoàn tất; vui lòng liên hệ T.A nếu cần gấp.</div></aside> }
 <section class="cp-card">
     <div class="cp-toolbar">
         <strong>@Model.Accounts.Count tài khoản</strong>

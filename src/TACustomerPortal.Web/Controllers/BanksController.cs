@@ -43,20 +43,20 @@ public sealed partial class BanksController(ICurrentCustomerContext customer, IP
         var type = bank is not null && input.AccountType is not null && bank.AccountTypes.Contains(input.AccountType) ? input.AccountType : null;
         IActionResult Fail(string? message = null)
         {
-            if (message is not null) ModelState.AddModelError(string.Empty, message);
+            if (message is not null) ModelState.AddModelError(string.Empty, PartnerText.Scrub(message));
             Response.StatusCode = StatusCodes.Status400BadRequest;
             return View(new BankAddVm(m, merchant is not null, tingee.IsConfigured, bank, type, input));
         }
 
         if (bank is null || type is null) return Fail("Vui lòng chọn ngân hàng và loại tài khoản.");
-        if (merchant is not long merchantId) return Fail("Doanh nghiệp chưa được T.A kích hoạt thanh toán Tingee.");
-        if (!tingee.IsConfigured) return Fail("Kết nối Tingee chưa được cấu hình. Vui lòng liên hệ T.A.");
+        if (merchant is not long merchantId) return Fail("Doanh nghiệp chưa được T.A kích hoạt dịch vụ thanh toán.");
+        if (!tingee.IsConfigured) return Fail("Dịch vụ liên kết ngân hàng chưa sẵn sàng. Vui lòng liên hệ T.A.");
         var rule = bank.Rule(type);
         Normalize(input);
         Validate(rule, input);
         var webhookUrl = tingeeOptions.Value.EffectiveVaStatusWebhookUrl;
         if (rule.AsyncResult && string.IsNullOrWhiteSpace(webhookUrl))
-            ModelState.AddModelError(string.Empty, $"{bank.Name} gửi kết quả liên kết qua webhook nhưng T.A chưa cấu hình địa chỉ nhận (Tingee__VaStatusWebhookUrl).");
+            ModelState.AddModelError(string.Empty, $"Chưa liên kết được {bank.Name} lúc này vì T.A chưa hoàn tất cấu hình. Vui lòng liên hệ T.A.");
         if (!ModelState.IsValid) return Fail();
 
         var notifyRoot = !rule.VaSupported || (rule.SupportsRootNotify && input.NotifyRootAccount);
@@ -83,8 +83,8 @@ public sealed partial class BanksController(ICurrentCustomerContext customer, IP
 
         TingeeCreateVaResult result;
         try { result = await tingee.CreateVaAsync(request); }
-        catch (TingeeApiException ex) { return Fail($"Ngân hàng/Tingee từ chối liên kết (mã {ex.Code}): {ex.TingeeMessage}{(ex.LogCode is null ? "" : $" — Mã log: {ex.LogCode}")}"); }
-        catch (HttpRequestException ex) { logger.LogWarning(ex, "Tingee unreachable (create-va) for customer {CustomerId}.", m.CustomerId); return Fail("Không kết nối được Tingee. Vui lòng thử lại sau."); }
+        catch (TingeeApiException ex) { return Fail($"Liên kết không thành công (mã {ex.Code}): {ex.TingeeMessage}{(ex.LogCode is null ? "" : $" — Mã log: {ex.LogCode}")}"); }
+        catch (HttpRequestException ex) { logger.LogWarning(ex, "Tingee unreachable (create-va) for customer {CustomerId}.", m.CustomerId); return Fail("Không kết nối được dịch vụ thanh toán. Vui lòng thử lại sau."); }
 
         var now = clock.GetUtcNow().UtcDateTime;
         var bankLink = result.AuthorizeLink ?? result.DeepLink;
@@ -170,12 +170,12 @@ public sealed partial class BanksController(ICurrentCustomerContext customer, IP
         }
         catch (TingeeApiException ex)
         {
-            ModelState.AddModelError("otp", $"Xác nhận không thành công (mã {ex.Code}): {ex.TingeeMessage}");
+            ModelState.AddModelError("otp", PartnerText.Scrub($"Xác nhận không thành công (mã {ex.Code}): {ex.TingeeMessage}"));
         }
         catch (HttpRequestException ex)
         {
             logger.LogWarning(ex, "Tingee unreachable (confirm) for customer {CustomerId}.", m.CustomerId);
-            ModelState.AddModelError("otp", "Không kết nối được Tingee. Vui lòng thử lại.");
+            ModelState.AddModelError("otp", "Không kết nối được dịch vụ thanh toán. Vui lòng thử lại.");
         }
         Response.StatusCode = StatusCodes.Status400BadRequest;
         return View(new BankConfirmVm(account, deleting));
@@ -197,7 +197,7 @@ public sealed partial class BanksController(ICurrentCustomerContext customer, IP
         }
         if (await store.MerchantIdAsync(m.CustomerId) is not long merchantId || !tingee.IsConfigured)
         {
-            Flash("Kết nối Tingee chưa sẵn sàng nên chưa thể hủy liên kết.", error: true);
+            Flash("Dịch vụ thanh toán chưa sẵn sàng nên chưa thể hủy liên kết.", error: true);
             return RedirectToAction(nameof(Index));
         }
         try
@@ -218,8 +218,8 @@ public sealed partial class BanksController(ICurrentCustomerContext customer, IP
             await store.UpdateBankAccountAsync(m.CustomerId, account with { Status = BankStatus.Deleted }, Actor);
             Flash($"Đã hủy liên kết tài khoản {account.BankName}.");
         }
-        catch (TingeeApiException ex) { Flash($"Tingee từ chối hủy liên kết (mã {ex.Code}): {ex.TingeeMessage}", error: true); }
-        catch (HttpRequestException ex) { logger.LogWarning(ex, "Tingee unreachable (delete-va)."); Flash("Không kết nối được Tingee. Vui lòng thử lại.", error: true); }
+        catch (TingeeApiException ex) { Flash($"Hủy liên kết không thành công (mã {ex.Code}): {ex.TingeeMessage}", error: true); }
+        catch (HttpRequestException ex) { logger.LogWarning(ex, "Tingee unreachable (delete-va)."); Flash("Không kết nối được dịch vụ thanh toán. Vui lòng thử lại.", error: true); }
         return RedirectToAction(nameof(Index));
     }
 
@@ -241,7 +241,7 @@ public sealed partial class BanksController(ICurrentCustomerContext customer, IP
         if (!CanManage(m)) return Forbid();
         if (await store.MerchantIdAsync(m.CustomerId) is not long merchantId || !tingee.IsConfigured)
         {
-            Flash("Kết nối Tingee chưa sẵn sàng.", error: true);
+            Flash("Dịch vụ thanh toán chưa sẵn sàng.", error: true);
             return RedirectToAction(nameof(Index));
         }
         try
@@ -259,10 +259,10 @@ public sealed partial class BanksController(ICurrentCustomerContext customer, IP
                 await store.UpdateBankAccountAsync(m.CustomerId, local with { Status = status, VaAccountNumber = match.VaAccountNumber ?? local.VaAccountNumber, ShopId = match.ShopId ?? local.ShopId, ActionLink = status == BankStatus.Active ? null : local.ActionLink }, Actor);
                 changed++;
             }
-            Flash(changed == 0 ? "Không có thay đổi từ Tingee." : $"Đã cập nhật {changed} tài khoản từ Tingee.");
+            Flash(changed == 0 ? "Trạng thái các tài khoản không có thay đổi." : $"Đã cập nhật trạng thái {changed} tài khoản.");
         }
-        catch (TingeeApiException ex) { Flash($"Tingee (mã {ex.Code}): {ex.TingeeMessage}", error: true); }
-        catch (HttpRequestException ex) { logger.LogWarning(ex, "Tingee unreachable (get-va-paging)."); Flash("Không kết nối được Tingee. Vui lòng thử lại.", error: true); }
+        catch (TingeeApiException ex) { Flash($"Không đồng bộ được trạng thái (mã {ex.Code}): {ex.TingeeMessage}", error: true); }
+        catch (HttpRequestException ex) { logger.LogWarning(ex, "Tingee unreachable (get-va-paging)."); Flash("Không kết nối được dịch vụ thanh toán. Vui lòng thử lại.", error: true); }
         return RedirectToAction(nameof(Index));
     }
 

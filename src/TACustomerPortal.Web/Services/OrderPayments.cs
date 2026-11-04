@@ -59,13 +59,13 @@ public sealed class OrderPayments(IPaymentStore store, ITingeeApi tingee, TimePr
         catch (Exception ex) when (ex is TingeeApiException or HttpRequestException or TingeeNotConfiguredException)
         {
             logger.LogWarning(ex, "QR not issued for order {OrderNo}.", order.OrderNo);
-            var error = ex is TingeeApiException t ? $"Tingee từ chối tạo QR (mã {t.Code}): {t.TingeeMessage}"
-                : ex is TingeeNotConfiguredException ? "Kết nối Tingee chưa được cấu hình." : "Không kết nối được Tingee.";
+            var error = ex is TingeeApiException t ? PartnerText.Scrub($"Không tạo được QR (mã {t.Code}): {t.TingeeMessage}")
+                : ex is TingeeNotConfiguredException ? "Dịch vụ thanh toán chưa sẵn sàng. Vui lòng liên hệ T.A." : "Không kết nối được dịch vụ thanh toán.";
             var failed = order with { LastError = error };
             await store.UpdateOrderAsync(customerId, failed, actor);
             return new(failed, error);
         }
-        if (string.IsNullOrEmpty(updated.QrPayload)) return new(order, "Tingee không trả về mã QR.");
+        if (string.IsNullOrEmpty(updated.QrPayload)) return new(order, "Không nhận được mã QR, vui lòng thử lại.");
         updated = updated with { Status = OrderMath.StatusFor(order.Amount, order.PaidAmount), ExpiresAt = now.AddMinutes(order.QrExpireMinutes), LastError = null };
         await store.UpdateOrderAsync(customerId, updated, actor);
         return new(updated, null);
@@ -93,7 +93,7 @@ public sealed class OrderPayments(IPaymentStore store, ITingeeApi tingee, TimePr
         catch (Exception ex) when (ex is TingeeApiException or HttpRequestException or TingeeNotConfiguredException)
         {
             logger.LogWarning(ex, "QR status unavailable for order {OrderNo}.", order.OrderNo);
-            return new(order, ex is TingeeApiException t ? $"Tingee (mã {t.Code}): {t.TingeeMessage}" : "Không kiểm tra được trạng thái QR lúc này.");
+            return new(order, ex is TingeeApiException t ? PartnerText.Scrub($"Không kiểm tra được trạng thái QR (mã {t.Code}): {t.TingeeMessage}") : "Không kiểm tra được trạng thái QR lúc này.");
         }
     }
 

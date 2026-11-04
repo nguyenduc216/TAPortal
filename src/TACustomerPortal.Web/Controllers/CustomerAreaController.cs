@@ -23,7 +23,8 @@ public abstract class CustomerAreaController(ICurrentCustomerContext customer) :
 
     protected IActionResult SelectCustomer() => RedirectToAction("SelectCustomer", "Account");
 
-    protected void Flash(string message, bool error = false) => TempData[error ? "Error" : "Success"] = message;
+    // Messages may carry text from a payment partner: partner names are scrubbed before the customer sees them (PartnerText).
+    protected void Flash(string message, bool error = false) => TempData[error ? "Error" : "Success"] = PartnerText.Scrub(message);
 }
 
 /// <summary>

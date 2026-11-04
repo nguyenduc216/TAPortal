@@ -40,7 +40,7 @@ public sealed class OrdersController(ICurrentCustomerContext customer, IPaymentS
         if (await Current() is not { } m) return SelectCustomer();
         if (!CanManage(m)) return Forbid();
         var merchant = await store.MerchantIdAsync(m.CustomerId);
-        if (merchant is null) ModelState.AddModelError(string.Empty, "Doanh nghiệp chưa được T.A kích hoạt thanh toán Tingee.");
+        if (merchant is null) ModelState.AddModelError(string.Empty, "Doanh nghiệp chưa được T.A kích hoạt dịch vụ thanh toán.");
         var bank = input.BankAccountId is Guid bankId ? await store.BankAccountAsync(m.CustomerId, bankId) : null;
         if (bank is null || !bank.IsActive || bank.ReceiveAccount is null) ModelState.AddModelError(nameof(input.BankAccountId), "Vui lòng chọn tài khoản nhận tiền đang hoạt động.");
         if (input.ContactId is Guid contactId && await store.ContactAsync(m.CustomerId, contactId) is not { IsActive: true })
