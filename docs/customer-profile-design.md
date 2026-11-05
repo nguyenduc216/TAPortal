@@ -268,7 +268,7 @@ Theo `AGENTS.md`, agent không được chạy seed/DML trên `TAPortalSys`, nê
 | Giai đoạn | Nội dung | Migration |
 |---|---|---|
 | 1 | `CustomerProfiles`, `CustomerRepresentatives`, `CustomerSystemAccounts` (mã hóa, quyền, audit), 3 tab — **đã code** | `013-customer-profile-core.sql` + verify `015` + rollback `016` |
-| 2 | Import Excel có màn hình duyệt | — |
+| 2 | Import Excel có màn hình duyệt (Khách hàng → Nhập từ Excel) — **đã code** | — |
 | 3 | `CustomerServices`, `CustomerEmployeeAssignments`, tab 4–5, phân quyền dữ liệu theo phân công | `014-…` |
 | 4 | `CustomerComplianceItems`, màn hình theo dõi kỳ, cảnh báo | `015-…` |
 | 5 | `CustomerCases`, bảng giá theo số hóa đơn, thu phí | `016-…` |

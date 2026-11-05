@@ -1,0 +1,107 @@
+@model CustomerImportVm
+@{
+    ViewData["Title"] = "Nhập khách hàng từ Excel";
+    ViewData["Heading"] = "Nhập khách hàng từ Excel";
+    ViewData["Subtitle"] = "Tạo hồ sơ, người đại diện và tài khoản hệ thống từ file \"Thông tin khách hàng.xlsx\".";
+    ViewData["PageIcon"] = "file-text";
+    ViewData["ParentTitle"] = "Khách hàng";
+    ViewData["ParentController"] = "Customers";
+    var vi = System.Globalization.CultureInfo.GetCultureInfo("vi-VN");
+}
+<partial name="_CustomersTabs" model="@("import")" />
+@if (!Model.SecretsEnabled)
+{
+    <div class="ta-alert ta-alert--warning" role="note" data-ta-secrets-disabled>@UiIcon.Render("alert-triangle")<div class="ta-alert__body">Máy chủ chưa cấu hình khóa mã hóa (<code>CustomerSecrets__Key</code>): dữ liệu vẫn nhập được nhưng <strong>mật khẩu/PIN sẽ chưa được lưu</strong>. Sau khi cấu hình khóa, nhập lại cùng file: hệ thống chỉ bổ sung mật khẩu còn thiếu, không tạo trùng.</div></div>
+}
+<div asp-validation-summary="ModelOnly" class="ta-alert ta-alert--danger" role="alert"></div>
+@if (Model.Rows is null)
+{
+    <form class="card" asp-action="ImportPreview" method="post" enctype="multipart/form-data" data-ta-import-upload>
+        <div class="card-header"><h2 class="card-title">@UiIcon.Render("file-text")Bước 1: Chọn file</h2></div>
+        <div class="card-body">
+            <ul class="mb-3">
+                <li>Mỗi sheet hồ sơ (có khối "Thông tin chung") là một khách hàng. Các sheet bảng như Phí, HKD, Check tờ khai, Cơ hội được bỏ qua ở bước này.</li>
+                <li>Khách hàng được khớp theo <strong>mã số thuế</strong>: đã có thì chỉ bổ sung thông tin còn trống, chưa có thì tạo mới.</li>
+                <li>Nhập lại cùng một file không tạo trùng người đại diện hay tài khoản.</li>
+                <li>File chỉ được giữ trong bộ nhớ máy chủ tối đa 30 phút để bạn duyệt, không lưu xuống ổ đĩa.</li>
+            </ul>
+            <label class="form-label required" for="importFile">File Excel (.xlsx, tối đa 10 MB)</label>
+            <div class="ta-input-icon">@UiIcon.Render("file-text")<input id="importFile" name="file" class="form-control" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" required /></div>
+        </div>
+        <div class="card-footer ta-form-actions">
+            <a asp-action="Index" class="btn">@UiIcon.Render("x")<span>Hủy</span></a>
+            <button type="submit" class="btn btn-primary ms-auto" data-ta-loading data-ta-loading-text="Đang đọc file...">@UiIcon.Render("search")<span>Đọc file và xem trước</span></button>
+        </div>
+    </form>
+}
+else
+{
+    var rows = Model.Rows;
+    <form asp-action="ImportConfirm" method="post" data-ta-import-confirm data-ta-confirm="Nhập các khách hàng đã chọn vào hệ thống?">
+        <input type="hidden" name="token" value="@Model.Token" />
+        <section class="card ta-table-card" aria-label="Xem trước dữ liệu nhập">
+            <div class="ta-table-toolbar">
+                <div><strong>Bước 2: Duyệt dữ liệu</strong> — @Model.FileName: @rows.Count sheet khách hàng (@rows.Count(r => r.Match is not null) đã có trong hệ thống, @rows.Count(r => r.Match is null) mới)@(Model.SkippedSheets > 0 ? $", bỏ qua {Model.SkippedSheets} sheet khác" : "").</div>
+            </div>
+            <div class="ta-table-wrap">
+                <table class="ta-table ta-table-stack" id="importTable">
+                    <thead><tr><th scope="col">Nhập</th><th scope="col">Sheet</th><th scope="col">Khách hàng</th><th scope="col">Mã KH</th><th scope="col">Hồ sơ</th><th scope="col">Người đại diện</th><th scope="col">Tài khoản</th><th scope="col">Cần kiểm tra</th></tr></thead>
+                    <tbody>
+                    @foreach (var r in rows)
+                    {
+                        var d = r.Data;
+                        <tr data-ta-row data-ta-import-row="@r.Index">
+                            <td data-label="Nhập"><label class="form-check"><input class="form-check-input" type="checkbox" name="include" value="@r.Index" checked="@r.CanImport" disabled="@(!r.CanImport)" aria-label="Nhập sheet @d.SheetName" /></label></td>
+                            <td class="ta-nowrap" data-label="Sheet">@d.SheetName</td>
+                            <td data-label="Khách hàng"><div class="ta-cell-strong">@(d.Name ?? r.Match?.Name ?? "—")</div><div class="ta-cell-sub">MST @(d.TaxCode ?? "—")</div></td>
+                            <td data-label="Mã KH">
+                                @if (r.Match is not null)
+                                {
+                                    <span class="ta-badge ta-badge--neutral" title="@r.Match.Name">Đã có: @r.Match.Code</span>
+                                }
+                                else
+                                {
+                                    <span class="ta-badge ta-badge--success">Tạo mới</span>
+                                    <div class="ta-input-icon mt-1">@UiIcon.Render("hash")<input class="form-control form-control-sm" name="codes[@r.Index]" value="@r.SuggestedCode" maxlength="50" pattern="[A-Za-z0-9_.\-]+" aria-label="Mã khách hàng mới cho sheet @d.SheetName" /></div>
+                                }
+                            </td>
+                            <td data-label="Hồ sơ">
+                                <div>@CustomerProfileCodes.Label(CustomerProfileCodes.LegalForms, d.Profile.LegalForm)</div>
+                                @if (d.Profile.CharterCapital is { } cap) {<div class="ta-cell-sub">Vốn @cap.ToString("N0", vi) đ</div>}
+                                @if (d.Profile.EstablishedDate is { } est) {<div class="ta-cell-sub">Thành lập @est.ToString("dd/MM/yyyy")</div>}
+                            </td>
+                            <td data-label="Người đại diện">
+                                @if (d.Representatives.Count == 0) {<span class="ta-cell-sub">—</span>}
+                                @foreach (var p in d.Representatives)
+                                {
+                                    <div>@p.FullName <span class="ta-cell-sub">(@CustomerProfileCodes.Label(CustomerProfileCodes.RepresentativeRoles, p.RoleCode))</span></div>
+                                }
+                            </td>
+                            <td data-label="Tài khoản">
+                                @if (d.Accounts.Count == 0) {<span class="ta-cell-sub">—</span>}
+                                @foreach (var g in d.Accounts.GroupBy(a => a.Input.SystemType))
+                                {
+                                    <div>@CustomerProfileCodes.Label(CustomerProfileCodes.SystemTypes, g.Key)@(g.Count() > 1 ? $" ×{g.Count()}" : "")</div>
+                                }
+                                @if (r.Passwords > 0) {<div class="ta-cell-sub">@UiIcon.Render("lock")@r.Passwords mật khẩu/PIN</div>}
+                            </td>
+                            <td data-label="Cần kiểm tra">
+                                @if (d.Warnings.Count == 0) {<span class="ta-badge ta-badge--success">OK</span>}
+                                else
+                                {
+                                    <ul class="ta-import-warnings">@foreach (var w in d.Warnings) {<li>@w</li>}</ul>
+                                }
+                                @if (!r.CanImport) {<div class="text-danger">Không nhập được: thiếu tên khách hàng và chưa có khách hàng cùng MST.</div>}
+                            </td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        </section>
+        <div class="ta-form-actions mt-3">
+            <a asp-action="Import" class="btn">@UiIcon.Render("arrow-left")<span>Chọn file khác</span></a>
+            <button type="submit" class="btn btn-primary ms-auto" data-ta-loading data-ta-loading-text="Đang nhập...">@UiIcon.Render("device-floppy")<span>Nhập các khách hàng đã chọn</span></button>
+        </div>
+    </form>
+}

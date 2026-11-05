@@ -95,6 +95,8 @@ public sealed class SafeAdminAccountTests
     [InlineData("0101234567", true)]
     [InlineData("0101234567-001", true)]
     [InlineData("0101234567001", false)]
+    [InlineData("079123456789", true)]
+    [InlineData("79123456789", false)]
     [InlineData("010123456", false)]
     [InlineData("0101234567-01", false)]
     [InlineData("01012345AB", false)]

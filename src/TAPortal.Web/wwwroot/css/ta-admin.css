@@ -58,3 +58,7 @@
 /* Customer Workspace → "Tài khoản hệ thống": one header row per system type. */
 .ta-table-group th { background: var(--ta-blue-soft); color: var(--ta-blue-strong); font-size: var(--ta-fs-small); font-weight: 700; letter-spacing: .02em; }
 [data-ta-secret] code { min-width: 7ch; user-select: all; }
+
+/* Customers → Nhập từ Excel: warnings per sheet on the review page. */
+.ta-import-warnings { margin: 0; padding-left: 1.1rem; font-size: .8125rem; color: var(--tblr-warning-text, #8a5300); }
+.ta-import-warnings li + li { margin-top: .15rem; }

@@ -152,11 +152,7 @@ public sealed class SqlCustomerProfileStore(IConfiguration configuration, AdminA
         var isNew = string.IsNullOrEmpty(vm.Stamp);
         await using (var cmd = Command(cn, tx, isNew ? CustomerProfileSql.InsertProfile : CustomerProfileSql.UpdateProfile, ("@customer", vm.CustomerId), ("@by", actor)))
         {
-            Add(cmd, "@ShortName", vm.ShortName); Add(cmd, "@LegalForm", vm.LegalForm); Add(cmd, "@CharterCapital", vm.CharterCapital); Add(cmd, "@EstablishedDate", vm.EstablishedDate);
-            Add(cmd, "@MainIndustryCode", vm.MainIndustryCode); Add(cmd, "@MainIndustryName", vm.MainIndustryName); Add(cmd, "@BusinessLine", vm.BusinessLine);
-            Add(cmd, "@TaxAuthority", vm.TaxAuthority); Add(cmd, "@TaxOfficerName", vm.TaxOfficerName); Add(cmd, "@TaxOfficerPhone", vm.TaxOfficerPhone);
-            Add(cmd, "@BusinessStatus", vm.BusinessStatus); Add(cmd, "@BusinessStatusDate", vm.BusinessStatusDate); Add(cmd, "@ScaleNote", vm.ScaleNote);
-            Add(cmd, "@SourceCode", vm.SourceCode); Add(cmd, "@SourceNote", vm.SourceNote); Add(cmd, "@ParentCustomerId", vm.ParentCustomerId); Add(cmd, "@Note", vm.Note);
+            AddProfile(cmd, vm);
             if (!isNew)
             {
                 if (RowVersion(vm.Stamp) is not { } rv) return ProfileChangeOutcome.Conflict;
@@ -189,10 +185,7 @@ public sealed class SqlCustomerProfileStore(IConfiguration configuration, AdminA
         var id = input.Id ?? Guid.NewGuid();
         await using (var cmd = Command(cn, tx, isNew ? CustomerProfileSql.InsertRepresentative : CustomerProfileSql.UpdateRepresentative, ("@id", id), ("@customer", customerId), ("@by", actor)))
         {
-            Add(cmd, "@RoleCode", input.RoleCode); cmd.Parameters.AddWithValue("@IsLegalRepresentative", input.IsLegalRepresentative); cmd.Parameters.AddWithValue("@IsPrimaryContact", input.IsPrimaryContact);
-            Add(cmd, "@FullName", input.FullName); Add(cmd, "@Gender", input.Gender); Add(cmd, "@DateOfBirth", input.DateOfBirth); Add(cmd, "@IdentityNumber", input.IdentityNumber);
-            Add(cmd, "@IdentityIssueDate", input.IdentityIssueDate); Add(cmd, "@IdentityIssuePlace", input.IdentityIssuePlace); Add(cmd, "@Address", input.Address);
-            Add(cmd, "@Email", input.Email); Add(cmd, "@Phone", input.Phone); Add(cmd, "@Note", input.Note); cmd.Parameters.AddWithValue("@SortOrder", input.SortOrder);
+            AddRepresentative(cmd, input);
             if (!isNew)
             {
                 if (RowVersion(input.Stamp) is not { } rv) return ProfileChangeOutcome.Conflict;
@@ -230,13 +223,7 @@ public sealed class SqlCustomerProfileStore(IConfiguration configuration, AdminA
         var id = accountId;
         await using (var cmd = Command(cn, tx, isNew ? CustomerProfileSql.InsertAccount : CustomerProfileSql.UpdateAccount, ("@id", id), ("@customer", customerId), ("@by", actor)))
         {
-            Add(cmd, "@SystemType", input.SystemType); Add(cmd, "@ProviderName", input.ProviderName); Add(cmd, "@SystemName", input.SystemName); Add(cmd, "@LoginUrl", input.LoginUrl);
-            Add(cmd, "@Username", input.Username); Add(cmd, "@LoginPhone", input.LoginPhone); Add(cmd, "@StoreName", input.StoreName); Add(cmd, "@UnitCode", input.UnitCode);
-            Add(cmd, "@BankAccountNumber", input.BankAccountNumber); Add(cmd, "@CertificateType", input.CertificateType); Add(cmd, "@CertificateSerial", input.CertificateSerial);
-            Add(cmd, "@ValidFrom", input.ValidFrom); Add(cmd, "@ExpiresAt", input.ExpiresAt); Add(cmd, "@Status", input.Status); Add(cmd, "@ManagedBy", input.ManagedBy);
-            Add(cmd, "@Note", input.Note); cmd.Parameters.AddWithValue("@SortOrder", input.SortOrder);
-            cmd.Parameters.Add("@pwd", SqlDbType.VarBinary, 4000).Value = (object?)password.Value ?? DBNull.Value;
-            cmd.Parameters.Add("@pin", SqlDbType.VarBinary, 4000).Value = (object?)pin.Value ?? DBNull.Value;
+            AddAccount(cmd, input, password.Value, pin.Value);
             if (!isNew)
             {
                 if (RowVersion(input.Stamp) is not { } rv) return ProfileChangeOutcome.Conflict;
@@ -277,7 +264,35 @@ public sealed class SqlCustomerProfileStore(IConfiguration configuration, AdminA
         }
     }
 
-    // ---- helpers ------------------------------------------------------------------------------------------
+    // ---- helpers (also used by SqlCustomerImportStore) ------------------------------------------------------
+
+    internal static void AddProfile(SqlCommand cmd, CustomerProfileVm vm)
+    {
+        Add(cmd, "@ShortName", vm.ShortName); Add(cmd, "@LegalForm", vm.LegalForm); Add(cmd, "@CharterCapital", vm.CharterCapital); Add(cmd, "@EstablishedDate", vm.EstablishedDate);
+        Add(cmd, "@MainIndustryCode", vm.MainIndustryCode); Add(cmd, "@MainIndustryName", vm.MainIndustryName); Add(cmd, "@BusinessLine", vm.BusinessLine);
+        Add(cmd, "@TaxAuthority", vm.TaxAuthority); Add(cmd, "@TaxOfficerName", vm.TaxOfficerName); Add(cmd, "@TaxOfficerPhone", vm.TaxOfficerPhone);
+        Add(cmd, "@BusinessStatus", vm.BusinessStatus); Add(cmd, "@BusinessStatusDate", vm.BusinessStatusDate); Add(cmd, "@ScaleNote", vm.ScaleNote);
+        Add(cmd, "@SourceCode", vm.SourceCode); Add(cmd, "@SourceNote", vm.SourceNote); Add(cmd, "@ParentCustomerId", vm.ParentCustomerId); Add(cmd, "@Note", vm.Note);
+    }
+
+    internal static void AddRepresentative(SqlCommand cmd, RepresentativeInput input)
+    {
+        Add(cmd, "@RoleCode", input.RoleCode); cmd.Parameters.AddWithValue("@IsLegalRepresentative", input.IsLegalRepresentative); cmd.Parameters.AddWithValue("@IsPrimaryContact", input.IsPrimaryContact);
+        Add(cmd, "@FullName", input.FullName); Add(cmd, "@Gender", input.Gender); Add(cmd, "@DateOfBirth", input.DateOfBirth); Add(cmd, "@IdentityNumber", input.IdentityNumber);
+        Add(cmd, "@IdentityIssueDate", input.IdentityIssueDate); Add(cmd, "@IdentityIssuePlace", input.IdentityIssuePlace); Add(cmd, "@Address", input.Address);
+        Add(cmd, "@Email", input.Email); Add(cmd, "@Phone", input.Phone); Add(cmd, "@Note", input.Note); cmd.Parameters.AddWithValue("@SortOrder", input.SortOrder);
+    }
+
+    internal static void AddAccount(SqlCommand cmd, SystemAccountInput input, byte[]? password, byte[]? pin)
+    {
+        Add(cmd, "@SystemType", input.SystemType); Add(cmd, "@ProviderName", input.ProviderName); Add(cmd, "@SystemName", input.SystemName); Add(cmd, "@LoginUrl", input.LoginUrl);
+        Add(cmd, "@Username", input.Username); Add(cmd, "@LoginPhone", input.LoginPhone); Add(cmd, "@StoreName", input.StoreName); Add(cmd, "@UnitCode", input.UnitCode);
+        Add(cmd, "@BankAccountNumber", input.BankAccountNumber); Add(cmd, "@CertificateType", input.CertificateType); Add(cmd, "@CertificateSerial", input.CertificateSerial);
+        Add(cmd, "@ValidFrom", input.ValidFrom); Add(cmd, "@ExpiresAt", input.ExpiresAt); Add(cmd, "@Status", input.Status); Add(cmd, "@ManagedBy", input.ManagedBy);
+        Add(cmd, "@Note", input.Note); cmd.Parameters.AddWithValue("@SortOrder", input.SortOrder);
+        cmd.Parameters.Add("@pwd", SqlDbType.VarBinary, 4000).Value = (object?)password ?? DBNull.Value;
+        cmd.Parameters.Add("@pin", SqlDbType.VarBinary, 4000).Value = (object?)pin ?? DBNull.Value;
+    }
 
     private async Task<ProfileChangeOutcome> SoftDelete(string sql, string existsSql, string action, string entity, Guid customerId, Guid id, string? stamp, Guid actor) =>
         await InTransaction(async (cn, tx) =>
@@ -317,26 +332,26 @@ public sealed class SqlCustomerProfileStore(IConfiguration configuration, AdminA
     private static async Task<ProfileChangeOutcome> Missing(SqlConnection cn, SqlTransaction tx, string existsSql, Guid id, Guid customerId) =>
         Convert.ToInt32(await Scalar(cn, tx, existsSql, ("@id", id), ("@customer", customerId))) == 0 ? ProfileChangeOutcome.NotFound : ProfileChangeOutcome.Conflict;
 
-    private static SqlCommand Command(SqlConnection cn, SqlTransaction? tx, string sql, params (string Name, object Value)[] args)
+    internal static SqlCommand Command(SqlConnection cn, SqlTransaction? tx, string sql, params (string Name, object Value)[] args)
     {
         var cmd = new SqlCommand(sql, cn, tx);
         foreach (var (name, value) in args) cmd.Parameters.AddWithValue(name, value);
         return cmd;
     }
 
-    private static async Task<object?> Scalar(SqlConnection cn, SqlTransaction tx, string sql, params (string Name, object Value)[] args)
+    internal static async Task<object?> Scalar(SqlConnection cn, SqlTransaction tx, string sql, params (string Name, object Value)[] args)
     {
         await using var cmd = Command(cn, tx, sql, args);
         return await cmd.ExecuteScalarAsync();
     }
 
-    private static void Add(SqlCommand cmd, string name, string? value) =>
+    internal static void Add(SqlCommand cmd, string name, string? value) =>
         cmd.Parameters.AddWithValue(name, string.IsNullOrWhiteSpace(value) ? DBNull.Value : value.Trim());
 
-    private static void Add(SqlCommand cmd, string name, DateOnly? value) =>
+    internal static void Add(SqlCommand cmd, string name, DateOnly? value) =>
         cmd.Parameters.Add(name, SqlDbType.Date).Value = value is { } d ? d.ToDateTime(TimeOnly.MinValue) : DBNull.Value;
 
-    private static void Add(SqlCommand cmd, string name, decimal? value)
+    internal static void Add(SqlCommand cmd, string name, decimal? value)
     {
         var p = cmd.Parameters.Add(name, SqlDbType.Decimal);
         p.Precision = 18;
@@ -344,12 +359,12 @@ public sealed class SqlCustomerProfileStore(IConfiguration configuration, AdminA
         p.Value = (object?)value ?? DBNull.Value;
     }
 
-    private static void Add(SqlCommand cmd, string name, Guid? value) =>
+    internal static void Add(SqlCommand cmd, string name, Guid? value) =>
         cmd.Parameters.Add(name, SqlDbType.UniqueIdentifier).Value = (object?)value ?? DBNull.Value;
 
-    private static string? Text(SqlDataReader r, int i) => r.IsDBNull(i) ? null : r.GetString(i);
+    internal static string? Text(SqlDataReader r, int i) => r.IsDBNull(i) ? null : r.GetString(i);
     private static DateOnly? Date(SqlDataReader r, int i) => r.IsDBNull(i) ? null : DateOnly.FromDateTime(r.GetDateTime(i));
-    private static string Stamp(SqlDataReader r, int i) => Convert.ToHexString((byte[])r[i]);
+    internal static string Stamp(SqlDataReader r, int i) => Convert.ToHexString((byte[])r[i]);
 
     internal static byte[]? RowVersion(string? stamp)
     {

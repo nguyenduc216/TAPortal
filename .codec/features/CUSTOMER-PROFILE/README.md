@@ -16,12 +16,15 @@
 5. Xóa tài khoản hệ thống là xóa mềm và xóa luôn ciphertext.
 6. (2026-11-04) Operator chọn một khóa AES-256 cố định thay cho Data Protection: Data Protection tự sinh key mới ~90 ngày/lần nên phải backup thư mục key ring định kỳ, quá bất tiện. Khóa cố định không tự đổi; backup duy nhất là một bản sao chuỗi khóa do operator giữ ngoài server (trình quản lý mật khẩu/bản giấy). Không dùng khóa khôi phục RSA (key escrow). Không đổi khóa khi đã có mật khẩu lưu (dữ liệu cũ sẽ không đọc được); nếu cần xoay khóa thì làm thành change riêng (byte version trong ciphertext đã dành sẵn).
 7. `DataProtection__KeyPath` của Admin vẫn chỉ phục vụ cookie đăng nhập/antiforgery, không liên quan mật khẩu khách hàng.
+8. (2026-11-05, giai đoạn 2) Dữ liệu Excel vào hệ thống qua chức năng Import trong Admin (không seed/SQL): đọc .xlsx bằng reader nội bộ (không thêm package), khớp khách hàng theo MST, chỉ điền trường còn trống, không tạo trùng người đại diện/tài khoản (khóa: họ tên; loại + đăng nhập + nhà cung cấp/phần mềm + số TK + link), bổ sung mật khẩu còn thiếu khi nhập lại. File chỉ giữ trong bộ nhớ 30 phút, gắn với người upload, dùng một lần. Ghi chú nghi là mật khẩu (nằm sai cột) không được nhập, chỉ cảnh báo.
+9. MST 12 số (số định danh cá nhân dùng làm MST cho cá nhân/HKD) được chấp nhận trong Admin như Customer Portal đã làm (`TaxCodePolicy`).
 
 ## Change history
 
 | Change ID | Ngày UTC | Nội dung | Commit SHA | Migration | Publish | Merge |
 |---|---|---|---|---|---|---|
 | `CUSTOMER-PROFILE-CHG-20261103T183438Z-C56EAB` | 2026-11-03 | Customer profile phase 1: general info, representatives, encrypted system accounts | `769f167` | EXECUTED (013) | DEPLOYED portal (`7492d78`) | main |
+| `CUSTOMER-PROFILE-CHG-20261105T152008Z-203021` | 2026-11-05 | Customer profile phase 2: import the customer workbook (Excel) with a review screen | — | NOT_APPLICABLE | NOT_PUBLISHED | PENDING |
 
-## Current status (2026-11-03, sau change C56EAB)
-Source giai đoạn 1 xong, gates PASS (trừ `codec validate` lỗi đường dẫn publish có sẵn từ trước do checkout nằm ở `D:\Working\...`). Chưa commit, migration 013 NOT_EXECUTED, chưa publish/deploy. Tiếp theo: operator sinh và cấu hình `CustomerSecrets__Key` (giữ một bản sao ngoài server), chạy migration 013 theo quy trình, deploy `portal`; giai đoạn 2 Import Excel.
+## Current status (2026-11-05)
+Giai đoạn 1 (C56EAB) DEPLOYED portal, migration 013 EXECUTED, đã merge main. Giai đoạn 2 (203021): chức năng "Nhập từ Excel" trong Khách hàng (đọc file, màn hình duyệt, lưu theo lựa chọn). Việc còn lại của operator: sinh và cấu hình `CustomerSecrets__Key` (giữ một bản sao ngoài server); nếu nhập trước khi có khóa thì nhập lại cùng file sau đó để bổ sung mật khẩu.

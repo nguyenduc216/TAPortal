@@ -41,7 +41,7 @@ Xem `.codec/changes/CUSTOMER-PROFILE-CHG-20261103T183438Z-C56EAB.md` mục "File
 restore OK; build Release 0 warning/0 error; Safe tests 336/336 PASS; codec unittest 4/4 OK; codec validate FAIL (CP-03, có từ trước); `git diff --check` OK. UI: NOT_VERIFIED trên trình duyệt thật.
 
 ## H. Admin Publish
-DEPLOYED portal 2026-11-05T15:19:07Z: source 7492d78, artifact e7072a9bdee53a1adccc4bd8151ff238aea31f131dccc8ffa69072368f985621 (65 files), package 0E4D1DEFBB8CFBDE5AF0FCDEBEE16D69217021F0F9148A0CD7B53A56503C028D, server backup C:\TADeployackups\portal-20261105-221858, health HTTP 200.
+DEPLOYED portal 2026-11-05T15:19:07Z: source 7492d78, artifact e7072a9bdee53a1adccc4bd8151ff238aea31f131dccc8ffa69072368f985621 (65 files), package 0E4D1DEFBB8CFBDE5AF0FCDEBEE16D69217021F0F9148A0CD7B53A56503C028D, server backup C:\TADeploy\backups\portal-20261105-221858, health HTTP 200.
 
 ## I. Customer Publish
 NOT_APPLICABLE — TACustomerPortal.Web và TAPortal.Shared không đổi.

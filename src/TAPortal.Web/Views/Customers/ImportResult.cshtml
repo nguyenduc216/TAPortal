@@ -1,0 +1,48 @@
+@model CustomerImportResultVm
+@{
+    ViewData["Title"] = "Kết quả nhập khách hàng";
+    ViewData["Heading"] = "Kết quả nhập khách hàng";
+    ViewData["Subtitle"] = Model.FileName;
+    ViewData["PageIcon"] = "file-text";
+    ViewData["ParentTitle"] = "Khách hàng";
+    ViewData["ParentController"] = "Customers";
+    var ok = Model.Rows.Count(r => r.Error is null);
+    var notSaved = Model.Rows.Sum(r => r.Result?.SecretsNotSaved ?? 0);
+}
+<partial name="_CustomersTabs" model="@("import")" />
+<div class="ta-alert @(ok == Model.Rows.Count ? "ta-alert--success" : "ta-alert--warning")" role="status" data-ta-import-summary>@UiIcon.Render(ok == Model.Rows.Count ? "circle-check" : "alert-triangle")<div class="ta-alert__body">Đã nhập @ok / @Model.Rows.Count khách hàng: @Model.Rows.Count(r => r.Result?.Status == TAPortal.Web.Services.CustomerImportStatus.Created) tạo mới, @Model.Rows.Count(r => r.Result?.Status == TAPortal.Web.Services.CustomerImportStatus.Updated) bổ sung vào khách hàng đã có.</div></div>
+@if (notSaved > 0)
+{
+    <div class="ta-alert ta-alert--warning" role="note" data-ta-secrets-disabled>@UiIcon.Render("lock")<div class="ta-alert__body">@notSaved mật khẩu/PIN chưa được lưu vì máy chủ chưa cấu hình khóa mã hóa (<code>CustomerSecrets__Key</code>). Sau khi cấu hình, nhập lại cùng file để bổ sung.</div></div>
+}
+<section class="card ta-table-card" aria-label="Kết quả từng sheet">
+    <div class="ta-table-wrap">
+        <table class="ta-table ta-table-stack" id="importResultTable">
+            <thead><tr><th scope="col">Sheet</th><th scope="col">Khách hàng</th><th scope="col">Kết quả</th><th scope="col">Người đại diện</th><th scope="col">Tài khoản</th><th scope="col">Mật khẩu/PIN đã lưu</th></tr></thead>
+            <tbody>
+            @foreach (var r in Model.Rows)
+            {
+                <tr data-ta-row>
+                    <td class="ta-nowrap" data-label="Sheet">@r.SheetName</td>
+                    <td data-label="Khách hàng">
+                        @if (r.CustomerId is { } id) {<a asp-action="SystemAccounts" asp-route-id="@id" class="ta-cell-strong">@r.CustomerCode</a>} else {<span class="ta-cell-strong">@(r.CustomerCode ?? "—")</span>}
+                        <div class="ta-cell-sub">@r.CustomerName</div>
+                    </td>
+                    <td data-label="Kết quả">
+                        @if (r.Error is not null) {<span class="ta-badge ta-badge--danger">Lỗi</span><div class="text-danger">@r.Error</div>}
+                        else if (r.Result!.Status == TAPortal.Web.Services.CustomerImportStatus.Created) {<span class="ta-badge ta-badge--success">Tạo mới</span>}
+                        else {<span class="ta-badge ta-badge--neutral">Bổ sung</span>}
+                    </td>
+                    <td data-label="Người đại diện">@(r.Result is { } a ? $"+{a.RepresentativesAdded}" + (a.RepresentativesSkipped > 0 ? $" (đã có {a.RepresentativesSkipped})" : "") : "—")</td>
+                    <td data-label="Tài khoản">@(r.Result is { } b ? $"+{b.AccountsAdded}" + (b.AccountsSkipped > 0 ? $" (đã có {b.AccountsSkipped})" : "") : "—")</td>
+                    <td data-label="Mật khẩu/PIN">@(r.Result?.SecretsSaved.ToString() ?? "—")@if (r.Result?.SecretsNotSaved > 0) {<span class="ta-cell-sub"> (chưa lưu @r.Result.SecretsNotSaved)</span>}</td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+</section>
+<div class="ta-form-actions mt-3">
+    <a asp-action="Index" class="btn">@UiIcon.Render("building")<span>Danh sách khách hàng</span></a>
+    <a asp-action="Import" class="btn btn-primary ms-auto">@UiIcon.Render("file-text")<span>Nhập file khác</span></a>
+</div>

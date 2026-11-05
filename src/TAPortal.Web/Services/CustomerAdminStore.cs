@@ -5,11 +5,13 @@ using TAPortal.Web.Models;
 
 namespace TAPortal.Web.Services;
 
-// Vietnamese tax code: 10 digits, or 10 digits + "-" + 3 digits for dependent units/branches.
-// Normalization only removes whitespace; the branch dash and leading zeros are meaningful and kept.
+// Vietnamese tax code: 10 digits, or 10 digits + "-" + 3 digits for dependent units/branches, or the 12-digit
+// personal identification number that individuals and household businesses use as tax code since 07/2025 (the
+// Customer Portal already accepts it). Normalization only removes whitespace; the branch dash and leading zeros are
+// meaningful and kept.
 public static partial class TaxCodePolicy
 {
-    [GeneratedRegex(@"^\d{10}(-\d{3})?$")]
+    [GeneratedRegex(@"^(\d{10}(-\d{3})?|\d{12})$")]
     private static partial Regex Format();
 
     public static string? Normalize(string? value)
