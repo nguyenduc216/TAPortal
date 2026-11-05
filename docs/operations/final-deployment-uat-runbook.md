@@ -31,6 +31,7 @@
 | `ASPNETCORE_ENVIRONMENT` | Cả hai | (Production nếu không đặt) | `Production` | — | Đặt tường minh |
 | `Database__ConnectionString` | Cả hai | rỗng (khởi động lỗi ngay) | Chuỗi tới TAPortalSys, principal riêng từng app | A6 | Đặt bằng biến môi trường/secret store |
 | `DataProtection__KeyPath` | Cả hai | rỗng (key không bền vững) | Thư mục riêng từng app | A11 | Đặt, cấp ACL |
+| `CustomerSecrets__Key` | Admin | rỗng (không lưu được mật khẩu khách hàng) | Base64 32 byte, sinh một lần bằng `deploy/windows/New-TACustomerSecretKey.ps1`; không đổi khi đã có dữ liệu | Migration 013 | Đặt, giữ một bản sao ngoài server |
 | `AllowedHosts` | Cả hai | `*` | Hostname thật, phân tách `;` | DNS | Đặt |
 | `Security__Audit__RequireDurableAudit` | Admin | `false` (log `DURABLE_AUDIT_NOT_ENFORCED`) | `true` | A4–A6 PASS | Bật sau khi xác minh (runbook audit bước 7) |
 | `Security__AdminLogin__AccountPermitLimit` / `IpPermitLimit` / `Window` / `MaxTrackedKeys` | Admin | 5 / 20 / `00:05:00` / 100000 | Giữ hoặc phê duyệt giá trị khác | A8 | Xác nhận |

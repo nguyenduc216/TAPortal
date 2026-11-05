@@ -246,3 +246,62 @@
         });
     });
 })();
+
+// Customer Workspace → "Tài khoản hệ thống": reveal / copy a stored password or PIN. Each click is one POST (the server
+// writes an audit row per request); a revealed value is masked again after 30 seconds and is never cached here.
+(() => {
+    'use strict';
+    const MASK = '••••••••';
+    const fetchSecret = async (row) => {
+        const scope = row.closest('[data-ta-secret-scope]');
+        const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+        if (!scope || !token) throw new Error('Trang chưa sẵn sàng, vui lòng tải lại.');
+        const body = new URLSearchParams({ accountId: row.dataset.taSecretAccount, field: row.dataset.taSecretField, __RequestVerificationToken: token });
+        const response = await fetch(scope.dataset.taSecretUrl, { method: 'POST', credentials: 'same-origin', headers: { 'X-TA-Soft': '1' }, body });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok || typeof data.value !== 'string') throw new Error(data.error || 'Không lấy được thông tin (mã ' + response.status + ').');
+        return data.value;
+    };
+    document.addEventListener('click', async (event) => {
+        const button = event.target.closest('[data-ta-secret-action]');
+        const row = button?.closest('[data-ta-secret]');
+        if (!row) return;
+        event.preventDefault();
+        const output = row.querySelector('[data-ta-secret-value]');
+        if (button.dataset.taSecretAction === 'reveal' && output.dataset.taShown === 'true') {
+            output.textContent = MASK;
+            delete output.dataset.taShown;
+            return;
+        }
+        button.disabled = true;
+        try {
+            const value = await fetchSecret(row);
+            if (button.dataset.taSecretAction === 'copy') {
+                await navigator.clipboard.writeText(value);
+                const label = button.textContent;
+                button.textContent = 'Đã chép';
+                setTimeout(() => { button.textContent = label; }, 1500);
+            } else {
+                output.textContent = value;
+                output.dataset.taShown = 'true';
+                clearTimeout(Number(output.dataset.taTimer));
+                output.dataset.taTimer = String(setTimeout(() => { output.textContent = MASK; delete output.dataset.taShown; }, 30000));
+            }
+        } catch (error) {
+            window.alert(error.message);
+        } finally {
+            button.disabled = false;
+        }
+    });
+})();
+
+// <form data-ta-confirm="..."> asks before submitting. The text comes from an attribute (HTML-encoded by Razor and
+// never evaluated as script), unlike an inline onsubmit="confirm('@value')", where entity-decoded quotes break out of
+// the JS string. Capture phase: runs before the loading-button and soft-navigation handlers.
+document.addEventListener('submit', (event) => {
+    const form = event.target.closest && event.target.closest('form[data-ta-confirm]');
+    if (form && !window.confirm(form.dataset.taConfirm)) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+    }
+}, true);

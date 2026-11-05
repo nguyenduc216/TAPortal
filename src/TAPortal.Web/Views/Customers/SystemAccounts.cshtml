@@ -1,0 +1,198 @@
+@model CustomerSystemAccountsVm
+@{
+    var ws = (CustomerWorkspaceHeader)ViewData["Workspace"]!;
+    ViewData["Title"] = ws.Code;
+    ViewData["ParentTitle"] = "Khách hàng";
+    ViewData["ParentController"] = "Customers";
+    ViewData["HideHeader"] = true;
+    var c = Model.Customer;
+    var e = Model.Edit;
+    var today = DateOnly.FromDateTime(DateTime.UtcNow.AddHours(7));   // Vietnam date for expiry badges
+    var revealUrl = Url.Action("RevealSecret", new { id = c.Id });
+}
+<partial name="_Workspace" model="ws" />
+@if (!Model.SecretsEnabled)
+{
+    <div class="ta-alert ta-alert--warning" role="note" data-ta-secrets-disabled>@UiIcon.Render("alert-triangle")<div class="ta-alert__body">Chưa cấu hình khóa mã hóa (<code>CustomerSecrets__Key</code>) cho TAPortal: có thể lưu thông tin đăng nhập nhưng <strong>chưa lưu được mật khẩu/PIN</strong>. Liên hệ quản trị hệ thống.</div></div>
+}
+<div class="ta-alert ta-alert--info" role="note">@UiIcon.Render("shield-lock")<div class="ta-alert__body">Mật khẩu và PIN được mã hóa trước khi lưu và luôn bị che. Mỗi lần bấm <strong>Hiện</strong> hoặc <strong>Sao chép</strong> đều được ghi vào nhật ký audit.</div></div>
+@if (e is not null)
+{
+    <form class="card mb-3" asp-action="SaveSystemAccount" asp-route-id="@c.Id" method="post" novalidate autocomplete="off" data-ta-system-account-form>
+        <input type="hidden" asp-for="Edit!.Id" /><input type="hidden" asp-for="Edit!.Stamp" />
+        <div class="card-header"><h2 class="card-title">@UiIcon.Render(e.Id is null ? "plus" : "pencil")@(e.Id is null ? "Thêm tài khoản hệ thống" : "Sửa tài khoản hệ thống")</h2></div>
+        <div class="card-body">
+            <div asp-validation-summary="ModelOnly" class="ta-alert ta-alert--danger" role="alert"></div>
+            <div class="ta-form-grid ta-form-grid--3">
+                <div>
+                    <label asp-for="Edit!.SystemType" class="form-label required">Loại hệ thống</label>
+                    <select asp-for="Edit!.SystemType" class="form-select">@foreach (var (code, label) in CustomerProfileCodes.SystemTypes) {<option value="@code">@label</option>}</select>
+                    <span asp-validation-for="Edit!.SystemType" class="invalid-feedback d-block"></span>
+                </div>
+                <div>
+                    <label asp-for="Edit!.ProviderName" class="form-label">Nhà cung cấp</label>
+                    <div class="ta-input-icon">@UiIcon.Render("building")<input asp-for="Edit!.ProviderName" class="form-control" maxlength="100" list="providerOptions" placeholder="vd MISA, Viettel, Techcombank" /></div>
+                    <datalist id="providerOptions">@foreach (var name in CustomerProfileCodes.Providers) {<option value="@name"></option>}</datalist>
+                </div>
+                <div>
+                    <label asp-for="Edit!.SystemName" class="form-label">Tên phần mềm / dịch vụ</label>
+                    <div class="ta-input-icon">@UiIcon.Render("settings")<input asp-for="Edit!.SystemName" class="form-control" maxlength="150" placeholder="vd meInvoice, VssID" /></div>
+                </div>
+                <div class="ta-ws-span-2">
+                    <label asp-for="Edit!.LoginUrl" class="form-label">Link đăng nhập</label>
+                    <div class="ta-input-icon">@UiIcon.Render("login-2")<input asp-for="Edit!.LoginUrl" class="form-control" type="url" maxlength="500" placeholder="https://" /></div>
+                    <span asp-validation-for="Edit!.LoginUrl" class="invalid-feedback d-block"></span>
+                </div>
+                <div>
+                    <label asp-for="Edit!.Username" class="form-label">Tên đăng nhập / email</label>
+                    <div class="ta-input-icon">@UiIcon.Render("user")<input asp-for="Edit!.Username" class="form-control" maxlength="256" autocomplete="off" /></div>
+                    <span asp-validation-for="Edit!.Username" class="invalid-feedback d-block"></span>
+                </div>
+                <div>
+                    <label asp-for="Edit!.Password" class="form-label">Mật khẩu</label>
+                    <div class="ta-input-icon">@UiIcon.Render("lock")<input asp-for="Edit!.Password" class="form-control" type="password" maxlength="500" autocomplete="new-password" value="" placeholder="@(e.Id is null ? "" : "Để trống = giữ nguyên")" disabled="@(!Model.SecretsEnabled)" /></div>
+                    <span asp-validation-for="Edit!.Password" class="invalid-feedback d-block"></span>
+                    @if (e.Id is not null) {<label class="form-check mt-1"><input asp-for="Edit!.ClearPassword" class="form-check-input" type="checkbox" /><span class="form-check-label">Xóa mật khẩu đã lưu</span></label>}
+                </div>
+                <div>
+                    <label asp-for="Edit!.Pin" class="form-label">PIN / mật khẩu cấp 2</label>
+                    <div class="ta-input-icon">@UiIcon.Render("lock")<input asp-for="Edit!.Pin" class="form-control" type="password" maxlength="100" autocomplete="new-password" value="" placeholder="@(e.Id is null ? "" : "Để trống = giữ nguyên")" disabled="@(!Model.SecretsEnabled)" /></div>
+                    <span asp-validation-for="Edit!.Pin" class="invalid-feedback d-block"></span>
+                    @if (e.Id is not null) {<label class="form-check mt-1"><input asp-for="Edit!.ClearPin" class="form-check-input" type="checkbox" /><span class="form-check-label">Xóa PIN đã lưu</span></label>}
+                </div>
+                <div>
+                    <label asp-for="Edit!.LoginPhone" class="form-label">SĐT nhận OTP</label>
+                    <div class="ta-input-icon">@UiIcon.Render("phone")<input asp-for="Edit!.LoginPhone" class="form-control" maxlength="30" inputmode="tel" /></div>
+                </div>
+                <div>
+                    <label asp-for="Edit!.StoreName" class="form-label">Tên gian hàng</label>
+                    <div class="ta-input-icon">@UiIcon.Render("building")<input asp-for="Edit!.StoreName" class="form-control" maxlength="150" placeholder="KiotViet, Fabi, sàn TMĐT…" /></div>
+                </div>
+                <div>
+                    <label asp-for="Edit!.UnitCode" class="form-label">Mã đơn vị (BHXH)</label>
+                    <div class="ta-input-icon">@UiIcon.Render("hash")<input asp-for="Edit!.UnitCode" class="form-control" maxlength="50" /></div>
+                </div>
+                <div>
+                    <label asp-for="Edit!.BankAccountNumber" class="form-label">Số tài khoản ngân hàng</label>
+                    <div class="ta-input-icon">@UiIcon.Render("building-bank")<input asp-for="Edit!.BankAccountNumber" class="form-control" maxlength="50" inputmode="numeric" /></div>
+                </div>
+                <div>
+                    <label asp-for="Edit!.CertificateType" class="form-label">Loại ký số</label>
+                    <select asp-for="Edit!.CertificateType" class="form-select"><option value="">-- Không áp dụng --</option>@foreach (var (code, label) in CustomerProfileCodes.CertificateTypes) {<option value="@code">@label</option>}</select>
+                    <span asp-validation-for="Edit!.CertificateType" class="invalid-feedback d-block"></span>
+                </div>
+                <div>
+                    <label asp-for="Edit!.CertificateSerial" class="form-label">Số serial chứng thư</label>
+                    <div class="ta-input-icon">@UiIcon.Render("hash")<input asp-for="Edit!.CertificateSerial" class="form-control" maxlength="100" /></div>
+                </div>
+                <div>
+                    <label asp-for="Edit!.ValidFrom" class="form-label">Hiệu lực từ</label>
+                    <div class="ta-input-icon">@UiIcon.Render("clock")<input asp-for="Edit!.ValidFrom" class="form-control" type="date" /></div>
+                </div>
+                <div>
+                    <label asp-for="Edit!.ExpiresAt" class="form-label">Ngày hết hạn</label>
+                    <div class="ta-input-icon">@UiIcon.Render("clock")<input asp-for="Edit!.ExpiresAt" class="form-control" type="date" /></div>
+                    <span asp-validation-for="Edit!.ExpiresAt" class="invalid-feedback d-block"></span>
+                    <div class="form-hint">Chứng thư số, gói phần mềm: cảnh báo trước 30 ngày.</div>
+                </div>
+                <div>
+                    <label asp-for="Edit!.Status" class="form-label">Trạng thái</label>
+                    <select asp-for="Edit!.Status" class="form-select">@foreach (var (code, label) in CustomerProfileCodes.AccountStatuses) {<option value="@code">@label</option>}</select>
+                    <span asp-validation-for="Edit!.Status" class="invalid-feedback d-block"></span>
+                </div>
+                <div>
+                    <label asp-for="Edit!.ManagedBy" class="form-label">Quản lý bởi</label>
+                    <select asp-for="Edit!.ManagedBy" class="form-select">@foreach (var (code, label) in CustomerProfileCodes.ManagedBy) {<option value="@code">@label</option>}</select>
+                </div>
+                <div>
+                    <label asp-for="Edit!.SortOrder" class="form-label">Thứ tự hiển thị</label>
+                    <div class="ta-input-icon">@UiIcon.Render("list-tree")<input asp-for="Edit!.SortOrder" class="form-control" type="number" min="0" step="1" /></div>
+                </div>
+                <div class="ta-ws-span-all">
+                    <label asp-for="Edit!.Note" class="form-label">Ghi chú</label>
+                    <div class="ta-input-icon">@UiIcon.Render("file-text")<input asp-for="Edit!.Note" class="form-control" maxlength="1000" placeholder="Không ghi mật khẩu vào ghi chú" /></div>
+                </div>
+            </div>
+        </div>
+        <div class="card-footer ta-form-actions">
+            <a asp-action="SystemAccounts" asp-route-id="@c.Id" class="btn">@UiIcon.Render("x")<span>Hủy</span></a>
+            <button type="submit" class="btn btn-primary ms-auto" data-ta-loading data-ta-loading-text="Đang lưu...">@UiIcon.Render("device-floppy")<span>Lưu</span></button>
+        </div>
+    </form>
+}
+<section class="card ta-table-card" aria-label="Tài khoản hệ thống của @c.Code">
+    <div class="ta-table-toolbar">
+        <div class="ms-auto"><a class="btn btn-primary" asp-action="SystemAccounts" asp-route-id="@c.Id" asp-route-add="TAX_PORTAL" aria-disabled="@(Model.Rows is null ? "true" : null)">@UiIcon.Render("plus")<span>Thêm tài khoản</span></a></div>
+    </div>
+    @if (Model.Rows is null)
+    {
+        <div class="ta-empty" data-ta-profile-unavailable><span class="ta-empty__icon">@UiIcon.Render("database-off")</span><p class="ta-empty__title">Không tải được tài khoản hệ thống</p><p class="ta-empty__text">Kiểm tra migration 013 (dbo.CustomerSystemAccounts) và quyền cơ sở dữ liệu; chi tiết đã ghi vào nhật ký ứng dụng.</p></div>
+    }
+    else if (Model.Rows.Count == 0)
+    {
+        <div class="ta-empty" data-ta-system-accounts-empty><span class="ta-empty__icon">@UiIcon.Render("key")</span><p class="ta-empty__title">Chưa có tài khoản hệ thống</p><p class="ta-empty__text">Thêm tài khoản thuế điện tử, hóa đơn, chữ ký số, BHXH, ngân hàng… của khách hàng.</p></div>
+    }
+    else
+    {
+        @Html.AntiForgeryToken()
+        <div class="ta-table-wrap" data-ta-secret-scope data-ta-secret-url="@revealUrl">
+            <table class="ta-table ta-table-stack" id="systemAccountsTable">
+                <thead><tr><th scope="col">Hệ thống</th><th scope="col">Đăng nhập</th><th scope="col">Mật khẩu / PIN</th><th scope="col">Hạn</th><th scope="col">Trạng thái</th><th scope="col" class="ta-col-actions">Thao tác</th></tr></thead>
+                @foreach (var (type, label) in CustomerProfileCodes.SystemTypes)
+                {
+                    var group = Model.Rows.Where(r => r.SystemType == type).ToList();
+                    if (group.Count == 0) continue;
+                    <tbody data-ta-system-type="@type">
+                    <tr class="ta-table-group"><th scope="rowgroup" colspan="6">@label <span class="text-secondary">(@group.Count)</span></th></tr>
+                    @foreach (var r in group)
+                    {
+                        var expiry = CustomerProfileCodes.Expiry(r.ExpiresAt, today);
+                        <tr data-ta-row data-ta-system-account="@r.Id">
+                            <td class="ta-cell-strong">
+                                <div>@(r.SystemName ?? r.ProviderName ?? label)</div>
+                                @if (r.ProviderName is not null && r.SystemName is not null) {<div class="ta-cell-sub">@r.ProviderName</div>}
+                                @if (Uri.TryCreate(r.LoginUrl, UriKind.Absolute, out var link) && (link.Scheme == Uri.UriSchemeHttps || link.Scheme == Uri.UriSchemeHttp)) {<div class="ta-cell-sub"><a href="@link.AbsoluteUri" target="_blank" rel="noopener noreferrer">Mở trang đăng nhập</a></div>} else if (r.LoginUrl is not null) {<div class="ta-cell-sub">@r.LoginUrl</div>}
+                            </td>
+                            <td data-label="Đăng nhập">
+                                <div>@(r.Username ?? "—")</div>
+                                @if (r.LoginPhone is not null) {<div class="ta-cell-sub">OTP: @r.LoginPhone</div>}
+                                @if (r.StoreName is not null) {<div class="ta-cell-sub">Gian hàng: @r.StoreName</div>}
+                                @if (r.UnitCode is not null) {<div class="ta-cell-sub">Mã đơn vị: @r.UnitCode</div>}
+                                @if (r.BankAccountNumber is not null) {<div class="ta-cell-sub">STK: @r.BankAccountNumber</div>}
+                                @if (r.CertificateType is not null) {<div class="ta-cell-sub">@CustomerProfileCodes.Label(CustomerProfileCodes.CertificateTypes, r.CertificateType)@(r.CertificateSerial is null ? "" : " · " + r.CertificateSerial)</div>}
+                            </td>
+                            <td data-label="Mật khẩu / PIN">
+                                @foreach (var (field, has, name) in new[] { ("Password", r.HasPassword, "Mật khẩu"), ("Pin", r.HasPin, "PIN") })
+                                {
+                                    if (!has) { if (field == "Password") {<div class="text-secondary">Chưa lưu mật khẩu</div>} continue; }
+                                    <div class="d-flex align-items-center gap-1" data-ta-secret data-ta-secret-account="@r.Id" data-ta-secret-field="@field">
+                                        <span class="text-secondary small">@name:</span>
+                                        <code data-ta-secret-value>••••••••</code>
+                                        @if (Model.CanReveal)
+                                        {
+                                            <button type="button" class="btn btn-sm ta-btn-icon" data-ta-secret-action="reveal" title="Hiện @name" aria-label="Hiện @name">@UiIcon.Render("eye")</button>
+                                            <button type="button" class="btn btn-sm" data-ta-secret-action="copy" title="Sao chép @name" aria-label="Sao chép @name">Chép</button>
+                                        }
+                                    </div>
+                                }
+                                @if (r.SecretChangedAt is { } changed) {<div class="ta-cell-sub">Đổi lần cuối (UTC): @changed.ToString("dd/MM/yyyy")</div>}
+                            </td>
+                            <td class="ta-nowrap" data-label="Hạn">@if (expiry is { } x) {<div>@r.ExpiresAt!.Value.ToString("dd/MM/yyyy")</div><span class="ta-badge @x.Css" data-ta-expiry>@x.Label</span>} else {<span>—</span>}</td>
+                            <td data-label="Trạng thái"><span class="ta-badge @(r.Status == "ACTIVE" ? "ta-badge--success" : r.Status == "INVALID" || r.Status == "LOCKED" ? "ta-badge--danger" : "ta-badge--neutral")">@CustomerProfileCodes.Label(CustomerProfileCodes.AccountStatuses, r.Status)</span>@if (r.ManagedBy == "CUSTOMER") {<div class="ta-cell-sub">Khách hàng tự làm</div>}</td>
+                            <td class="ta-col-actions">
+                                <div class="d-flex gap-1 justify-content-end">
+                                    <a class="btn btn-sm" asp-action="SystemAccounts" asp-route-id="@c.Id" asp-route-edit="@r.Id">@UiIcon.Render("pencil")<span>Sửa</span></a>
+                                    <form asp-action="DeleteSystemAccount" asp-route-id="@c.Id" method="post" onsubmit="return confirm('Xóa tài khoản này? Mật khẩu/PIN đã lưu cũng bị xóa vĩnh viễn.')">
+                                        <input type="hidden" name="accountId" value="@r.Id" /><input type="hidden" name="stamp" value="@r.Stamp" />
+                                        <button type="submit" class="btn btn-sm btn-outline-danger ta-btn-icon" aria-label="Xóa tài khoản" title="Xóa">@UiIcon.Render("trash")</button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                    </tbody>
+                }
+            </table>
+        </div>
+    }
+</section>

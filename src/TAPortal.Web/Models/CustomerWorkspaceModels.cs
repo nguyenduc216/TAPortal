@@ -11,6 +11,9 @@ public static class CustomerWorkspace
 {
     public const string Overview = "overview";
     public const string Info = "info";
+    public const string Profile = "profile";
+    public const string Representatives = "representatives";
+    public const string SystemAccounts = "system-accounts";
     public const string Portal = "portal";
     public const string Tingee = "tingee";
     public const string ServicePackages = "service-packages";
@@ -19,6 +22,9 @@ public static class CustomerWorkspace
     [
         new(Overview, "Tổng quan", "layout-dashboard", "Details"),
         new(Info, "Thông tin khách hàng", "id", "Edit"),
+        new(Profile, "Hồ sơ doanh nghiệp", "file-text", "Profile"),
+        new(Representatives, "Người đại diện", "user", "Representatives"),
+        new(SystemAccounts, "Tài khoản hệ thống", "key", "SystemAccounts"),
         new(Portal, "Tài khoản Portal", "users-group", "PortalAccounts"),
         new(Tingee, "Thanh toán Tingee", "building-bank", "Tingee"),
         new(ServicePackages, "Gói dịch vụ", "package", "ServicePackages"),

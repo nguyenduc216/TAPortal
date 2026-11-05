@@ -1,0 +1,27 @@
+# Feature: CUSTOMER-PROFILE
+
+- Feature ID: `CUSTOMER-PROFILE`
+- Tên: Hồ sơ khách hàng — thay file Excel nội bộ "Thông tin khách hàng.xlsx" (mỗi khách hàng một sheet)
+- Mục tiêu: lưu trên TAPortal (Admin) toàn bộ thông tin khách hàng và thông tin đăng nhập các hệ thống của khách hàng (thuế điện tử, hóa đơn, chữ ký số, BHXH, ngân hàng, phần mềm…), mật khẩu được mã hóa, có phân quyền và nhật ký; sau đó là dịch vụ/phí, nhân viên phụ trách, theo dõi tờ khai theo kỳ, vấn đề/cơ hội.
+- Phạm vi / ngoài phạm vi: Trong phạm vi: Admin (`TAPortal.Web`) Customer Workspace. Ngoài phạm vi: Customer Portal không đọc các bảng này; không import dữ liệu Excel bằng SQL/seed (giai đoạn 2 làm chức năng Import có màn hình duyệt).
+- Kiến trúc / bảng liên quan: thiết kế ở `docs/customer-profile-design.md`. Giai đoạn 1: `dbo.CustomerProfiles` (1:1 `dbo.Customers`), `dbo.CustomerRepresentatives`, `dbo.CustomerSystemAccounts` (migration 013). Mật khẩu/PIN mã hóa AES-256-GCM bằng một khóa cố định `CustomerSecrets__Key` (associated data `TAPortal.CustomerSecrets.v1`) trong `TAPortal.Web`; DB chỉ chứa `varbinary`.
+- Các phụ thuộc: `CustomerSecrets__Key` cho TAPortal.Web trên server (PENDING_OPERATOR, sinh bằng `deploy/windows/New-TACustomerSecretKey.ps1`) — chưa có hoặc sai định dạng thì không lưu được mật khẩu; `dbo.AuditLogs` ghi được — chưa có thì không hiện được mật khẩu.
+- Trạng thái: ACTIVE
+
+## Quyết định (2026-11-03)
+1. Hồ sơ doanh nghiệp là bảng 1:1 `dbo.CustomerProfiles` thay vì thêm cột vào `dbo.Customers`: các màn hình khách hàng hiện có không phụ thuộc migration 013, rollback chỉ là drop bảng mới.
+2. Một bảng chung `dbo.CustomerSystemAccounts` cho mọi loại tài khoản (12 `SystemType`), không giới hạn số tài khoản mỗi loại; chứng thư số dùng cùng bảng (`CertificateType`, `ExpiresAt`).
+3. Mật khẩu/PIN chỉ ghi (write-only) trên form; chỉ xem qua `RevealSecret` (quyền `CRM.CUSTOMERS.SECRETS.REVEAL`, SYS_ADMIN có sẵn), mỗi lần xem ghi `CUSTOMER_SECRET_REVEALED` vào `dbo.AuditLogs` bắt buộc (không có audit thì không trả mật khẩu). Audit không chứa mật khẩu, CCCD, ngày sinh.
+4. Từ chối lưu mật khẩu khi chưa cấu hình `CustomerSecrets:Key` hợp lệ (base64 của 32 byte).
+5. Xóa tài khoản hệ thống là xóa mềm và xóa luôn ciphertext.
+6. (2026-11-04) Operator chọn một khóa AES-256 cố định thay cho Data Protection: Data Protection tự sinh key mới ~90 ngày/lần nên phải backup thư mục key ring định kỳ, quá bất tiện. Khóa cố định không tự đổi; backup duy nhất là một bản sao chuỗi khóa do operator giữ ngoài server (trình quản lý mật khẩu/bản giấy). Không dùng khóa khôi phục RSA (key escrow). Không đổi khóa khi đã có mật khẩu lưu (dữ liệu cũ sẽ không đọc được); nếu cần xoay khóa thì làm thành change riêng (byte version trong ciphertext đã dành sẵn).
+7. `DataProtection__KeyPath` của Admin vẫn chỉ phục vụ cookie đăng nhập/antiforgery, không liên quan mật khẩu khách hàng.
+
+## Change history
+
+| Change ID | Ngày UTC | Nội dung | Commit SHA | Migration | Publish | Merge |
+|---|---|---|---|---|---|---|
+| `CUSTOMER-PROFILE-CHG-20261103T183438Z-C56EAB` | 2026-11-03 | Customer profile phase 1: general info, representatives, encrypted system accounts | — | NOT_EXECUTED (013) | NOT_PUBLISHED | PENDING_APPROVAL |
+
+## Current status (2026-11-03, sau change C56EAB)
+Source giai đoạn 1 xong, gates PASS (trừ `codec validate` lỗi đường dẫn publish có sẵn từ trước do checkout nằm ở `D:\Working\...`). Chưa commit, migration 013 NOT_EXECUTED, chưa publish/deploy. Tiếp theo: operator sinh và cấu hình `CustomerSecrets__Key` (giữ một bản sao ngoài server), chạy migration 013 theo quy trình, deploy `portal`; giai đoạn 2 Import Excel.

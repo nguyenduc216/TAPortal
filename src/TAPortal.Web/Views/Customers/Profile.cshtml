@@ -1,0 +1,107 @@
+@model CustomerProfileTabVm
+@{
+    var ws = (CustomerWorkspaceHeader)ViewData["Workspace"]!;
+    ViewData["Title"] = ws.Code;
+    ViewData["ParentTitle"] = "Khách hàng";
+    ViewData["ParentController"] = "Customers";
+    ViewData["HideHeader"] = true;
+    var p = Model.Profile;
+}
+<partial name="_Workspace" model="ws" />
+@if (!Model.StoreAvailable)
+{
+    <div class="ta-alert ta-alert--danger" role="alert" data-ta-profile-unavailable>@UiIcon.Render("database-off")<div class="ta-alert__body">Không đọc được hồ sơ doanh nghiệp (dbo.CustomerProfiles). Kiểm tra migration 013 và quyền cơ sở dữ liệu; chi tiết đã ghi vào nhật ký ứng dụng.</div></div>
+}
+else
+{
+<form class="card" asp-action="Profile" asp-route-id="@Model.Customer.Id" method="post" novalidate data-ta-profile-form>
+    <input type="hidden" asp-for="Profile.Stamp" />
+    <div class="card-header"><h2 class="card-title">@UiIcon.Render("file-text")Hồ sơ doanh nghiệp</h2>@if (p.UpdatedAt is { } at) {<span class="ms-auto text-secondary small">Cập nhật lần cuối (UTC): @at.ToString("dd/MM/yyyy HH:mm")</span>}</div>
+    <div class="card-body">
+        <div asp-validation-summary="ModelOnly" class="ta-alert ta-alert--danger" role="alert"></div>
+        <div class="ta-form-grid ta-form-grid--3">
+            <div>
+                <label asp-for="Profile.ShortName" class="form-label">Tên thường gọi</label>
+                <div class="ta-input-icon">@UiIcon.Render("building")<input asp-for="Profile.ShortName" class="form-control" maxlength="100" placeholder="Tên dùng nội bộ, vd Nhà hàng Ấn" /></div>
+                <span asp-validation-for="Profile.ShortName" class="invalid-feedback d-block"></span>
+            </div>
+            <div>
+                <label asp-for="Profile.LegalForm" class="form-label">Loại hình</label>
+                <select asp-for="Profile.LegalForm" class="form-select"><option value="">-- Chưa chọn --</option>@foreach (var (code, label) in CustomerProfileCodes.LegalForms) {<option value="@code" selected="@(p.LegalForm == code)">@label</option>}</select>
+                <span asp-validation-for="Profile.LegalForm" class="invalid-feedback d-block"></span>
+            </div>
+            <div>
+                <label asp-for="Profile.CharterCapital" class="form-label">Vốn điều lệ (VNĐ)</label>
+                <div class="ta-input-icon">@UiIcon.Render("report-money")<input asp-for="Profile.CharterCapital" class="form-control" type="number" min="0" step="1" inputmode="numeric" /></div>
+                <span asp-validation-for="Profile.CharterCapital" class="invalid-feedback d-block"></span>
+            </div>
+            <div>
+                <label asp-for="Profile.EstablishedDate" class="form-label">Ngày thành lập</label>
+                <div class="ta-input-icon">@UiIcon.Render("clock")<input asp-for="Profile.EstablishedDate" class="form-control" type="date" /></div>
+            </div>
+            <div>
+                <label asp-for="Profile.MainIndustryCode" class="form-label">Mã ngành chính (VSIC)</label>
+                <div class="ta-input-icon">@UiIcon.Render("hash")<input asp-for="Profile.MainIndustryCode" class="form-control" maxlength="10" inputmode="numeric" placeholder="vd 5610" /></div>
+                <span asp-validation-for="Profile.MainIndustryCode" class="invalid-feedback d-block"></span>
+            </div>
+            <div>
+                <label asp-for="Profile.BusinessLine" class="form-label">Lĩnh vực (ngắn gọn)</label>
+                <div class="ta-input-icon">@UiIcon.Render("file-text")<input asp-for="Profile.BusinessLine" class="form-control" maxlength="200" placeholder="vd Nhà hàng, Thi công, Thương mại" /></div>
+            </div>
+            <div class="ta-ws-span-all">
+                <label asp-for="Profile.MainIndustryName" class="form-label">Ngành nghề kinh doanh chính</label>
+                <div class="ta-input-icon ta-input-icon--top">@UiIcon.Render("file-text")<textarea asp-for="Profile.MainIndustryName" class="form-control" rows="2" maxlength="500"></textarea></div>
+            </div>
+            <div>
+                <label asp-for="Profile.TaxAuthority" class="form-label">Cơ quan thuế quản lý</label>
+                <div class="ta-input-icon">@UiIcon.Render("building")<input asp-for="Profile.TaxAuthority" class="form-control" maxlength="200" placeholder="vd Thuế cơ sở 2 tỉnh Khánh Hòa" /></div>
+            </div>
+            <div>
+                <label asp-for="Profile.TaxOfficerName" class="form-label">Cán bộ thuế quản lý</label>
+                <div class="ta-input-icon">@UiIcon.Render("user")<input asp-for="Profile.TaxOfficerName" class="form-control" maxlength="150" /></div>
+            </div>
+            <div>
+                <label asp-for="Profile.TaxOfficerPhone" class="form-label">SĐT cán bộ thuế</label>
+                <div class="ta-input-icon">@UiIcon.Render("phone")<input asp-for="Profile.TaxOfficerPhone" class="form-control" maxlength="30" inputmode="tel" /></div>
+            </div>
+            <div>
+                <label asp-for="Profile.BusinessStatus" class="form-label">Tình trạng hoạt động</label>
+                <select asp-for="Profile.BusinessStatus" class="form-select"><option value="">-- Chưa chọn --</option>@foreach (var (code, label) in CustomerProfileCodes.BusinessStatuses) {<option value="@code" selected="@(p.BusinessStatus == code)">@label</option>}</select>
+                <span asp-validation-for="Profile.BusinessStatus" class="invalid-feedback d-block"></span>
+                <div class="form-hint">Theo đăng ký với cơ quan thuế; khác với trạng thái sử dụng dịch vụ của T.A.</div>
+            </div>
+            <div>
+                <label asp-for="Profile.BusinessStatusDate" class="form-label">Từ ngày</label>
+                <div class="ta-input-icon">@UiIcon.Render("clock")<input asp-for="Profile.BusinessStatusDate" class="form-control" type="date" /></div>
+            </div>
+            <div>
+                <label asp-for="Profile.ScaleNote" class="form-label">Quy mô</label>
+                <div class="ta-input-icon">@UiIcon.Render("file-text")<input asp-for="Profile.ScaleNote" class="form-control" maxlength="200" placeholder="vd doanh thu/năm, số lao động" /></div>
+            </div>
+            <div>
+                <label asp-for="Profile.SourceCode" class="form-label">Nguồn khách</label>
+                <div class="ta-input-icon">@UiIcon.Render("hash")<input asp-for="Profile.SourceCode" class="form-control text-uppercase" maxlength="30" placeholder="vd BNI, MA" /></div>
+                <span asp-validation-for="Profile.SourceCode" class="invalid-feedback d-block"></span>
+            </div>
+            <div class="ta-ws-span-2">
+                <label asp-for="Profile.SourceNote" class="form-label">Người giới thiệu / ghi chú nguồn</label>
+                <div class="ta-input-icon">@UiIcon.Render("file-text")<input asp-for="Profile.SourceNote" class="form-control" maxlength="250" /></div>
+            </div>
+            <div class="ta-ws-span-all">
+                <label asp-for="Profile.ParentCustomerId" class="form-label">Đơn vị liên kết</label>
+                <select asp-for="Profile.ParentCustomerId" class="form-select"><option value="">-- Không có --</option>@foreach (var o in Model.Parents) {<option value="@o.Id" selected="@(p.ParentCustomerId == o.Id)">@o.Code — @o.Name</option>}</select>
+                <span asp-validation-for="Profile.ParentCustomerId" class="invalid-feedback d-block"></span>
+                <div class="form-hint">Dùng khi công ty và hộ kinh doanh của cùng một chủ được quản lý thành hai khách hàng.</div>
+            </div>
+            <div class="ta-ws-span-all">
+                <label asp-for="Profile.Note" class="form-label">Ghi chú</label>
+                <div class="ta-input-icon ta-input-icon--top">@UiIcon.Render("file-text")<textarea asp-for="Profile.Note" class="form-control" rows="3" maxlength="4000" placeholder="Lưu ý nghiệp vụ, vd lịch nộp tờ khai riêng của khách hàng"></textarea></div>
+                <span asp-validation-for="Profile.Note" class="invalid-feedback d-block"></span>
+            </div>
+        </div>
+    </div>
+    <div class="card-footer ta-form-actions">
+        <button type="submit" class="btn btn-primary ms-auto" data-ta-loading data-ta-loading-text="Đang lưu...">@UiIcon.Render("device-floppy")<span>Lưu hồ sơ</span></button>
+    </div>
+</form>
+}

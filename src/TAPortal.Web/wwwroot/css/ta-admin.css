@@ -54,3 +54,7 @@
 .ta-select__check { width: 16px; height: 16px; color: var(--ta-blue-strong); }
 .ta-select__group { padding: 10px 10px 4px; color: var(--ta-text-2); font-size: var(--ta-fs-small); font-weight: 700; letter-spacing: .03em; text-transform: uppercase; }
 .ta-select__empty { padding: 10px; color: var(--ta-text-2); font-size: var(--ta-fs-label); }
+
+/* Customer Workspace → "Tài khoản hệ thống": one header row per system type. */
+.ta-table-group th { background: var(--ta-blue-soft); color: var(--ta-blue-strong); font-size: var(--ta-fs-small); font-weight: 700; letter-spacing: .02em; }
+[data-ta-secret] code { min-width: 7ch; user-select: all; }

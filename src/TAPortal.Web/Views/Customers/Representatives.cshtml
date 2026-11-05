@@ -1,0 +1,126 @@
+@model CustomerRepresentativesVm
+@{
+    var ws = (CustomerWorkspaceHeader)ViewData["Workspace"]!;
+    ViewData["Title"] = ws.Code;
+    ViewData["ParentTitle"] = "Khách hàng";
+    ViewData["ParentController"] = "Customers";
+    ViewData["HideHeader"] = true;
+    var c = Model.Customer;
+    var e = Model.Edit;
+}
+<partial name="_Workspace" model="ws" />
+@if (e is not null)
+{
+    <form class="card mb-3" asp-action="SaveRepresentative" asp-route-id="@c.Id" method="post" novalidate data-ta-representative-form>
+        <input type="hidden" asp-for="Edit!.Id" /><input type="hidden" asp-for="Edit!.Stamp" />
+        <div class="card-header"><h2 class="card-title">@UiIcon.Render(e.Id is null ? "user-plus" : "pencil")@(e.Id is null ? "Thêm người đại diện" : "Sửa người đại diện")</h2></div>
+        <div class="card-body">
+            <div asp-validation-summary="ModelOnly" class="ta-alert ta-alert--danger" role="alert"></div>
+            <div class="ta-form-grid ta-form-grid--3">
+                <div>
+                    <label asp-for="Edit!.RoleCode" class="form-label required">Vai trò</label>
+                    <select asp-for="Edit!.RoleCode" class="form-select">@foreach (var (code, label) in CustomerProfileCodes.RepresentativeRoles) {<option value="@code">@label</option>}</select>
+                    <span asp-validation-for="Edit!.RoleCode" class="invalid-feedback d-block"></span>
+                </div>
+                <div class="ta-ws-span-2">
+                    <label asp-for="Edit!.FullName" class="form-label required">Họ tên</label>
+                    <div class="ta-input-icon">@UiIcon.Render("user")<input asp-for="Edit!.FullName" class="form-control" maxlength="150" required /></div>
+                    <span asp-validation-for="Edit!.FullName" class="invalid-feedback d-block"></span>
+                </div>
+                <div>
+                    <label asp-for="Edit!.Gender" class="form-label">Giới tính</label>
+                    <select asp-for="Edit!.Gender" class="form-select"><option value="">-- Chưa chọn --</option>@foreach (var (code, label) in CustomerProfileCodes.Genders) {<option value="@code">@label</option>}</select>
+                    <span asp-validation-for="Edit!.Gender" class="invalid-feedback d-block"></span>
+                </div>
+                <div>
+                    <label asp-for="Edit!.DateOfBirth" class="form-label">Ngày sinh</label>
+                    <div class="ta-input-icon">@UiIcon.Render("clock")<input asp-for="Edit!.DateOfBirth" class="form-control" type="date" /></div>
+                </div>
+                <div>
+                    <label asp-for="Edit!.Phone" class="form-label">Điện thoại</label>
+                    <div class="ta-input-icon">@UiIcon.Render("phone")<input asp-for="Edit!.Phone" class="form-control" maxlength="30" inputmode="tel" /></div>
+                </div>
+                <div>
+                    <label asp-for="Edit!.IdentityNumber" class="form-label">Số CCCD/CMND</label>
+                    <div class="ta-input-icon">@UiIcon.Render("id")<input asp-for="Edit!.IdentityNumber" class="form-control" maxlength="20" inputmode="numeric" autocomplete="off" /></div>
+                    <span asp-validation-for="Edit!.IdentityNumber" class="invalid-feedback d-block"></span>
+                </div>
+                <div>
+                    <label asp-for="Edit!.IdentityIssueDate" class="form-label">Ngày cấp</label>
+                    <div class="ta-input-icon">@UiIcon.Render("clock")<input asp-for="Edit!.IdentityIssueDate" class="form-control" type="date" /></div>
+                </div>
+                <div>
+                    <label asp-for="Edit!.IdentityIssuePlace" class="form-label">Nơi cấp</label>
+                    <div class="ta-input-icon">@UiIcon.Render("id")<input asp-for="Edit!.IdentityIssuePlace" class="form-control" maxlength="200" /></div>
+                </div>
+                <div>
+                    <label asp-for="Edit!.Email" class="form-label">Email</label>
+                    <div class="ta-input-icon">@UiIcon.Render("mail")<input asp-for="Edit!.Email" class="form-control" type="email" maxlength="256" /></div>
+                    <span asp-validation-for="Edit!.Email" class="invalid-feedback d-block"></span>
+                </div>
+                <div class="ta-ws-span-2">
+                    <label asp-for="Edit!.Address" class="form-label">Địa chỉ</label>
+                    <div class="ta-input-icon">@UiIcon.Render("map-pin")<input asp-for="Edit!.Address" class="form-control" maxlength="500" /></div>
+                </div>
+                <div class="ta-ws-span-2">
+                    <label asp-for="Edit!.Note" class="form-label">Ghi chú</label>
+                    <div class="ta-input-icon">@UiIcon.Render("file-text")<input asp-for="Edit!.Note" class="form-control" maxlength="1000" /></div>
+                </div>
+                <div>
+                    <label asp-for="Edit!.SortOrder" class="form-label">Thứ tự hiển thị</label>
+                    <div class="ta-input-icon">@UiIcon.Render("list-tree")<input asp-for="Edit!.SortOrder" class="form-control" type="number" min="0" step="1" /></div>
+                </div>
+                <div class="ta-ws-span-all">
+                    <label class="form-check form-check-inline"><input asp-for="Edit!.IsLegalRepresentative" class="form-check-input" type="checkbox" /><span class="form-check-label">Người đại diện theo pháp luật</span></label>
+                    <label class="form-check form-check-inline"><input asp-for="Edit!.IsPrimaryContact" class="form-check-input" type="checkbox" /><span class="form-check-label">Người liên hệ chính của T.A</span></label>
+                </div>
+            </div>
+        </div>
+        <div class="card-footer ta-form-actions">
+            <a asp-action="Representatives" asp-route-id="@c.Id" class="btn">@UiIcon.Render("x")<span>Hủy</span></a>
+            <button type="submit" class="btn btn-primary ms-auto" data-ta-loading data-ta-loading-text="Đang lưu...">@UiIcon.Render("device-floppy")<span>Lưu</span></button>
+        </div>
+    </form>
+}
+<section class="card ta-table-card" aria-label="Người đại diện của @c.Code">
+    <div class="ta-table-toolbar">
+        <div class="ms-auto"><a class="btn btn-primary" asp-action="Representatives" asp-route-id="@c.Id" asp-route-add="true" aria-disabled="@(Model.Rows is null ? "true" : null)">@UiIcon.Render("user-plus")<span>Thêm người đại diện</span></a></div>
+    </div>
+    @if (Model.Rows is null)
+    {
+        <div class="ta-empty" data-ta-profile-unavailable><span class="ta-empty__icon">@UiIcon.Render("database-off")</span><p class="ta-empty__title">Không tải được danh sách người đại diện</p><p class="ta-empty__text">Kiểm tra migration 013 (dbo.CustomerRepresentatives) và quyền cơ sở dữ liệu; chi tiết đã ghi vào nhật ký ứng dụng.</p></div>
+    }
+    else if (Model.Rows.Count == 0)
+    {
+        <div class="ta-empty" data-ta-representatives-empty><span class="ta-empty__icon">@UiIcon.Render("user")</span><p class="ta-empty__title">Chưa có người đại diện</p><p class="ta-empty__text">Thêm giám đốc, chủ hộ kinh doanh hoặc người phụ trách làm việc với T.A.</p></div>
+    }
+    else
+    {
+        <div class="ta-table-wrap">
+            <table class="ta-table ta-table-stack" id="representativesTable">
+                <thead><tr><th scope="col">Họ tên</th><th scope="col">Vai trò</th><th scope="col">Liên hệ</th><th scope="col">CCCD</th><th scope="col">Ngày sinh</th><th scope="col" class="ta-col-actions">Thao tác</th></tr></thead>
+                <tbody>
+                @foreach (var r in Model.Rows)
+                {
+                    <tr data-ta-row data-ta-representative="@r.Id">
+                        <td class="ta-cell-strong"><div>@r.FullName</div>@if (r.Gender is not null) {<div class="ta-cell-sub">@CustomerProfileCodes.Label(CustomerProfileCodes.Genders, r.Gender)</div>}</td>
+                        <td data-label="Vai trò">@CustomerProfileCodes.Label(CustomerProfileCodes.RepresentativeRoles, r.RoleCode)@if (r.IsLegalRepresentative) {<div><span class="ta-badge ta-badge--neutral">Đại diện pháp luật</span></div>}@if (r.IsPrimaryContact) {<div><span class="ta-badge ta-badge--success">Liên hệ chính</span></div>}</td>
+                        <td data-label="Liên hệ"><div>@(r.Phone ?? "—")</div>@if (r.Email is not null) {<div class="ta-cell-sub">@r.Email</div>}</td>
+                        <td class="ta-nowrap" data-label="CCCD" title="Chỉ hiển thị 4 số cuối; mở Sửa để xem đầy đủ">@(CustomerProfileCodes.MaskIdentity(r.IdentityNumber) ?? "—")</td>
+                        <td class="ta-nowrap" data-label="Ngày sinh">@(r.DateOfBirth?.ToString("dd/MM/yyyy") ?? "—")</td>
+                        <td class="ta-col-actions">
+                            <div class="d-flex gap-1 justify-content-end">
+                                <a class="btn btn-sm" asp-action="Representatives" asp-route-id="@c.Id" asp-route-edit="@r.Id">@UiIcon.Render("pencil")<span>Sửa</span></a>
+                                <form asp-action="DeleteRepresentative" asp-route-id="@c.Id" method="post" data-ta-confirm="Xóa người đại diện @r.FullName?">
+                                    <input type="hidden" name="representativeId" value="@r.Id" /><input type="hidden" name="stamp" value="@r.Stamp" />
+                                    <button type="submit" class="btn btn-sm btn-outline-danger ta-btn-icon" aria-label="Xóa @r.FullName" title="Xóa">@UiIcon.Render("trash")</button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    }
+</section>

@@ -60,6 +60,8 @@ builder.Services.AddScoped<ICustomerPortalAccounts, SqlCustomerPortalAccounts>()
 builder.Services.AddScoped<IUserRoleStore, SqlUserRoleStore>();
 builder.Services.AddScoped<IUserAccountStore, SqlUserAccountStore>();
 builder.Services.AddScoped<ICustomerAdminStore, SqlCustomerAdminStore>();
+builder.Services.AddScoped<ICustomerProfileStore, SqlCustomerProfileStore>();
+builder.Services.AddSingleton<ICustomerSecretProtector, AesGcmCustomerSecretProtector>();
 builder.Services.AddScoped<IDashboardStore, SqlDashboardStore>();
 builder.Services.AddScoped<ITingeeMerchantStore, SqlTingeeMerchantStore>();
 builder.Services.AddScoped<IServicePackageStore, SqlServicePackageStore>();
