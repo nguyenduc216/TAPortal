@@ -93,12 +93,13 @@ public sealed class SafeUiDesignSystemTests
     }
 
     [Fact]
-    public void CustomerPortalSidebarUsesTheAdminStyleAndBlueDesign()
+    public void CustomerPortalHasGoldSidebarWithAdminMenuStructure()
     {
         var css = File.ReadAllText(Path.Combine(CustomerWww, "css", "customer.css"));
         Assert.Matches(@"--cp-blue-600:\s*#2563EB;", css);              // primary
-        Assert.Matches(@"--cp-side-bg:\s*#082746;", css);               // navy sidebar, same as the Admin portal (operator, 2026-11-05)
-        Assert.Matches(@"--cp-side-gold:\s*#E5A900;", css);             // gold marker on the current page
+        Assert.Matches(@"--cp-gold-700:\s*#A16207;", css);              // deep-gold sidebar: colours stay (operator, 2026-11-05)
+        Assert.Matches(@"--cp-side-bg:[^;]*var\(--cp-gold-700\)", css);
+        Assert.DoesNotContain("#082746", css);                         // only the Admin menu structure is shared, not its navy
         Assert.DoesNotContain("--ta-navy", css);
         Assert.False(File.Exists(Path.Combine(CustomerWww, "css", "ta-design.css")));
         Assert.False(Directory.Exists(Path.Combine(CustomerWww, "lib", "tabler")));

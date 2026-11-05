@@ -27,3 +27,8 @@ Operator (2026-11-05): "menu bên hệ thống hoá đơn làm style giống tra
 
 ## Git
 - Branch: feature/customer-portal-mvp01; merged to main (fast-forward) after this record.
+
+## Sửa theo phản hồi (2026-11-05)
+Operator: "tôi đâu có bảo thay đổi thành màu xanh Navi đâu, vẫn giữ cái màu vàng cũ á, chỉ là cái cấu trúc của menu là giống cấu trúc menu ở bên trang admin thôi, không có đổi màu."
+- Trả lại màu vàng (gradient gold-700 → gold-900, chữ #FFF4D6, nhãn nhóm gold-200, ô doanh nghiệp nền tối mờ + ô chữ cái xanh, theme-color #A16207). Giữ cấu trúc menu Admin: thanh thương hiệu có logo và đường kẻ dưới, nhãn nhóm in hoa, mục cao 40px, mục đang chọn nền trắng mờ + vạch trắng bên trái + icon trắng, chân menu có đường kẻ trên. Ô "Cần hỗ trợ?" vẫn bỏ.
+- Test: `CustomerPortalHasGoldSidebarWithAdminMenuStructure` (sidebar dùng gold-700, không có màu navy #082746, không có "Cần hỗ trợ").
