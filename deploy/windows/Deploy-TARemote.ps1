@@ -254,6 +254,15 @@ try { :main do {
         $out = Join-Path $PublishRoot "deployed-$project"
         if ((Test-Path $out) -and (Get-ChildItem $out -Force | Select-Object -First 1)) {
             $keep = Join-Path $PublishRoot "rollback\$Stamp\$project"
+            # Operator rule 2026-11-05: keep only the last previous artifact per project (older rollback copies are removed).
+            $rollbackRoot = Join-Path $PublishRoot 'rollback'
+            if (Test-Path $rollbackRoot) {
+                foreach ($stale in Get-ChildItem $rollbackRoot -Directory | ForEach-Object { Join-Path $_.FullName $project } | Where-Object { Test-Path $_ }) {
+                    Remove-Item $stale -Recurse -Force
+                    Write-Host "  Old rollback copy removed: $stale"
+                }
+                Get-ChildItem $rollbackRoot -Directory | Where-Object { -not (Get-ChildItem $_.FullName -Force | Select-Object -First 1) } | Remove-Item -Force
+            }
             New-Item -ItemType Directory -Force -Path (Split-Path $keep) | Out-Null
             $old = Get-ManifestSha $out
             Move-Item $out $keep
@@ -299,7 +308,7 @@ try { :main do {
         Invoke-Checked $Scp (@($SshOptions) + @($p.Zip, "${SshHost}:C:/TADeploy/incoming/$name"))
         Ok "Uploaded $name"
         $remotePkg = "$RemoteRoot\incoming\$name"
-        $code = Invoke-Remote ("& '$RemoteRoot\Apply-TARelease.ps1' -Target $t -Package '$remotePkg' -Sha256 $($p.Sha) -ExpectedCommit $commit; " +
+        $code = Invoke-Remote ("& '$RemoteRoot\Apply-TARelease.ps1' -Target $t -Package '$remotePkg' -Sha256 $($p.Sha) -ExpectedCommit $commit -KeepBackups 1; " +
                                "`$code = `$LASTEXITCODE; if (`$code -eq 0) { Remove-Item '$remotePkg' -Force; " +
                                "New-Item -ItemType Directory -Force -Path '$RemoteRoot\state' | Out-Null; Set-Content -Path '$RemoteRoot\state\$t.txt' -Value '$commit' -Encoding ASCII }; exit `$code")
         $status = if ($code -eq 0) { 'DEPLOYED' } else { 'ROLLED_BACK_OR_FAILED (see C:\TADeploy\logs on server)' }

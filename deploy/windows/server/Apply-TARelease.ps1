@@ -20,7 +20,8 @@ param(
     [string] $Sha256,
     [string] $ExpectedCommit,
     [switch] $Rollback,
-    [int] $KeepBackups = 5
+    # Operator rule 2026-11-05: one backup per target (the release replaced by the last deploy).
+    [int] $KeepBackups = 1
 )
 
 $ErrorActionPreference = 'Stop'
