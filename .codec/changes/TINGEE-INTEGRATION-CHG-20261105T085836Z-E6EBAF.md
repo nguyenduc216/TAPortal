@@ -16,11 +16,14 @@ Operator (2026-11-05): "menu bên hệ thống hoá đơn làm style giống tra
 - ADD `src/TACustomerPortal.Web/wwwroot/images/ta-logo.png` (bản sao logo của Admin)
 - MODIFY `tests/TACustomerPortal.Tests/SafeUiDesignSystemTests.cs`
 
+## Test và kết quả
+- Release build 0 lỗi; Safe tests 416/416 pass; Codec unit tests OK; `codec validate` chỉ còn lỗi đường dẫn publish có sẵn (vị trí worktree).
+
 ## Migration SQL
 - NOT_APPLICABLE.
 
 ## Publish
-- Project: TACustomerPortal.Web (target `invoice`). Xem report.
+- Project: TACustomerPortal.Web (target `invoice`): DEPLOYED 2026-11-05T09:01:56Z, source 7c3eac0, artifact SHA256 3877dfc9c51d0a2f98d3835638e00c60ed641da3d40fa9ce323048d2d5e1bdac, package SHA256 6C6111D5C34482E91E1CB11A0188684DA1F581798A79A2BC5D074075626304E1, health HTTP 200, server backup invoice-20261105-160150 (kept alone).
 
 ## Git
-- Branch: feature/customer-portal-mvp01
+- Branch: feature/customer-portal-mvp01; merged to main (fast-forward) after this record.
