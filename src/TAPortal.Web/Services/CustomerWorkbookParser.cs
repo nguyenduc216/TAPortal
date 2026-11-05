@@ -16,7 +16,9 @@ public sealed class ImportedAccount
     public string? Password { get; set; }
     public string? Pin { get; set; }
     public bool HasData => !string.IsNullOrWhiteSpace(Input.Username) || !string.IsNullOrWhiteSpace(Password) || !string.IsNullOrWhiteSpace(Input.LoginUrl)
-        || !string.IsNullOrWhiteSpace(Input.BankAccountNumber) || !string.IsNullOrWhiteSpace(Input.ProviderName) || !string.IsNullOrWhiteSpace(Input.SystemName) || Input.ExpiresAt is not null;
+        || !string.IsNullOrWhiteSpace(Input.BankAccountNumber) || !string.IsNullOrWhiteSpace(Input.ProviderName) || !string.IsNullOrWhiteSpace(Input.SystemName) || Input.ExpiresAt is not null
+        || !string.IsNullOrWhiteSpace(Pin) || !string.IsNullOrWhiteSpace(Input.CertificateSerial) || !string.IsNullOrWhiteSpace(Input.UnitCode) || !string.IsNullOrWhiteSpace(Input.StoreName)
+        || !string.IsNullOrWhiteSpace(Input.LoginPhone);
 }
 
 public sealed class ImportedCustomer
@@ -179,7 +181,7 @@ public static partial class CustomerWorkbookParser
                 if (p.LegalForm is null) notes.Add($"Hình thức: {value}");
                 break;
             case "von dieu le":
-                if (cell?.Number is { } capital && capital >= 0) p.CharterCapital = Math.Round((decimal)capital, 0);
+                if (cell?.Number is { } capital && capital is >= 0 and < 1e18) p.CharterCapital = Math.Round((decimal)capital, 0);
                 else if (decimal.TryParse(Regex.Replace(value, @"[^\d]", ""), NumberStyles.None, CultureInfo.InvariantCulture, out var parsed) && parsed > 0) p.CharterCapital = parsed;
                 else notes.Add($"Vốn điều lệ: {value}");
                 break;
@@ -198,7 +200,10 @@ public static partial class CustomerWorkbookParser
                 p.BusinessStatus = BusinessStatus(Key(value));
                 if (p.BusinessStatus is null) notes.Add($"Tình trạng hoạt động: {value}");
                 break;
-            default: notes.Add($"{label.TrimEnd(':')}: {value}"); break;
+            default:
+                if (LooksLikeSecret(value)) c.Warnings.Add($"Thông tin chung / {label.TrimEnd(':')}: giá trị giống mật khẩu nên không nhập, hãy kiểm tra.");
+                else notes.Add($"{label.TrimEnd(':')}: {value}");
+                break;
         }
     }
 
@@ -239,14 +244,17 @@ public static partial class CustomerWorkbookParser
                 break;
             case "so dien thoai" or "dien thoai" or "sdt": r.Phone = Limit(Phone(value, cell), 30); break;
             case "dia chi": r.Address = Limit(value, 500); break;
-            default: r.Note = Join(r.Note, $"{label.TrimEnd(':')}: {value}"); break;
+            default:
+                if (LooksLikeSecret(value)) c.Warnings.Add($"{Who(r)} / {label.TrimEnd(':')}: giá trị giống mật khẩu nên không nhập, hãy kiểm tra.");
+                else r.Note = Join(r.Note, $"{label.TrimEnd(':')}: {value}");
+                break;
         }
     }
 
     private static string? AccountSlot(string field) => field switch
     {
         _ when field.StartsWith("ten dang nhap") || field.StartsWith("mail dang nhap") || field == "tai khoan" || field == "user" => "user",
-        _ when field.StartsWith("mat khau") => "password",
+        _ when field.StartsWith("mat khau") || field.StartsWith("pass") || field is "mk" or "pw" or "pwd" => "password",
         _ when field is "pin" or "ma pin" => "pin",
         _ when field.StartsWith("link") || field == "website" => "url",
         _ when field.StartsWith("so dien thoai") || field == "sdt" => "phone",
@@ -267,18 +275,28 @@ public static partial class CustomerWorkbookParser
         var i = a.Input;
         switch (slot)
         {
-            case "user": i.Username = Limit(cell?.Number is { } n ? n.ToString("0", CultureInfo.InvariantCulture) : value, 256); break;
-            case "password": a.Password = cell?.Number is { } pn ? pn.ToString("0.###############", CultureInfo.InvariantCulture) : value; break;
-            case "pin": a.Pin = cell?.Number is { } pin ? pin.ToString("0", CultureInfo.InvariantCulture) : value; break;
+            case "user":
+                if (cell?.Number is not null && i.SystemType is "TAX_PORTAL" or "EINVOICE_PORTAL" or "ETAX_MOBILE" && TaxCode(value, cell, out _) is { } taxLogin) i.Username = taxLogin;
+                else i.Username = Limit(cell?.Number is { } n ? n.ToString("0", CultureInfo.InvariantCulture) : value, 256);
+                if (cell?.Number is not null) NumericWarning(c, a, "tên đăng nhập");
+                break;
+            case "password":
+                a.Password = cell?.Number is { } pn ? pn.ToString("0.###############", CultureInfo.InvariantCulture) : value;
+                if (cell?.Number is not null) NumericWarning(c, a, "mật khẩu");
+                break;
+            case "pin":
+                a.Pin = cell?.Number is { } pin ? pin.ToString("0", CultureInfo.InvariantCulture) : value;
+                if (cell?.Number is not null) NumericWarning(c, a, "PIN");
+                break;
             case "url":
                 var url = value.Trim();
                 if (!url.Contains("://", StringComparison.Ordinal) && Regex.IsMatch(url, @"^[\w-]+(\.[\w-]+)+(/.*)?$")) url = "https://" + url;
                 if (Uri.TryCreate(url, UriKind.Absolute, out var u) && (u.Scheme == Uri.UriSchemeHttps || u.Scheme == Uri.UriSchemeHttp)) i.LoginUrl = Limit(url, 500);
-                else if (i.SystemType is "OTHER" or "SOCIAL_INSURANCE" && i.SystemName is null) i.SystemName = Limit(value, 200);
+                else if (i.SystemType is "OTHER" or "SOCIAL_INSURANCE" && i.SystemName is null) i.SystemName = Limit(value, 150);
                 else i.Note = Join(i.Note, $"{label.TrimEnd(':')}: {value}");
                 break;
             case "phone": i.LoginPhone = Limit(Phone(value, cell), 30); break;
-            case "provider": i.ProviderName = Limit(Provider(value), 150); break;
+            case "provider": i.ProviderName = Limit(Provider(value), 100); break;
             case "expires": i.ExpiresAt = DateValue(value, cell); if (i.ExpiresAt is null) i.Note = Join(i.Note, $"Hạn: {value}"); break;
             case "certtype":
                 var k = Key(value);
@@ -286,15 +304,30 @@ public static partial class CustomerWorkbookParser
                 if (i.CertificateType is null) i.Note = Join(i.Note, $"Loại ký số: {value}");
                 break;
             case "system":
-                i.SystemName = Limit(value, 200);
+                i.SystemName = Limit(value, 150);
                 if (i.SystemType == "OTHER") i.SystemType = OtherSoftwareType(Key(value));
                 break;
             case "unit": i.UnitCode = Limit(value, 50); break;
-            case "store": i.StoreName = Limit(value, 200); break;
-            case "bank": i.BankAccountNumber = Limit(cell?.Number is { } bn ? bn.ToString("0", CultureInfo.InvariantCulture) : value, 50); break;
+            case "store": i.StoreName = Limit(value, 150); break;
+            case "bank":
+                if (cell?.Number is { } bn && bn >= 1e15) { i.Note = Join(i.Note, "Số tài khoản: cần nhập lại (Excel lưu dạng số làm sai các chữ số cuối)"); c.Warnings.Add("Số tài khoản ngân hàng quá dài bị Excel lưu dạng số nên sai chữ số: không nhập, hãy nhập lại."); }
+                else i.BankAccountNumber = Limit(cell?.Number is { } bn2 ? bn2.ToString("0", CultureInfo.InvariantCulture) : value, 50);
+                if (cell?.Number is not null) NumericWarning(c, a, "số tài khoản");
+                break;
             case "serial": i.CertificateSerial = Limit(value, 100); break;
-            default: i.Note = Join(i.Note, $"{label.TrimEnd(':')}: {value}"); break;
+            default:
+                if (LooksLikeSecret(value)) c.Warnings.Add($"{Blocks.Label(i.SystemType)} / {label.TrimEnd(':')}: giá trị giống mật khẩu ở dòng không nhận diện được nên không nhập, hãy kiểm tra.");
+                else i.Note = Join(i.Note, $"{label.TrimEnd(':')}: {value}");
+                break;
         }
+    }
+
+    private static void NumericWarning(ImportedCustomer c, ImportedAccount a, string what) =>
+        c.Warnings.Add($"{Blocks.Label(a.Input.SystemType)}: {what} được Excel lưu dạng số, có thể đã mất số 0 ở đầu. Hãy kiểm tra sau khi nhập.");
+
+    private static class Blocks
+    {
+        public static string Label(string systemType) => CustomerProfileCodes.Label(CustomerProfileCodes.SystemTypes, systemType);
     }
 
     private static string OtherSoftwareType(string name) => name switch

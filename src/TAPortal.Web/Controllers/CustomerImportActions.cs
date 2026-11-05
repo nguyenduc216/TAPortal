@@ -18,15 +18,18 @@ public sealed partial class CustomersController
     internal const long ImportMaxBytes = 10 * 1024 * 1024;
     private static readonly TimeSpan ImportLifetime = TimeSpan.FromMinutes(30);
     private const string ImportPermission = PermissionPolicies.Prefix + "CRM.CUSTOMERS.CREATE";
+    private const string ImportUpdatePermission = PermissionPolicies.Prefix + "CRM.CUSTOMERS.UPDATE"; // it also fills existing customers
     private static string ImportKey(Guid actor, Guid token) => $"customer-import:{actor:N}:{token:N}";
 
     [HttpGet]
     [Authorize(Policy = ImportPermission)]
+    [Authorize(Policy = ImportUpdatePermission)]
     public IActionResult Import([FromServices] ICustomerSecretProtector secrets) => View(new CustomerImportVm(null, null, null, secrets.Enabled));
 
     [HttpPost]
     [ValidateAntiForgeryToken]
     [Authorize(Policy = ImportPermission)]
+    [Authorize(Policy = ImportUpdatePermission)]
     [RequestSizeLimit(ImportMaxBytes + 1024 * 1024)]
     [RequestFormLimits(MultipartBodyLengthLimit = ImportMaxBytes + 1024 * 1024)]
     public async Task<IActionResult> ImportPreview(IFormFile? file, [FromServices] ICustomerImportStore imports, [FromServices] ICustomerSecretProtector secrets, [FromServices] IMemoryCache cache)
@@ -65,6 +68,7 @@ public sealed partial class CustomersController
     [HttpPost]
     [ValidateAntiForgeryToken]
     [Authorize(Policy = ImportPermission)]
+    [Authorize(Policy = ImportUpdatePermission)]
     public async Task<IActionResult> ImportConfirm(Guid token, [FromForm] List<int>? include, [FromForm] Dictionary<int, string>? codes,
         [FromServices] ICustomerImportStore imports, [FromServices] ICustomerSecretProtector secrets, [FromServices] IMemoryCache cache)
     {

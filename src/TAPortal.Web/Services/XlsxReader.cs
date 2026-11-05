@@ -83,7 +83,7 @@ public static class XlsxReader
             }
             return sheets;
         }
-        catch (Exception ex) when (ex is InvalidDataException or XmlException or InvalidOperationException)
+        catch (Exception ex) when (ex is InvalidDataException or XmlException or InvalidOperationException or ArgumentException or OverflowException or FormatException)
         {
             throw new XlsxFormatException("Không đọc được file Excel (.xlsx). Hãy lưu lại file bằng Excel rồi thử lại.");
         }

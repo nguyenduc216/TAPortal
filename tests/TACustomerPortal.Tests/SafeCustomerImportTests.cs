@@ -86,6 +86,25 @@ public sealed class SafeCustomerImportTests
     }
 
     [Fact]
+    public void PasswordsUnderOtherLabelsAreEncryptedFieldsNeverPlainNotes()
+    {
+        var rows = Template();
+        rows[1][3] = new Cell("Công ty Demo");
+        rows[1][2] = new Cell("Tên:");
+        rows.Add([new("hoadondientu.gdt.gov.vn"), new("1"), new("Tên đăng nhập"), new("312345678", 312345678), null]); // number cell: leading 0 lost
+        rows.Add([null, new("2"), new("Pass:"), new(Secret), null]);
+        rows.Add([null, new("3"), new("Ghi chú khác:"), new("Qw3rty-Zx!"), null]);                                   // unknown label, secret-looking value
+        rows.Add([new("Phần mềm khác"), new("1"), new("Tên phần mềm:"), new(new string('X', 400)), null]);
+        var c = Assert.Single(Parse(Xlsx([("Demo", rows)])));
+        var portal = c.Accounts.Single(a => a.Input.SystemType == "EINVOICE_PORTAL");
+        Assert.Equal(("0312345678", Secret), (portal.Input.Username, portal.Password));
+        Assert.DoesNotContain("Qw3rty-Zx!", portal.Input.Note ?? "");
+        Assert.Contains(c.Warnings, w => w.Contains("giống mật khẩu"));
+        Assert.Contains(c.Warnings, w => w.Contains("lưu dạng số"));
+        Assert.Equal(150, c.Accounts.Single(a => a.Input.SystemType == "OTHER").Input.SystemName!.Length); // nvarchar(150)
+    }
+
+    [Fact]
     public void OperationalSheetsAndEmptyTemplatesAreSkipped()
     {
         var sheets = new[] { ("Phí dv", Profile()), ("CHECK Q3.26", Profile()), ("Sheet2", Template()), ("HKD Demo", Profile(taxCode: "0398765432", name: "Hộ kinh doanh Demo")) };
