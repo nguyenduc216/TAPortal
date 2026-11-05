@@ -24,7 +24,7 @@
 | Change ID | Ngày UTC | Nội dung | Commit SHA | Migration | Publish | Merge |
 |---|---|---|---|---|---|---|
 | `CUSTOMER-PROFILE-CHG-20261103T183438Z-C56EAB` | 2026-11-03 | Customer profile phase 1: general info, representatives, encrypted system accounts | `769f167` | EXECUTED (013) | DEPLOYED portal (`7492d78`) | main |
-| `CUSTOMER-PROFILE-CHG-20261105T152008Z-203021` | 2026-11-05 | Customer profile phase 2: import the customer workbook (Excel) with a review screen | — | NOT_APPLICABLE | NOT_PUBLISHED | PENDING |
+| `CUSTOMER-PROFILE-CHG-20261105T152008Z-203021` | 2026-11-05 | Customer profile phase 2: import the customer workbook (Excel) with a review screen | `4a89199` | NOT_APPLICABLE | DEPLOYED portal (`4a89199`) | main |
 
 ## Current status (2026-11-05)
 Giai đoạn 1 (C56EAB) DEPLOYED portal, migration 013 EXECUTED, đã merge main. Giai đoạn 2 (203021): chức năng "Nhập từ Excel" trong Khách hàng (đọc file, màn hình duyệt, lưu theo lựa chọn). Việc còn lại của operator: sinh và cấu hình `CustomerSecrets__Key` (giữ một bản sao ngoài server); nếu nhập trước khi có khóa thì nhập lại cùng file sau đó để bổ sung mật khẩu.

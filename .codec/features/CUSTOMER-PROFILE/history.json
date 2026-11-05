@@ -13,10 +13,10 @@
     "change_id": "CUSTOMER-PROFILE-CHG-20261105T152008Z-203021",
     "created_at": "2026-11-05T15:20:08.878194+00:00",
     "title": "Customer profile phase 2: import the customer workbook (Excel) with a review screen",
-    "status": "IMPLEMENTED",
-    "commit_sha": null,
+    "status": "DEPLOYED",
+    "commit_sha": "4a89199926579950a2e6993df2d26e9ee1a9c9aa",
     "migration_status": "NOT_APPLICABLE (uses migration 013 tables)",
-    "publish_status": "NOT_PUBLISHED",
-    "merge_status": "PENDING"
+    "publish_status": "DEPLOYED portal 2026-11-05T15:39:38Z: source 4a89199, artifact 05e94f98e35b5e4df40bf66fd70db05a1cbf3a1df736ea82c17c9dfffb576d2f, package A9F6072F13575721FC8DECD36EBDE7B324A498BABD21CFDA4F97C7F477E78DF8, server backup C:\\TADeploy\\backups\\portal-20261105-223928, health HTTP 200",
+    "merge_status": "main (see hand-off)"
   }
 ]
