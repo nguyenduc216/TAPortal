@@ -50,8 +50,11 @@ function Upload([string]$name, [string]$text) {
 }
 function Sql([string]$file, [switch]$Plain) {
     $format = if ($Plain) { ' -h -1 -W' } else { '' }
+    # Windows PowerShell 5.1 turns a native exe's stderr into errors: with 'Stop' that would abort before the exit code is read.
+    $ErrorActionPreference = 'Continue'
     $out = & $Ssh $SshHost "sqlcmd -S $Instance -E -d TAPortalSys -b -I$format -i $remote\$file; exit `$LASTEXITCODE" 2>&1 | Out-String
     $code = $LASTEXITCODE
+    $ErrorActionPreference = 'Stop'
     Add-Content -Path $log -Value $out -Encoding utf8
     return [pscustomobject]@{ Code = $code; Out = $out }
 }
