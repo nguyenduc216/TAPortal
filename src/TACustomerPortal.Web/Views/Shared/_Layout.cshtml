@@ -45,7 +45,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <link rel="icon" type="image/png" href="~/images/favicon-32x32.png" />
-    <meta name="theme-color" content="#A16207" />
+    <meta name="theme-color" content="#082746" />
     <title>@ViewData["Title"] · T.A Customer Portal</title>
     <link rel="stylesheet" href="~/css/customer.css" asp-append-version="true" />
 </head>
@@ -56,8 +56,8 @@
     <aside class="cp-sidebar" id="taSidebar" aria-label="Điều hướng chính">
         <div class="cp-sidebar__brand">
             <a class="cp-brand" asp-controller="Dashboard" asp-action="Index" aria-label="T.A Customer Portal — Tổng quan">
-                <span class="cp-brand__mark" aria-hidden="true">T<span>A</span></span>
-                <span class="cp-brand__text">T.A Portal<small>Khách hàng</small></span>
+                <img src="~/images/ta-logo.png" class="cp-brand__logo" alt="" width="34" height="34" />
+                <span class="cp-brand__text">T.A Portal<small>Hóa đơn điện tử</small></span>
             </a>
             <button type="button" class="cp-sidebar__close" data-ta-drawer-close aria-label="Đóng menu">@UiIcon.Render("x")</button>
         </div>
@@ -79,7 +79,6 @@
             }
         </nav>
         <div class="cp-sidebar__foot">
-            <div class="cp-help"><strong>Cần hỗ trợ?</strong>Liên hệ quản trị viên T.A phụ trách doanh nghiệp của bạn.</div>
             <form method="post" asp-controller="Account" asp-action="Logout" data-ta-hard><button type="submit" class="cp-logout" title="Đăng xuất">@UiIcon.Render("logout")<span>Đăng xuất</span></button></form>
         </div>
     </aside>

@@ -93,17 +93,19 @@ public sealed class SafeUiDesignSystemTests
     }
 
     [Fact]
-    public void CustomerPortalHasItsOwnGoldSidebarAndBlueDesign()
+    public void CustomerPortalSidebarUsesTheAdminStyleAndBlueDesign()
     {
         var css = File.ReadAllText(Path.Combine(CustomerWww, "css", "customer.css"));
         Assert.Matches(@"--cp-blue-600:\s*#2563EB;", css);              // primary
-        Assert.Matches(@"--cp-gold-700:\s*#A16207;", css);              // deep-gold sidebar
+        Assert.Matches(@"--cp-side-bg:\s*#082746;", css);               // navy sidebar, same as the Admin portal (operator, 2026-11-05)
+        Assert.Matches(@"--cp-side-gold:\s*#E5A900;", css);             // gold marker on the current page
         Assert.DoesNotContain("--ta-navy", css);
         Assert.False(File.Exists(Path.Combine(CustomerWww, "css", "ta-design.css")));
         Assert.False(Directory.Exists(Path.Combine(CustomerWww, "lib", "tabler")));
         var layout = File.ReadAllText(Path.Combine(Root, "src", "TACustomerPortal.Web", "Views", "Shared", "_Layout.cshtml"));
         Assert.Contains("class=\"cp-sidebar\" id=\"taSidebar\"", layout);   // own sidebar, drawer behaviour from ta-shell.js
         Assert.DoesNotContain("class=\"ta-sidebar\"", layout);              // not the Admin sidebar
+        Assert.DoesNotContain("Cần hỗ trợ", layout);                    // help box removed (operator, 2026-11-05)
         Assert.Contains("data-ta-swap", layout);                       // soft navigation container
     }
 
