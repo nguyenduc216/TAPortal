@@ -38,7 +38,7 @@ Bảo mật (theo yêu cầu "lưu ý kỹ"):
 - Database: TAPortalSys
 - Script: `database/migrations/020-notification-channels.sql` (sau 019; chỉ tạo bảng mới)
 - Verify / Rollback: `database/scripts/029-verify-notification-channels.sql` / `database/scripts/030-rollback-notification-channels.sql`
-- Execution: NOT_EXECUTED (xem report)
+- Execution: EXECUTED 2026-11-05T05:03:28Z via `deploy/windows/Invoke-TAMigrations.ps1` (sqlcmd -E on ta-server): pre-check NOT_APPLIED → dry-run in one transaction (migration → verify PASS → rollback → verify NOT_APPLIED → ROLLBACK, @@TRANCOUNT=0) → pre-check again NOT_APPLIED → backup: latest full 1103 min old (< 24 h) → gates restore/build/Safe 416/416 PASS → real run → verify PASS. Log: `.codec/reports/TINGEE-INTEGRATION-CHG-20261105T042908Z-94446D-migrations-20261105T050148Z.log`.
 
 ## Test và kết quả
 - Release build 0 lỗi; Safe tests 416/416 pass (planner theo đối tượng nhận, không dùng kênh doanh nghiệp khác, bí mật không hiện lại, xóa/giữ bí mật, chặn IP nội bộ, dispatcher thử lại + lưu token mới, trang portal chỉ OWNER/ADMIN, trang Admin 4 kênh).

@@ -41,7 +41,7 @@ Audit lỗi của CEA3FA (chưa deploy): HIGH — `CK_TWI_Status` (migration 011
 - Script / absolute path: `database/migrations/019-payment-reconciliation.sql`
 - Thứ tự chạy: sau 018. Chỉ thêm cột/bảng và nới 2 CHECK constraint; không sửa/xóa dòng nào.
 - Preflight / Verify / Rollback: `database/scripts/027-verify-payment-reconciliation.sql` / `database/scripts/028-rollback-payment-reconciliation.sql` (từ chối rollback khi đã có giao dịch hoặc trạng thái mới).
-- Execution: NOT_EXECUTED (chạy theo AGENT MIGRATION EXECUTION trước khi deploy; xem report)
+- Execution: EXECUTED 2026-11-05T05:03:24Z via `deploy/windows/Invoke-TAMigrations.ps1` (sqlcmd -E on ta-server): pre-check NOT_APPLIED → dry-run in one transaction (migration → verify PASS → rollback → verify NOT_APPLIED → ROLLBACK, @@TRANCOUNT=0) → pre-check again NOT_APPLIED → backup: latest full 1103 min old (< 24 h) → gates restore/build/Safe 416/416 PASS → real run → verify PASS. Log: `.codec/reports/TINGEE-INTEGRATION-CHG-20261105T042908Z-94446D-migrations-20261105T050148Z.log`.
 
 ## Test và kết quả
 - Release build 0 lỗi; Safe tests 410/410 pass (thêm: quy tắc trạng thái, đối soát hai nguồn, đối tác không truy cập được, lỗi xử lý ⇒ UNMATCHED, trang đối soát chỉ thấy giao dịch của doanh nghiệp, MEMBER không xử lý được, thẻ tổng hợp, trang Admin thấy giao dịch chưa gắn khách hàng).
