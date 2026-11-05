@@ -60,3 +60,4 @@ Audit lỗi của CEA3FA (chưa deploy): HIGH — `CK_TWI_Status` (migration 011
 - QR hết hạn: giao dịch đến sau `ExpiresAt` ⇒ `EXPIRED_PAID` kể cả khi chỉ trễ vài phút (đúng quyết định); nhân viên "Chấp nhận cho đơn" để chuyển về trạng thái theo số đã thu.
 - Lệch đối soát khi Tingee báo nhiều hơn hệ thống (thiếu webhook): đơn hiện "Lệch đối soát"; không tự tạo giao dịch để tránh cộng trùng khi webhook đến muộn.
 - Gửi thông báo (Zalo OA/Telegram/SMTP): change riêng; cột `NotifiedAt` đã có sẵn.
+- 2026-11-05: operator cấp quyền đọc DB production ⇒ ADD `deploy/windows/Invoke-TAReadQuery.ps1` (chặn từ khóa ghi/DDL/EXEC, chạy trong transaction luôn ROLLBACK, lock timeout 5 giây), MODIFY `AGENTS.md`. Kiểm tra sau deploy: inbox 5 dòng đều `BankLink` RECEIVED (chưa có webhook thanh toán), PaymentTransactions 0, NotificationChannels 0, NotificationOutbox 0, đơn: 1 AWAITING_PAYMENT, 1 CANCELLED.
