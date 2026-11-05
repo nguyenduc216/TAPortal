@@ -846,7 +846,9 @@ public sealed class SafeCustomerPaymentsTests
             StaticQrRequests.Add(request);
             return Task.FromResult(new TingeeStaticQr { QrCode = "00020101021138540010A0000007270124STATIC" });
         }
-        public Task<TingeeQrStatus> GetDynamicQrStatusAsync(long merchantId, string qrAccount, string billId, CancellationToken ct = default) => Task.FromResult(Status);
+        public Exception? StatusError { get; set; }
+        public Task<TingeeQrStatus> GetDynamicQrStatusAsync(long merchantId, string qrAccount, string billId, CancellationToken ct = default) =>
+            StatusError is not null ? Task.FromException<TingeeQrStatus>(StatusError) : Task.FromResult(Status);
         public Task DeleteDynamicQrAsync(long merchantId, string qrAccount, string billId, CancellationToken ct = default) { DeletedQrs.Add((qrAccount, billId)); return Task.CompletedTask; }
         public List<TingeeBankLinkSessionRequest> Sessions { get; } = [];
         public string SessionUrl { get; set; } = "https://uat-bank-link.tingee.vn/link?token=T1";

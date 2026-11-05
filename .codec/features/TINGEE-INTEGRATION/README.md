@@ -64,3 +64,4 @@ Database sẵn sàng cho phần thanh toán (verify PASS). Tiếp theo: operator
 | `TINGEE-INTEGRATION-CHG-20261104T182406Z-ECDCF6` | 2026-11-04 | Customer Portal: automatic customer codes (KH001, KH002...) | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |
 | `TINGEE-INTEGRATION-CHG-20261104T183759Z-3C176A` | 2026-11-04 | Customer Portal: QR transfer content without '-' (fix 400 Purpose of transaction is wrong format) | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |
 | `TINGEE-INTEGRATION-CHG-20261104T185412Z-3684CE` | 2026-11-04 | Customer Portal: choose receiving account when issuing an order QR; QR lifetime in days/hours/minutes | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |
+| `TINGEE-INTEGRATION-CHG-20261105T010435Z-CEA3FA` | 2026-11-05 | Webhooks: apply Tingee payment webhooks to customer orders in the background | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |

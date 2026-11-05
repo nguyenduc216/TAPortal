@@ -8,7 +8,13 @@ builder.WebHost.ConfigureKestrel(options => options.Limits.MaxRequestBodySize = 
 builder.Services.Configure<IISServerOptions>(options => options.MaxRequestBodySize = TingeeWebhookEndpoints.MaxBodyBytes);
 // Durable inbox when a connection string is configured; otherwise AddTingee keeps the "unavailable" inbox (503 + retry).
 if (!string.IsNullOrWhiteSpace(builder.Configuration["Database:ConnectionString"]))
+{
     builder.Services.AddSingleton<ITingeeWebhookInbox, SqlTingeeWebhookInbox>();
+    // Stored payment webhooks are applied to customer orders in the background (TingeePaymentProcessor).
+    builder.Services.AddSingleton<ITingeePaymentLedger, SqlTingeePaymentLedger>();
+    builder.Services.AddScoped<TingeePaymentProcessor>();
+    builder.Services.AddHostedService<TingeePaymentWorker>();
+}
 builder.Services.AddTingee(builder.Configuration);
 
 var app = builder.Build();
