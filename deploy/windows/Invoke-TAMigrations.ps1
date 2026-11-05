@@ -26,6 +26,8 @@ param(
     [switch]$SkipGates
 )
 $ErrorActionPreference = 'Stop'
+# powershell -File passes "a","b" as one string: accept commas inside items too.
+$Plan = @($Plan | ForEach-Object { $_ -split ',' } | ForEach-Object { $_.Trim() } | Where-Object { $_ })
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 $stamp = (Get-Date).ToUniversalTime().ToString('yyyyMMddTHHmmssZ')
 $log = Join-Path $root ".codec\reports\$ChangeId-migrations-$stamp.log"
