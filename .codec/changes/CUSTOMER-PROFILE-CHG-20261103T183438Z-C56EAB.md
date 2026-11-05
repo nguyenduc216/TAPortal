@@ -52,9 +52,9 @@ Không đổi `TAPortal.Shared`, `TAPortal.Integrations`, `TACustomerPortal.Web`
 ## Publish
 - Project: TAPortal.Web
 - Destination (chỉ từ config): `D:\T.A\TAPortal\TAPortal\src\publish\deployed-TAPortal.Web`
-- Trạng thái: NOT_PUBLISHED
-- Artifact SHA256: —
-- Smoke test: NOT_RUN
+- Trạng thái: DEPLOYED portal 2026-11-05T15:19:07Z: source 7492d78, artifact e7072a9bdee53a1adccc4bd8151ff238aea31f131dccc8ffa69072368f985621 (65 files), package 0E4D1DEFBB8CFBDE5AF0FCDEBEE16D69217021F0F9148A0CD7B53A56503C028D, server backup C:\TADeployackups\portal-20261105-221858, health HTTP 200
+- Artifact SHA256: `e7072a9bdee53a1adccc4bd8151ff238aea31f131dccc8ffa69072368f985621` (manifest `.codec/reports/CUSTOMER-PROFILE-CHG-20261103T183438Z-C56EAB-TAPortal.Web.sha256`)
+- Smoke test: health check của Apply-TARelease HTTP 200; giao diện chưa kiểm tra bằng tài khoản thật
 
 ## Git
 - Branch: feature/customer-portal-mvp01 (không tạo branch mới; tạo branch cần operator duyệt)
