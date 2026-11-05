@@ -4,7 +4,7 @@
 - Change ID: `CUSTOMER-PORTAL-FOUNDATION-CHG-20261105T235309Z-2AA0D3`
 - Created UTC: 2026-11-05T23:53:09.687249+00:00
 - Tiêu đề: Customer Portal: tự đăng ký doanh nghiệp (tra MST) và khách hàng linh hoạt theo loại (khách lẻ/hộ KD/doanh nghiệp/tổ chức)
-- Trạng thái: IMPLEMENTED
+- Trạng thái: DEPLOYED
 
 ## Yêu cầu và phạm vi
 Operator (2026-11-06): (1) thêm form đăng ký trên Customer Portal — MST, email, điện thoại; nhập MST thì tra cứu và tự điền tên/địa chỉ; (2) quản lý khách hàng của doanh nghiệp linh hoạt: Zalo, điện thoại, số tài khoản ngân hàng; khách lẻ (không MST, có thể CCCD), hộ kinh doanh, nhà hàng, doanh nghiệp (cần MST).
@@ -36,7 +36,7 @@ Trong phạm vi:
 
 ## Git
 - Branch: feature/customer-portal-mvp01
-- Commit SHA: xem report
+- Commit SHA: b3074b4
 - PR:
 - Merge: xem report
 - Merge SHA:
