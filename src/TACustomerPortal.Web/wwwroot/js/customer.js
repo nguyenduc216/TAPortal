@@ -153,4 +153,55 @@ document.addEventListener("input", event => {
     const parts = [d && d + " ngày", h && h + " giờ", m && m + " phút"].filter(Boolean);
     const minutes = d * 1440 + h * 60 + m;
     total.textContent = (parts.length ? parts.join(" ") : "0 phút") + (minutes > 43200 ? " (quá 30 ngày)" : minutes < 1 ? " (tối thiểu 1 phút)" : "");
+});// Tax code lookup (sign-up and buyer forms): fills the registered name and address of an enterprise tax code. "Tra cứu"
+// replaces the fields; leaving the tax code field only fills fields that are still empty.
+const taxLookup = (button, overwrite) => {
+    const field = button.closest(".cp-field");
+    const input = field?.querySelector("[data-cp-tax-input]");
+    const msg = field?.querySelector("[data-cp-tax-msg]");
+    const code = (input?.value || "").replace(/\s+/g, "");
+    if (!input || !msg) return;
+    const say = (text, tone) => { msg.textContent = text; msg.classList.toggle("is-ok", tone === "ok"); msg.classList.toggle("is-error", tone === "error"); };
+    if (!/^\d{10}(-\d{3})?$/.test(code)) { if (overwrite) say("Chỉ tra cứu được mã số thuế doanh nghiệp 10 chữ số (hoặc 10-3).", "error"); return; }
+    if (button.dataset.busy === code) return;
+    button.dataset.busy = code;
+    button.disabled = true;
+    say("Đang tra cứu mã số thuế…");
+    fetch(button.dataset.cpTaxLookup + "?code=" + encodeURIComponent(code), { credentials: "same-origin", headers: { Accept: "application/json" } })
+        .then(r => r.ok ? r.json() : Promise.reject(new Error(r.status === 429 ? "Bạn tra cứu quá nhanh, vui lòng đợi một chút." : "Tạm thời chưa tra cứu được. Vui lòng nhập tay.")))
+        .then(s => {
+            if (!s.ok) { say(s.message, "error"); return; }
+            const form = button.closest("form");
+            [[button.dataset.cpFillName, s.name], [button.dataset.cpFillAddress, s.address]].forEach(([selector, value]) => {
+                const target = selector && value ? form.querySelector(selector) : null;
+                if (target && (overwrite || !target.value.trim())) target.value = value;
+            });
+            say(s.message + " " + s.name, "ok");
+        })
+        .catch(e => say(e.message, "error"))
+        .finally(() => { button.disabled = false; delete button.dataset.busy; });
+};
+document.addEventListener("click", event => {
+    const button = event.target.closest("[data-cp-tax-lookup]");
+    if (button) taxLookup(button, true);
 });
+document.addEventListener("change", event => {
+    if (!event.target.matches("[data-cp-tax-input]")) return;
+    const button = event.target.closest(".cp-field")?.querySelector("[data-cp-tax-lookup]");
+    if (button && !button.closest("[data-cp-when]")?.hidden) taxLookup(button, false);
+});
+// Buyer form: fields follow the chosen buyer type (data-cp-when="BUSINESS HOUSEHOLD" shows a block only for those types;
+// data-cp-required-when marks inputs required only for those types). The server applies the same rules.
+const applyBuyerType = root => {
+    const type = root.querySelector("input[name='BuyerType']:checked")?.value || "";
+    root.querySelectorAll("[data-cp-when]").forEach(el => { el.hidden = !el.dataset.cpWhen.split(" ").includes(type); });
+    root.querySelectorAll("[data-cp-required-when]").forEach(el => { el.required = el.dataset.cpRequiredWhen.split(" ").includes(type); });
+    root.querySelectorAll("[data-cp-label-when]").forEach(el => { el.classList.toggle("is-required", el.dataset.cpLabelWhen.split(" ").includes(type)); });
+};
+const initBuyerForms = () => document.querySelectorAll("[data-cp-buyer-form]").forEach(applyBuyerType);
+document.addEventListener("change", event => {
+    const root = event.target.matches("input[name='BuyerType']") && event.target.closest("[data-cp-buyer-form]");
+    if (root) applyBuyerType(root);
+});
+document.addEventListener("ta:load", initBuyerForms);
+if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", initBuyerForms); else initBuyerForms();

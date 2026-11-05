@@ -1,0 +1,52 @@
+@model SignupVm
+@{ ViewData["Title"] = "Đăng ký"; }
+<div class="cp-auth">
+    <section class="cp-auth__panel" aria-hidden="true">
+        <span class="cp-brand"><span class="cp-brand__mark">T<span>A</span></span><span class="cp-brand__text">T.A Portal<small>Khách hàng</small></span></span>
+        <div class="cp-auth__headline">
+            <h1>Bắt đầu cùng T.A <em>trong vài phút.</em></h1>
+            <p>Đăng ký doanh nghiệp, chọn gói dịch vụ và quản lý thanh toán, hóa đơn điện tử ở một nơi.</p>
+        </div>
+        <ul class="cp-auth__points">
+            <li><span>@UiIcon.Render("receipt-tax")</span>Nhập mã số thuế, tự điền tên và địa chỉ</li>
+            <li><span>@UiIcon.Render("package")</span>Tự chọn gói, chuyển khoản là dùng</li>
+            <li><span>@UiIcon.Render("shield-check")</span>Dữ liệu riêng cho từng doanh nghiệp</li>
+        </ul>
+    </section>
+    <div class="cp-auth__form">
+        <div class="cp-auth__card cp-auth__card--wide">
+            <div class="cp-eyebrow">Customer Portal</div>
+            <h2>Đăng ký tài khoản doanh nghiệp</h2>
+            <p>Đã có tài khoản? <a asp-action="Login">Đăng nhập</a></p>
+            <form method="post" asp-action="Register" data-cp-signup>
+                <div asp-validation-summary="ModelOnly" class="cp-alert" role="alert"></div>
+                <div class="cp-seg" role="radiogroup" aria-label="Loại hình">
+                    <label><input type="radio" name="CustomerType" value="@SignupVm.Business" checked="@(Model.CustomerType != SignupVm.Household)" /><strong>Doanh nghiệp</strong><small>Công ty, chi nhánh (MST 10 số)</small></label>
+                    <label><input type="radio" name="CustomerType" value="@SignupVm.Household" checked="@(Model.CustomerType == SignupVm.Household)" /><strong>Hộ kinh doanh</strong><small>MST 10 hoặc 12 số</small></label>
+                </div>
+                <div class="cp-form-grid">
+                    <div class="cp-field cp-span">
+                        <label asp-for="TaxCode" class="cp-label">Mã số thuế</label>
+                        <div class="cp-lookup">
+                            <div class="cp-input-wrap">@UiIcon.Render("receipt-tax")<input asp-for="TaxCode" class="cp-input" inputmode="numeric" maxlength="20" required autocomplete="off" placeholder="VD: 0101234567" data-cp-tax-input /></div>
+                            <button class="cp-btn cp-btn--ghost" type="button" data-cp-tax-lookup="@Url.Action("TaxLookup")" data-cp-fill-name="#CompanyName" data-cp-fill-address="#Address">@UiIcon.Render("search")<span>Tra cứu</span></button>
+                        </div>
+                        <div class="cp-lookup-msg" aria-live="polite" data-cp-tax-msg>Nhập MST rồi bấm Tra cứu (hoặc rời ô) để tự điền tên và địa chỉ.</div>
+                        <span asp-validation-for="TaxCode" class="cp-error"></span>
+                    </div>
+                    <div class="cp-field cp-span"><label asp-for="CompanyName" class="cp-label">Tên doanh nghiệp / hộ kinh doanh</label><div class="cp-input-wrap">@UiIcon.Render("building")<input asp-for="CompanyName" class="cp-input" maxlength="250" required /></div><span asp-validation-for="CompanyName" class="cp-error"></span></div>
+                    <div class="cp-field cp-span"><label asp-for="Address" class="cp-label">Địa chỉ</label><div class="cp-input-wrap">@UiIcon.Render("map-pin")<input asp-for="Address" class="cp-input" maxlength="1000" /></div><span asp-validation-for="Address" class="cp-error"></span></div>
+                    <div class="cp-field"><label asp-for="ContactName" class="cp-label">Người liên hệ</label><div class="cp-input-wrap">@UiIcon.Render("user")<input asp-for="ContactName" class="cp-input" maxlength="200" required autocomplete="name" /></div><span asp-validation-for="ContactName" class="cp-error"></span></div>
+                    <div class="cp-field"><label asp-for="Phone" class="cp-label">Điện thoại</label><div class="cp-input-wrap">@UiIcon.Render("phone")<input asp-for="Phone" class="cp-input" inputmode="tel" maxlength="10" required autocomplete="tel" /></div><span asp-validation-for="Phone" class="cp-error"></span></div>
+                    <div class="cp-field cp-span"><label asp-for="Email" class="cp-label">Email (dùng để đăng nhập)</label><div class="cp-input-wrap">@UiIcon.Render("mail")<input asp-for="Email" class="cp-input" type="email" maxlength="100" required autocomplete="email" /></div><span asp-validation-for="Email" class="cp-error"></span></div>
+                    <div class="cp-field"><label asp-for="Password" class="cp-label">Mật khẩu</label><div class="cp-input-wrap">@UiIcon.Render("lock")<input asp-for="Password" id="password" type="password" class="cp-input" autocomplete="new-password" required maxlength="256" /><button class="cp-toggle" type="button" onclick="taTogglePassword('password',this)" aria-label="Hiện mật khẩu" aria-pressed="false">@UiIcon.Render("eye", "ta-icon-show")@UiIcon.Render("eye-off", "ta-icon-hide")</button></div><span asp-validation-for="Password" class="cp-error"></span></div>
+                    <div class="cp-field"><label asp-for="ConfirmPassword" class="cp-label">Nhập lại mật khẩu</label><div class="cp-input-wrap">@UiIcon.Render("lock")<input asp-for="ConfirmPassword" type="password" class="cp-input" autocomplete="new-password" required maxlength="256" /></div><span asp-validation-for="ConfirmPassword" class="cp-error"></span></div>
+                    <div class="cp-field cp-span"><div class="cp-hint">Mật khẩu tối thiểu 8 ký tự, có chữ cái, chữ số và ký tự đặc biệt.</div></div>
+                    <div class="cp-field cp-span"><label class="cp-check"><input type="checkbox" name="AcceptTerms" value="true" checked="@Model.AcceptTerms" required /><span>Tôi đồng ý với điều khoản sử dụng dịch vụ của T.A và xác nhận thông tin đăng ký là đúng.</span></label><span asp-validation-for="AcceptTerms" class="cp-error"></span></div>
+                </div>
+                <button type="submit" class="cp-btn cp-btn--primary cp-btn--block">@UiIcon.Render("user-plus")<span>Đăng ký</span></button>
+            </form>
+            <p class="cp-auth__foot">Sau khi đăng ký, bạn được đăng nhập ngay để chọn gói dịch vụ.</p>
+        </div>
+    </div>
+</div>

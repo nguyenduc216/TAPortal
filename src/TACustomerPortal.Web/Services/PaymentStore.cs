@@ -20,7 +20,44 @@ public static class BankStatus
     public const string PendingOtp = "PENDING_OTP", PendingBank = "PENDING_BANK", Active = "ACTIVE", Failed = "FAILED", PendingDelete = "PENDING_DELETE", Deleted = "DELETED";
 }
 
-public sealed record Contact(Guid Id, string Code, string Name, string? LegalName, string? TaxCode, string? Phone, string? Email, string? Address, string? Note, bool IsActive);
+public sealed record Contact(Guid Id, string Code, string Name, string? LegalName, string? TaxCode, string? Phone, string? Email, string? Address, string? Note, bool IsActive,
+    string? BuyerType = null, string? BuyerGroup = null, string? IdentityNumber = null, string? Zalo = null, string? BankName = null, string? BankAccountNumber = null,
+    string? BankAccountName = null)
+{
+    /// <summary>Stored type, or for rows saved before the type existed: a tax code ⇒ business, otherwise a retail customer.</summary>
+    public string Type => BuyerTypes.Normalize(BuyerType) ?? (TaxCode is null ? BuyerTypes.Individual : BuyerTypes.Business);
+}
+
+/// <summary>Kinds of buyer a company sells to (operator 2026-11-06): only a business must give a tax code.</summary>
+public static class BuyerTypes
+{
+    public const string Individual = "INDIVIDUAL";
+    public const string Household = "HOUSEHOLD";
+    public const string Business = "BUSINESS";
+    public const string Organization = "ORGANIZATION";
+    public static readonly IReadOnlyList<string> All = [Individual, Household, Business, Organization];
+
+    public static string? Normalize(string? value) => All.FirstOrDefault(t => string.Equals(t, value?.Trim(), StringComparison.OrdinalIgnoreCase));
+
+    public static string Label(string type) => type switch
+    {
+        Household => "Hộ kinh doanh",
+        Business => "Doanh nghiệp",
+        Organization => "Tổ chức khác",
+        _ => "Khách lẻ"
+    };
+
+    public static string Hint(string type) => type switch
+    {
+        Household => "Cửa hàng, quán, hộ cá thể",
+        Business => "Công ty, chi nhánh — cần MST",
+        Organization => "Trường, hội, đơn vị sự nghiệp",
+        _ => "Cá nhân, không cần MST"
+    };
+
+    /// <summary>Suggestions for the free "nhóm khách" field.</summary>
+    public static readonly IReadOnlyList<string> Groups = ["Nhà hàng", "Quán cà phê", "Khách sạn", "Bán lẻ", "Bán buôn", "Spa / làm đẹp", "Giáo dục", "Y tế", "Văn phòng"];
+}
 
 public sealed record OrderLine(int LineNumber, string ItemName, string? UnitName, decimal Quantity, decimal UnitPrice, string TaxRateCode, decimal AmountBeforeTax, decimal TaxAmount)
 {
@@ -177,8 +214,9 @@ WHERE CustomerId=@c AND (IsDefault=1 OR Id=@id)
     }
 
     // ---- contacts -----------------------------------------------------------------------------------------
-    private const string ContactColumns = "Id,Code,Name,LegalName,TaxCode,Phone,Email,Address,Note,IsActive";
-    private static Contact ReadContact(SqlDataReader r) => new(r.GetGuid(0), r.GetString(1), r.GetString(2), S(r, 3), S(r, 4), S(r, 5), S(r, 6), S(r, 7), S(r, 8), r.GetBoolean(9));
+    private const string ContactColumns = "Id,Code,Name,LegalName,TaxCode,Phone,Email,Address,Note,IsActive,BuyerType,BuyerGroup,IdentityNumber,Zalo,BankName,BankAccountNumber,BankAccountName";
+    private static Contact ReadContact(SqlDataReader r) => new(r.GetGuid(0), r.GetString(1), r.GetString(2), S(r, 3), S(r, 4), S(r, 5), S(r, 6), S(r, 7), S(r, 8), r.GetBoolean(9),
+        S(r, 10), S(r, 11), S(r, 12), S(r, 13), S(r, 14), S(r, 15), S(r, 16));
 
     public async Task<IReadOnlyList<Contact>> ContactsAsync(Guid customerId)
     {
@@ -202,10 +240,18 @@ WHERE CustomerId=@c AND (IsDefault=1 OR Id=@id)
     {
         await using var cn = await Open();
         var sql = x.Id == Guid.Empty
-            ? "INSERT dbo.CustomerBuyers(CustomerId,Code,Name,LegalName,TaxCode,Phone,Email,Address,Note,IsActive,CreatedBy) VALUES(@c,@code,@name,@legal,@tax,@phone,@email,@address,@note,1,@actor)"
-            : "UPDATE dbo.CustomerBuyers SET Code=@code,Name=@name,LegalName=@legal,TaxCode=@tax,Phone=@phone,Email=@email,Address=@address,Note=@note,UpdatedAt=SYSUTCDATETIME(),UpdatedBy=@actor WHERE CustomerId=@c AND Id=@id AND IsDeleted=0";
+            ? """
+INSERT dbo.CustomerBuyers(CustomerId,Code,Name,LegalName,TaxCode,Phone,Email,Address,Note,IsActive,CreatedBy,BuyerType,BuyerGroup,IdentityNumber,Zalo,BankName,BankAccountNumber,BankAccountName)
+VALUES(@c,@code,@name,@legal,@tax,@phone,@email,@address,@note,1,@actor,@type,@group,@identity,@zalo,@bank,@bankNo,@bankName)
+"""
+            : """
+UPDATE dbo.CustomerBuyers SET Code=@code,Name=@name,LegalName=@legal,TaxCode=@tax,Phone=@phone,Email=@email,Address=@address,Note=@note,
+ BuyerType=@type,BuyerGroup=@group,IdentityNumber=@identity,Zalo=@zalo,BankName=@bank,BankAccountNumber=@bankNo,BankAccountName=@bankName,
+ UpdatedAt=SYSUTCDATETIME(),UpdatedBy=@actor WHERE CustomerId=@c AND Id=@id AND IsDeleted=0
+""";
         await using var cmd = Command(cn, sql, ("@c", customerId), ("@id", x.Id), ("@code", x.Code), ("@name", x.Name), ("@legal", x.LegalName), ("@tax", x.TaxCode),
-            ("@phone", x.Phone), ("@email", x.Email), ("@address", x.Address), ("@note", x.Note), ("@actor", actor));
+            ("@phone", x.Phone), ("@email", x.Email), ("@address", x.Address), ("@note", x.Note), ("@actor", actor), ("@type", x.Type), ("@group", x.BuyerGroup),
+            ("@identity", x.IdentityNumber), ("@zalo", x.Zalo), ("@bank", x.BankName), ("@bankNo", x.BankAccountNumber), ("@bankName", x.BankAccountName));
         try { await cmd.ExecuteNonQueryAsync(); return true; }
         catch (SqlException ex) when (ex.Number is 2601 or 2627) { return false; }
     }

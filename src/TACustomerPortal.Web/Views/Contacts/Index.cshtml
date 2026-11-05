@@ -2,11 +2,11 @@
 @{
     ViewData["Title"] = "Khách hàng";
     ViewData["Eyebrow"] = "Thanh toán";
-    ViewData["Subtitle"] = "Khách hàng của doanh nghiệp: người thanh toán đơn hàng và người mua trên hóa đơn điện tử.";
+    ViewData["Subtitle"] = "Khách hàng của doanh nghiệp: khách lẻ, hộ kinh doanh, doanh nghiệp — người thanh toán đơn hàng và người mua trên hóa đơn điện tử.";
 }
 <section class="cp-card">
     <div class="cp-toolbar">
-        <div class="cp-search">@UiIcon.Render("search")<input class="cp-input" type="search" aria-label="Tìm khách hàng" placeholder="Tìm theo mã, tên, MST, điện thoại..." oninput="taFilterRows(this.value,'contactsTable')" /></div>
+        <div class="cp-search">@UiIcon.Render("search")<input class="cp-input" type="search" aria-label="Tìm khách hàng" placeholder="Tìm theo mã, tên, nhóm, MST, CCCD, điện thoại..." oninput="taFilterRows(this.value,'contactsTable')" /></div>
         @if (Model.CanManage) {<div class="cp-toolbar__end"><a class="cp-btn cp-btn--primary" asp-action="Create">@UiIcon.Render("user-plus")<span>Thêm khách hàng</span></a></div>}
     </div>
     @if (Model.Contacts.Count == 0)
@@ -17,15 +17,16 @@
     {
         <div class="cp-table-wrap">
             <table class="cp-table" id="contactsTable" data-ta-pager="10">
-                <thead><tr><th>Mã</th><th>Khách hàng</th><th>MST</th><th>Liên hệ</th><th>Trạng thái</th><th class="cp-actions">Thao tác</th></tr></thead>
+                <thead><tr><th>Mã</th><th>Khách hàng</th><th>Loại</th><th>MST / CCCD</th><th>Liên hệ</th><th>Trạng thái</th><th class="cp-actions">Thao tác</th></tr></thead>
                 <tbody>
                 @foreach (var c in Model.Contacts)
                 {
                     <tr data-ta-row>
                         <td><span class="cp-code">@c.Code</span></td>
                         <td><strong>@c.Name</strong>@if (c.LegalName is string legal) {<div class="cp-muted">@legal</div>}</td>
-                        <td>@(c.TaxCode ?? "—")</td>
-                        <td>@(c.Phone ?? "—")<div class="cp-muted">@c.Email</div></td>
+                        <td data-cp-buyer-type="@c.Type"><span class="cp-badge @(c.Type == BuyerTypes.Business ? "cp-badge--blue" : c.Type == BuyerTypes.Individual ? "cp-badge--soft" : "cp-badge--gold")">@BuyerTypes.Label(c.Type)</span>@if (c.BuyerGroup is string g) {<div class="cp-muted">@g</div>}</td>
+                        <td>@(c.TaxCode ?? c.IdentityNumber ?? "—")@if (c.TaxCode is null && c.IdentityNumber is not null) {<div class="cp-muted">CCCD</div>}</td>
+                        <td>@(c.Phone ?? "—")@if (c.Zalo is string z) {<div class="cp-muted">Zalo: @z</div>}<div class="cp-muted">@c.Email</div></td>
                         <td><span class="cp-badge @(c.IsActive ? "cp-badge--green" : "cp-badge--soft")">@(c.IsActive ? "Đang dùng" : "Ngừng sử dụng")</span></td>
                         <td class="cp-actions">
                             @if (Model.CanManage)

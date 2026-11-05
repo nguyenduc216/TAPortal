@@ -405,3 +405,22 @@ textarea.cp-input { height: auto; min-height: 72px; padding-top: 8px; padding-bo
 /* Reconciliation: actions under a transaction. */
 .cp-tx-actions { margin-top: 6px; }
 .cp-tx-actions form { margin-top: 6px; }
+/* Sign-up and buyer forms: type choice as tiles, tax code with a lookup button, sections that follow the chosen type. */
+.cp-auth__card--wide { width: min(640px, 100%); }
+.cp-seg { display: grid; gap: 8px; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); margin-bottom: 14px; }
+.cp-seg label { display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border: 1px solid var(--cp-line); border-radius: 10px; background: var(--cp-surface); cursor: pointer; transition: background .15s, border-color .15s; }
+.cp-seg label:hover { background: var(--cp-hover-bg); border-color: var(--cp-hover-line); }
+.cp-seg input { position: absolute; opacity: 0; pointer-events: none; }
+.cp-seg strong { font-size: 13.5px; }
+.cp-seg small { color: var(--cp-ink-3); font-size: 11.5px; }
+.cp-seg label:has(input:checked) { border-color: var(--cp-blue-600); box-shadow: 0 0 0 1px var(--cp-blue-600) inset; }
+.cp-seg label:has(input:focus-visible) { outline: 2px solid var(--cp-blue-600); outline-offset: 2px; }
+.cp-lookup { display: flex; gap: 8px; }
+.cp-lookup .cp-input-wrap { flex: 1 1 auto; min-width: 0; }
+.cp-lookup .cp-btn { flex: none; }
+.cp-lookup-msg { margin-top: 5px; font-size: 12px; color: var(--cp-ink-3); }
+.cp-lookup-msg.is-ok { color: var(--cp-green-700); }
+.cp-lookup-msg.is-error { color: #B42318; }
+.cp-form-section { grid-column: 1 / -1; margin: 6px 0 2px; font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--cp-ink-3); }
+[data-cp-when][hidden] { display: none !important; }
+.cp-label.is-required::after { content: " *"; color: #B42318; }

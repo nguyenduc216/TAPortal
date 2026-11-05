@@ -103,6 +103,53 @@ public sealed class SafeCustomerPaymentsTests
         Assert.Single(store.Contacts);
     }
 
+    // Operator 2026-11-06: buyers are retail customers, households, businesses or other organisations; only a business must
+    // give a tax code (and its registered name). Fields that do not apply to the chosen type are not kept.
+    [Fact]
+    public async Task BuyerTypesDecideWhichDetailsAreRequiredAndKept()
+    {
+        using var f = Factory("OWNER", out var store, out _);
+        var c = Client(f);
+        var form = WebUtility.HtmlDecode(await c.GetStringAsync("/contacts/create"));
+        Assert.Contains("data-cp-buyer-form", form);
+        foreach (var t in new[] { "INDIVIDUAL", "HOUSEHOLD", "BUSINESS", "ORGANIZATION" }) Assert.Contains($"value=\"{t}\"", form);
+        Assert.Contains("data-cp-tax-lookup=\"/account/tax-lookup\"", form);
+        var token = await Token(c, "/contacts/create");
+
+        var noTax = await Post(c, "/contacts/create", token, new() { ["BuyerType"] = "BUSINESS", ["Name"] = "Nhà hàng Sen", ["LegalName"] = "Công ty Sen" });
+        Assert.Equal(HttpStatusCode.BadRequest, noTax.StatusCode);
+        Assert.Contains("Khách hàng doanh nghiệp cần mã số thuế", WebUtility.HtmlDecode(await noTax.Content.ReadAsStringAsync()));
+
+        // A retail customer: name, Zalo, CCCD and bank account; a tax code left over from another type is dropped.
+        Assert.Equal(HttpStatusCode.Redirect, (await Post(c, "/contacts/create", token, new()
+        {
+            ["BuyerType"] = "INDIVIDUAL", ["Name"] = "Chị Lan", ["BuyerGroup"] = "Bán lẻ", ["TaxCode"] = "0101234567", ["LegalName"] = "Cũ",
+            ["IdentityNumber"] = "001 088 012345", ["Zalo"] = "0912345678", ["BankName"] = "Vietcombank", ["BankAccountNumber"] = "0123 456 789", ["BankAccountName"] = "Nguyen Thi Lan"
+        })).StatusCode);
+        var lan = store.Contacts.Single(x => x.Contact.Name == "Chị Lan").Contact;
+        Assert.Equal(("INDIVIDUAL", null, null, "001088012345", "0912345678"), (lan.Type, lan.TaxCode, lan.LegalName, lan.IdentityNumber, lan.Zalo));
+        Assert.Equal(("Vietcombank", "0123456789", "NGUYEN THI LAN", "Bán lẻ"), (lan.BankName, lan.BankAccountNumber, lan.BankAccountName, lan.BuyerGroup));
+
+        // A business: tax code and registered name; no CCCD kept.
+        Assert.Equal(HttpStatusCode.Redirect, (await Post(c, "/contacts/create", token, new()
+        {
+            ["BuyerType"] = "BUSINESS", ["Name"] = "Anh Minh", ["LegalName"] = "Công ty TNHH Sen Vàng", ["TaxCode"] = "0101234567", ["IdentityNumber"] = "001088012345"
+        })).StatusCode);
+        var sen = store.Contacts.Single(x => x.Contact.Name == "Anh Minh").Contact;
+        Assert.Equal(("BUSINESS", "0101234567", null), (sen.Type, sen.TaxCode, sen.IdentityNumber));
+
+        // A bank account number needs its bank.
+        var noBank = await Post(c, "/contacts/create", token, new() { ["BuyerType"] = "HOUSEHOLD", ["Name"] = "Quán Bà Tư", ["BankAccountNumber"] = "123456" });
+        Assert.Equal(HttpStatusCode.BadRequest, noBank.StatusCode);
+
+        // Rows saved before the type existed: a tax code means business, otherwise a retail customer.
+        Assert.Equal("BUSINESS", (Contact(Guid.NewGuid(), "KH9", "Cũ") with { TaxCode = "0101234567" }).Type);
+        Assert.Equal("INDIVIDUAL", Contact(Guid.NewGuid(), "KH9", "Cũ").Type);
+        var list = WebUtility.HtmlDecode(await c.GetStringAsync("/contacts"));
+        Assert.Contains("data-cp-buyer-type=\"INDIVIDUAL\"", list);
+        Assert.Contains("Zalo: 0912345678", list);
+    }
+
     [Fact]
     public async Task NewCustomerCodesAreNumberedAutomatically()
     {

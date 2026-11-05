@@ -1,21 +1,55 @@
+@using TAPortal.Integrations.Tingee
 @model ContactInput
 @{
     var isNew = Model.Id == Guid.Empty;
     ViewData["Title"] = isNew ? "Thêm khách hàng" : "Sửa khách hàng";
     ViewData["Eyebrow"] = "Khách hàng";
-    ViewData["Subtitle"] = "Tên đơn vị, MST và địa chỉ được dùng làm thông tin người mua khi xuất hóa đơn điện tử.";
+    ViewData["Subtitle"] = "Khách lẻ chỉ cần tên và cách liên hệ; khách doanh nghiệp cần mã số thuế để xuất hóa đơn điện tử.";
+    var type = BuyerTypes.Normalize(Model.BuyerType) ?? BuyerTypes.Individual;
+    bool Hide(string types) => !types.Split(' ').Contains(type);
 }
-<form class="cp-card" method="post" asp-action="@(isNew ? "Create" : "Edit")" asp-route-id="@(isNew ? null : Model.Id)">
+<form class="cp-card" method="post" asp-action="@(isNew ? "Create" : "Edit")" asp-route-id="@(isNew ? null : Model.Id)" data-cp-buyer-form>
     <div class="cp-card__body">
         <div asp-validation-summary="ModelOnly" class="cp-alert" role="alert"></div>
+        <div class="cp-label">Loại khách hàng</div>
+        <div class="cp-seg" role="radiogroup" aria-label="Loại khách hàng" data-cp-buyer-types>
+            @foreach (var t in BuyerTypes.All)
+            {
+                <label><input type="radio" name="BuyerType" value="@t" checked="@(t == type)" /><strong>@BuyerTypes.Label(t)</strong><small>@BuyerTypes.Hint(t)</small></label>
+            }
+        </div>
         <div class="cp-form-grid">
+            <div class="cp-form-section">Thông tin chung</div>
             <div class="cp-field"><label asp-for="Code" class="cp-label">Mã khách hàng</label><div class="cp-input-wrap">@UiIcon.Render("hash")<input asp-for="Code" class="cp-input" maxlength="50" required="@(Model.Id != Guid.Empty)" /></div>@if (Model.Id == Guid.Empty) {<div class="cp-hint">Tự động theo thứ tự (KH001, KH002…); có thể sửa hoặc để trống.</div>}<span asp-validation-for="Code" class="cp-error"></span></div>
-            <div class="cp-field"><label asp-for="Name" class="cp-label">Tên khách hàng / người liên hệ</label><div class="cp-input-wrap">@UiIcon.Render("user")<input asp-for="Name" class="cp-input" maxlength="250" required /></div><span asp-validation-for="Name" class="cp-error"></span></div>
-            <div class="cp-field"><label asp-for="LegalName" class="cp-label">Tên đơn vị (trên hóa đơn)</label><div class="cp-input-wrap">@UiIcon.Render("building")<input asp-for="LegalName" class="cp-input" maxlength="250" /></div><span asp-validation-for="LegalName" class="cp-error"></span></div>
-            <div class="cp-field"><label asp-for="TaxCode" class="cp-label">Mã số thuế</label><div class="cp-input-wrap">@UiIcon.Render("receipt-tax")<input asp-for="TaxCode" class="cp-input" inputmode="numeric" /></div><span asp-validation-for="TaxCode" class="cp-error"></span></div>
-            <div class="cp-field"><label asp-for="Phone" class="cp-label">Điện thoại (Zalo)</label><div class="cp-input-wrap">@UiIcon.Render("phone")<input asp-for="Phone" class="cp-input" inputmode="tel" /></div><span asp-validation-for="Phone" class="cp-error"></span></div>
+            <div class="cp-field"><label asp-for="Name" class="cp-label is-required">Tên khách hàng / người liên hệ</label><div class="cp-input-wrap">@UiIcon.Render("user")<input asp-for="Name" class="cp-input" maxlength="250" required /></div><span asp-validation-for="Name" class="cp-error"></span></div>
+            <div class="cp-field"><label asp-for="BuyerGroup" class="cp-label">Nhóm khách</label><div class="cp-input-wrap">@UiIcon.Render("users-group")<input asp-for="BuyerGroup" class="cp-input" maxlength="100" list="buyerGroups" placeholder="VD: Nhà hàng, Bán lẻ…" /></div>
+                <datalist id="buyerGroups">@foreach (var g in BuyerTypes.Groups) {<option value="@g"></option>}</datalist><span asp-validation-for="BuyerGroup" class="cp-error"></span></div>
+
+            <div class="cp-form-section" data-cp-when="HOUSEHOLD BUSINESS ORGANIZATION" hidden="@Hide("HOUSEHOLD BUSINESS ORGANIZATION")">Thuế và hóa đơn</div>
+            <div class="cp-field" data-cp-when="HOUSEHOLD BUSINESS ORGANIZATION" hidden="@Hide("HOUSEHOLD BUSINESS ORGANIZATION")">
+                <label asp-for="TaxCode" class="cp-label @(type == BuyerTypes.Business ? "is-required" : "")" data-cp-label-when="BUSINESS">Mã số thuế</label>
+                <div class="cp-lookup">
+                    <div class="cp-input-wrap">@UiIcon.Render("receipt-tax")<input asp-for="TaxCode" class="cp-input" inputmode="numeric" maxlength="20" autocomplete="off" required="@(type == BuyerTypes.Business)" data-cp-required-when="BUSINESS" data-cp-tax-input /></div>
+                    <button class="cp-btn cp-btn--ghost" type="button" data-cp-tax-lookup="@Url.Action("TaxLookup", "Account")" data-cp-fill-name="#LegalName" data-cp-fill-address="#Address">@UiIcon.Render("search")<span>Tra cứu</span></button>
+                </div>
+                <div class="cp-lookup-msg" aria-live="polite" data-cp-tax-msg>MST doanh nghiệp 10 số: bấm Tra cứu để điền tên đơn vị và địa chỉ.</div>
+                <span asp-validation-for="TaxCode" class="cp-error"></span>
+            </div>
+            <div class="cp-field" data-cp-when="HOUSEHOLD BUSINESS ORGANIZATION" hidden="@Hide("HOUSEHOLD BUSINESS ORGANIZATION")"><label asp-for="LegalName" class="cp-label @(type is BuyerTypes.Business or BuyerTypes.Organization ? "is-required" : "")" data-cp-label-when="BUSINESS ORGANIZATION">Tên đơn vị (trên hóa đơn)</label><div class="cp-input-wrap">@UiIcon.Render("building")<input asp-for="LegalName" class="cp-input" maxlength="250" required="@(type is BuyerTypes.Business or BuyerTypes.Organization)" data-cp-required-when="BUSINESS ORGANIZATION" /></div><span asp-validation-for="LegalName" class="cp-error"></span></div>
+            <div class="cp-field" data-cp-when="INDIVIDUAL HOUSEHOLD" hidden="@Hide("INDIVIDUAL HOUSEHOLD")"><label asp-for="IdentityNumber" class="cp-label">Số CCCD</label><div class="cp-input-wrap">@UiIcon.Render("id")<input asp-for="IdentityNumber" class="cp-input" maxlength="20" autocomplete="off" /></div><div class="cp-hint">Không bắt buộc. Dùng làm mã định danh người mua khi không có MST.</div><span asp-validation-for="IdentityNumber" class="cp-error"></span></div>
+
+            <div class="cp-form-section">Liên hệ</div>
+            <div class="cp-field"><label asp-for="Phone" class="cp-label">Điện thoại</label><div class="cp-input-wrap">@UiIcon.Render("phone")<input asp-for="Phone" class="cp-input" inputmode="tel" maxlength="10" /></div><span asp-validation-for="Phone" class="cp-error"></span></div>
+            <div class="cp-field"><label asp-for="Zalo" class="cp-label">Zalo</label><div class="cp-input-wrap">@UiIcon.Render("phone")<input asp-for="Zalo" class="cp-input" maxlength="100" placeholder="Số Zalo hoặc tên Zalo" /></div><span asp-validation-for="Zalo" class="cp-error"></span></div>
             <div class="cp-field"><label asp-for="Email" class="cp-label">Email nhận hóa đơn</label><div class="cp-input-wrap">@UiIcon.Render("mail")<input asp-for="Email" class="cp-input" type="email" /></div><span asp-validation-for="Email" class="cp-error"></span></div>
             <div class="cp-field cp-span"><label asp-for="Address" class="cp-label">Địa chỉ</label><div class="cp-input-wrap">@UiIcon.Render("map-pin")<input asp-for="Address" class="cp-input" maxlength="500" /></div><span asp-validation-for="Address" class="cp-error"></span></div>
+
+            <div class="cp-form-section">Tài khoản ngân hàng</div>
+            <div class="cp-field"><label asp-for="BankName" class="cp-label">Ngân hàng</label><div class="cp-input-wrap">@UiIcon.Render("building-bank")<input asp-for="BankName" class="cp-input" maxlength="100" list="buyerBanks" /></div>
+                <datalist id="buyerBanks">@foreach (var bk in TingeeBankCatalog.Banks) {<option value="@bk.Name"></option>}</datalist><span asp-validation-for="BankName" class="cp-error"></span></div>
+            <div class="cp-field"><label asp-for="BankAccountNumber" class="cp-label">Số tài khoản</label><div class="cp-input-wrap">@UiIcon.Render("hash")<input asp-for="BankAccountNumber" class="cp-input" inputmode="numeric" maxlength="30" autocomplete="off" /></div><span asp-validation-for="BankAccountNumber" class="cp-error"></span></div>
+            <div class="cp-field"><label asp-for="BankAccountName" class="cp-label">Chủ tài khoản</label><div class="cp-input-wrap">@UiIcon.Render("user")<input asp-for="BankAccountName" class="cp-input" maxlength="150" placeholder="VIẾT HOA KHÔNG DẤU" /></div><span asp-validation-for="BankAccountName" class="cp-error"></span></div>
+
             <div class="cp-field cp-span"><label asp-for="Note" class="cp-label">Ghi chú</label><div class="cp-input-wrap cp-input-wrap--top">@UiIcon.Render("file-text")<textarea asp-for="Note" class="cp-input" maxlength="1000"></textarea></div><span asp-validation-for="Note" class="cp-error"></span></div>
         </div>
     </div>

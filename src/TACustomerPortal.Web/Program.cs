@@ -16,6 +16,9 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddSingleton<PasswordService>();
 builder.Services.AddSingleton<LoginAttemptLimiter>();
 builder.Services.AddScoped<ICustomerStore, CustomerStore>();
+builder.Services.AddScoped<ISignupStore, SqlSignupStore>();
+builder.Services.AddHttpClient(VietQrTaxCodeLookup.ClientName, c => { c.BaseAddress = new Uri("https://api.vietqr.io/"); c.Timeout = TimeSpan.FromSeconds(6); });
+builder.Services.AddSingleton<ITaxCodeLookup, VietQrTaxCodeLookup>();
 builder.Services.AddScoped<ICurrentCustomerContext, CurrentCustomerContext>();
 builder.Services.AddScoped<CustomerCookieEvents>();
 builder.Services.AddScoped<IPaymentStore, SqlPaymentStore>();
@@ -57,6 +60,7 @@ builder.Services.AddRateLimiter(o =>
         context.HttpContext.Response.ContentType = "text/plain; charset=utf-8";
         await context.HttpContext.Response.WriteAsync("Quá nhiều yêu cầu đăng nhập từ địa chỉ này. Vui lòng đợi 1 phút rồi thử lại.", token);
     };
+    o.AddPolicy("lookup", context => RateLimitPartition.GetFixedWindowLimiter(context.Connection.RemoteIpAddress?.ToString() ?? "unknown", _ => new FixedWindowRateLimiterOptions { PermitLimit = 20, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
     o.AddPolicy("login", context => RateLimitPartition.GetFixedWindowLimiter(context.Connection.RemoteIpAddress?.ToString() ?? "unknown", _ => new FixedWindowRateLimiterOptions { PermitLimit = 10, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
 });
 // Read configuration when options are resolved, including host-supplied configuration.

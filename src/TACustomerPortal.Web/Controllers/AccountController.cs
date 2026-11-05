@@ -80,6 +80,82 @@ public sealed class AccountController(ICustomerStore store, PasswordService pass
         return memberships.Count == 1 ? LocalRedirect(Url.Content("~/")) : RedirectToAction(nameof(SelectCustomer));
     }
 
+    // ---- self sign-up (operator decision 2026-11-06) ----------------------------------------------------------------
+    [AllowAnonymous, HttpGet("register")]
+    public IActionResult Register() => User.Identity?.IsAuthenticated == true ? LocalRedirect(Url.Content("~/")) : View(new SignupVm());
+
+    [AllowAnonymous, HttpPost("register"), EnableRateLimiting("login")]
+    public async Task<IActionResult> Register(SignupVm vm, [FromServices] ISignupStore signups)
+    {
+        vm.TaxCode = TaxCodeRules.Normalize(vm.TaxCode) ?? "";
+        vm.Email = vm.Email?.Trim().ToLowerInvariant() ?? "";
+        vm.Phone = vm.Phone?.Trim() ?? "";
+        vm.CompanyName = vm.CompanyName?.Trim() ?? "";
+        vm.ContactName = vm.ContactName?.Trim() ?? "";
+        vm.Address = string.IsNullOrWhiteSpace(vm.Address) ? null : vm.Address.Trim();
+        if (vm.CustomerType is not (SignupVm.Business or SignupVm.Household)) vm.CustomerType = SignupVm.Business;
+        var taxOk = vm.CustomerType == SignupVm.Business ? TaxCodeRules.IsLookupable(vm.TaxCode) : TaxCodeRules.IsValid(vm.TaxCode);
+        if (vm.TaxCode.Length > 0 && !taxOk)
+            ModelState.AddModelError(nameof(vm.TaxCode), vm.CustomerType == SignupVm.Business
+                ? "Mã số thuế doanh nghiệp gồm 10 chữ số (chi nhánh: 10 chữ số-3 chữ số)."
+                : "Mã số thuế hộ kinh doanh gồm 10 hoặc 12 chữ số.");
+        var (passwordOk, passwordError) = PasswordPolicy.Validate(vm.Password);
+        if (!passwordOk) ModelState.AddModelError(nameof(vm.Password), passwordError);
+        if (!ModelState.IsValid) { Response.StatusCode = StatusCodes.Status400BadRequest; return View(vm); }
+
+        SignupResult result;
+        try
+        {
+            result = await signups.RegisterAsync(new SignupRequest(vm.TaxCode, vm.CompanyName, vm.CustomerType, vm.Address, vm.ContactName, vm.Email, vm.Phone,
+                passwords.Hash(vm.Password), HttpContext.Connection.RemoteIpAddress?.ToString()));
+        }
+        catch (Exception ex) when (IsDataUnavailable(ex))
+        {
+            var reference = RequestReference;
+            logger.LogError(ex, "CUSTOMER_SIGNUP_DATA_UNAVAILABLE reference {Reference} sql error {SqlNumber}", reference, (ex as SqlException)?.Number);
+            Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
+            ModelState.AddModelError("", $"Hệ thống tạm thời chưa đăng ký được. Vui lòng thử lại sau hoặc liên hệ T.A (mã sự cố: {reference}).");
+            return View(vm);
+        }
+        switch (result.Outcome)
+        {
+            case SignupOutcome.TaxCodeTaken:
+                ModelState.AddModelError(nameof(vm.TaxCode), "Mã số thuế này đã có tài khoản. Hãy đăng nhập, hoặc liên hệ T.A để được thêm vào doanh nghiệp.");
+                break;
+            case SignupOutcome.EmailTaken:
+                ModelState.AddModelError(nameof(vm.Email), "Email này đã được dùng cho một tài khoản khác. Hãy đăng nhập hoặc dùng email khác.");
+                break;
+            case SignupOutcome.AuditUnavailable:
+                ModelState.AddModelError("", "Hệ thống tạm thời chưa đăng ký được. Vui lòng thử lại sau.");
+                break;
+            case SignupOutcome.Created:
+                logger.LogInformation("CUSTOMER_SELF_REGISTERED customer {CustomerId} user {UserId}", result.CustomerId, result.UserId);
+                var user = new CustomerUser(result.UserId, vm.Email, vm.ContactName, vm.Email, "");
+                await HttpContext.SignOutAsync();
+                await HttpContext.SignInAsync(CustomerIdentity.Create(user, result.CustomerId), new AuthenticationProperties { IsPersistent = false });
+                TempData["Success"] = $"Đăng ký thành công. Chào mừng {vm.CompanyName}! Chọn gói dịch vụ để bắt đầu.";
+                return RedirectToAction("Index", "ServicePackages");
+        }
+        Response.StatusCode = StatusCodes.Status400BadRequest;
+        return View(vm);
+    }
+
+    /// <summary>Name and address registered for an enterprise tax code, to fill the sign-up and buyer forms (public data).</summary>
+    [AllowAnonymous, HttpGet("tax-lookup"), EnableRateLimiting("lookup")]
+    public async Task<IActionResult> TaxLookup(string? code, [FromServices] ITaxCodeLookup lookup)
+    {
+        var result = await lookup.LookupAsync(code, HttpContext.RequestAborted);
+        var message = result.Status switch
+        {
+            TaxCodeLookupStatus.Found => "Đã điền tên và địa chỉ theo đăng ký thuế.",
+            TaxCodeLookupStatus.NotFound => "Không tìm thấy mã số thuế này. Kiểm tra lại hoặc nhập tay.",
+            TaxCodeLookupStatus.Invalid => "Chỉ tra cứu được mã số thuế doanh nghiệp 10 chữ số (hoặc 10-3).",
+            _ => "Tạm thời chưa tra cứu được. Vui lòng nhập tay tên và địa chỉ."
+        };
+        var info = result.Info;
+        return Json(new { ok = info is not null, name = info?.Name, shortName = info?.ShortName, address = info?.Address, message });
+    }
+
     [HttpPost("logout")]
     public async Task<IActionResult> Logout()
     {

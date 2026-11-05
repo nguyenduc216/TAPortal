@@ -57,6 +57,27 @@ public sealed class ContactInput
 
     [StringLength(1000, ErrorMessage = "Ghi chú tối đa 1000 ký tự.")]
     public string? Note { get; set; }
+
+    /// <summary>INDIVIDUAL / HOUSEHOLD / BUSINESS / ORGANIZATION (<see cref="BuyerTypes"/>); only a business must give a tax code.</summary>
+    public string BuyerType { get; set; } = BuyerTypes.Individual;
+
+    [StringLength(100, ErrorMessage = "Nhóm khách tối đa 100 ký tự.")]
+    public string? BuyerGroup { get; set; }
+
+    [RegularExpression("^[0-9]{9}$|^[0-9]{12}$|^[A-Za-z][0-9]{7,8}$", ErrorMessage = "Số CCCD gồm 12 chữ số (CMND 9 chữ số; hộ chiếu: 1 chữ cái + 7–8 chữ số).")]
+    public string? IdentityNumber { get; set; }
+
+    [StringLength(100, ErrorMessage = "Zalo tối đa 100 ký tự.")]
+    public string? Zalo { get; set; }
+
+    [StringLength(100, ErrorMessage = "Tên ngân hàng tối đa 100 ký tự.")]
+    public string? BankName { get; set; }
+
+    [RegularExpression("^[0-9A-Za-z]{4,30}$", ErrorMessage = "Số tài khoản gồm 4–30 chữ số/chữ cái, không dấu cách.")]
+    public string? BankAccountNumber { get; set; }
+
+    [StringLength(150, ErrorMessage = "Tên chủ tài khoản tối đa 150 ký tự.")]
+    public string? BankAccountName { get; set; }
 }
 
 public sealed record OrdersVm(CustomerMembership Customer, bool CanManage, bool Linked, string? Filter, IReadOnlyList<Order> Orders, DateTime UtcNow,
