@@ -25,7 +25,7 @@ Trong phạm vi:
 ## Migration SQL (KHÔNG tự chạy)
 - Database: TAPortalSys
 - 021-customer-buyer-profile.sql: thêm 7 cột nullable vào dbo.CustomerBuyers (+ CK_CB_BuyerType). Verify 031, rollback 032 (từ chối khi cột có dữ liệu).
-- Execution: xem report.
+- Execution: EXECUTED 2026-11-05T23:55:38Z (pre-check NOT_APPLIED; dry-run afterMigration=PASS, afterRollback=NOT_APPLIED, trancount 0; full backup age 519 phút; gates 455/455; real run VERIFY_STATUS=PASS). Log cục bộ (gitignored): `.codec/reports/CUSTOMER-PORTAL-FOUNDATION-CHG-20261105T235309Z-2AA0D3-migrations-20261105T235407Z.log`.
 
 ## Test và kết quả
 - `dotnet build TAPortal.sln -c Release`: 0 lỗi. Safe tests: 455/455 pass. `test_codec.py` OK. `git diff --check` OK. `codec.py validate`: lỗi publish path có sẵn từ trước (không do change này).
