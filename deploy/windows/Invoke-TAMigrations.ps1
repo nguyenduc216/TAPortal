@@ -28,6 +28,10 @@ param(
 $ErrorActionPreference = 'Stop'
 # powershell -File passes "a","b" as one string: accept commas inside items too.
 $Plan = @($Plan | ForEach-Object { $_ -split ',' } | ForEach-Object { $_.Trim() } | Where-Object { $_ })
+# Same ssh/scp as Deploy-TARemote.ps1: Windows' own ssh.exe refuses ~/.ssh/config when its ACL has foreign entries.
+$Ssh = 'C:\Program Files\Git\usr\bin\ssh.exe'
+$Scp = 'C:\Program Files\Git\usr\bin\scp.exe'
+if (-not (Test-Path $Ssh)) { $Ssh = Join-Path $env:windir 'System32\OpenSSH\ssh.exe'; $Scp = Join-Path $env:windir 'System32\OpenSSH\scp.exe' }
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 $stamp = (Get-Date).ToUniversalTime().ToString('yyyyMMddTHHmmssZ')
 $log = Join-Path $root ".codec\reports\$ChangeId-migrations-$stamp.log"
@@ -39,14 +43,14 @@ function Fail([string]$text) { Log "STOP: $text"; exit 1 }
 function Upload([string]$name, [string]$text) {
     $tmp = Join-Path ([IO.Path]::GetTempPath()) $name
     [IO.File]::WriteAllText($tmp, $text, (New-Object Text.UTF8Encoding($false)))
-    & scp -q $tmp "${SshHost}:$($remote.Replace('\', '/'))/$name"
+    & $Scp -q $tmp "${SshHost}:$($remote.Replace('\', '/'))/$name"
     $code = $LASTEXITCODE
     Remove-Item $tmp
     if ($code -ne 0) { Fail "upload of $name failed" }
 }
 function Sql([string]$file, [switch]$Plain) {
     $format = if ($Plain) { ' -h -1 -W' } else { '' }
-    $out = & ssh $SshHost "sqlcmd -S $Instance -E -d TAPortalSys -b -I$format -i $remote\$file; exit `$LASTEXITCODE" 2>&1 | Out-String
+    $out = & $Ssh $SshHost "sqlcmd -S $Instance -E -d TAPortalSys -b -I$format -i $remote\$file; exit `$LASTEXITCODE" 2>&1 | Out-String
     $code = $LASTEXITCODE
     Add-Content -Path $log -Value $out -Encoding utf8
     return [pscustomobject]@{ Code = $code; Out = $out }
@@ -75,10 +79,10 @@ $items = foreach ($p in $Plan) {
     if (-not ($m -and $v -and $r)) { Fail "missing migration/verify/rollback for $p" }
     [pscustomobject]@{ Migration = $m; Verify = $v; Rollback = $r }
 }
-& ssh $SshHost "New-Item -ItemType Directory -Force '$remote' | Out-Null"
+& $Ssh $SshHost "New-Item -ItemType Directory -Force '$remote' | Out-Null"
 if ($LASTEXITCODE -ne 0) { Fail "cannot create $remote" }
 $files = $items | ForEach-Object { $_.Migration.FullName; $_.Verify.FullName; $_.Rollback.FullName }
-& scp -q @files "${SshHost}:$($remote.Replace('\', '/'))/"
+& $Scp -q @files "${SshHost}:$($remote.Replace('\', '/'))/"
 if ($LASTEXITCODE -ne 0) { Fail "upload failed" }
 
 $checkedGates = $false
