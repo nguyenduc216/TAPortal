@@ -401,7 +401,7 @@
     "commit_sha": "556e987",
     "migration_status": "EXECUTED (019, 2026-11-05T05:03:24Z)",
     "publish_status": "DEPLOYED webhooks, invoice, portal 2026-11-05 (commit 556e987)",
-    "merge_status": "PENDING_APPROVAL"
+    "merge_status": "MERGED main 437af94 (fast-forward, 2026-11-05)"
   },
   {
     "change_id": "TINGEE-INTEGRATION-CHG-20261105T044328Z-2BCDDC",
@@ -411,6 +411,6 @@
     "commit_sha": "556e987",
     "migration_status": "EXECUTED (020, 2026-11-05T05:03:28Z)",
     "publish_status": "DEPLOYED webhooks, invoice, portal 2026-11-05 (commit 556e987)",
-    "merge_status": "PENDING_APPROVAL"
+    "merge_status": "MERGED main 437af94 (fast-forward, 2026-11-05)"
   }
 ]
