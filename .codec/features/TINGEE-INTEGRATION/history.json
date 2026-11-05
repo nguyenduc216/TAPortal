@@ -402,5 +402,15 @@
     "migration_status": "NOT_EXECUTED",
     "publish_status": "NOT_PUBLISHED",
     "merge_status": "PENDING_APPROVAL"
+  },
+  {
+    "change_id": "TINGEE-INTEGRATION-CHG-20261105T044328Z-2BCDDC",
+    "created_at": "2026-11-05T04:43:28.916820+00:00",
+    "title": "Notification channels: T.A system channels (Zalo OA, Telegram bot/group, SMTP) and company channels (Zalo OA, Telegram group, SMTP)",
+    "status": "IMPLEMENTED",
+    "commit_sha": null,
+    "migration_status": "NOT_EXECUTED",
+    "publish_status": "NOT_PUBLISHED",
+    "merge_status": "PENDING_APPROVAL"
   }
 ]

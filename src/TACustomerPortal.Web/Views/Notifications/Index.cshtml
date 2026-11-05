@@ -1,0 +1,110 @@
+@model TACustomerPortal.Web.Controllers.NotificationsVm
+@using TAPortal.Integrations.Notifications
+@{
+    ViewData["Title"] = "Cài đặt thông báo";
+    ViewData["Eyebrow"] = "Thanh toán";
+    ViewData["Subtitle"] = "Nơi T.A gửi thông báo cho doanh nghiệp, và các kênh doanh nghiệp dùng để báo cho khách hàng của mình khi nhận tiền.";
+    var r = Model.Recipients;
+}
+@if (Model.Errors.Count > 0)
+{
+    <div class="cp-error" role="alert" style="margin-bottom:14px" data-cp-notify-errors>@foreach (var e in Model.Errors) {<div>@e</div>}</div>
+}
+<form class="cp-card" method="post" asp-action="Recipients" style="margin-bottom:14px" data-cp-recipients>
+    <div class="cp-card__head"><span class="cp-blob">@UiIcon.Render("bell")</span><h2>Nhận thông báo từ T.A</h2></div>
+    <div class="cp-card__body">
+        <p class="cp-muted">T.A gửi thông báo đơn hàng nhận tiền và giao dịch cần xử lý của doanh nghiệp tới các địa chỉ dưới đây. Để trống nếu không muốn nhận qua kênh đó.</p>
+        <div class="cp-form-grid">
+            <div class="cp-field"><label class="cp-label" for="rEmail">Email</label><div class="cp-input-wrap">@UiIcon.Render("mail")<input class="cp-input" id="rEmail" type="email" name="email" value="@r.Email" maxlength="256" placeholder="ketoan@congty.vn" /></div></div>
+            <div class="cp-field"><label class="cp-label" for="rZalo">Số điện thoại Zalo</label><div class="cp-input-wrap">@UiIcon.Render("phone")<input class="cp-input" id="rZalo" name="zaloPhone" value="@r.ZaloPhone" maxlength="20" placeholder="0912345678" /></div></div>
+            <div class="cp-field"><label class="cp-label" for="rTelegram">Telegram chat ID</label><div class="cp-input-wrap">@UiIcon.Render("hash")<input class="cp-input" id="rTelegram" name="telegramChatId" value="@r.TelegramChatId" maxlength="50" placeholder="123456789" /></div></div>
+        </div>
+        @foreach (var (code, label) in NotificationEvent.All)
+        {
+            <div class="cp-field"><label class="cp-check"><input type="checkbox" name="events" value="@code" checked="@r.Events.Contains(code)" /><span>Nhận khi: @label</span></label></div>
+        }
+    </div>
+    <div class="cp-card__foot"><button class="cp-btn cp-btn--primary" type="submit" style="margin-left:auto">@UiIcon.Render("device-floppy")<span>Lưu nơi nhận</span></button></div>
+</form>
+
+<div class="cp-grid">
+@foreach (var c in Model.Channels)
+{
+    <section class="cp-card" data-cp-channel="@c.Channel">
+        <div class="cp-card__head"><span class="cp-blob @(c.IsEnabled ? "cp-blob--green" : "")">@UiIcon.Render("send")</span><h2>@c.Label</h2>
+            <span class="cp-badge @(c.IsEnabled ? "cp-badge--green" : "cp-badge--soft")" style="margin-left:auto">@(c.IsEnabled ? "Đang bật" : "Đang tắt")</span></div>
+        <form method="post" asp-action="Save">
+            <div class="cp-card__body">
+                <input type="hidden" name="channel" value="@c.Channel" />
+                <p class="cp-muted">@c.Audience</p>
+                @if (Model.ErrorChannel == c.Channel && Model.Errors.Count > 0) {<div class="cp-error" style="margin-bottom:10px">@string.Join(" ", Model.Errors)</div>}
+                @foreach (var f in c.Fields)
+                {
+                    var id = c.Channel + "_" + f.Key;
+                    var saved = f.Secret && c.SecretKeys.Contains(f.Key);
+                    <div class="cp-field">
+                        <label class="cp-label" for="@id">@f.Label@(f.Required ? " *" : "")</label>
+                        @if (f.Key == "templateData")
+                        {
+                            <div class="cp-input-wrap cp-input-wrap--top">@UiIcon.Render("list-tree")<textarea class="cp-input" id="@id" name="f_@f.Key" rows="3" maxlength="2000" placeholder="@f.Placeholder">@c.Settings.GetValueOrDefault(f.Key)</textarea></div>
+                        }
+                        else if (f.Secret)
+                        {
+                            <div class="cp-input-wrap">@UiIcon.Render("lock")<input class="cp-input" id="@id" name="f_@f.Key" type="password" maxlength="2000" autocomplete="new-password" placeholder="@(saved ? "Đã lưu — để trống để giữ nguyên" : f.Placeholder)" /></div>
+                        }
+                        else
+                        {
+                            <div class="cp-input-wrap">@UiIcon.Render("pencil")<input class="cp-input" id="@id" name="f_@f.Key" value="@c.Settings.GetValueOrDefault(f.Key)" maxlength="2000" autocomplete="off" placeholder="@f.Placeholder" /></div>
+                        }
+                        @if (f.Help is not null) {<span class="cp-muted" style="display:block;font-size:12px">@f.Help</span>}
+                        @if (saved) {<label class="cp-check" style="margin-top:4px"><input type="checkbox" name="clear" value="@f.Key" /><span>Xóa giá trị đã lưu</span></label>}
+                    </div>
+                }
+                @foreach (var (code, label) in NotificationEvent.All)
+                {
+                    <div class="cp-field"><label class="cp-check"><input type="checkbox" name="events" value="@code" checked="@c.Events.Contains(code)" /><span>Gửi khi: @label</span></label></div>
+                }
+                <div class="cp-field"><label class="cp-check"><input type="checkbox" name="enabled" value="true" checked="@c.IsEnabled" /><span><strong>Bật kênh này</strong></span></label></div>
+            </div>
+            <div class="cp-card__foot"><button class="cp-btn cp-btn--primary" type="submit" style="margin-left:auto">@UiIcon.Render("device-floppy")<span>Lưu kênh</span></button></div>
+        </form>
+        <form method="post" asp-action="Test" class="cp-card__foot cp-inline-form">
+            <input type="hidden" name="channel" value="@c.Channel" />
+            @if (c.Channel == NotificationChannelKind.Smtp)
+            {
+                <div class="cp-input-wrap">@UiIcon.Render("mail")<input class="cp-input" name="recipient" maxlength="256" aria-label="Email nhận thử" placeholder="Email nhận thử" /></div>
+            }
+            else if (c.Channel == NotificationChannelKind.ZaloOa)
+            {
+                <div class="cp-input-wrap">@UiIcon.Render("phone")<input class="cp-input" name="recipient" maxlength="20" aria-label="Số điện thoại nhận thử" placeholder="SĐT nhận thử" /></div>
+            }
+            <button class="cp-btn cp-btn--ghost" type="submit">@UiIcon.Render("send")<span>Gửi thử</span></button>
+            @if (c.LastTestResult is string t) {<span class="cp-muted" style="font-size:12px">@PaymentText.VietnamTime(c.LastTestAtUtc): @PartnerText.Scrub(t)</span>}
+        </form>
+    </section>
+}
+</div>
+
+<section class="cp-card" style="margin-top:14px">
+    <div class="cp-card__head"><span class="cp-blob cp-blob--gold">@UiIcon.Render("history")</span><h2>Thông báo gửi cho khách hàng gần đây</h2></div>
+    @if (Model.Recent.Count == 0)
+    {
+        <div class="cp-empty">@UiIcon.Render("bell")<p>Chưa có thông báo nào.</p></div>
+    }
+    else
+    {
+        <div class="cp-table-wrap">
+            <table class="cp-table">
+                <thead><tr><th>Lúc</th><th>Kênh</th><th>Người nhận</th><th>Tiêu đề</th><th>Trạng thái</th></tr></thead>
+                <tbody>
+                @foreach (var o in Model.Recent)
+                {
+                    <tr><td>@PaymentText.VietnamTime(o.CreatedAtUtc)</td><td>@NotificationCatalog.Label(o.Channel)</td><td>@o.Recipient</td><td>@o.Subject</td>
+                        <td><span class="cp-badge @(o.Status == "SENT" ? "cp-badge--green" : o.Status == "FAILED" ? "cp-badge--red" : "cp-badge--gold")">@(o.Status == "SENT" ? "Đã gửi" : o.Status == "FAILED" ? "Thất bại" : "Đang chờ")</span>
+                            @if (o.LastError is string e) {<div class="cp-muted">@PartnerText.Scrub(e)</div>}</td></tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    }
+</section>

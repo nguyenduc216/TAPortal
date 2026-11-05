@@ -301,7 +301,7 @@ public sealed class SafeCustomerPaymentsTests
         tingee.IsConfigured = false;
         pages.Add(await c.GetStringAsync("/banks"));
         tingee.IsConfigured = true;
-        foreach (var path in new[] { "/banks", "/banks/add", "/banks/add?bin=970422&type=business-account", "/banks/add?bin=970436&type=business-account", "/orders", "/orders/create", "/contacts", "/paymentsettings", "/servicepackages" })
+        foreach (var path in new[] { "/banks", "/banks/add", "/banks/add?bin=970422&type=business-account", "/banks/add?bin=970436&type=business-account", "/orders", "/orders/create", "/contacts", "/paymentsettings", "/servicepackages", "/transactions", "/notifications" })
             pages.Add(await c.GetStringAsync(path));
         tingee.CreateVaError = new TingeeApiException("1133", "Tingee: merchant không có quyền, liên hệ support@tingee.vn");
         var failed = await Post(c, "/banks/add", await Token(c, "/banks/add?bin=970422&type=personal-account"), new()
@@ -716,6 +716,12 @@ public sealed class SafeCustomerPaymentsTests
                 services.AddSingleton<IServicePackageStore>(sp);
                 services.RemoveAll<IPaymentTransactionStore>();
                 services.AddSingleton<IPaymentTransactionStore>(Transactions);
+                services.RemoveAll<TAPortal.Integrations.Notifications.INotificationStore>();
+                services.AddSingleton<TAPortal.Integrations.Notifications.INotificationStore>(new SafeNotificationTests.MemoryNotificationStore());
+                services.RemoveAll<TAPortal.Integrations.Notifications.ISecretProtector>();
+                services.AddSingleton<TAPortal.Integrations.Notifications.ISecretProtector>(new SafeNotificationTests.PlainProtector());
+                services.RemoveAll<TAPortal.Integrations.Notifications.INotificationTransport>();
+                services.AddSingleton<TAPortal.Integrations.Notifications.INotificationTransport>(new SafeNotificationTests.FakeTransport());
                 services.AddAuthentication().AddScheme<AuthenticationSchemeOptions, TestAuthHandler>(TestScheme, _ => { });
                 services.PostConfigure<AuthenticationOptions>(o => { o.DefaultScheme = TestScheme; o.DefaultAuthenticateScheme = TestScheme; o.DefaultChallengeScheme = TestScheme; o.DefaultForbidScheme = TestScheme; });
             }));
@@ -812,6 +818,32 @@ public sealed class SafeCustomerPaymentsTests
         var close = await Post(c, "/transactions/close/9201", await Token(c, "/transactions"), new() { ["note"] = "x" });
         Assert.NotEqual(HttpStatusCode.Redirect, close.StatusCode);
         lock (Transactions.Calls) Assert.DoesNotContain(Transactions.Calls, x => x.Id == 9201);
+    }
+
+    [Fact]
+    public async Task TheNotificationPageIsForOwnersAndShowsOnlyTheCompanysChannels()
+    {
+        using (var f = Factory("MEMBER", out _, out _))
+            Assert.NotEqual(HttpStatusCode.OK, (await Client(f).GetAsync("/notifications")).StatusCode);
+        using var owner = Factory("OWNER", out _, out _);
+        var c = Client(owner);
+        var page = WebUtility.HtmlDecode(await c.GetStringAsync("/notifications"));
+        Assert.Contains("Nhận thông báo từ T.A", page);
+        Assert.Contains("data-cp-channel=\"SMTP\"", page);
+        Assert.Contains("data-cp-channel=\"TELEGRAM_GROUP\"", page);
+        Assert.Contains("data-cp-channel=\"ZALO_OA\"", page);
+        Assert.DoesNotContain("data-cp-channel=\"TELEGRAM_BOT\"", page);   // T.A's private bot is not a company channel
+
+        var token = await Token(c, "/notifications");
+        var bad = await Post(c, "/notifications/save", token, new() { ["channel"] = "TELEGRAM_GROUP", ["enabled"] = "true", ["f_chatId"] = "-100222", ["f_botToken"] = "nope" });
+        Assert.Equal(HttpStatusCode.BadRequest, bad.StatusCode);
+        var secret = "123456:" + new string('Z', 35);
+        var ok = await Post(c, "/notifications/save", token, new() { ["channel"] = "TELEGRAM_GROUP", ["enabled"] = "true", ["events"] = "PAYMENT", ["f_chatId"] = "-100222", ["f_botToken"] = secret });
+        Assert.Equal(HttpStatusCode.Redirect, ok.StatusCode);
+        var after = WebUtility.HtmlDecode(await c.GetStringAsync("/notifications"));
+        Assert.Contains("-100222", after);
+        Assert.DoesNotContain(secret, after);
+        Assert.Contains("Đã lưu — để trống để giữ nguyên", after);
     }
 
     [Fact]

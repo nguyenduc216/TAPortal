@@ -14,6 +14,8 @@ if (!string.IsNullOrWhiteSpace(builder.Configuration["Database:ConnectionString"
     builder.Services.AddSingleton<ITingeePaymentLedger, SqlTingeePaymentLedger>();
     builder.Services.AddScoped<TingeePaymentProcessor>();
     builder.Services.AddHostedService<TingeePaymentWorker>();
+    // Payment notifications (Zalo OA / Telegram / SMTP) are planned and sent from here (NotificationDispatcher).
+    TAPortal.Integrations.Notifications.NotificationServiceCollectionExtensions.AddNotifications(builder.Services, worker: true);
 }
 builder.Services.AddTingee(builder.Configuration);
 

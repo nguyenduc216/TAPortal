@@ -373,6 +373,14 @@ public sealed class SafeCustomerWorkspaceTests
         Assert.Contains("data-pr-cards", page);
     }
 
+    [Fact]
+    public async Task TAConfiguresItsOwnFourNotificationChannels()
+    {
+        using var f = Factory("SYS_ADMIN", out _);
+        var page = WebUtility.HtmlDecode(await Client(f).GetStringAsync("/notificationsettings"));
+        foreach (var channel in new[] { "ZALO_OA", "TELEGRAM_BOT", "TELEGRAM_GROUP", "SMTP" }) Assert.Contains($"data-ns-channel=\"{channel}\"", page);
+    }
+
     private static WebApplicationFactory<admin::Program> Factory(string role, out FakePortal portal, params string[] permissions)
     {
         var fake = portal = new FakePortal();
@@ -388,6 +396,12 @@ public sealed class SafeCustomerWorkspaceTests
                 s.AddSingleton(new Identity(role, permissions));
                 s.RemoveAll<TAPortal.Integrations.Tingee.IPaymentTransactionStore>();
                 s.AddSingleton<TAPortal.Integrations.Tingee.IPaymentTransactionStore>(AdminTransactions);
+                s.RemoveAll<TAPortal.Integrations.Notifications.INotificationStore>();
+                s.AddSingleton<TAPortal.Integrations.Notifications.INotificationStore>(new SafeNotificationTests.MemoryNotificationStore());
+                s.RemoveAll<TAPortal.Integrations.Notifications.ISecretProtector>();
+                s.AddSingleton<TAPortal.Integrations.Notifications.ISecretProtector>(new SafeNotificationTests.PlainProtector());
+                s.RemoveAll<TAPortal.Integrations.Notifications.INotificationTransport>();
+                s.AddSingleton<TAPortal.Integrations.Notifications.INotificationTransport>(new SafeNotificationTests.FakeTransport());
                 s.AddAuthentication().AddScheme<AuthenticationSchemeOptions, TestAuthHandler>(TestScheme, _ => { });
                 s.PostConfigure<AuthenticationOptions>(o => { o.DefaultScheme = TestScheme; o.DefaultAuthenticateScheme = TestScheme; o.DefaultChallengeScheme = TestScheme; o.DefaultForbidScheme = TestScheme; });
             }));

@@ -1,0 +1,99 @@
+@model TAPortal.Web.Controllers.NotificationSettingsVm
+@using TAPortal.Integrations.Notifications
+@{
+    ViewData["Subtitle"] = "Kênh của T.A gửi thông báo cho doanh nghiệp dùng hóa đơn điện tử (tại địa chỉ doanh nghiệp tự khai báo trên Customer Portal) và cho nhóm nhân viên T.A.";
+    ViewData["PageIcon"] = "bell";
+    string Local(DateTime? utc) => utc is { } v ? v.AddHours(7).ToString("dd/MM/yyyy HH:mm") : "—";
+}
+@if (Model.StoreError is not null)
+{
+    <div class="ta-alert ta-alert--danger mb-3" role="alert">@UiIcon.Render("database-off")<div class="ta-alert__body">@Model.StoreError</div></div>
+}
+@if (Model.Errors.Count > 0)
+{
+    <div class="ta-alert ta-alert--danger mb-3" role="alert" data-ns-errors>@UiIcon.Render("alert-circle")<div class="ta-alert__body">@foreach (var e in Model.Errors) {<div>@e</div>}</div></div>
+}
+<div class="row g-3">
+@foreach (var c in Model.Channels)
+{
+    <div class="col-12 col-xl-6">
+        <section class="card h-100" data-ns-channel="@c.Channel">
+            <div class="card-header d-flex align-items-center gap-2">@UiIcon.Render("send")<strong>@c.Label</strong>
+                <span class="ta-badge @(c.IsEnabled ? "ta-badge--success" : "ta-badge--neutral") ms-auto">@(c.IsEnabled ? "Đang bật" : "Đang tắt")</span></div>
+            <form method="post" asp-action="Save" class="card-body">
+                <input type="hidden" name="channel" value="@c.Channel" />
+                <p class="text-secondary small">@c.Audience</p>
+                @foreach (var f in c.Fields)
+                {
+                    var id = c.Channel + "_" + f.Key;
+                    var saved = f.Secret && c.SecretKeys.Contains(f.Key);
+                    <div class="mb-2">
+                        <label class="form-label" for="@id">@f.Label@(f.Required ? " *" : "")</label>
+                        @if (f.Key == "templateData")
+                        {
+                            <div class="ta-input-icon">@UiIcon.Render("list-tree")<textarea class="form-control" id="@id" name="f_@f.Key" rows="3" maxlength="2000" placeholder="@f.Placeholder">@c.Settings.GetValueOrDefault(f.Key)</textarea></div>
+                        }
+                        else if (f.Secret)
+                        {
+                            <div class="ta-input-icon">@UiIcon.Render("lock")<input class="form-control" id="@id" name="f_@f.Key" type="password" maxlength="2000" autocomplete="new-password" placeholder="@(saved ? "Đã lưu — để trống để giữ nguyên" : f.Placeholder)" /></div>
+                        }
+                        else
+                        {
+                            <div class="ta-input-icon">@UiIcon.Render("pencil")<input class="form-control" id="@id" name="f_@f.Key" value="@c.Settings.GetValueOrDefault(f.Key)" maxlength="2000" autocomplete="off" placeholder="@f.Placeholder" /></div>
+                        }
+                        @if (f.Help is not null) {<div class="form-text">@f.Help</div>}
+                        @if (saved) {<div class="form-check"><input class="form-check-input" type="checkbox" id="@(id)_clear" name="clear" value="@f.Key" /><label class="form-check-label" for="@(id)_clear">Xóa giá trị đã lưu</label></div>}
+                    </div>
+                }
+                @foreach (var (code, label) in NotificationEvent.All)
+                {
+                    <div class="form-check"><input class="form-check-input" type="checkbox" id="@(c.Channel)_@code" name="events" value="@code" checked="@c.Events.Contains(code)" /><label class="form-check-label" for="@(c.Channel)_@code">Gửi khi: @label</label></div>
+                }
+                <div class="form-check mt-2"><input class="form-check-input" type="checkbox" id="@(c.Channel)_enabled" name="enabled" value="true" checked="@c.IsEnabled" /><label class="form-check-label" for="@(c.Channel)_enabled"><strong>Bật kênh này</strong></label></div>
+                <button class="btn btn-primary mt-2" type="submit">@UiIcon.Render("device-floppy")<span>Lưu kênh</span></button>
+            </form>
+            <form method="post" asp-action="Test" class="card-footer d-flex flex-wrap gap-2 align-items-center">
+                <input type="hidden" name="channel" value="@c.Channel" />
+                @if (c.Channel == NotificationChannelKind.Smtp)
+                {
+                    <div class="ta-input-icon">@UiIcon.Render("mail")<input class="form-control form-control-sm" name="recipient" maxlength="256" aria-label="Email nhận thử" placeholder="Email nhận thử" /></div>
+                }
+                else if (c.Channel == NotificationChannelKind.ZaloOa)
+                {
+                    <div class="ta-input-icon">@UiIcon.Render("phone")<input class="form-control form-control-sm" name="recipient" maxlength="20" aria-label="Số điện thoại nhận thử" placeholder="SĐT nhận thử" /></div>
+                }
+                else if (c.Channel == NotificationChannelKind.TelegramBot)
+                {
+                    <div class="ta-input-icon">@UiIcon.Render("hash")<input class="form-control form-control-sm" name="recipient" maxlength="50" aria-label="Chat ID nhận thử" placeholder="Chat ID nhận thử" /></div>
+                }
+                <button class="btn btn-sm" type="submit">@UiIcon.Render("send")<span>Gửi thử</span></button>
+                @if (c.LastTestResult is string t) {<span class="text-secondary small">@Local(c.LastTestAtUtc): @t</span>}
+            </form>
+        </section>
+    </div>
+}
+</div>
+<section class="card ta-table-card mt-3" aria-label="Thông báo gần đây">
+    <div class="card-header"><strong>Thông báo gần đây (mọi kênh)</strong></div>
+    @if (Model.Recent.Count == 0)
+    {
+        <div class="ta-empty"><span class="ta-empty__icon">@UiIcon.Render("bell")</span><p class="ta-empty__title">Chưa có thông báo</p></div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table ta-table mb-0">
+                <thead><tr><th>Lúc</th><th>Phạm vi</th><th>Kênh</th><th>Người nhận</th><th>Tiêu đề</th><th>Trạng thái</th></tr></thead>
+                <tbody>
+                @foreach (var o in Model.Recent)
+                {
+                    <tr><td data-label="Lúc">@Local(o.CreatedAtUtc)</td><td data-label="Phạm vi">@(o.Scope == NotificationScope.System ? "T.A" : "Doanh nghiệp")</td><td data-label="Kênh">@NotificationCatalog.Label(o.Channel)</td>
+                        <td data-label="Người nhận">@o.Recipient</td><td data-label="Tiêu đề">@o.Subject</td>
+                        <td data-label="Trạng thái"><span class="ta-badge @(o.Status == "SENT" ? "ta-badge--success" : o.Status == "FAILED" ? "ta-badge--danger" : "ta-badge--warning")">@o.Status</span>
+                            @if (o.LastError is string e) {<div class="text-secondary small">@e (@o.Attempts lần)</div>}</td></tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    }
+</section>
