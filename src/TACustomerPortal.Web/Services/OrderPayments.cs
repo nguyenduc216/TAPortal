@@ -77,7 +77,11 @@ public sealed class OrderPayments(IPaymentStore store, ITingeeApi tingee, TimePr
         return new(updated, null);
     }
 
-    /// <summary>Reads the dynamic QR status from Tingee and applies the amount paid. Static QR orders are settled by webhook/reconciliation.</summary>
+    /// <summary>
+    /// Reads the amount paid on the dynamic QR from Tingee and stores it next to the system's own count (operator decision
+    /// 2026-11-05): money is only counted from bank notifications (webhook site) or staff reconciliation, so this check can
+    /// never count a payment twice; a difference is shown for reconciliation. Static QR orders have nothing to read.
+    /// </summary>
     public async Task<OrderPaymentResult> RefreshAsync(Guid customerId, long merchantId, Order order, Guid actor)
     {
         if (order.QrType != TingeeQrTypes.Recurring || order.QrAccount is null || order.BillId is null)
@@ -88,12 +92,9 @@ public sealed class OrderPayments(IPaymentStore store, ITingeeApi tingee, TimePr
             // A QR re-issued for the remainder carries Amount = what was still due; money paid before it is Amount(order) - Amount(QR).
             var bill = status.BillInfo;
             var paidBefore = bill is { Amount: > 0 } && bill.Amount < order.Amount ? order.Amount - bill.Amount : 0;
-            var paid = Math.Max(order.PaidAmount, paidBefore + (bill?.TotalAmountPaid ?? 0));
-            var next = OrderMath.StatusFor(order.Amount, paid);
-            if (next != OrderStatus.Paid && bill?.Status is "expired" or "cancelled") next = OrderStatus.Expired;
-            var updated = order with { PaidAmount = paid, Status = next, LastError = null };
-            if (next == OrderStatus.Paid) await CloseQrAsync(merchantId, updated);
-            await store.UpdateOrderAsync(customerId, updated, actor);
+            var partner = paidBefore + (bill?.TotalAmountPaid ?? 0);
+            await store.RecordPartnerPaidAsync(customerId, order.Id, partner);
+            var updated = await store.OrderAsync(customerId, order.Id) ?? order with { PartnerPaidAmount = partner };
             return new(updated, null);
         }
         catch (Exception ex) when (ex is TingeeApiException or HttpRequestException or TingeeNotConfiguredException)

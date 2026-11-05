@@ -59,7 +59,47 @@ public sealed class ContactInput
     public string? Note { get; set; }
 }
 
-public sealed record OrdersVm(CustomerMembership Customer, bool CanManage, bool Linked, string? Filter, IReadOnlyList<Order> Orders, DateTime UtcNow);
+public sealed record OrdersVm(CustomerMembership Customer, bool CanManage, bool Linked, string? Filter, IReadOnlyList<Order> Orders, DateTime UtcNow,
+    IReadOnlyList<OrderSummaryCard> Cards);
+
+/// <summary>A summary card on the order list: orders in one state (or with one problem), their total and amount collected.</summary>
+public sealed record OrderSummaryCard(string? Code, string Label, string Icon, string Tone, int Count, decimal Amount, decimal Paid);
+
+public static class OrderSummary
+{
+    /// <summary>Filters that are not a status: overpaid orders and orders whose partner amount differs.</summary>
+    public const string Overpaid = "OVERPAID", Mismatch = "MISMATCH";
+
+    private static readonly (string? Code, string Label, string Icon, string Tone)[] Definitions =
+    [
+        (null, "Tất cả đơn", "file-invoice", ""),
+        (Services.OrderStatus.Awaiting, "Chờ thanh toán", "clock", "cp-blob--blue"),
+        (Services.OrderStatus.Partial, "Thanh toán một phần", "report-money", "cp-blob--gold"),
+        (Services.OrderStatus.Paid, "Đã thanh toán", "circle-check", "cp-blob--green"),
+        (Services.OrderStatus.Expired, "Hết hạn", "clock", "cp-blob--red"),
+        (Services.OrderStatus.ExpiredPaid, "QR hết hạn có giao dịch", "alert-triangle", "cp-blob--red"),
+        (Services.OrderStatus.Cancelled, "Đã hủy", "ban", ""),
+        (Services.OrderStatus.CancelledPaid, "Đơn hủy có giao dịch", "alert-triangle", "cp-blob--red"),
+        (Services.OrderStatus.Draft, "Chưa có QR", "qrcode", ""),
+        (Overpaid, "Trả dư", "alert-triangle", "cp-blob--gold"),
+        (Mismatch, "Lệch đối soát", "refresh", "cp-blob--gold"),
+    ];
+
+    public static bool Matches(Order o, string code) => code switch
+    {
+        Overpaid => o.Overpaid > 0,
+        Mismatch => o.PartnerDiffers,
+        _ => o.Status == code
+    };
+
+    /// <summary>Cards over every order (statuses already effective); "Tất cả" first.</summary>
+    public static IReadOnlyList<OrderSummaryCard> Cards(IReadOnlyList<Order> orders) =>
+        Definitions.Select(d =>
+        {
+            var set = d.Code is null ? orders : orders.Where(o => Matches(o, d.Code)).ToList();
+            return new OrderSummaryCard(d.Code, d.Label, d.Icon, d.Tone, set.Count, set.Sum(o => o.Amount), set.Sum(o => o.PaidAmount));
+        }).ToList();
+}
 
 public sealed record OrderCreateVm(CustomerMembership Customer, bool Linked, bool ApiConfigured, IReadOnlyList<Contact> Contacts, IReadOnlyList<BankAccount> Banks, OrderInput Input);
 
@@ -171,6 +211,8 @@ public static class PaymentText
         Services.OrderStatus.Paid => ("Đã thanh toán", "cp-badge--green"),
         Services.OrderStatus.Expired => ("Hết hạn", "cp-badge--red"),
         Services.OrderStatus.Cancelled => ("Đã hủy", "cp-badge--soft"),
+        Services.OrderStatus.ExpiredPaid => ("QR hết hạn có giao dịch", "cp-badge--red"),
+        Services.OrderStatus.CancelledPaid => ("Đơn hủy có giao dịch", "cp-badge--red"),
         _ => (status, "cp-badge--soft")
     };
 

@@ -506,23 +506,24 @@ public sealed class SafeCustomerPaymentsTests
     }
 
     [Fact]
-    public async Task PartialPaymentsAccumulateUntilTheOrderIsPaidAndTheQrIsClosed()
+    public async Task CheckingPaymentRecordsThePartnerAmountForReconciliationButNeverCountsMoney()
     {
+        // Operator decision 2026-11-05: money is counted from bank notifications (webhook site) only; "Kiểm tra thanh toán"
+        // stores what the payment service reports next to the system's count, and a difference is shown.
         using var f = Factory("OWNER", out var store, out var tingee);
         store.Merchants[A] = 9001;
-        var order = Order(OrderStatus.Awaiting, 300_000, 0) with { QrType = TingeeQrTypes.Recurring, QrAccount = "QRA", BillId = "BILL1", ExpiresAt = DateTime.UtcNow.AddHours(1) };
+        var order = Order(OrderStatus.Partial, 300_000, 100_000) with { QrType = TingeeQrTypes.Recurring, QrAccount = "QRA", BillId = "BILL1", ExpiresAt = DateTime.UtcNow.AddHours(1) };
         store.Orders.Add((A, order));
         var c = Client(f);
         var token = await Token(c, "/orders");
-        tingee.Status = new() { BillInfo = new() { Amount = 300_000, TotalAmountPaid = 100_000, Status = "partially-paid" } };
-        await Post(c, $"/orders/refresh/{order.Id}", token, new());
-        Assert.Equal((OrderStatus.Partial, 100_000m), (store.Orders.Single().Order.Status, store.Orders.Single().Order.PaidAmount));
-        Assert.Empty(tingee.DeletedQrs);
-
         tingee.Status = new() { BillInfo = new() { Amount = 300_000, TotalAmountPaid = 300_000, Status = "fully-paid" } };
         await Post(c, $"/orders/refresh/{order.Id}", token, new());
-        Assert.Equal((OrderStatus.Paid, 300_000m), (store.Orders.Single().Order.Status, store.Orders.Single().Order.PaidAmount));
-        Assert.Equal(("QRA", "BILL1"), tingee.DeletedQrs.Single());
+        var saved = store.Orders.Single().Order;
+        Assert.Equal((OrderStatus.Partial, 100_000m, 300_000m), (saved.Status, saved.PaidAmount, saved.PartnerPaidAmount));
+        Assert.True(saved.PartnerDiffers);
+        Assert.Empty(tingee.DeletedQrs);
+        var page = await c.GetStringAsync($"/orders/details/{order.Id}");
+        Assert.Contains("Lệch đối soát", page);
     }
 
     [Fact]
@@ -536,7 +537,7 @@ public sealed class SafeCustomerPaymentsTests
         tingee.Status = new() { BillInfo = new() { Amount = 200_000, TotalAmountPaid = 50_000, Status = "partially-paid" } };
         var c = Client(f);
         await Post(c, $"/orders/refresh/{order.Id}", await Token(c, "/orders"), new());
-        Assert.Equal(150_000, store.Orders.Single().Order.PaidAmount);
+        Assert.Equal((100_000m, 150_000m), (store.Orders.Single().Order.PaidAmount, store.Orders.Single().Order.PartnerPaidAmount));
     }
 
     [Fact]
@@ -713,6 +714,8 @@ public sealed class SafeCustomerPaymentsTests
                 services.AddSingleton<ITingeeApi>(t);
                 services.RemoveAll<IServicePackageStore>();
                 services.AddSingleton<IServicePackageStore>(sp);
+                services.RemoveAll<IPaymentTransactionStore>();
+                services.AddSingleton<IPaymentTransactionStore>(Transactions);
                 services.AddAuthentication().AddScheme<AuthenticationSchemeOptions, TestAuthHandler>(TestScheme, _ => { });
                 services.PostConfigure<AuthenticationOptions>(o => { o.DefaultScheme = TestScheme; o.DefaultAuthenticateScheme = TestScheme; o.DefaultChallengeScheme = TestScheme; o.DefaultForbidScheme = TestScheme; });
             }));
@@ -737,6 +740,95 @@ public sealed class SafeCustomerPaymentsTests
             var claims = new[] { new Claim(ClaimTypes.NameIdentifier, UserId.ToString()), new Claim(ClaimTypes.Name, "member"), new Claim("display_name", "Thành viên"), new Claim("customer_id", A.ToString()) };
             return Task.FromResult(AuthenticateResult.Success(new AuthenticationTicket(new ClaimsPrincipal(new ClaimsIdentity(claims, TestScheme)), TestScheme)));
         }
+    }
+
+    // One store per test class run is enough: tests only add rows with fresh ids and read their own.
+    private static readonly MemoryTransactionStore Transactions = new();
+
+    public sealed class MemoryTransactionStore : IPaymentTransactionStore
+    {
+        public List<PaymentTransaction> Items { get; } = [];
+        public List<(string Action, long Id, Guid? Scope, Guid? OrderCustomer, string? OrderNo)> Calls { get; } = [];
+
+        public static PaymentTransaction Tx(long id, Guid? customer, string status, string content) =>
+            new(id, "CREDIT", "FT" + id, 50_000, content, "MBB", "12345678", null, DateTime.UtcNow, DateTime.UtcNow, customer, null, null, null, null,
+                status, null, "Không tìm thấy mã đơn hàng trong nội dung chuyển khoản", null, null, null, null, null, null, null, null);
+
+        private IEnumerable<PaymentTransaction> Scoped(Guid? scope) { lock (Items) return Items.Where(t => scope is null || t.CustomerId == scope).ToList(); }
+        public Task<IReadOnlyList<PaymentTransaction>> SearchAsync(PaymentTxFilter f, CancellationToken ct = default) =>
+            Task.FromResult<IReadOnlyList<PaymentTransaction>>(Scoped(f.CustomerId).Where(t => string.IsNullOrEmpty(f.Status) || t.Status == f.Status || (f.Status == "STAFF" && PaymentTxStatus.NeedsStaff(t.Status))).ToList());
+        public Task<PaymentTxSummary> SummaryAsync(PaymentTxFilter f, CancellationToken ct = default)
+        {
+            var mine = Scoped(f.CustomerId).ToList();
+            (int, decimal) G(string s) => (mine.Count(t => t.Status == s), mine.Where(t => t.Status == s).Sum(t => t.Amount));
+            var (u, ua) = G(PaymentTxStatus.Unmatched); var (r, ra) = G(PaymentTxStatus.Review); var (m, ma) = G(PaymentTxStatus.Matched);
+            return Task.FromResult(new PaymentTxSummary(u, ua, r, ra, m, ma, 0, 0, 0, 0));
+        }
+        public Task<PaymentTransaction?> GetAsync(long id, Guid? scope, CancellationToken ct = default) => Task.FromResult(Scoped(scope).FirstOrDefault(t => t.Id == id));
+        public Task<IReadOnlyList<(Guid Id, string Code, string Name)>> CustomersAsync(CancellationToken ct = default) => Task.FromResult<IReadOnlyList<(Guid, string, string)>>([]);
+        public Task<PaymentTxResult> AssignAsync(long id, Guid? scope, Guid orderCustomerId, string orderNo, Guid actor, string via, string? note, CancellationToken ct = default)
+        {
+            lock (Calls) Calls.Add(("assign", id, scope, orderCustomerId, orderNo));
+            return Task.FromResult(Scoped(scope).Any(t => t.Id == id) ? PaymentTxResult.Success : new PaymentTxResult(false, "Không tìm thấy giao dịch."));
+        }
+        public Task<PaymentTxResult> AcceptAsync(long id, Guid? scope, Guid actor, string via, string? note, CancellationToken ct = default) { lock (Calls) Calls.Add(("accept", id, scope, null, null)); return Task.FromResult(PaymentTxResult.Success); }
+        public Task<PaymentTxResult> CloseAsync(long id, Guid? scope, Guid actor, string via, string note, CancellationToken ct = default) { lock (Calls) Calls.Add(("close", id, scope, null, null)); return Task.FromResult(PaymentTxResult.Success); }
+    }
+
+    [Fact]
+    public async Task TheReconciliationPageShowsOnlyTheCompanysOwnTransactionsAndActsWithinIt()
+    {
+        using var f = Factory("OWNER", out _, out _);
+        lock (Transactions.Items)
+        {
+            Transactions.Items.Add(MemoryTransactionStore.Tx(9101, A, PaymentTxStatus.Unmatched, "CK mine 9101"));
+            Transactions.Items.Add(MemoryTransactionStore.Tx(9102, B, PaymentTxStatus.Unmatched, "CK other 9102"));
+            Transactions.Items.Add(MemoryTransactionStore.Tx(9103, null, PaymentTxStatus.Unmatched, "CK nobody 9103"));
+        }
+        var c = Client(f);
+        var page = WebUtility.HtmlDecode(await c.GetStringAsync("/transactions"));
+        Assert.Contains("CK mine 9101", page);
+        Assert.DoesNotContain("CK other 9102", page);
+        Assert.DoesNotContain("CK nobody 9103", page);
+        Assert.Contains("data-cp-tx-cards", page);
+        Assert.False(PartnerText.Mentions(Regex.Replace(page, "<script.*?</script>|<link[^>]*>", "", RegexOptions.Singleline)));
+
+        // Another company's transaction: the action runs with this company as the scope, so the store refuses it.
+        var token = await Token(c, "/transactions");
+        await Post(c, "/transactions/assign/9102", token, new() { ["orderNo"] = "DH261105-0001" });
+        lock (Transactions.Calls)
+            Assert.Equal(("assign", (Guid?)A, (Guid?)A), Transactions.Calls.Where(x => x.Id == 9102).Select(x => (x.Action, x.Scope, x.OrderCustomer)).Single());
+    }
+
+    [Fact]
+    public async Task OnlyOwnersAndAdminsResolveTransactions()
+    {
+        using var f = Factory("MEMBER", out _, out _);
+        lock (Transactions.Items) Transactions.Items.Add(MemoryTransactionStore.Tx(9201, A, PaymentTxStatus.Unmatched, "CK member 9201"));
+        var c = Client(f);
+        var page = WebUtility.HtmlDecode(await c.GetStringAsync("/transactions"));
+        Assert.Contains("CK member 9201", page);
+        Assert.DoesNotContain("Gán vào đơn", page);
+        var close = await Post(c, "/transactions/close/9201", await Token(c, "/transactions"), new() { ["note"] = "x" });
+        Assert.NotEqual(HttpStatusCode.Redirect, close.StatusCode);
+        lock (Transactions.Calls) Assert.DoesNotContain(Transactions.Calls, x => x.Id == 9201);
+    }
+
+    [Fact]
+    public async Task TheOrderListHasSummaryCardsPerStatus()
+    {
+        using var f = Factory("OWNER", out var store, out _);
+        store.Orders.Add((A, Order(OrderStatus.Awaiting, 100_000, 0) with { ExpiresAt = DateTime.UtcNow.AddHours(1) }));
+        store.Orders.Add((A, Order(OrderStatus.Paid, 100_000, 120_000)));
+        store.Orders.Add((A, Order(OrderStatus.ExpiredPaid, 100_000, 50_000)));
+        store.Orders.Add((A, Order(OrderStatus.CancelledPaid, 100_000, 10_000)));
+        var c = Client(f);
+        var page = WebUtility.HtmlDecode(await c.GetStringAsync("/orders"));
+        foreach (var label in new[] { "Chờ thanh toán", "Thanh toán một phần", "Đã thanh toán", "QR hết hạn có giao dịch", "Đơn hủy có giao dịch", "Trả dư", "Lệch đối soát" })
+            Assert.Contains(label, page);
+        Assert.Matches(new Regex("data-cp-card=\"OVERPAID\"[^§]*?1 đơn"), page);
+        var overpaid = WebUtility.HtmlDecode(await c.GetStringAsync("/orders?status=OVERPAID"));
+        Assert.Single(Regex.Matches(overpaid, "<tr data-ta-row"));
     }
 
     public sealed class MemoryPaymentStore : IPaymentStore
@@ -799,7 +891,14 @@ public sealed class SafeCustomerPaymentsTests
         public Task UpdateOrderAsync(Guid customerId, Order order, Guid actor)
         {
             var i = Orders.FindIndex(o => o.Customer == customerId && o.Order.Id == order.Id);
-            if (i >= 0) Orders[i] = (customerId, order with { Lines = Orders[i].Order.Lines });
+            // Same rule as SqlPaymentStore: the amount paid is never written by the portal.
+            if (i >= 0) Orders[i] = (customerId, order with { Lines = Orders[i].Order.Lines, PaidAmount = Orders[i].Order.PaidAmount });
+            return Task.CompletedTask;
+        }
+        public Task RecordPartnerPaidAsync(Guid customerId, Guid orderId, decimal partnerPaid)
+        {
+            var i = Orders.FindIndex(o => o.Customer == customerId && o.Order.Id == orderId);
+            if (i >= 0) Orders[i] = (customerId, Orders[i].Order with { PartnerPaidAmount = partnerPaid, PartnerCheckedAt = DateTime.UtcNow });
             return Task.CompletedTask;
         }
         public Task<PaymentSettings> SettingsAsync(Guid customerId) { Check(); return Task.FromResult(settings); }

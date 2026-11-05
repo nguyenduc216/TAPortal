@@ -30,14 +30,20 @@ public sealed record OrderLine(int LineNumber, string ItemName, string? UnitName
 public sealed record Order(
     Guid Id, string OrderNo, Guid? ContactId, string? ContactName, Guid? BankAccountId, string? Description, decimal Amount, decimal PaidAmount,
     string Status, string? QrType, string? QrPayload, string? QrAccount, string? BillId, int QrExpireMinutes, DateTime? ExpiresAt,
-    bool AutoIssueInvoice, string InvoiceStatus, string? LastError, DateTime CreatedAt, IReadOnlyList<OrderLine> Lines)
+    bool AutoIssueInvoice, string InvoiceStatus, string? LastError, DateTime CreatedAt, IReadOnlyList<OrderLine> Lines,
+    decimal? PartnerPaidAmount = null, DateTime? PartnerCheckedAt = null)
 {
     public decimal Remaining => Math.Max(0, Amount - PaidAmount);
+    public decimal Overpaid => Math.Max(0, PaidAmount - Amount);
+    /// <summary>The payment service reported a different amount paid than the system counted from bank notifications.</summary>
+    public bool PartnerDiffers => PartnerPaidAmount is decimal p && p != PaidAmount;
 }
 
 public static class OrderStatus
 {
     public const string Draft = "DRAFT", Awaiting = "AWAITING_PAYMENT", Partial = "PARTIALLY_PAID", Paid = "PAID", Expired = "EXPIRED", Cancelled = "CANCELLED";
+    /// <summary>Money arrived after the QR expired / on a cancelled order (migration 019): waits for staff in "Đối soát giao dịch".</summary>
+    public const string ExpiredPaid = "EXPIRED_PAID", CancelledPaid = "CANCELLED_PAID";
     public static bool IsOpen(string status) => status is Draft or Awaiting or Partial;
 }
 
@@ -70,8 +76,13 @@ public interface IPaymentStore
     Task<IReadOnlyList<Order>> OrdersAsync(Guid customerId);
     Task<Order?> OrderAsync(Guid customerId, Guid id);
     Task<(Guid Id, string OrderNo)> CreateOrderAsync(Guid customerId, NewOrder order, Guid actor);
-    /// <summary>Writes the mutable state of an order: payment, status, QR, expiry, last error.</summary>
+    /// <summary>
+    /// Writes the mutable state of an order: status, QR, expiry, last error. The amount paid is never written here (only the
+    /// payment processor and staff reconciliation change it), and a payment status is recomputed from the stored amount.
+    /// </summary>
     Task UpdateOrderAsync(Guid customerId, Order order, Guid actor);
+    /// <summary>Stores the amount paid reported by the payment service, next to the system's own count.</summary>
+    Task RecordPartnerPaidAsync(Guid customerId, Guid orderId, decimal partnerPaid);
 
     Task<PaymentSettings> SettingsAsync(Guid customerId);
     Task SaveSettingsAsync(Guid customerId, PaymentSettings settings, Guid actor);
@@ -210,13 +221,14 @@ WHERE CustomerId=@c AND (IsDefault=1 OR Id=@id)
     // ---- orders -------------------------------------------------------------------------------------------
     private const string OrderSelect = """
 SELECT o.Id,o.OrderNo,o.ContactId,c.Name,o.BankAccountId,o.Description,o.Amount,o.PaidAmount,o.Status,o.QrType,o.QrPayload,o.QrAccount,o.BillId,
- o.QrExpireMinutes,o.ExpiresAt,o.AutoIssueInvoice,o.InvoiceStatus,o.LastError,o.CreatedAt
+ o.QrExpireMinutes,o.ExpiresAt,o.AutoIssueInvoice,o.InvoiceStatus,o.LastError,o.CreatedAt,o.PartnerPaidAmount,o.PartnerCheckedAt
 FROM dbo.CustomerOrders o LEFT JOIN dbo.CustomerBuyers c ON c.Id=o.ContactId AND c.CustomerId=o.CustomerId
 """;
 
     private static Order ReadOrder(SqlDataReader r, IReadOnlyList<OrderLine> lines) => new(r.GetGuid(0), r.GetString(1), r.IsDBNull(2) ? null : r.GetGuid(2), S(r, 3),
         r.IsDBNull(4) ? null : r.GetGuid(4), S(r, 5), r.GetDecimal(6), r.GetDecimal(7), r.GetString(8), S(r, 9), S(r, 10), S(r, 11), S(r, 12), r.GetInt32(13),
-        r.IsDBNull(14) ? null : r.GetDateTime(14), r.GetBoolean(15), r.GetString(16), S(r, 17), r.GetDateTime(18), lines);
+        r.IsDBNull(14) ? null : r.GetDateTime(14), r.GetBoolean(15), r.GetString(16), S(r, 17), r.GetDateTime(18), lines,
+        r.IsDBNull(19) ? null : r.GetDecimal(19), r.IsDBNull(20) ? null : r.GetDateTime(20));
 
     public async Task<IReadOnlyList<Order>> OrdersAsync(Guid customerId)
     {
@@ -273,14 +285,29 @@ OUTPUT inserted.Id VALUES(@c,@no,@contact,@bank,@desc,@amount,'DRAFT',@expire,@i
     {
         await using var cn = await Open();
         await using var cmd = Command(cn, """
-UPDATE dbo.CustomerOrders SET BankAccountId=@bank,PaidAmount=@paid,Status=@status,QrType=@qrType,QrPayload=@payload,QrAccount=@qrAccount,BillId=@bill,ExpiresAt=@expires,LastError=@error,
- InvoiceStatus=CASE WHEN @status='PAID' AND AutoIssueInvoice=1 AND InvoiceStatus='NONE' THEN 'PENDING' ELSE InvoiceStatus END,
- PaidAt=CASE WHEN @status='PAID' AND PaidAt IS NULL THEN SYSUTCDATETIME() ELSE PaidAt END,
- CancelledAt=CASE WHEN @status='CANCELLED' AND CancelledAt IS NULL THEN SYSUTCDATETIME() ELSE CancelledAt END,
+UPDATE o SET BankAccountId=@bank,Status=n.Status,QrType=@qrType,QrPayload=@payload,QrAccount=@qrAccount,BillId=@bill,ExpiresAt=@expires,LastError=@error,
+ InvoiceStatus=CASE WHEN n.Status='PAID' AND o.AutoIssueInvoice=1 AND o.InvoiceStatus='NONE' THEN 'PENDING' ELSE o.InvoiceStatus END,
+ PaidAt=CASE WHEN n.Status='PAID' AND o.PaidAt IS NULL THEN SYSUTCDATETIME() ELSE o.PaidAt END,
+ CancelledAt=CASE WHEN n.Status='CANCELLED' AND o.CancelledAt IS NULL THEN SYSUTCDATETIME() ELSE o.CancelledAt END,
  UpdatedAt=SYSUTCDATETIME(),UpdatedBy=@actor
-WHERE CustomerId=@c AND Id=@id
-""", ("@c", customerId), ("@id", o.Id), ("@bank", o.BankAccountId), ("@paid", o.PaidAmount), ("@status", o.Status), ("@qrType", o.QrType), ("@payload", o.QrPayload), ("@qrAccount", o.QrAccount),
+FROM dbo.CustomerOrders o
+-- The payment processor may have counted money since the order was read: payment states follow the stored amount, and an
+-- order that has received money is never cancelled here.
+CROSS APPLY (SELECT CASE
+  WHEN @status IN ('AWAITING_PAYMENT','PARTIALLY_PAID','PAID') THEN CASE WHEN o.PaidAmount>=o.Amount THEN 'PAID' WHEN o.PaidAmount>0 THEN 'PARTIALLY_PAID' ELSE 'AWAITING_PAYMENT' END
+  WHEN @status='CANCELLED' AND o.PaidAmount>0 THEN o.Status
+  ELSE @status END AS Status) n
+WHERE o.CustomerId=@c AND o.Id=@id AND o.Status NOT IN ('EXPIRED_PAID','CANCELLED_PAID')
+""", ("@c", customerId), ("@id", o.Id), ("@bank", o.BankAccountId), ("@status", o.Status), ("@qrType", o.QrType), ("@payload", o.QrPayload), ("@qrAccount", o.QrAccount),
             ("@bill", o.BillId), ("@expires", o.ExpiresAt), ("@error", o.LastError), ("@actor", actor));
+        await cmd.ExecuteNonQueryAsync();
+    }
+
+    public async Task RecordPartnerPaidAsync(Guid customerId, Guid orderId, decimal partnerPaid)
+    {
+        await using var cn = await Open();
+        await using var cmd = Command(cn, "UPDATE dbo.CustomerOrders SET PartnerPaidAmount=@p,PartnerCheckedAt=SYSUTCDATETIME() WHERE CustomerId=@c AND Id=@id",
+            ("@c", customerId), ("@id", orderId), ("@p", partnerPaid));
         await cmd.ExecuteNonQueryAsync();
     }
 

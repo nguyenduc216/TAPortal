@@ -20,6 +20,8 @@
                     <div><dt>@UiIcon.Render("report-money")Số tiền đơn</dt><dd>@PaymentText.Money(o.Amount)</dd></div>
                     <div><dt>@UiIcon.Render("circle-check")Đã thu</dt><dd>@PaymentText.Money(o.PaidAmount)</dd></div>
                     <div><dt>@UiIcon.Render("clock")Còn phải thu</dt><dd>@PaymentText.Money(o.Remaining)</dd></div>
+                    @if (o.Overpaid > 0) {<div><dt>@UiIcon.Render("alert-triangle")Trả dư</dt><dd>@PaymentText.Money(o.Overpaid) <span class="cp-badge cp-badge--red">Trả dư</span></dd></div>}
+                    @if (o.PartnerPaidAmount is decimal partner) {<div><dt>@UiIcon.Render("refresh")Đối chiếu dịch vụ thanh toán</dt><dd>@PaymentText.Money(partner) <span class="cp-muted">(@PaymentText.VietnamTime(o.PartnerCheckedAt))</span> @if (o.PartnerDiffers) {<span class="cp-badge cp-badge--red">Lệch đối soát</span>} else {<span class="cp-badge cp-badge--green">Khớp</span>}</dd></div>}
                     <div><dt>@UiIcon.Render("clock")QR hết hạn</dt><dd>@PaymentText.VietnamTime(o.ExpiresAt)</dd></div>
                     <div><dt>@UiIcon.Render("user")Khách hàng</dt><dd>@(Model.Contact?.Name ?? "Khách lẻ")</dd></div>
                     <div><dt>@UiIcon.Render("building-bank")Nhận tiền vào</dt><dd>@(Model.Bank is { } b ? $"{b.BankName} — {b.ReceiveAccount}" : "—")</dd></div>
@@ -28,10 +30,15 @@
                 </dl>
                 <div class="cp-progress" style="margin-top:14px" role="progressbar" aria-valuenow="@percent" aria-valuemin="0" aria-valuemax="100" aria-label="Tỷ lệ đã thanh toán"><span style="width:@(percent)%"></span></div>
                 @if (o.LastError is string err) {<div class="cp-error" style="margin-top:10px">@err</div>}
+                @if (Model.Status is OrderStatus.ExpiredPaid or OrderStatus.CancelledPaid || o.Overpaid > 0 || o.PartnerDiffers)
+                {
+                    <div class="cp-error" style="margin-top:10px">@(Model.Status == OrderStatus.ExpiredPaid ? "Có tiền chuyển vào sau khi mã QR hết hạn." : Model.Status == OrderStatus.CancelledPaid ? "Có tiền chuyển vào đơn đã hủy." : o.Overpaid > 0 ? "Khách đã chuyển dư so với số tiền đơn." : "Số đã thu trên hệ thống khác số dịch vụ thanh toán báo về.")
+                        <a class="cp-link" asp-controller="Transactions" asp-action="Index" asp-route-q="@OrderMath.TransferContent(o.OrderNo)">Xem tại Đối soát giao dịch</a></div>
+                }
             </div>
             <div class="cp-card__foot">
                 <a class="cp-btn cp-btn--ghost" asp-action="Index">@UiIcon.Render("arrow-left")<span>Danh sách đơn</span></a>
-                @if (open || Model.Status == OrderStatus.Expired) {<form method="post" asp-action="Refresh" asp-route-id="@o.Id"><button class="cp-btn cp-btn--ghost" type="submit">@UiIcon.Render("refresh")<span>Kiểm tra thanh toán</span></button></form>}
+                @if (open || Model.Status is OrderStatus.Expired or OrderStatus.ExpiredPaid) {<form method="post" asp-action="Refresh" asp-route-id="@o.Id"><button class="cp-btn cp-btn--ghost" type="submit">@UiIcon.Render("refresh")<span>Kiểm tra thanh toán</span></button></form>}
                 @if (canIssue) {<form method="post" asp-action="IssueQr" asp-route-id="@o.Id" class="cp-inline-form">@if (Model.Banks.Count > 1) {<select class="cp-input cp-input--plain" name="bankAccountId" aria-label="Tài khoản nhận tiền" data-cp-issue-bank>@foreach (var b in Model.Banks) {<option value="@b.Id" selected="@(b.Id == (Model.Bank is { IsActive: true } cur ? cur.Id : Model.Banks[0].Id))">@PaymentText.BankOption(b)</option>}</select>}<button class="cp-btn cp-btn--primary" type="submit">@UiIcon.Render("qrcode")<span>Tạo QR @(o.PaidAmount > 0 ? "cho số còn lại" : "")</span></button></form>}
                 @if (Model.CanManage && OrderStatus.IsOpen(o.Status) && o.PaidAmount == 0) {<form method="post" asp-action="Cancel" asp-route-id="@o.Id" style="margin-left:auto" onsubmit="return confirm('Hủy đơn @o.OrderNo? Mã QR sẽ không còn dùng được.')"><button class="cp-btn cp-btn--danger" type="submit">@UiIcon.Render("ban")<span>Hủy đơn</span></button></form>}
             </div>
@@ -63,7 +70,7 @@
         }
         else
         {
-            <div class="cp-qr cp-muted">@UiIcon.Render("qrcode")<p>@(Model.Status switch { OrderStatus.Paid => "Đơn đã được thanh toán đủ.", OrderStatus.Cancelled => "Đơn đã hủy.", OrderStatus.Expired => "Mã QR đã hết hạn.", _ => "Đơn chưa có mã QR." })</p></div>
+            <div class="cp-qr cp-muted">@UiIcon.Render("qrcode")<p>@(Model.Status switch { OrderStatus.Paid => "Đơn đã được thanh toán đủ.", OrderStatus.Cancelled => "Đơn đã hủy.", OrderStatus.Expired => "Mã QR đã hết hạn.", OrderStatus.ExpiredPaid => "Mã QR đã hết hạn và có giao dịch cần đối soát.", OrderStatus.CancelledPaid => "Đơn đã hủy và có giao dịch cần đối soát.", _ => "Đơn chưa có mã QR." })</p></div>
         }
     </section>
 </div>

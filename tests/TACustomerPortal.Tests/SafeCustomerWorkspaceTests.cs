@@ -354,6 +354,25 @@ public sealed class SafeCustomerWorkspaceTests
     private static HttpClient Client(WebApplicationFactory<admin::Program> f) =>
         f.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false, BaseAddress = new Uri("https://localhost"), HandleCookies = true });
 
+    private static readonly SafeCustomerPaymentsTests.MemoryTransactionStore AdminTransactions = new();
+
+    [Fact]
+    public async Task TAReconcilesEveryCustomersTransactionsIncludingUnattributedOnes()
+    {
+        using var f = Factory("SYS_ADMIN", out _);
+        lock (AdminTransactions.Items)
+        {
+            AdminTransactions.Items.Add(SafeCustomerPaymentsTests.MemoryTransactionStore.Tx(9301, A, TAPortal.Integrations.Tingee.PaymentTxStatus.Unmatched, "CK A 9301"));
+            AdminTransactions.Items.Add(SafeCustomerPaymentsTests.MemoryTransactionStore.Tx(9302, null, TAPortal.Integrations.Tingee.PaymentTxStatus.Unmatched, "CK none 9302"));
+        }
+        var c = Client(f);
+        var page = WebUtility.HtmlDecode(await c.GetStringAsync("/paymentreconciliation"));
+        Assert.Contains("CK A 9301", page);
+        Assert.Contains("CK none 9302", page);
+        Assert.Contains("name=\"orderCustomerId\"", page);   // an unattributed transaction asks for the customer
+        Assert.Contains("data-pr-cards", page);
+    }
+
     private static WebApplicationFactory<admin::Program> Factory(string role, out FakePortal portal, params string[] permissions)
     {
         var fake = portal = new FakePortal();
@@ -367,6 +386,8 @@ public sealed class SafeCustomerWorkspaceTests
                 s.RemoveAll<AdminServices.ICustomerPortalAccounts>();
                 s.AddSingleton<AdminServices.ICustomerPortalAccounts>(fake);
                 s.AddSingleton(new Identity(role, permissions));
+                s.RemoveAll<TAPortal.Integrations.Tingee.IPaymentTransactionStore>();
+                s.AddSingleton<TAPortal.Integrations.Tingee.IPaymentTransactionStore>(AdminTransactions);
                 s.AddAuthentication().AddScheme<AuthenticationSchemeOptions, TestAuthHandler>(TestScheme, _ => { });
                 s.PostConfigure<AuthenticationOptions>(o => { o.DefaultScheme = TestScheme; o.DefaultAuthenticateScheme = TestScheme; o.DefaultChallengeScheme = TestScheme; o.DefaultForbidScheme = TestScheme; });
             }));

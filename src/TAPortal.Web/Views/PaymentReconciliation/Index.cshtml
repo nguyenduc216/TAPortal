@@ -1,0 +1,110 @@
+@model TAPortal.Web.Controllers.PaymentReconciliationVm
+@using TAPortal.Integrations.Tingee
+@{
+    ViewData["Subtitle"] = "Mọi giao dịch biến động số dư ngân hàng báo về webhook: đã khớp đơn, cần xem lại, hoặc chưa xử lý. Cuối ngày, xử lý các giao dịch chưa khớp của khách hàng.";
+    ViewData["PageIcon"] = "receipt-tax";
+    var back = Context.Request.Path + Context.Request.QueryString;
+    string Money(decimal v) => v.ToString("#,##0", System.Globalization.CultureInfo.GetCultureInfo("vi-VN")) + " ₫";
+    string Local(DateTime utc) => utc.AddHours(7).ToString("dd/MM/yyyy HH:mm");
+    string Tone(string tone) => tone switch { "green" => "ta-badge--success", "gold" => "ta-badge--warning", "red" => "ta-badge--danger", "blue" => "ta-badge--info", _ => "ta-badge--neutral" };
+    var fromText = Model.From?.ToString("yyyy-MM-dd");
+    var toText = Model.To?.ToString("yyyy-MM-dd");
+}
+@if (Model.Error is not null)
+{
+    <div class="ta-alert ta-alert--danger mb-3" role="alert">@UiIcon.Render("database-off")<div class="ta-alert__body">@Model.Error</div></div>
+}
+@if (Model.Summary is { } s)
+{
+    var cards = new (string Code, string Label, string Icon, string Tone, int Count, decimal Amount)[]
+    {
+        (PaymentTxStatus.Unmatched, "Chưa xử lý", "alert-triangle", "ta-stat-icon--gold", s.Unmatched, s.UnmatchedAmount),
+        (PaymentTxStatus.Review, "Cần xem lại", "refresh", "ta-stat-icon--gold", s.Review, s.ReviewAmount),
+        (PaymentTxStatus.Matched, "Đã khớp đơn", "circle-check", "ta-stat-icon--green", s.Matched, s.MatchedAmount),
+        (PaymentTxStatus.Resolved, "Đã xử lý", "shield-check", "ta-stat-icon--navy", s.Resolved, s.ResolvedAmount),
+    };
+    <div class="ta-kpi-grid" data-pr-cards>
+        @foreach (var c in cards)
+        {
+            <a class="card ta-stat-card" asp-action="Index" asp-route-status="@c.Code" asp-route-customerId="@Model.CustomerId" asp-route-unattributed="@(Model.UnattributedOnly ? "true" : null)" asp-route-from="@fromText" asp-route-to="@toText">
+                <div class="ta-stat-head"><span class="ta-stat-icon @c.Tone">@UiIcon.Render(c.Icon)</span><div><div class="ta-stat-label">@c.Label</div><div class="ta-stat-value">@c.Count</div></div></div>
+                <ul class="ta-stat-list"><li>@Money(c.Amount)</li></ul>
+            </a>
+        }
+    </div>
+}
+<section class="card ta-table-card" aria-label="Giao dịch">
+    <form class="ta-table-toolbar d-flex flex-wrap gap-2 align-items-center" method="get" asp-action="Index">
+        <div class="ta-search">@UiIcon.Render("search")<input class="form-control" type="search" name="q" value="@Model.Query" aria-label="Tìm giao dịch" placeholder="Nội dung, mã giao dịch, số tài khoản, mã đơn..." /></div>
+        <select class="form-select w-auto" name="customerId" aria-label="Khách hàng">
+            <option value="">Tất cả khách hàng</option>
+            @foreach (var c in Model.Customers) {<option value="@c.Id" selected="@(c.Id == Model.CustomerId)">@c.Code — @c.Name</option>}
+        </select>
+        <select class="form-select w-auto" name="status" aria-label="Trạng thái">
+            @foreach (var (code, label) in PaymentTxText.Filters) {<option value="@code" selected="@(code == Model.Status)">@label</option>}
+        </select>
+        <div class="ta-input-icon">@UiIcon.Render("calendar")<input class="form-control w-auto" type="date" name="from" value="@fromText" aria-label="Từ ngày" /></div>
+        <div class="ta-input-icon">@UiIcon.Render("calendar")<input class="form-control w-auto" type="date" name="to" value="@toText" aria-label="Đến ngày" /></div>
+        <label class="form-check-label d-flex gap-1 align-items-center"><input class="form-check-input" type="checkbox" name="unattributed" value="true" checked="@Model.UnattributedOnly" />Chưa gắn khách hàng</label>
+        <button class="btn" type="submit">@UiIcon.Render("search")<span>Lọc</span></button>
+    </form>
+    @if (Model.Items.Count == 0)
+    {
+        <div class="ta-empty"><span class="ta-empty__icon">@UiIcon.Render("receipt-tax")</span><p class="ta-empty__title">Không có giao dịch</p><p class="ta-empty__text">Giao dịch xuất hiện khi ngân hàng báo biến động số dư về webhook.</p></div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table ta-table mb-0" data-pr-table>
+                <thead><tr><th>Thời gian</th><th>Khách hàng</th><th class="text-end">Số tiền</th><th>Nội dung</th><th>Tài khoản</th><th>Đơn</th><th class="text-end">Hệ thống tính</th><th class="text-end">Tingee báo</th><th>Trạng thái</th></tr></thead>
+                <tbody>
+                @foreach (var t in Model.Items)
+                {
+                    var (label, tone) = PaymentTxText.Status(t.Status);
+                    <tr data-pr-tx="@t.Id">
+                        <td data-label="Thời gian">@Local(t.TransactionAtUtc ?? t.ReceivedAtUtc)<div class="text-secondary small">#@t.Id · @t.TransactionCode</div></td>
+                        <td data-label="Khách hàng">@(t.CustomerName ?? "— chưa gắn —")</td>
+                        <td data-label="Số tiền" class="text-end">@(t.Direction == "DEBIT" ? "−" : "")@Money(t.Amount)</td>
+                        <td data-label="Nội dung">@(t.Content ?? "—")</td>
+                        <td data-label="Tài khoản">@t.Bank @(t.VaAccountNumber ?? t.AccountNumber)</td>
+                        <td data-label="Đơn">@(t.OrderNo ?? "—")</td>
+                        <td data-label="Hệ thống tính" class="text-end">@(t.SystemPaidAfter is decimal sp ? Money(sp) : "—")</td>
+                        <td data-label="Tingee báo" class="text-end">@(t.PartnerPaidTotal is decimal pp ? Money(pp) : "—")</td>
+                        <td data-label="Trạng thái">
+                            <span class="ta-badge @Tone(tone)">@label</span>
+                            @foreach (var f in t.FlagList) {<span class="ta-badge ta-badge--danger">@PaymentTxText.Flag(f)</span>}
+                            @if (t.Reason is string reason && t.OrderId is null) {<div class="text-secondary small">@reason</div>}
+                            @if (t.ResolutionNote is string rn) {<div class="text-secondary small">Ghi chú (@t.ResolvedVia): @rn</div>}
+                            @if (PaymentTxStatus.NeedsStaff(t.Status))
+                            {
+                                <details class="mt-1"><summary>Xử lý</summary>
+                                    @if (t.Status == PaymentTxStatus.Unmatched && t.Direction == "CREDIT")
+                                    {
+                                        <form method="post" asp-action="Assign" asp-route-id="@t.Id" class="d-flex flex-wrap gap-1 mt-1"><input type="hidden" name="back" value="@back" />
+                                            @if (t.CustomerId is null)
+                                            {
+                                                <select class="form-select form-select-sm w-auto" name="orderCustomerId" required aria-label="Khách hàng của đơn"><option value="">Chọn khách hàng</option>@foreach (var c in Model.Customers) {<option value="@c.Id">@c.Code — @c.Name</option>}</select>
+                                            }
+                                            <div class="ta-input-icon">@UiIcon.Render("hash")<input class="form-control form-control-sm w-auto" name="orderNo" required placeholder="Mã đơn" aria-label="Mã đơn" /></div>
+                                            <div class="ta-input-icon">@UiIcon.Render("pencil")<input class="form-control form-control-sm w-auto" name="note" placeholder="Ghi chú" aria-label="Ghi chú" /></div>
+                                            <button class="btn btn-sm btn-primary" type="submit">Gán vào đơn</button></form>
+                                    }
+                                    @if (t.Status == PaymentTxStatus.Review && t.OrderId is not null)
+                                    {
+                                        <form method="post" asp-action="Accept" asp-route-id="@t.Id" class="d-flex flex-wrap gap-1 mt-1"><input type="hidden" name="back" value="@back" />
+                                            <div class="ta-input-icon">@UiIcon.Render("pencil")<input class="form-control form-control-sm w-auto" name="note" placeholder="Ghi chú" aria-label="Ghi chú" /></div>
+                                            <button class="btn btn-sm btn-primary" type="submit">Chấp nhận cho đơn</button></form>
+                                    }
+                                    <form method="post" asp-action="Close" asp-route-id="@t.Id" class="d-flex flex-wrap gap-1 mt-1"><input type="hidden" name="back" value="@back" />
+                                        <div class="ta-input-icon">@UiIcon.Render("pencil")<input class="form-control form-control-sm w-auto" name="note" required placeholder="Lý do" aria-label="Lý do" /></div>
+                                        <button class="btn btn-sm" type="submit">Đánh dấu đã xử lý</button></form>
+                                </details>
+                            }
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    }
+</section>

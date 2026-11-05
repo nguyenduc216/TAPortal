@@ -64,6 +64,7 @@ builder.Services.AddScoped<IDashboardStore, SqlDashboardStore>();
 builder.Services.AddScoped<ITingeeMerchantStore, SqlTingeeMerchantStore>();
 builder.Services.AddScoped<IServicePackageStore, SqlServicePackageStore>();
 builder.Services.AddScoped<ITingeeSandboxInbox, SqlTingeeSandboxInbox>();
+builder.Services.AddScoped<TAPortal.Integrations.Tingee.IPaymentTransactionStore, TAPortal.Integrations.Tingee.SqlPaymentTransactionStore>();
 builder.Services.AddScoped<ITingeeSandboxMerchants, SqlTingeeSandboxMerchants>();
 builder.Services.AddHttpClient(nameof(TAPortal.Web.Controllers.TingeeSandboxController), client => client.Timeout = TimeSpan.FromSeconds(20));
 // Tingee Sandbox: webhooks are received here too (same signature-checked routes as TAPortal.Webhooks) into dbo.TingeeWebhookInbox.

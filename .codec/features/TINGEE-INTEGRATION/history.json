@@ -387,9 +387,19 @@
     "change_id": "TINGEE-INTEGRATION-CHG-20261105T010435Z-CEA3FA",
     "created_at": "2026-11-05T01:04:35.545145+00:00",
     "title": "Webhooks: apply Tingee payment webhooks to customer orders in the background",
-    "status": "IMPLEMENTED",
+    "status": "SUPERSEDED_BEFORE_DEPLOY",
     "commit_sha": null,
     "migration_status": "NOT_APPLICABLE",
+    "publish_status": "NOT_PUBLISHED",
+    "merge_status": "PENDING_APPROVAL"
+  },
+  {
+    "change_id": "TINGEE-INTEGRATION-CHG-20261105T042908Z-94446D",
+    "created_at": "2026-11-05T04:29:08.391839+00:00",
+    "title": "Payment reconciliation: order-number matching, system vs partner amounts, EXPIRED_PAID/CANCELLED_PAID, overpaid, reconciliation pages, order summary cards",
+    "status": "IMPLEMENTED",
+    "commit_sha": null,
+    "migration_status": "NOT_EXECUTED",
     "publish_status": "NOT_PUBLISHED",
     "merge_status": "PENDING_APPROVAL"
   }

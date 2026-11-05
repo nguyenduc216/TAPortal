@@ -1,0 +1,96 @@
+@model TACustomerPortal.Web.Controllers.TransactionsVm
+@using TAPortal.Integrations.Tingee
+@{
+    ViewData["Title"] = "Đối soát giao dịch";
+    ViewData["Eyebrow"] = "Thanh toán";
+    ViewData["Subtitle"] = "Mọi giao dịch ngân hàng báo về tài khoản nhận tiền của doanh nghiệp. Cuối ngày, xử lý các giao dịch chưa khớp đơn hoặc cần xem lại.";
+    var s = Model.Summary;
+    var back = Context.Request.Path + Context.Request.QueryString;
+    var cards = new (string Code, string Label, string Icon, string Tone, int Count, decimal Amount)[]
+    {
+        (PaymentTxStatus.Unmatched, "Chưa xử lý", "alert-triangle", "cp-blob--red", s.Unmatched, s.UnmatchedAmount),
+        (PaymentTxStatus.Review, "Cần xem lại", "refresh", "cp-blob--gold", s.Review, s.ReviewAmount),
+        (PaymentTxStatus.Matched, "Đã khớp đơn", "circle-check", "cp-blob--green", s.Matched, s.MatchedAmount),
+        (PaymentTxStatus.Resolved, "Đã xử lý", "shield-check", "cp-blob--blue", s.Resolved, s.ResolvedAmount),
+        (PaymentTxStatus.Ignored, "Tiền ra (ghi nợ)", "arrow-left", "", s.Ignored, s.IgnoredAmount),
+    };
+}
+<nav class="cp-stats" aria-label="Tổng hợp giao dịch" data-cp-tx-cards>
+    @foreach (var c in cards)
+    {
+        <a class="cp-card cp-stat" asp-action="Index" asp-route-status="@c.Code" asp-route-from="@Model.From?.ToString("yyyy-MM-dd")" asp-route-to="@Model.To?.ToString("yyyy-MM-dd")" aria-current="@(c.Code == Model.Status ? "page" : null)">
+            <div class="cp-stat__top"><span class="cp-stat__label">@c.Label</span><span class="cp-blob @c.Tone">@UiIcon.Render(c.Icon)</span></div>
+            <div class="cp-stat__value">@c.Count giao dịch</div>
+            <div class="cp-stat__hint">@PaymentText.Money(c.Amount)</div>
+        </a>
+    }
+</nav>
+<section class="cp-card">
+    <form class="cp-toolbar" method="get" asp-action="Index">
+        <input type="hidden" name="status" value="@Model.Status" />
+        <div class="cp-search">@UiIcon.Render("search")<input class="cp-input" type="search" name="q" value="@Model.Query" aria-label="Tìm giao dịch" placeholder="Nội dung, mã giao dịch, số tài khoản, mã đơn..." /></div>
+        <label class="cp-muted">Từ <div class="cp-input-wrap">@UiIcon.Render("calendar")<input class="cp-input" type="date" name="from" value="@Model.From?.ToString("yyyy-MM-dd")" /></div></label>
+        <label class="cp-muted">Đến <div class="cp-input-wrap">@UiIcon.Render("calendar")<input class="cp-input" type="date" name="to" value="@Model.To?.ToString("yyyy-MM-dd")" /></div></label>
+        <button class="cp-btn cp-btn--ghost" type="submit">@UiIcon.Render("search")<span>Lọc</span></button>
+    </form>
+    <div class="cp-toolbar cp-filters" aria-label="Lọc theo trạng thái">
+        @foreach (var (code, label) in PaymentTxText.Filters)
+        {
+            <a class="cp-filter" asp-action="Index" asp-route-status="@code" asp-route-q="@Model.Query" asp-route-from="@Model.From?.ToString("yyyy-MM-dd")" asp-route-to="@Model.To?.ToString("yyyy-MM-dd")" aria-current="@(code == Model.Status ? "page" : null)">@label</a>
+        }
+    </div>
+    @if (Model.Items.Count == 0)
+    {
+        <div class="cp-empty" data-cp-empty>@UiIcon.Render("receipt-tax")<p>Không có giao dịch nào.</p></div>
+    }
+    else
+    {
+        <div class="cp-table-wrap">
+            <table class="cp-table" data-ta-pager="20">
+                <thead><tr><th>Thời gian</th><th class="cp-num">Số tiền</th><th>Nội dung</th><th>Tài khoản nhận</th><th>Đơn hàng</th><th class="cp-num">Hệ thống tính</th><th class="cp-num">Dịch vụ thanh toán báo</th><th>Trạng thái</th></tr></thead>
+                <tbody>
+                @foreach (var t in Model.Items)
+                {
+                    var (label, tone) = PaymentTxText.Status(t.Status);
+                    <tr data-ta-row data-cp-tx="@t.Id">
+                        <td>@PaymentText.VietnamTime(t.TransactionAtUtc ?? t.ReceivedAtUtc)<div class="cp-muted">@t.TransactionCode</div></td>
+                        <td class="cp-num">@(t.Direction == "DEBIT" ? "−" : "")@PaymentText.Money(t.Amount)</td>
+                        <td>@(t.Content ?? "—")</td>
+                        <td>@t.Bank @(t.VaAccountNumber ?? t.AccountNumber)</td>
+                        <td>@if (t.OrderId is Guid oid) {<a class="cp-link" asp-controller="Orders" asp-action="Details" asp-route-id="@oid">@t.OrderNo</a>} else {<span>—</span>}</td>
+                        <td class="cp-num">@(t.SystemPaidAfter is decimal sp ? PaymentText.Money(sp) : "—")</td>
+                        <td class="cp-num">@(t.PartnerPaidTotal is decimal pp ? PaymentText.Money(pp) : "—")</td>
+                        <td>
+                            <span class="cp-badge cp-badge--@tone">@label</span>
+                            @foreach (var f in t.FlagList) {<span class="cp-badge cp-badge--red">@PaymentTxText.Flag(f)</span>}
+                            @if (t.Reason is string reason && t.Status != PaymentTxStatus.Matched && t.OrderId is null) {<div class="cp-muted">@PartnerText.Scrub(reason)</div>}
+                            @if (t.ResolutionNote is string rn) {<div class="cp-muted">Ghi chú: @rn</div>}
+                            @if (Model.CanManage && PaymentTxStatus.NeedsStaff(t.Status))
+                            {
+                                <details class="cp-tx-actions"><summary class="cp-link">Xử lý</summary>
+                                    @if (t.Status == PaymentTxStatus.Unmatched && t.Direction == "CREDIT")
+                                    {
+                                        <form method="post" asp-action="Assign" asp-route-id="@t.Id" class="cp-inline-form"><input type="hidden" name="back" value="@back" />
+                                            <div class="cp-input-wrap">@UiIcon.Render("hash")<input class="cp-input" name="orderNo" required placeholder="Mã đơn, ví dụ DH261105-0001" aria-label="Mã đơn hàng" /></div>
+                                            <div class="cp-input-wrap">@UiIcon.Render("pencil")<input class="cp-input" name="note" placeholder="Ghi chú" aria-label="Ghi chú" /></div>
+                                            <button class="cp-btn cp-btn--primary" type="submit">Gán vào đơn</button></form>
+                                    }
+                                    @if (t.Status == PaymentTxStatus.Review && t.OrderId is not null)
+                                    {
+                                        <form method="post" asp-action="Accept" asp-route-id="@t.Id" class="cp-inline-form"><input type="hidden" name="back" value="@back" />
+                                            <div class="cp-input-wrap">@UiIcon.Render("pencil")<input class="cp-input" name="note" placeholder="Ghi chú" aria-label="Ghi chú" /></div>
+                                            <button class="cp-btn cp-btn--primary" type="submit">Chấp nhận cho đơn</button></form>
+                                    }
+                                    <form method="post" asp-action="Close" asp-route-id="@t.Id" class="cp-inline-form"><input type="hidden" name="back" value="@back" />
+                                        <div class="cp-input-wrap">@UiIcon.Render("pencil")<input class="cp-input" name="note" required placeholder="Lý do (không liên quan đơn, đã hoàn tiền...)" aria-label="Lý do" /></div>
+                                        <button class="cp-btn cp-btn--ghost" type="submit">Đánh dấu đã xử lý</button></form>
+                                </details>
+                            }
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    }
+</section>

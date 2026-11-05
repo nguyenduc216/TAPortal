@@ -18,9 +18,10 @@ public sealed class OrdersController(ICurrentCustomerContext customer, IPaymentS
     {
         if (await Current() is not { } m) return SelectCustomer();
         var now = clock.GetUtcNow().UtcDateTime;
-        var orders = (await store.OrdersAsync(m.CustomerId)).Select(o => o with { Status = OrderMath.EffectiveStatus(o, now) }).ToList();
-        if (!string.IsNullOrEmpty(status)) orders = orders.Where(o => o.Status == status).ToList();
-        return View(new OrdersVm(m, CanManage(m), await store.MerchantIdAsync(m.CustomerId) is not null, status, orders, now));
+        var all = (await store.OrdersAsync(m.CustomerId)).Select(o => o with { Status = OrderMath.EffectiveStatus(o, now) }).ToList();
+        var cards = OrderSummary.Cards(all);
+        var orders = string.IsNullOrEmpty(status) ? all : all.Where(o => OrderSummary.Matches(o, status)).ToList();
+        return View(new OrdersVm(m, CanManage(m), await store.MerchantIdAsync(m.CustomerId) is not null, status, orders, now, cards));
     }
 
     [HttpGet]
@@ -92,7 +93,9 @@ public sealed class OrdersController(ICurrentCustomerContext customer, IPaymentS
         if (order is null) return NotFound();
         if (await store.MerchantIdAsync(m.CustomerId) is not long merchantId) return NotFound();
         var result = await payments.RefreshAsync(m.CustomerId, merchantId, order, Actor);
-        Flash(result.Error ?? PaymentText.OrderStatus(result.Order.Status).Label + $" — đã nhận {PaymentText.Money(result.Order.PaidAmount)}.", error: result.Error is not null);
+        Flash(result.Error ?? (result.Order.PartnerDiffers
+            ? $"Lệch đối soát: hệ thống đã ghi nhận {PaymentText.Money(result.Order.PaidAmount)}, dịch vụ thanh toán báo {PaymentText.Money(result.Order.PartnerPaidAmount ?? 0)}. Giao dịch sẽ được ghi nhận khi ngân hàng gửi thông báo, hoặc được xử lý tại Đối soát giao dịch."
+            : $"Khớp đối soát — đã nhận {PaymentText.Money(result.Order.PaidAmount)}."), error: result.Error is not null);
         return RedirectToAction(nameof(Details), new { id });
     }
 
