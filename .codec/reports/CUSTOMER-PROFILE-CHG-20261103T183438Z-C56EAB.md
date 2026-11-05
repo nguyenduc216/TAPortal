@@ -32,9 +32,9 @@ Customer Workspace thêm 3 tab: Hồ sơ doanh nghiệp (tạo/sửa 1:1), Ngư�
 Xem `.codec/changes/CUSTOMER-PROFILE-CHG-20261103T183438Z-C56EAB.md` mục "File thay đổi".
 
 ## F. Database
-- `database/migrations/013-customer-profile-core.sql` — tạo `dbo.CustomerProfiles`, `dbo.CustomerRepresentatives`, `dbo.CustomerSystemAccounts`; NOT_EXECUTED.
+- `database/migrations/013-customer-profile-core.sql` — tạo `dbo.CustomerProfiles`, `dbo.CustomerRepresentatives`, `dbo.CustomerSystemAccounts`; EXECUTED.
 - Verify `database/scripts/015-verify-customer-profile.sql`; rollback `database/scripts/016-rollback-customer-profile.sql` (từ chối khi có dữ liệu).
-- Dry-run: NOT_RUN.
+- Dry-run: PASS; real run EXECUTED 2026-11-05T15:16:37Z (chi tiết trong change record).
 
 ## G. Build & Tests
 2026-11-05: đồng bộ checkout với HEAD `3368fba` (nhánh đã đi thêm 76 commit; working tree trước đó còn ở `c7949c8`), áp lại thay đổi của change này, review độc lập, sửa CP-04..CP-08. Kết quả mới ghi trong change record.

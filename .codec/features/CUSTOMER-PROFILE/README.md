@@ -21,7 +21,7 @@
 
 | Change ID | Ngày UTC | Nội dung | Commit SHA | Migration | Publish | Merge |
 |---|---|---|---|---|---|---|
-| `CUSTOMER-PROFILE-CHG-20261103T183438Z-C56EAB` | 2026-11-03 | Customer profile phase 1: general info, representatives, encrypted system accounts | — | NOT_EXECUTED (013) | NOT_PUBLISHED | PENDING_APPROVAL |
+| `CUSTOMER-PROFILE-CHG-20261103T183438Z-C56EAB` | 2026-11-03 | Customer profile phase 1: general info, representatives, encrypted system accounts | `769f167` | EXECUTED (013) | NOT_PUBLISHED | PENDING |
 
 ## Current status (2026-11-03, sau change C56EAB)
 Source giai đoạn 1 xong, gates PASS (trừ `codec validate` lỗi đường dẫn publish có sẵn từ trước do checkout nằm ở `D:\Working\...`). Chưa commit, migration 013 NOT_EXECUTED, chưa publish/deploy. Tiếp theo: operator sinh và cấu hình `CustomerSecrets__Key` (giữ một bản sao ngoài server), chạy migration 013 theo quy trình, deploy `portal`; giai đoạn 2 Import Excel.

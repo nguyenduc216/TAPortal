@@ -37,7 +37,7 @@ Không đổi `TAPortal.Shared`, `TAPortal.Integrations`, `TACustomerPortal.Web`
 - Thứ tự chạy: sau 012-tingee-customer-buyers.sql
 - Verify: `database/scripts/015-verify-customer-profile.sql` (PASS khi đủ bảng/constraint/FK/index; NOT_APPLIED khi chưa có bảng)
 - Rollback: `database/scripts/016-rollback-customer-profile.sql` (chỉ drop khi cả 3 bảng rỗng; có dữ liệu thì THROW, không đổi gì)
-- Execution: NOT_EXECUTED (chưa chạy dry-run; cần chạy theo `## AGENT MIGRATION EXECUTION` trước khi deploy)
+- Execution: EXECUTED 2026-11-05T15:16:37Z (`Invoke-TAMigrations.ps1 -Plan 013:015:016`): pre-check NOT_APPLIED; dry-run exit 0, sau migration PASS, sau rollback NOT_APPLIED, @@TRANCOUNT=0, pre-check lại NOT_APPLIED; backup `TAPortalSys-predeploy-20261105T151518Z.bak` (RESTORE VERIFYONLY OK); gates 428/428 PASS; real run VERIFY_STATUS=PASS.
 
 ## Test và kết quả
 - `dotnet restore TAPortal.sln`: OK
@@ -58,7 +58,7 @@ Không đổi `TAPortal.Shared`, `TAPortal.Integrations`, `TACustomerPortal.Web`
 
 ## Git
 - Branch: feature/customer-portal-mvp01 (không tạo branch mới; tạo branch cần operator duyệt)
-- Commit SHA: — (chưa commit, chờ operator)
+- Source commit SHA: `769f1670b2cbae69706463e3a387c3569a4e3f73`
 - PR: —
 - Merge: PENDING_APPROVAL
 - Merge SHA: —
