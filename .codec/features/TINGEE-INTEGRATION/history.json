@@ -397,20 +397,20 @@
     "change_id": "TINGEE-INTEGRATION-CHG-20261105T042908Z-94446D",
     "created_at": "2026-11-05T04:29:08.391839+00:00",
     "title": "Payment reconciliation: order-number matching, system vs partner amounts, EXPIRED_PAID/CANCELLED_PAID, overpaid, reconciliation pages, order summary cards",
-    "status": "IMPLEMENTED",
-    "commit_sha": null,
+    "status": "DEPLOYED",
+    "commit_sha": "556e987",
     "migration_status": "EXECUTED (019, 2026-11-05T05:03:24Z)",
-    "publish_status": "NOT_PUBLISHED",
+    "publish_status": "DEPLOYED webhooks, invoice, portal 2026-11-05 (commit 556e987)",
     "merge_status": "PENDING_APPROVAL"
   },
   {
     "change_id": "TINGEE-INTEGRATION-CHG-20261105T044328Z-2BCDDC",
     "created_at": "2026-11-05T04:43:28.916820+00:00",
     "title": "Notification channels: T.A system channels (Zalo OA, Telegram bot/group, SMTP) and company channels (Zalo OA, Telegram group, SMTP)",
-    "status": "IMPLEMENTED",
-    "commit_sha": null,
+    "status": "DEPLOYED",
+    "commit_sha": "556e987",
     "migration_status": "EXECUTED (020, 2026-11-05T05:03:28Z)",
-    "publish_status": "NOT_PUBLISHED",
+    "publish_status": "DEPLOYED webhooks, invoice, portal 2026-11-05 (commit 556e987)",
     "merge_status": "PENDING_APPROVAL"
   }
 ]
