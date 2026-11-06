@@ -52,6 +52,11 @@ public sealed class SafeCustomerPayPageTests
         Assert.Contains("Công ty A", page);                                   // seller
         Assert.Contains("Nhà hàng Sen", page);                                // their customer
         Assert.Contains("class=\"cp-pay__bridge\"", page);                    // the two logos are joined
+        // Operator 2026-11-06: customer on the left, seller on the right, a bank in between (the money's path).
+        var buyerAt = page.IndexOf("cp-pay__party--buyer", StringComparison.Ordinal);
+        var bridgeAt = page.IndexOf("class=\"cp-pay__bridge\"", StringComparison.Ordinal);
+        Assert.True(buyerAt >= 0 && buyerAt < bridgeAt && bridgeAt < page.IndexOf("cp-pay__party--seller", StringComparison.Ordinal));
+        Assert.Contains("M5 6l7 -3l7 3", page[bridgeAt..page.IndexOf("cp-pay__party--seller", StringComparison.Ordinal)]);   // building-bank icon
         Assert.Contains(link[17..] + "/logo/buyer?v=", page);                 // buyer logo uploaded, seller shows initials
         Assert.DoesNotContain("/logo/seller", page);
         Assert.Contains("Tiệc cuối năm", page);                               // title = description

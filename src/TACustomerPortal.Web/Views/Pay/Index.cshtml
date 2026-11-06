@@ -31,24 +31,25 @@
 <main class="cp-pay">
     <article class="cp-pay__card" aria-labelledby="payTitle">
         <header class="cp-pay__brands @(Model.BuyerName is null ? "is-single" : "")" aria-label="Các bên của đơn hàng">
-            <figure class="cp-pay__party">
-                <span class="cp-pay__logo">
-                    @if (Model.SellerLogo is string sv) {<img src="@pay/logo/seller?v=@sv" alt="Logo @Model.SellerName" />}
-                    else {<span class="cp-pay__initials" aria-hidden="true">@PayPageVm.Initials(Model.SellerName)</span>}
-                </span>
-                <figcaption><small>Người bán</small><strong>@Model.SellerName</strong></figcaption>
-            </figure>
+            @* Buyer on the left, seller on the right: the payment flows from the customer through the bank to the seller. *@
             @if (Model.BuyerName is string buyer)
             {
-                <div class="cp-pay__bridge" aria-hidden="true"><span class="cp-pay__wire"></span><span class="cp-pay__knot">@UiIcon.Render("link")</span><span class="cp-pay__wire"></span></div>
-                <figure class="cp-pay__party">
+                <figure class="cp-pay__party cp-pay__party--buyer">
                     <span class="cp-pay__logo">
                         @if (Model.BuyerLogo is string bv) {<img src="@pay/logo/buyer?v=@bv" alt="Logo @buyer" />}
                         else {<span class="cp-pay__initials cp-pay__initials--buyer" aria-hidden="true">@PayPageVm.Initials(buyer)</span>}
                     </span>
                     <figcaption><small>Khách hàng</small><strong>@buyer</strong></figcaption>
                 </figure>
+                <div class="cp-pay__bridge" aria-hidden="true"><span class="cp-pay__wire"></span><span class="cp-pay__knot">@UiIcon.Render("building-bank")</span><span class="cp-pay__wire"></span></div>
             }
+            <figure class="cp-pay__party cp-pay__party--seller">
+                <span class="cp-pay__logo">
+                    @if (Model.SellerLogo is string sv) {<img src="@pay/logo/seller?v=@sv" alt="Logo @Model.SellerName" />}
+                    else {<span class="cp-pay__initials" aria-hidden="true">@PayPageVm.Initials(Model.SellerName)</span>}
+                </span>
+                <figcaption><small>Người bán</small><strong>@Model.SellerName</strong></figcaption>
+            </figure>
         </header>
 
         <section class="cp-pay__head">
