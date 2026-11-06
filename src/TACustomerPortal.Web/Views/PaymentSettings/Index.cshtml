@@ -9,8 +9,8 @@
     <form class="cp-card" method="post" asp-action="Index">
         <div class="cp-card__body">
             <div class="cp-field">
-                <input type="hidden" name="AutoIssueInvoiceDefault" value="false" />
                 <label class="cp-check"><input type="checkbox" name="AutoIssueInvoiceDefault" value="true" checked="@i.AutoIssueInvoiceDefault" disabled="@(!Model.CanManage)" /><span><strong>Tự động xuất hóa đơn điện tử khi đơn được thanh toán đủ</strong><span class="cp-muted" style="display:block">Áp dụng mặc định cho đơn hàng mới.</span></span></label>
+                <input type="hidden" name="AutoIssueInvoiceDefault" value="false" />
             </div>
             @await Html.PartialAsync("_QrLifetime", new QrLifetimeField("DefaultQrExpire", "Thời hạn QR mặc định", i.DefaultQrExpireMinutes, !Model.CanManage, Last: true))
         </div>

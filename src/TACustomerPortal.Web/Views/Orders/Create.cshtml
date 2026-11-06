@@ -39,8 +39,8 @@ else if (Model.Banks.Count == 0)
                 <div class="cp-input-wrap">@UiIcon.Render("file-text")<input class="cp-input" id="Description" name="Description" value="@i.Description" maxlength="500" /></div>
             </div>
             <div class="cp-span">
-                <input type="hidden" name="AutoIssueInvoice" value="false" />
                 <label class="cp-check"><input type="checkbox" name="AutoIssueInvoice" value="true" checked="@i.AutoIssueInvoice" /><span><strong>Tự động xuất hóa đơn điện tử khi đơn được thanh toán đủ</strong><span class="cp-muted" style="display:block">Mặc định theo Cài đặt thanh toán của doanh nghiệp.</span></span></label>
+                <input type="hidden" name="AutoIssueInvoice" value="false" />
             </div>
         </div>
     </section>

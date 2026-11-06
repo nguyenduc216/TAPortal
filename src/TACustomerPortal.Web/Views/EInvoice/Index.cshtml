@@ -66,12 +66,12 @@ else if (!Model.ServiceReady) { <aside class="cp-note" style="margin-bottom:14px
                     <div class="cp-field"><label asp-for="Template.Series" class="cp-label">Ký hiệu</label><div class="cp-input-wrap">@UiIcon.Render("hash")<input asp-for="Template.Series" class="cp-input" maxlength="20" placeholder="VD: C26TAA" disabled="@(!canEdit || !s.IsConnected)" /></div><span asp-validation-for="Template.Series" class="cp-error"></span></div>
                 </div>
                 <div class="cp-field">
-                    <input type="hidden" name="Template.AutoIssueEnabled" value="false" />
                     <label class="cp-check"><input type="checkbox" name="Template.AutoIssueEnabled" value="true" checked="@t.AutoIssueEnabled" disabled="@(!canEdit || !s.IsConnected)" /><span><strong>Tự động xuất hóa đơn khi đơn hàng QR được thanh toán đủ</strong><span class="cp-muted" style="display:block">Áp dụng cho đơn có đánh dấu "tự động xuất hóa đơn" và được thanh toán đủ từ lúc bật. Đơn đã thanh toán trước đó: xuất từ trang chi tiết đơn.</span></span></label>
+                    <input type="hidden" name="Template.AutoIssueEnabled" value="false" />
                 </div>
                 <div class="cp-field">
-                    <input type="hidden" name="Template.SendEmail" value="false" />
                     <label class="cp-check"><input type="checkbox" name="Template.SendEmail" value="true" checked="@t.SendEmail" disabled="@(!canEdit || !s.IsConnected)" /><span><strong>Gửi hóa đơn qua email cho người mua</strong><span class="cp-muted" style="display:block">Khi khách hàng của đơn có email.</span></span></label>
+                    <input type="hidden" name="Template.SendEmail" value="false" />
                 </div>
             </div>
             @if (canEdit && s.IsConnected)

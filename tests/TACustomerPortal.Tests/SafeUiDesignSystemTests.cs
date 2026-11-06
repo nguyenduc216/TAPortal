@@ -54,6 +54,28 @@ public sealed class SafeUiDesignSystemTests
         Assert.Contains("event.submitter?.hasAttribute(\"formtarget\")", customer);
     }
 
+    // A ticked box posts "true" and its hidden fallback "false"; the model binder takes the first value, so the checkbox must
+    // come first (production 2026-11-06: "tự động xuất hóa đơn" and "gửi email" were saved as off although ticked).
+    [Fact]
+    public void HiddenFalseFallbacksComeAfterTheirCheckboxes()
+    {
+        var views = new[] { Path.Combine(Root, "src", "TAPortal.Web", "Views"), Path.Combine(Root, "src", "TACustomerPortal.Web", "Views") }
+            .SelectMany(d => Directory.EnumerateFiles(d, "*.cshtml", SearchOption.AllDirectories));
+        var checkedCount = 0;
+        foreach (var file in views)
+        {
+            var text = File.ReadAllText(file);
+            foreach (Match hidden in Regex.Matches(text, @"<input type=""hidden"" name=""([^""]+)"" value=""false"""))
+            {
+                var box = Regex.Match(text, @"type=""checkbox""[^>]*name=""" + Regex.Escape(hidden.Groups[1].Value) + @"""");
+                if (!box.Success) continue;
+                checkedCount++;
+                Assert.True(box.Index < hidden.Index, $"{Path.GetFileName(file)}: hidden '{hidden.Groups[1].Value}=false' comes before its checkbox");
+            }
+        }
+        Assert.True(checkedCount >= 5);
+    }
+
     [Fact]
     public void DesignTokensUseTheApprovedPalette()
     {

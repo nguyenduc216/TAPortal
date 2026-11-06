@@ -39,3 +39,4 @@ CHECKPOINT_4A: PASS (existing artifact integrity, isolated localhost startup and
 | `CUSTOMER-PORTAL-FOUNDATION-CHG-20261106T012601Z-147F73` | 2026-11-06 | Customer Portal: MISA e-invoice settings and automatic invoice for paid QR orders | 71cb50a | EXECUTED | DEPLOYED | PENDING_APPROVAL |
 | `CUSTOMER-PORTAL-FOUNDATION-CHG-20261106T042042Z-D6E634` | 2026-11-06 | Shell: button formaction/formtarget (MISA templates, draft preview) | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |
 | `CUSTOMER-PORTAL-FOUNDATION-CHG-20261106T044512Z-10B30D` | 2026-11-06 | MISA template id (GUID): InvoicePattern varchar(50) | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |
+| `CUSTOMER-PORTAL-FOUNDATION-CHG-20261106T045730Z-1DF625` | 2026-11-06 | Checkbox hidden fallback order (auto-issue, email, package active) | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |

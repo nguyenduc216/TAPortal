@@ -63,8 +63,8 @@
                 <span asp-validation-for="Input.Description" class="invalid-feedback d-block"></span>
             </div>
             <div class="d-flex align-items-end">
-                <input type="hidden" name="Input.IsActive" value="false" />
                 <label class="form-check mb-2"><input class="form-check-input" type="checkbox" name="Input.IsActive" value="true" checked="@i.IsActive" /> <span class="form-check-label">Đang bán (khách hàng thấy và mua được)</span></label>
+                <input type="hidden" name="Input.IsActive" value="false" />
             </div>
         </div>
         @if (!isNew) {<p class="form-hint mb-0 mt-3">Sửa gói không ảnh hưởng các giao dịch đã tạo: mỗi giao dịch lưu lại thông tin gói tại thời điểm mua.</p>}
