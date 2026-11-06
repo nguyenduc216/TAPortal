@@ -412,5 +412,15 @@
     "migration_status": "EXECUTED (020, 2026-11-05T05:03:28Z)",
     "publish_status": "DEPLOYED webhooks, invoice, portal 2026-11-05 (commit 556e987)",
     "merge_status": "MERGED main 437af94 (fast-forward, 2026-11-05)"
+  },
+  {
+    "change_id": "TINGEE-INTEGRATION-CHG-20261106T051400Z-A0E31B",
+    "created_at": "2026-11-06T05:14:00.530222+00:00",
+    "title": "SMTP: them Message-ID de Gmail khong tu choi thu",
+    "status": "IMPLEMENTED",
+    "commit_sha": null,
+    "migration_status": "NOT_APPLICABLE",
+    "publish_status": "NOT_PUBLISHED",
+    "merge_status": "PENDING_APPROVAL"
   }
 ]

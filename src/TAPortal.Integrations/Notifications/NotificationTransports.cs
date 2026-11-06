@@ -9,6 +9,19 @@ namespace TAPortal.Integrations.Notifications;
 /// <summary>Result of one send. <see cref="Secrets"/> is set when the channel's tokens were refreshed and must be saved.</summary>
 public sealed record SendResult(bool Ok, string? Error = null, Dictionary<string, string>? Secrets = null);
 
+/// <summary>
+/// System.Net.Mail writes no Message-ID header and Gmail refuses mail without one (550 5.7.1) after the SMTP server
+/// has already accepted it, so the sender sees success while nothing arrives. Every outgoing mail gets one.
+/// </summary>
+public static class MailIds
+{
+    public static void Stamp(MailMessage mail)
+    {
+        var host = mail.From?.Host is { Length: > 0 } h ? h : "localhost";
+        mail.Headers["Message-ID"] = $"<{Guid.NewGuid():N}@{host}>";
+    }
+}
+
 public interface INotificationTransport
 {
     /// <summary>Sends one message through <paramref name="channel"/>; never throws for a channel-side failure.</summary>
@@ -53,6 +66,7 @@ public sealed class NotificationTransport(IHttpClientFactory http) : INotificati
         if (c.Scope == NotificationScope.Customer && !await PublicHostGuard.IsPublicAsync(host, ct)) return new(false, "Máy chủ SMTP phải là địa chỉ công khai trên Internet");
         using var mail = new MailMessage { From = new MailAddress(from, Get(c.Settings, "fromName") ?? from, Encoding.UTF8), Subject = m.Subject ?? "Thông báo", SubjectEncoding = Encoding.UTF8, BodyEncoding = Encoding.UTF8, Body = m.Body };
         mail.To.Add(m.Recipient);
+        MailIds.Stamp(mail);
         using var smtp = new SmtpClient(host, port) { EnableSsl = true, DeliveryMethod = SmtpDeliveryMethod.Network, Timeout = 20000 };
         if (Get(c.Settings, "username") is string user) smtp.Credentials = new NetworkCredential(user, Get(secrets, "password"));
         await smtp.SendMailAsync(mail, ct);

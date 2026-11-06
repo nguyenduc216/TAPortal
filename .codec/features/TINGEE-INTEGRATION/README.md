@@ -67,3 +67,4 @@ Database sẵn sàng cho phần thanh toán (verify PASS). Tiếp theo: operator
 | `TINGEE-INTEGRATION-CHG-20261105T010435Z-CEA3FA` | 2026-11-05 | Webhooks: apply Tingee payment webhooks to customer orders in the background | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |
 | `TINGEE-INTEGRATION-CHG-20261105T042908Z-94446D` | 2026-11-05 | Payment reconciliation: order-number matching, system vs partner amounts, EXPIRED_PAID/CANCELLED_PAID, overpaid, reconciliation pages, order summary cards | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |
 | `TINGEE-INTEGRATION-CHG-20261105T044328Z-2BCDDC` | 2026-11-05 | Notification channels: T.A system channels (Zalo OA, Telegram bot/group, SMTP) and company channels (Zalo OA, Telegram group, SMTP) | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |
+| `TINGEE-INTEGRATION-CHG-20261106T051400Z-A0E31B` | 2026-11-06 | SMTP: them Message-ID de Gmail khong tu choi thu | — | NOT_APPLICABLE | NOT_PUBLISHED | PENDING_APPROVAL |

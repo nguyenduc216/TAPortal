@@ -24,6 +24,23 @@ public sealed class SafeNotificationTests
             settings ?? [], new HashSet<string>(), 0, null, null);
 
     [Fact]
+    public void EveryMailCarriesAMessageId()
+    {
+        // Gmail refuses mail without a Message-ID after the SMTP server accepted it: the test said "sent", nothing arrived.
+        var dir = Directory.CreateTempSubdirectory("ta-mail-").FullName;
+        try
+        {
+            using var mail = new System.Net.Mail.MailMessage("info@congty.vn", "khach@example.com", "Tin thử", "x");
+            MailIds.Stamp(mail);
+            using (var smtp = new System.Net.Mail.SmtpClient("localhost") { DeliveryMethod = System.Net.Mail.SmtpDeliveryMethod.SpecifiedPickupDirectory, PickupDirectoryLocation = dir })
+                smtp.Send(mail);
+            var headers = File.ReadAllText(Directory.GetFiles(dir).Single());
+            Assert.Matches(@"(?m)^Message-ID: <[0-9a-f]{32}@congty\.vn>\r?$", headers);
+        }
+        finally { Directory.Delete(dir, true); }
+    }
+
+    [Fact]
     public void ThePlannerSendsEachAudienceOnlyWhatItShouldGet()
     {
         var system = new[]

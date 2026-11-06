@@ -48,6 +48,7 @@ public sealed class SmtpEmailSender(IOptions<EmailOptions> options) : IEmailSend
         mail.To.Add(message.To);
         mail.Body = message.TextBody;
         mail.AlternateViews.Add(AlternateView.CreateAlternateViewFromString(message.HtmlBody, Encoding.UTF8, "text/html"));
+        TAPortal.Integrations.Notifications.MailIds.Stamp(mail);
         using var smtp = new SmtpClient(o.Host!, o.Port) { EnableSsl = o.EnableSsl, DeliveryMethod = SmtpDeliveryMethod.Network, Timeout = 20000 };
         if (!string.IsNullOrWhiteSpace(o.Username)) smtp.Credentials = new NetworkCredential(o.Username, o.Password);
         await smtp.SendMailAsync(mail, ct);
