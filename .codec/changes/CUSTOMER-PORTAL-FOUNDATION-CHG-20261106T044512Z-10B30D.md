@@ -24,7 +24,7 @@ Sửa: InvoicePattern varchar(50) (migration 023); validation mẫu số 1–50 
 - Script: database/migrations/023-einvoice-template-id.sql (nới cột nullable, không sửa dòng nào)
 - Thứ tự chạy: sau 022
 - Preflight / Verify / Rollback: 035-verify (NOT_APPLIED khi varchar(20), PASS khi varchar(50)) / 036-rollback (từ chối khi có giá trị > 20 ký tự)
-- Execution: NOT_EXECUTED
+- Execution: EXECUTED 2026-11-06 04:47:36Z (Invoke-TAMigrations: precheck NOT_APPLIED, dry-run PASS/NOT_APPLIED, backup đầy đủ 810 phút, gates 469/469, real run VERIFY_STATUS=PASS); log .codec/reports/CUSTOMER-PORTAL-FOUNDATION-CHG-20261106T044512Z-10B30D-migrations-20261106T044540Z.log
 
 ## Test và kết quả
 - `dotnet build TAPortal.sln -c Release`: 0 lỗi. Safe tests 469/469 pass.
