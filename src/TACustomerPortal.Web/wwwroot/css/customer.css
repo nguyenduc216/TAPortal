@@ -307,6 +307,17 @@ a.cp-card:hover { background: var(--cp-hover-bg); border-color: var(--cp-hover-l
 .cp-flash { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 14px; padding: 10px 14px; border-radius: var(--cp-radius-sm); font-size: 13px; animation: cp-pop .2s var(--cp-ease) both; }
 .cp-flash--ok { background: var(--cp-green-100); color: var(--cp-green-700); border: 1px solid #BBF7D0; }
 .cp-flash--error { background: var(--cp-red-50); color: var(--cp-red); border: 1px solid #F6C9C4; }
+/* Toasts: flash messages raised by ta-shell.js to a fixed stack at the top centre of the screen. */
+.ta-toasts { position: fixed; top: 16px; left: 50%; z-index: 1090; display: flex; flex-direction: column; align-items: center; gap: 10px; width: max-content; max-width: calc(100vw - 32px); transform: translateX(-50%); pointer-events: none; }
+.ta-toasts .ta-toast { position: relative; width: min(560px, calc(100vw - 32px)); margin: 0; padding-right: 44px; font-size: 14px; font-weight: 550; box-shadow: var(--cp-shadow-lg); pointer-events: auto; animation: ta-toast-in .28s cubic-bezier(.2, .8, .2, 1) both; }
+.ta-toasts .ta-toast.is-leaving { animation: ta-toast-out .22s ease-in both; }
+.ta-toast__close { display: none; }
+.ta-toasts .ta-toast__close { position: absolute; top: 6px; right: 6px; display: grid; place-items: center; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 6px; background: transparent; color: inherit; font-size: 20px; line-height: 1; opacity: .65; cursor: pointer; }
+.ta-toasts .ta-toast__close:hover, .ta-toasts .ta-toast__close:focus-visible { opacity: 1; background: rgba(15, 23, 42, .08); }
+@keyframes ta-toast-in { from { opacity: 0; transform: translateY(-16px) scale(.98); } to { opacity: 1; transform: none; } }
+@keyframes ta-toast-out { to { opacity: 0; transform: translateY(-12px); } }
+@media (prefers-reduced-motion: reduce) { .ta-toasts .ta-toast, .ta-toasts .ta-toast.is-leaving { animation-duration: .01s; } }
+@media (max-width: 575.98px) { .ta-toasts { top: 10px; } .ta-toasts .ta-toast { width: calc(100vw - 24px); } }
 .cp-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--cp-line); }
 .cp-toolbar .cp-search { flex: 1 1 260px; margin: 0; max-width: 420px; }
 .cp-toolbar__end { display: flex; flex-wrap: wrap; gap: 8px; margin-left: auto; }

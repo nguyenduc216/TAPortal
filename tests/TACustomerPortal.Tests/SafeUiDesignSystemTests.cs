@@ -41,6 +41,29 @@ public sealed class SafeUiDesignSystemTests
         Assert.Equal(File.ReadAllBytes(adminFile), File.ReadAllBytes(customerFile));
     }
 
+    // Operator 2026-11-06: a flash message at the top of the content was easy to miss; both portals raise it as a toast at
+    // the top centre of the screen (close button, auto-hide), and it stays in the page when script is off.
+    [Fact]
+    public void FlashMessagesAreRaisedAsTopCentreToasts()
+    {
+        var shell = File.ReadAllText(Path.Combine(CustomerWww, "js", "ta-shell.js"));
+        Assert.Contains("const raiseToasts = (root) =>", shell);
+        Assert.Contains("document.addEventListener('ta:load', () => raiseToasts(document));", shell);
+        foreach (var (layout, css) in new[]
+        {
+            (Path.Combine(Root, "src", "TACustomerPortal.Web", "Views", "Shared", "_Layout.cshtml"), Path.Combine(CustomerWww, "css", "customer.css")),
+            (Path.Combine(Root, "src", "TAPortal.Web", "Views", "Shared", "_Layout.cshtml"), Path.Combine(AdminWww, "css", "ta-design.css"))
+        })
+        {
+            var html = File.ReadAllText(layout);
+            Assert.Contains("role=\"status\" data-ta-toast>", html);
+            Assert.Contains("role=\"alert\" data-ta-toast>", html);
+            var style = File.ReadAllText(css);
+            Assert.Contains(".ta-toasts { position: fixed; top: 16px; left: 50%;", style);
+            Assert.Contains("transform: translateX(-50%)", style);
+        }
+    }
+
     // "Lấy mẫu hóa đơn từ MISA" / "Xem thử hóa đơn nháp" (and the Admin sandbox "Tạo nháp" / "Phát hành") are buttons with
     // formaction inside a form: the background submit must post to the button's action, and formtarget=_blank must go native.
     [Fact]

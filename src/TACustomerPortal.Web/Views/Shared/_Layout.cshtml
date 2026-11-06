@@ -113,8 +113,8 @@
                     </div>
                 </div>
             }
-            @if (TempData["Success"] is string flashOk) {<div class="cp-flash cp-flash--ok" role="status">@UiIcon.Render("circle-check")<div>@flashOk</div></div>}
-            @if (TempData["Error"] is string flashError) {<div class="cp-flash cp-flash--error" role="alert">@UiIcon.Render("alert-circle")<div>@flashError</div></div>}
+            @if (TempData["Success"] is string flashOk) {<div class="cp-flash cp-flash--ok" role="status" data-ta-toast>@UiIcon.Render("circle-check")<div>@flashOk</div></div>}
+            @if (TempData["Error"] is string flashError) {<div class="cp-flash cp-flash--error" role="alert" data-ta-toast>@UiIcon.Render("alert-circle")<div>@flashError</div></div>}
             @RenderBody()
         </main>
     </div>

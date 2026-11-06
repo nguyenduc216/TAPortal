@@ -73,3 +73,4 @@ Sign-in survives data-layer failures with a message and incident reference; CL-0
 ## Customer Portal UI v2 — current status
 Deep-gold left sidebar, blue primary, compact 13px type, auto-fit grids; collapsible rail on desktop and drawer below 1200px. Safe tests 260/260; E2E PASS. Customer `45728db6…0ddc` (55). NOT_DEPLOYED. Prior status lines above are historical.
 | `TAPORTAL-SYSTEM-AUDIT-CHG-20261103T143443Z-55C344` | 2026-11-03 | Execute migration 009 on production, pin Pkcs 8.0.2, first agent deploy of portal and invoice | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |
+| `TAPORTAL-SYSTEM-AUDIT-CHG-20261106T054921Z-5B484C` | 2026-11-06 | Thong bao dang toast giua tren man hinh (Admin + Customer Portal) | — | NOT_APPLICABLE | NOT_PUBLISHED | PENDING_APPROVAL |

@@ -145,8 +145,8 @@
                     @if (IsSectionDefined("PageActions")) {<div class="ta-page-head__actions">@RenderSection("PageActions")</div>}
                 </div>
             }
-            @if (TempData["Success"] is string success) {<div class="ta-alert ta-alert--success alert-dismissible fade show" role="status">@UiIcon.Render("circle-check")<div class="ta-alert__body">@success</div><button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Đóng thông báo"></button></div>}
-            @if (TempData["Error"] is string error) {<div class="ta-alert ta-alert--danger alert-dismissible fade show" role="alert">@UiIcon.Render("alert-circle")<div class="ta-alert__body">@error</div><button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Đóng thông báo"></button></div>}
+            @if (TempData["Success"] is string success) {<div class="ta-alert ta-alert--success" role="status" data-ta-toast>@UiIcon.Render("circle-check")<div class="ta-alert__body">@success</div></div>}
+            @if (TempData["Error"] is string error) {<div class="ta-alert ta-alert--danger" role="alert" data-ta-toast>@UiIcon.Render("alert-circle")<div class="ta-alert__body">@error</div></div>}
             @RenderBody()
         </main>
     </div>

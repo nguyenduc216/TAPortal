@@ -187,6 +187,53 @@
         renderList(list);
     };
 
+    // ---- Toasts ----------------------------------------------------------------------------------------------------
+    // Flash messages ([data-ta-toast], rendered in the page) move to a fixed stack at the top centre of the screen with a
+    // close button; success hides itself after 5 s, an error after 9 s, paused while hovered or focused. Without script
+    // they simply stay in the page.
+    const toastStack = () => {
+        let stack = document.querySelector('.ta-toasts');
+        if (!stack) {
+            stack = document.createElement('div');
+            stack.className = 'ta-toasts';
+            document.body.appendChild(stack);
+        }
+        return stack;
+    };
+    const hideToast = (toast) => {
+        if (toast.classList.contains('is-leaving')) return;
+        window.clearTimeout(toast.taTimer);
+        toast.classList.add('is-leaving');
+        window.setTimeout(() => toast.remove(), 220);
+    };
+    const raiseToasts = (root) => {
+        root.querySelectorAll('[data-ta-toast]').forEach((toast) => {
+            toast.removeAttribute('data-ta-toast');
+            toast.classList.add('ta-toast');
+            const close = document.createElement('button');
+            close.type = 'button';
+            close.className = 'ta-toast__close';
+            close.setAttribute('aria-label', 'Đóng thông báo');
+            close.textContent = '×';
+            close.addEventListener('click', () => hideToast(toast));
+            toast.appendChild(close);
+            const delay = toast.getAttribute('role') === 'alert' ? 9000 : 5000;
+            const arm = () => { window.clearTimeout(toast.taTimer); toast.taTimer = window.setTimeout(() => hideToast(toast), delay); };
+            const hold = () => window.clearTimeout(toast.taTimer);
+            toast.addEventListener('mouseenter', hold);
+            toast.addEventListener('mouseleave', arm);
+            toast.addEventListener('focusin', hold);
+            toast.addEventListener('focusout', arm);
+            toastStack().appendChild(toast);
+            arm();
+        });
+    };
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') document.querySelectorAll('.ta-toasts .ta-toast').forEach(hideToast);
+    });
+    document.addEventListener('ta:load', () => raiseToasts(document));
+    raiseToasts(document);
+
     // ---- Soft navigation -------------------------------------------------------------------------------------------
     // Only pages that share the same shell (elements with data-ta-swap and the same ids) are swapped in place; anything
     // else (login, logout, errors, other layouts) falls back to a normal browser navigation. Security is unchanged: the

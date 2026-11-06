@@ -1136,5 +1136,15 @@
     "migration_status": "EXECUTED (009); 008,010,011,012 VERIFIED_PRESENT",
     "publish_status": "DEPLOYED portal + invoice 2026-11-03",
     "merge_status": "PENDING_APPROVAL"
+  },
+  {
+    "change_id": "TAPORTAL-SYSTEM-AUDIT-CHG-20261106T054921Z-5B484C",
+    "created_at": "2026-11-06T05:49:21.072077+00:00",
+    "title": "Thong bao dang toast giua tren man hinh (Admin + Customer Portal)",
+    "status": "IMPLEMENTED",
+    "commit_sha": null,
+    "migration_status": "NOT_APPLICABLE",
+    "publish_status": "NOT_PUBLISHED",
+    "merge_status": "PENDING_APPROVAL"
   }
 ]
