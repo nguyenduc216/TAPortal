@@ -413,5 +413,15 @@
     "migration_status": "NOT_APPLICABLE",
     "publish_status": "DEPLOYED",
     "merge_status": "MERGED"
+  },
+  {
+    "change_id": "CUSTOMER-PORTAL-FOUNDATION-CHG-20261106T235029Z-86E87C",
+    "created_at": "2026-11-06T23:50:29.958496+00:00",
+    "title": "E-invoice: create a draft (status DRAFT) when MISA cannot sign, instead of failing",
+    "status": "IMPLEMENTED",
+    "commit_sha": null,
+    "migration_status": "NOT_EXECUTED",
+    "publish_status": "NOT_PUBLISHED",
+    "merge_status": "PENDING_APPROVAL"
   }
 ]

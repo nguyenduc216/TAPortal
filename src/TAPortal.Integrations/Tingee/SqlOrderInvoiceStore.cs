@@ -76,10 +76,11 @@ ORDER BY o.PaidAt
         await using var tx = (SqlTransaction)await cn.BeginTransactionAsync(ct);
         string orderNo;
         string? code;
+        bool fromDraft;
         await using (var pick = Command(cn, tx, """
-SELECT OrderNo,InvoiceCode FROM dbo.CustomerOrders WITH (UPDLOCK,ROWLOCK)
+SELECT OrderNo,InvoiceCode,InvoiceStatus FROM dbo.CustomerOrders WITH (UPDLOCK,ROWLOCK)
 WHERE Id=@id AND CustomerId=@c AND Status='PAID'
-  AND (InvoiceStatus IN ('NONE','PENDING') OR (@manual=1 AND InvoiceStatus='FAILED'))
+  AND (InvoiceStatus IN ('NONE','PENDING') OR (@manual=1 AND InvoiceStatus IN ('FAILED','DRAFT')))
   AND (InvoiceLockedUntil IS NULL OR InvoiceLockedUntil<@now)
 """, ("@id", orderId), ("@c", customerId), ("@manual", manual), ("@now", utcNow)))
         await using (var r = await pick.ExecuteReaderAsync(ct))
@@ -87,6 +88,7 @@ WHERE Id=@id AND CustomerId=@c AND Status='PAID'
             if (!await r.ReadAsync(ct)) return null;
             orderNo = r.GetString(0);
             code = S(r, 1);
+            fromDraft = r.GetString(2) == OrderInvoiceStatus.Draft;
         }
         code ??= OrderInvoiceRules.InvoiceCode(orderNo, orderId);
         await using (var claim = Command(cn, tx, """
@@ -119,7 +121,7 @@ WHERE o.Id=@id AND o.CustomerId=@c
         await using (var r = await linesCmd.ExecuteReaderAsync(ct))
             while (await r.ReadAsync(ct)) lines.Add(new(r.GetInt32(0), r.GetString(1), S(r, 2), r.GetDecimal(3), r.GetDecimal(4), r.GetString(5)));
         await tx.CommitAsync(ct);
-        return job with { Lines = lines };
+        return job with { Lines = lines, FromDraft = fromDraft };
     }
 
     public Task CompleteAsync(Guid customerId, Guid orderId, OrderInvoiceIssued issued, string? note, CancellationToken ct = default) => Execute(ct, """
@@ -128,6 +130,11 @@ UPDATE dbo.CustomerOrders SET InvoiceStatus='ISSUED',InvoiceNumber=ISNULL(@numbe
  InvoiceLockedUntil=NULL,InvoiceNextAttemptAt=NULL,UpdatedAt=SYSUTCDATETIME()
 WHERE Id=@id AND CustomerId=@c
 """, ("@id", orderId), ("@c", customerId), ("@number", Cut(issued.InvoiceNumber, 40)), ("@lookup", Cut(issued.LookupCode, 60)), ("@tracking", Cut(issued.TrackingCode, 100)), ("@note", Cut(note, 500)));
+
+    public Task DraftAsync(Guid customerId, Guid orderId, string note, CancellationToken ct = default) => Execute(ct, """
+UPDATE dbo.CustomerOrders SET InvoiceStatus='DRAFT',InvoiceError=@note,InvoiceNextAttemptAt=NULL,InvoiceLockedUntil=NULL,UpdatedAt=SYSUTCDATETIME()
+WHERE Id=@id AND CustomerId=@c AND InvoiceStatus='PENDING'
+""", ("@id", orderId), ("@c", customerId), ("@note", Cut(note, 500)));
 
     public Task RetryLaterAsync(Guid customerId, Guid orderId, DateTime nextAttemptAt, string error, CancellationToken ct = default) => Execute(ct, """
 UPDATE dbo.CustomerOrders SET InvoiceStatus='PENDING',InvoiceError=@error,InvoiceNextAttemptAt=@next,InvoiceLockedUntil=NULL,UpdatedAt=SYSUTCDATETIME()

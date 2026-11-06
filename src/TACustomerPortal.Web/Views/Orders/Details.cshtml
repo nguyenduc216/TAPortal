@@ -12,6 +12,7 @@
     var open = Model.Status is OrderStatus.Awaiting or OrderStatus.Partial;
     var (invoiceLabel, invoiceCss) = InvoiceText.Status(o.InvoiceStatus);
     var issued = o.InvoiceStatus == OrderInvoiceStatus.Issued;
+    var draft = o.InvoiceStatus == OrderInvoiceStatus.Draft;
     var canInvoice = Model.CanManage && Model.InvoiceReady && o.Status == OrderStatus.Paid && !issued;
 }
 <div class="cp-grid cp-grid--2">
@@ -40,7 +41,7 @@
                 </dl>
                 <div class="cp-progress" style="margin-top:14px" role="progressbar" aria-valuenow="@percent" aria-valuemin="0" aria-valuemax="100" aria-label="Tỷ lệ đã thanh toán"><span style="width:@(percent)%"></span></div>
                 @if (o.LastError is string err) {<div class="cp-error" style="margin-top:10px">@err</div>}
-                @if (o.InvoiceError is string invoiceError) {<div class="@(issued ? "cp-muted" : "cp-error")" style="margin-top:10px" data-cp-invoice-error>Hóa đơn: @PartnerText.Scrub(invoiceError)</div>}
+                @if (o.InvoiceError is string invoiceError) {<div class="@(issued || draft ? "cp-muted" : "cp-error")" style="margin-top:10px" data-cp-invoice-error>Hóa đơn: @PartnerText.Scrub(invoiceError)</div>}
                 @if (o.Status == OrderStatus.Paid && !Model.InvoiceReady && !issued) {<div class="cp-muted" style="margin-top:10px">Chưa cài đặt hóa đơn điện tử. <a class="cp-link" asp-controller="EInvoice" asp-action="Index">Kết nối MISA meInvoice</a></div>}
                 @if (Model.Status is OrderStatus.ExpiredPaid or OrderStatus.CancelledPaid || o.Overpaid > 0 || o.PartnerDiffers)
                 {
@@ -52,8 +53,8 @@
                 <a class="cp-btn cp-btn--ghost" asp-action="Index">@UiIcon.Render("arrow-left")<span>Danh sách đơn</span></a>
                 @if (open || Model.Status is OrderStatus.Expired or OrderStatus.ExpiredPaid) {<form method="post" asp-action="Refresh" asp-route-id="@o.Id"><button class="cp-btn cp-btn--ghost" type="submit">@UiIcon.Render("refresh")<span>Kiểm tra thanh toán</span></button></form>}
                 @if (canIssue) {<form method="post" asp-action="IssueQr" asp-route-id="@o.Id" class="cp-inline-form">@if (Model.Banks.Count > 1) {<select class="cp-input cp-input--plain" name="bankAccountId" aria-label="Tài khoản nhận tiền" data-cp-issue-bank>@foreach (var b in Model.Banks) {<option value="@b.Id" selected="@(b.Id == (Model.Bank is { IsActive: true } cur ? cur.Id : Model.Banks[0].Id))">@PaymentText.BankOption(b)</option>}</select>}<button class="cp-btn cp-btn--primary" type="submit">@UiIcon.Render("qrcode")<span>Tạo QR @(o.PaidAmount > 0 ? "cho số còn lại" : "")</span></button></form>}
-                @if (issued) {<a class="cp-btn cp-btn--ghost" asp-action="InvoicePdf" asp-route-id="@o.Id" target="_blank" rel="noopener">@UiIcon.Render("file-text")<span>Xem hóa đơn PDF</span></a>}
-                @if (canInvoice) {<form method="post" asp-action="IssueInvoice" asp-route-id="@o.Id" onsubmit="return confirm('Xuất hóa đơn điện tử cho đơn @o.OrderNo? Hóa đơn được ký và gửi cơ quan thuế.')"><button class="cp-btn cp-btn--primary" type="submit">@UiIcon.Render("send")<span>@(o.InvoiceStatus == OrderInvoiceStatus.Failed ? "Xuất lại hóa đơn" : "Xuất hóa đơn")</span></button></form>}
+                @if (issued || draft) {<a class="cp-btn cp-btn--ghost" asp-action="InvoicePdf" asp-route-id="@o.Id" target="_blank" rel="noopener">@UiIcon.Render("file-text")<span>@(draft ? "Xem bản nháp PDF" : "Xem hóa đơn PDF")</span></a>}
+                @if (canInvoice) {<form method="post" asp-action="IssueInvoice" asp-route-id="@o.Id" onsubmit="return confirm('Xuất hóa đơn điện tử cho đơn @o.OrderNo? Hóa đơn được ký và gửi cơ quan thuế.')"><button class="cp-btn cp-btn--primary" type="submit">@UiIcon.Render("send")<span>@(o.InvoiceStatus is OrderInvoiceStatus.Failed or OrderInvoiceStatus.Draft ? "Xuất lại hóa đơn" : "Xuất hóa đơn")</span></button></form>}
                 @if (Model.CanManage && OrderStatus.IsOpen(o.Status) && o.PaidAmount == 0) {<form method="post" asp-action="Cancel" asp-route-id="@o.Id" style="margin-left:auto" onsubmit="return confirm('Hủy đơn @o.OrderNo? Mã QR sẽ không còn dùng được.')"><button class="cp-btn cp-btn--danger" type="submit">@UiIcon.Render("ban")<span>Hủy đơn</span></button></form>}
             </div>
         </section>

@@ -47,6 +47,7 @@ public static class InvoiceText
         OrderInvoiceStatus.Pending => ("Đang xuất hóa đơn", "cp-badge--gold"),
         OrderInvoiceStatus.Issued => ("Đã xuất hóa đơn", "cp-badge--green"),
         OrderInvoiceStatus.Failed => ("Xuất hóa đơn lỗi", "cp-badge--red"),
+        OrderInvoiceStatus.Draft => ("Đã xuất nháp", "cp-badge--blue"),
         _ => ("Chưa xuất hóa đơn", "cp-badge--soft")
     };
 }

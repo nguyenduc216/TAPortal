@@ -125,7 +125,7 @@
                     <div><dt>Mã số thuế</dt><dd>@(Model.Saved.TaxCode ?? "—")</dd></div>
                     <div><dt>Tên xuất hóa đơn</dt><dd>@(Model.Saved.Name ?? "—")</dd></div>
                 </dl>
-                <p class="cp-hint">@(o.InvoiceStatus == OrderInvoiceStatus.Issued ? "Hóa đơn điện tử đã được xuất cho đơn hàng này." : o.InvoiceStatus == OrderInvoiceStatus.Pending ? "Hóa đơn điện tử đang được xuất." : Model.Saved.TaxCode is not null && Model.Status is not (OrderStatus.Cancelled or OrderStatus.CancelledPaid) ? "Thông tin xuất hóa đơn do người bán cung cấp." : "Không thể thay đổi thông tin xuất hóa đơn của đơn hàng này.")</p>
+                <p class="cp-hint">@(o.InvoiceStatus == OrderInvoiceStatus.Issued ? "Hóa đơn điện tử đã được xuất cho đơn hàng này." : o.InvoiceStatus is OrderInvoiceStatus.Pending or OrderInvoiceStatus.Draft ? "Hóa đơn điện tử đang được xuất." : Model.Saved.TaxCode is not null && Model.Status is not (OrderStatus.Cancelled or OrderStatus.CancelledPaid) ? "Thông tin xuất hóa đơn do người bán cung cấp." : "Không thể thay đổi thông tin xuất hóa đơn của đơn hàng này.")</p>
             }
         </section>
 

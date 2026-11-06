@@ -41,7 +41,7 @@
                         <td class="cp-num">@PaymentText.Money(o.PaidAmount)</td>
                         <td><span class="cp-badge @css">@label</span>@if (o.Overpaid > 0) {<span class="cp-badge cp-badge--red">Trả dư</span>}@if (o.PartnerDiffers) {<span class="cp-badge cp-badge--gold">Lệch đối soát</span>}</td>
                         @{ var (invLabel, invCss) = InvoiceText.Status(o.InvoiceStatus); }
-                        <td data-cp-invoice-status="@o.InvoiceStatus"><span class="cp-badge @invCss" title="@(o.InvoiceStatus == OrderInvoiceStatus.Failed ? PartnerText.Scrub(o.InvoiceError) : null)">@invLabel</span>@if (o.InvoiceNumber is string no) {<div class="cp-muted">Số @no</div>}
+                        <td data-cp-invoice-status="@o.InvoiceStatus"><span class="cp-badge @invCss" title="@(o.InvoiceStatus is OrderInvoiceStatus.Failed or OrderInvoiceStatus.Draft ? PartnerText.Scrub(o.InvoiceError) : null)">@invLabel</span>@if (o.InvoiceNumber is string no) {<div class="cp-muted">Số @no</div>}
                             else if (o.InvoiceStatus == OrderInvoiceStatus.None) {<div class="cp-muted">@(o.AutoIssueInvoice ? "Tự xuất khi thanh toán đủ" : "Xuất tay")</div>}</td>
                         <td>@PaymentText.VietnamTime(o.ExpiresAt)</td>
                         <td>@PaymentText.VietnamTime(o.CreatedAt)</td>

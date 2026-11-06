@@ -147,7 +147,7 @@ public sealed class OrdersController(ICurrentCustomerContext customer, IPaymentS
             return RedirectToAction(nameof(Details), new { id });
         }
         var result = await invoicer.IssueAsync(m.CustomerId, id, manual: true, HttpContext.RequestAborted);
-        Flash(result.Message, error: !result.Issued);
+        Flash(result.Message, error: result.Status is not (OrderInvoiceStatus.Issued or OrderInvoiceStatus.Draft));
         return RedirectToAction(nameof(Details), new { id });
     }
 
@@ -157,7 +157,7 @@ public sealed class OrdersController(ICurrentCustomerContext customer, IPaymentS
     {
         if (await Current() is not { } m) return SelectCustomer();
         var order = await store.OrderAsync(m.CustomerId, id);
-        if (order is null || order.InvoiceStatus != OrderInvoiceStatus.Issued || order.InvoiceCode is not string code) return NotFound();
+        if (order is null || order.InvoiceStatus is not (OrderInvoiceStatus.Issued or OrderInvoiceStatus.Draft) || order.InvoiceCode is not string code) return NotFound();
         if (await store.MerchantIdAsync(m.CustomerId) is not long merchantId) return NotFound();
         var settings = await settingsStore.SettingsAsync(m.CustomerId);
         try

@@ -21,10 +21,11 @@ public sealed record CustomerInvoiceSettings(
     public bool IsReady => IsConnected && HasTemplate;
 }
 
-/// <summary>dbo.CustomerOrders.InvoiceStatus.</summary>
+/// <summary>dbo.CustomerOrders.InvoiceStatus. DRAFT (migration 026): the invoice could not be signed, so a draft with the
+/// order's invoice code was created at the provider instead; it reaches the tax authority only once it is issued there.</summary>
 public static class OrderInvoiceStatus
 {
-    public const string None = "NONE", Pending = "PENDING", Issued = "ISSUED", Failed = "FAILED";
+    public const string None = "NONE", Pending = "PENDING", Issued = "ISSUED", Failed = "FAILED", Draft = "DRAFT";
 }
 
 public sealed record OrderInvoiceLine(int LineNumber, string ItemName, string? UnitName, decimal Quantity, decimal UnitPrice, string TaxRateCode);
@@ -33,7 +34,7 @@ public sealed record OrderInvoiceLine(int LineNumber, string ItemName, string? U
 public sealed record OrderInvoiceJob(
     Guid CustomerId, Guid OrderId, string OrderNo, string? Description, string InvoiceCode, int Attempts, long? MerchantId,
     string? BuyerType, string? BuyerName, string? BuyerLegalName, string? BuyerTaxCode, string? BuyerAddress, string? BuyerPhone, string? BuyerEmail,
-    IReadOnlyList<OrderInvoiceLine> Lines);
+    IReadOnlyList<OrderInvoiceLine> Lines, bool FromDraft = false);
 
 public sealed record OrderInvoiceIssued(string? InvoiceNumber, string? LookupCode, string? TrackingCode, bool AlreadyIssued);
 
@@ -50,6 +51,8 @@ public interface IOrderInvoiceStore
     /// </summary>
     Task<OrderInvoiceJob?> ClaimAsync(Guid customerId, Guid orderId, DateTime utcNow, DateTime leaseUntil, bool manual, CancellationToken ct = default);
     Task CompleteAsync(Guid customerId, Guid orderId, OrderInvoiceIssued issued, string? note, CancellationToken ct = default);
+    /// <summary>Signing failed and a draft was created at the provider: status DRAFT with <paramref name="note"/>, no automatic retry.</summary>
+    Task DraftAsync(Guid customerId, Guid orderId, string note, CancellationToken ct = default);
     /// <summary>Leaves the order PENDING and tries again from <paramref name="nextAttemptAt"/>.</summary>
     Task RetryLaterAsync(Guid customerId, Guid orderId, DateTime nextAttemptAt, string error, CancellationToken ct = default);
     Task FailAsync(Guid customerId, Guid orderId, string error, CancellationToken ct = default);
@@ -74,6 +77,15 @@ public static class OrderInvoiceRules
 
     /// <summary>Partner codes that retrying cannot fix: settings or data must change first.</summary>
     public static bool IsPermanent(string code) => code is "2032" or "2037" or "2038" or "2007" or "1057" or "1005" or "400" or "1001" or "1002";
+
+    /// <summary>
+    /// The provider could not sign the invoice (MISA answers 400 "CallSignServiceFail" when the company has no signing
+    /// certificate usable for API issuing, e.g. no HSM): a draft can still be created (operator 2026-11-07).
+    /// </summary>
+    public static bool IsSigningFailure(TingeeApiException ex) => ex.TingeeMessage.Contains("SignService", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>Stored on a DRAFT order and shown to the company.</summary>
+    public const string DraftNote = "Chưa ký số được nên đã tạo hóa đơn nháp trên MISA meInvoice (chưa gửi cơ quan thuế). Ký và phát hành bản nháp trên MISA, hoặc cài chữ ký số dùng được cho phát hành tự động rồi bấm Xuất lại hóa đơn.";
 
     /// <summary>Wait before the next automatic attempt: 1, 2, 4, 8 … minutes, at most an hour.</summary>
     public static TimeSpan Backoff(int attempts) => TimeSpan.FromMinutes(Math.Min(60, Math.Pow(2, Math.Max(0, attempts - 1))));
@@ -120,7 +132,8 @@ public static class OrderInvoiceRules
 /// <summary>
 /// Issues the invoice of a paid order: from the webhook site's worker (automatic) or the order page (by hand). Partner
 /// failures never lose the order: a temporary one is retried with a growing delay (automatic) and a refusal is stored as
-/// FAILED with the reason, for the company to fix its settings and issue again.
+/// FAILED with the reason, for the company to fix its settings and issue again. When only the signing fails, a draft is
+/// created instead and the order shows DRAFT, not an error (operator 2026-11-07).
 /// </summary>
 public sealed class OrderInvoicer(IOrderInvoiceStore store, ITingeeInvoiceApi invoices, TimeProvider clock, ILogger<OrderInvoicer> logger)
 {
@@ -166,23 +179,31 @@ public sealed class OrderInvoicer(IOrderInvoiceStore store, ITingeeInvoiceApi in
             var issued = await invoices.CreateAndIssueAsync(request, ct);
             result = new(issued.InvoiceNumber, issued.ReservationCode, issued.TrackingCode, false);
         }
+        catch (TingeeApiException api) when (api.Code == "2034" && job.FromDraft)
+        {
+            // The code is taken by this order's own draft: from here it can only be issued at the provider.
+            logger.LogWarning(api, "ORDER_INVOICE_DRAFT_EXISTS order={OrderNo} code={Code}", job.OrderNo, job.InvoiceCode);
+            return await Draft(customerId, orderId, job, manual, ct);
+        }
         catch (TingeeApiException api) when (api.Code == "2034")
         {
             // Issued by an earlier attempt whose answer was lost: the fixed invoice code proves it.
             result = new(null, null, null, true);
         }
+        catch (TingeeApiException api) when (OrderInvoiceRules.IsSigningFailure(api))
+        {
+            logger.LogWarning(api, "ORDER_INVOICE_NOT_SIGNED order={OrderNo} code={Code} manual={Manual}; creating a draft", job.OrderNo, job.InvoiceCode, manual);
+            try { await invoices.CreateDraftAsync(request, ct); }
+            catch (TingeeApiException draft) when (draft.Code == "2034") { }   // the draft exists already (an earlier attempt)
+            catch (Exception ex) when (ex is TingeeApiException or HttpRequestException or TaskCanceledException or TingeeNotConfiguredException && !ct.IsCancellationRequested)
+            {
+                return await NotIssued(customerId, orderId, job, manual, ex, now.UtcDateTime, ct);
+            }
+            return await Draft(customerId, orderId, job, manual, ct);
+        }
         catch (Exception ex) when (ex is TingeeApiException or HttpRequestException or TaskCanceledException or TingeeNotConfiguredException && !ct.IsCancellationRequested)
         {
-            var reason = Reason(ex);
-            var permanent = ex is TingeeApiException a && OrderInvoiceRules.IsPermanent(a.Code) || ex is TingeeNotConfiguredException;
-            logger.LogWarning(ex, "ORDER_INVOICE_NOT_ISSUED order={OrderNo} code={Code} attempt={Attempt} manual={Manual}", job.OrderNo, job.InvoiceCode, job.Attempts, manual);
-            if (!manual && !permanent && job.Attempts < MaxAutoAttempts)
-            {
-                await store.RetryLaterAsync(customerId, orderId, now.UtcDateTime + OrderInvoiceRules.Backoff(job.Attempts), reason, ct);
-                return new(OrderInvoiceStatus.Pending, reason);
-            }
-            await store.FailAsync(customerId, orderId, reason, ct);
-            return new(OrderInvoiceStatus.Failed, reason);
+            return await NotIssued(customerId, orderId, job, manual, ex, now.UtcDateTime, ct);
         }
 
         string? note = result.AlreadyIssued ? "Hóa đơn đã được phát hành ở lần xuất trước." : null;
@@ -203,6 +224,27 @@ public sealed class OrderInvoicer(IOrderInvoiceStore store, ITingeeInvoiceApi in
             }
         }
         return new(OrderInvoiceStatus.Issued, result.InvoiceNumber is string n ? $"Đã xuất hóa đơn số {n}." : "Đã xuất hóa đơn.", result.InvoiceNumber);
+    }
+
+    private async Task<OrderInvoiceOutcome> Draft(Guid customerId, Guid orderId, OrderInvoiceJob job, bool manual, CancellationToken ct)
+    {
+        await store.DraftAsync(customerId, orderId, OrderInvoiceRules.DraftNote, ct);
+        logger.LogInformation("ORDER_INVOICE_DRAFT order={OrderNo} code={Code} manual={Manual}", job.OrderNo, job.InvoiceCode, manual);
+        return new(OrderInvoiceStatus.Draft, "Đã tạo hóa đơn nháp vì chưa ký số được hóa đơn. Ký và phát hành bản nháp trên MISA meInvoice.");
+    }
+
+    private async Task<OrderInvoiceOutcome> NotIssued(Guid customerId, Guid orderId, OrderInvoiceJob job, bool manual, Exception ex, DateTime utcNow, CancellationToken ct)
+    {
+        var reason = Reason(ex);
+        var permanent = ex is TingeeApiException a && OrderInvoiceRules.IsPermanent(a.Code) || ex is TingeeNotConfiguredException;
+        logger.LogWarning(ex, "ORDER_INVOICE_NOT_ISSUED order={OrderNo} code={Code} attempt={Attempt} manual={Manual}", job.OrderNo, job.InvoiceCode, job.Attempts, manual);
+        if (!manual && !permanent && job.Attempts < MaxAutoAttempts)
+        {
+            await store.RetryLaterAsync(customerId, orderId, utcNow + OrderInvoiceRules.Backoff(job.Attempts), reason, ct);
+            return new(OrderInvoiceStatus.Pending, reason);
+        }
+        await store.FailAsync(customerId, orderId, reason, ct);
+        return new(OrderInvoiceStatus.Failed, reason);
     }
 
     /// <summary>Text stored on the order and shown to the company (the portal removes partner names before showing it).</summary>

@@ -139,7 +139,88 @@ public sealed class SafeCustomerEInvoiceTests
         Assert.Empty(api.Issued);
     }
 
+    // Operator 2026-11-07: MISA refuses to sign (400 "CallSignServiceFail", no certificate usable for API issuing). The
+    // order must not show an error: a draft with the same invoice code is created and the order is DRAFT.
+    [Fact]
+    public async Task WhenSigningFailsADraftIsCreatedInsteadOfAnError()
+    {
+        var (store, api, invoicer, customer, order) = Setup(buyerEmail: "ketoan@namphat.vn");
+        api.IssueErrors.Enqueue(new TingeeApiException("400", "CallSignServiceFail"));
+        var outcome = await invoicer.IssueAsync(customer, order, manual: false);
+        Assert.Equal(OrderInvoiceStatus.Draft, outcome.Status);
+        var o = store.Order(order);
+        Assert.Equal(OrderInvoiceStatus.Draft, o.InvoiceStatus);
+        Assert.Equal(OrderInvoiceRules.DraftNote, o.InvoiceError);
+        var draft = Assert.Single(api.Drafts);
+        Assert.Equal((o.InvoiceCode, api.Issued[0].InvoiceCode), (draft.InvoiceCode, draft.InvoiceCode));
+        Assert.Empty(api.Emails);                           // a draft is not sent to the buyer
+        Assert.Equal(0, await invoicer.RunOnceAsync());     // and is not retried automatically
+        Assert.Single(api.Issued);
+    }
+
+    [Fact]
+    public async Task ADraftCanBeIssuedAgainByHandOnceSigningWorks()
+    {
+        var (store, api, invoicer, customer, order) = Setup();
+        api.IssueErrors.Enqueue(new TingeeApiException("400", "CallSignServiceFail"));
+        await invoicer.IssueAsync(customer, order, manual: false);
+        // Still no usable certificate: the draft already holds the code (2034) and the order stays DRAFT.
+        api.IssueErrors.Enqueue(new TingeeApiException("400", "CallSignServiceFail"));
+        api.DraftErrors.Enqueue(new TingeeApiException("2034", "Invoice code already exists"));
+        Assert.Equal(OrderInvoiceStatus.Draft, (await invoicer.IssueAsync(customer, order, manual: true)).Status);
+        // The code is taken by the draft: never reported as issued.
+        api.IssueErrors.Enqueue(new TingeeApiException("2034", "Invoice code already exists"));
+        Assert.Equal(OrderInvoiceStatus.Draft, (await invoicer.IssueAsync(customer, order, manual: true)).Status);
+        Assert.Equal(OrderInvoiceStatus.Draft, store.Order(order).InvoiceStatus);
+        // Signing works now.
+        var issued = await invoicer.IssueAsync(customer, order, manual: true);
+        Assert.Equal((OrderInvoiceStatus.Issued, "0000123"), (store.Order(order).InvoiceStatus, issued.InvoiceNumber));
+        Assert.All(api.Issued.Concat(api.Drafts), r => Assert.Equal(store.Order(order).InvoiceCode, r.InvoiceCode));
+    }
+
+    [Fact]
+    public async Task OnlySigningFailuresBecomeDraftsAndAFailedDraftIsReported()
+    {
+        var (store, api, invoicer, customer, order) = Setup();
+        api.IssueErrors.Enqueue(new TingeeApiException("400", "CallSignServiceFail"));
+        api.DraftErrors.Enqueue(new TingeeApiException("2037", "invalid login"));
+        Assert.Equal(OrderInvoiceStatus.Failed, (await invoicer.IssueAsync(customer, order, manual: false)).Status);
+        Assert.Contains("2037", store.Order(order).InvoiceError);
+        api.IssueErrors.Enqueue(new TingeeApiException("400", "Misa API error"));
+        Assert.Equal(OrderInvoiceStatus.Failed, (await invoicer.IssueAsync(customer, order, manual: true)).Status);
+        Assert.Single(api.Drafts);
+        Assert.True(OrderInvoiceRules.IsSigningFailure(new TingeeApiException("400", "CallSignServiceFail")));
+        Assert.False(OrderInvoiceRules.IsSigningFailure(new TingeeApiException("400", "Misa API error")));
+    }
+
     // ---- Customer Portal -------------------------------------------------------------------------------
+    [Fact]
+    public async Task ADraftOrderShowsItsStatusWithoutAnError()
+    {
+        var api = new FakeInvoiceApi();
+        var invoices = new MemoryInvoiceStore();
+        using var f = Factory("OWNER", out var payments, out _, invoiceStore: invoices, invoiceApi: api);
+        invoices.Payments = payments;
+        payments.Merchants[A] = 9001;
+        var order = PaidOrder() with { AutoIssueInvoice = false };
+        payments.Orders.Add((A, order));
+        invoices.Settings[A] = Ready(A);
+        var c = Client(f);
+        api.IssueErrors.Enqueue(new TingeeApiException("400", "CallSignServiceFail"));
+        var r = await Post(c, $"/orders/issueinvoice/{order.Id}", await Token(c, $"/orders/details/{order.Id}"), []);
+        Assert.Equal(HttpStatusCode.Redirect, r.StatusCode);
+        var page = WebUtility.HtmlDecode(await c.GetStringAsync($"/orders/details/{order.Id}"));
+        Assert.Contains("Đã tạo hóa đơn nháp", page);
+        Assert.DoesNotContain("role=\"alert\" data-ta-toast", page);
+        Assert.Contains("Đã xuất nháp", page);
+        Assert.Contains("Xem bản nháp PDF", page);
+        Assert.Contains("Xuất lại hóa đơn", page);
+        Assert.DoesNotContain("CallSignServiceFail", page);
+        Assert.DoesNotContain("cp-error\" style=\"margin-top:10px\" data-cp-invoice-error", page);
+        Assert.Contains("Đã xuất nháp", WebUtility.HtmlDecode(await c.GetStringAsync("/orders")));
+        Assert.Equal("application/pdf", (await c.GetAsync($"/orders/invoicepdf/{order.Id}")).Content.Headers.ContentType?.MediaType);
+    }
+
     [Fact]
     public async Task TheCompanyConnectsMisaWithoutTheTPortalKeepingThePassword()
     {
@@ -320,7 +401,7 @@ public sealed class SafeCustomerEInvoiceTests
         {
             var row = Payments.Orders.FirstOrDefault(x => x.Customer == customerId && x.Order.Id == orderId);
             var o = row.Order;
-            if (o is null || o.Status != OrderStatus.Paid || !(o.InvoiceStatus is OrderInvoiceStatus.None or OrderInvoiceStatus.Pending || manual && o.InvoiceStatus == OrderInvoiceStatus.Failed))
+            if (o is null || o.Status != OrderStatus.Paid || !(o.InvoiceStatus is OrderInvoiceStatus.None or OrderInvoiceStatus.Pending || manual && o.InvoiceStatus is OrderInvoiceStatus.Failed or OrderInvoiceStatus.Draft))
                 return Task.FromResult<OrderInvoiceJob?>(null);
             attempts[orderId] = manual ? 1 : attempts.GetValueOrDefault(orderId) + 1;
             var code = o.InvoiceCode ?? OrderInvoiceRules.InvoiceCode(o.OrderNo, orderId);
@@ -328,12 +409,19 @@ public sealed class SafeCustomerEInvoiceTests
             var b = o.ContactId is Guid c ? Payments.Contacts.First(x => x.Contact.Id == c).Contact : null;
             return Task.FromResult<OrderInvoiceJob?>(new(customerId, orderId, o.OrderNo, o.Description, code, attempts[orderId],
                 Payments.Merchants.TryGetValue(customerId, out var m) ? m : null, b?.Type, b?.Name, b?.LegalName, b?.TaxCode, b?.Address, b?.Phone, b?.Email,
-                o.Lines.Select(l => new OrderInvoiceLine(l.LineNumber, l.ItemName, l.UnitName, l.Quantity, l.UnitPrice, l.TaxRateCode)).ToList()));
+                o.Lines.Select(l => new OrderInvoiceLine(l.LineNumber, l.ItemName, l.UnitName, l.Quantity, l.UnitPrice, l.TaxRateCode)).ToList(),
+                o.InvoiceStatus == OrderInvoiceStatus.Draft));
         }
 
         public Task CompleteAsync(Guid customerId, Guid orderId, OrderInvoiceIssued issued, string? note, CancellationToken ct = default)
         {
             Update(orderId, o => o with { InvoiceStatus = OrderInvoiceStatus.Issued, InvoiceNumber = issued.InvoiceNumber ?? o.InvoiceNumber, InvoiceIssuedAt = o.InvoiceIssuedAt ?? DateTime.UtcNow, InvoiceError = note });
+            NextAttempt.Remove(orderId);
+            return Task.CompletedTask;
+        }
+        public Task DraftAsync(Guid customerId, Guid orderId, string note, CancellationToken ct = default)
+        {
+            Update(orderId, o => o with { InvoiceStatus = OrderInvoiceStatus.Draft, InvoiceError = note });
             NextAttempt.Remove(orderId);
             return Task.CompletedTask;
         }
@@ -364,6 +452,7 @@ public sealed class SafeCustomerEInvoiceTests
         public List<string> Emails { get; } = [];
         public List<string> Downloads { get; } = [];
         public Queue<Exception> IssueErrors { get; } = new();
+        public Queue<Exception> DraftErrors { get; } = new();
 
         public Task<IReadOnlyList<TingeeInvoiceProvider>> GetProvidersAsync(CancellationToken ct = default) => Task.FromResult<IReadOnlyList<TingeeInvoiceProvider>>([]);
         public Task<TingeePage<TingeeInvoiceAccount>> GetAccountsAsync(long merchantId, CancellationToken ct = default) => Task.FromResult(new TingeePage<TingeeInvoiceAccount>());
@@ -374,6 +463,7 @@ public sealed class SafeCustomerEInvoiceTests
         public Task<TingeeInvoicePdf> CreateDraftAsync(TingeeInvoiceRequest request, CancellationToken ct = default)
         {
             Drafts.Add(request);
+            if (DraftErrors.TryDequeue(out var error)) return Task.FromException<TingeeInvoicePdf>(error);
             return Task.FromResult(new TingeeInvoicePdf { InvoiceCode = request.InvoiceCode, PdfBase64 = "JVBERi0xLjQK" });
         }
         public Task<TingeeIssuedInvoice> CreateAndIssueAsync(TingeeInvoiceRequest request, CancellationToken ct = default)
