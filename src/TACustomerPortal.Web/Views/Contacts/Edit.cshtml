@@ -18,7 +18,7 @@
                 <label><input type="radio" name="BuyerType" value="@t" checked="@(t == type)" /><strong>@BuyerTypes.Label(t)</strong><small>@BuyerTypes.Hint(t)</small></label>
             }
         </div>
-        <div class="cp-form-grid">
+        <div class="cp-form-grid cp-form-grid--3">
             <div class="cp-form-section">Thông tin chung</div>
             <div class="cp-field"><label asp-for="Code" class="cp-label">Mã khách hàng</label><div class="cp-input-wrap">@UiIcon.Render("hash")<input asp-for="Code" class="cp-input" maxlength="50" required="@(Model.Id != Guid.Empty)" /></div>@if (Model.Id == Guid.Empty) {<div class="cp-hint">Tự động theo thứ tự (KH001, KH002…); có thể sửa hoặc để trống.</div>}<span asp-validation-for="Code" class="cp-error"></span></div>
             <div class="cp-field"><label asp-for="Name" class="cp-label is-required">Tên khách hàng / người liên hệ</label><div class="cp-input-wrap">@UiIcon.Render("user")<input asp-for="Name" class="cp-input" maxlength="250" required /></div><span asp-validation-for="Name" class="cp-error"></span></div>
@@ -56,7 +56,7 @@
             </div>
 
             <div class="cp-form-section">Liên hệ</div>
-            <div class="cp-field"><label asp-for="Phone" class="cp-label">Điện thoại</label><div class="cp-input-wrap">@UiIcon.Render("phone")<input asp-for="Phone" class="cp-input" inputmode="tel" maxlength="10" /></div><span asp-validation-for="Phone" class="cp-error"></span></div>
+            <div class="cp-field"><label asp-for="Phone" class="cp-label">Điện thoại</label><div class="cp-input-wrap">@UiIcon.Render("phone")<input asp-for="Phone" class="cp-input" inputmode="tel" maxlength="15" placeholder="0912345678" /></div><span asp-validation-for="Phone" class="cp-error"></span></div>
             <div class="cp-field"><label asp-for="Zalo" class="cp-label">Zalo</label><div class="cp-input-wrap">@UiIcon.Render("phone")<input asp-for="Zalo" class="cp-input" maxlength="100" placeholder="Số Zalo hoặc tên Zalo" /></div><span asp-validation-for="Zalo" class="cp-error"></span></div>
             <div class="cp-field"><label asp-for="Email" class="cp-label">Email nhận hóa đơn</label><div class="cp-input-wrap">@UiIcon.Render("mail")<input asp-for="Email" class="cp-input" type="email" /></div><span asp-validation-for="Email" class="cp-error"></span></div>
             <div class="cp-field cp-span"><label asp-for="Address" class="cp-label">Địa chỉ</label><div class="cp-input-wrap">@UiIcon.Render("map-pin")<input asp-for="Address" class="cp-input" maxlength="500" /></div><span asp-validation-for="Address" class="cp-error"></span></div>
