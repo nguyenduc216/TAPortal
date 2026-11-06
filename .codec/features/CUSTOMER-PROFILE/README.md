@@ -28,3 +28,5 @@
 
 ## Current status (2026-11-05)
 Giai đoạn 1 (C56EAB) DEPLOYED portal, migration 013 EXECUTED, đã merge main. Giai đoạn 2 (203021): chức năng "Nhập từ Excel" trong Khách hàng (đọc file, màn hình duyệt, lưu theo lựa chọn). Việc còn lại của operator: sinh và cấu hình `CustomerSecrets__Key` (giữ một bản sao ngoài server); nếu nhập trước khi có khóa thì nhập lại cùng file sau đó để bổ sung mật khẩu.
+
+2026-11-06 (17A9E4): "Hiện"/"Sao chép" mật khẩu báo không ghi được audit vì `dbo.AuditLogs` production là bảng cũ (ActionCode/EntityType), thiếu cột `Action`/`EntityName` mà mọi audit của Admin ghi vào. Migration 025 thêm 2 cột (nullable, không đổi dữ liệu cũ): EXECUTED. Không đổi code, không deploy.
