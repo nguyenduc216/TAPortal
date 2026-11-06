@@ -939,6 +939,21 @@ public sealed class SafeCustomerPaymentsTests
         Assert.Single(Regex.Matches(overpaid, "<tr data-ta-row"));
     }
 
+    // Operator 2026-11-06: the list shows whether each order's e-invoice was issued.
+    [Fact]
+    public async Task TheOrderListShowsTheInvoiceStatus()
+    {
+        using var f = Factory("OWNER", out var store, out _);
+        store.Orders.Add((A, Order(OrderStatus.Paid, 54_000, 54_000) with { InvoiceStatus = OrderInvoiceStatus.Issued, InvoiceNumber = "00000012" }));
+        store.Orders.Add((A, Order(OrderStatus.Paid, 54_000, 54_000) with { InvoiceStatus = OrderInvoiceStatus.Failed, InvoiceError = "Nhà cung cấp hóa đơn từ chối (mã 400): CallSignServiceFail" }));
+        store.Orders.Add((A, Order(OrderStatus.Awaiting, 2_000, 0) with { AutoIssueInvoice = true }));
+        var page = WebUtility.HtmlDecode(await Client(f).GetStringAsync("/orders"));
+        Assert.Contains("<th>Hóa đơn</th>", page);
+        Assert.Contains("Đã xuất hóa đơn</span><div class=\"cp-muted\">Số 00000012</div>", page);
+        Assert.Contains("title=\"Nhà cung cấp hóa đơn từ chối (mã 400): CallSignServiceFail\">Xuất hóa đơn lỗi", page);
+        Assert.Contains("Chưa xuất hóa đơn</span><div class=\"cp-muted\">Tự xuất khi thanh toán đủ</div>", page);
+    }
+
     public sealed class MemoryPaymentStore : IPaymentStore
     {
         public bool Fail { get; set; }
