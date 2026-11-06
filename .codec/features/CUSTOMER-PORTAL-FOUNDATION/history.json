@@ -358,10 +358,10 @@
     "change_id": "CUSTOMER-PORTAL-FOUNDATION-CHG-20261106T064001Z-46830A",
     "created_at": "2026-11-06T06:40:01.524894+00:00",
     "title": "Khach hang: MST dan co khoang trang, dien thoai/Zalo tu bo khoang trang, form rong 3 cot",
-    "status": "IMPLEMENTED",
-    "commit_sha": null,
+    "status": "DEPLOYED",
+    "commit_sha": "7ded836",
     "migration_status": "NOT_APPLICABLE",
-    "publish_status": "NOT_PUBLISHED",
-    "merge_status": "PENDING_APPROVAL"
+    "publish_status": "DEPLOYED",
+    "merge_status": "MERGED"
   }
 ]

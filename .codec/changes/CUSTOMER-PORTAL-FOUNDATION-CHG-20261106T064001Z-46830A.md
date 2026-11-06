@@ -4,7 +4,7 @@
 - Change ID: `CUSTOMER-PORTAL-FOUNDATION-CHG-20261106T064001Z-46830A`
 - Created UTC: 2026-11-06T06:40:01.524894+00:00
 - Tiêu đề: Khach hang: MST dan co khoang trang, dien thoai/Zalo tu bo khoang trang, form rong 3 cot
-- Trạng thái: IMPLEMENTED
+- Trạng thái: DEPLOYED
 
 ## Yêu cầu và phạm vi
 Operator (2026-11-06), trang Thêm khách hàng: (1) mã số thuế đúng, tra cứu đã ra đơn vị nhưng vẫn báo sai định dạng; (2) nội dung bị dồn một góc, cần rộng ra; (3) số điện thoại và Zalo phải tự bỏ khoảng trắng vì khách copy từ nguồn khác.
@@ -38,7 +38,7 @@ Sửa:
 
 ## Git
 - Branch: feature/customer-portal-mvp01
-- Commit SHA: xem report
+- Commit SHA: a5d4552 (khôi phục: 7ded836)
 - PR:
 - Merge: xem report
 - Merge SHA:
