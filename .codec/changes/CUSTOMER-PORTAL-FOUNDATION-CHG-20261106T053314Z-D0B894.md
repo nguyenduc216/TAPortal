@@ -4,7 +4,7 @@
 - Change ID: `CUSTOMER-PORTAL-FOUNDATION-CHG-20261106T053314Z-D0B894`
 - Created UTC: 2026-11-06T05:33:14.297075+00:00
 - Tiêu đề: Logo doanh nghiệp và khách hàng; trang QR đơn hàng công khai
-- Trạng thái: IMPLEMENTED
+- Trạng thái: DEPLOYED
 
 ## Yêu cầu và phạm vi
 Operator 2026-11-06: logo cho doanh nghiệp dùng hoadontudong và cho từng khách hàng của họ; mỗi đơn hàng có QR có một trang
@@ -46,7 +46,10 @@ Quyết định kỹ thuật:
 - Script: `database/migrations/024-logos-and-order-pay-page.sql` (sau 023)
 - Verify: `database/scripts/037-verify-logos-and-order-pay-page.sql`; Rollback: `database/scripts/038-rollback-logos-and-order-pay-page.sql`
 - Bảng mới + cột nullable; không đổi dữ liệu cũ. Rollback từ chối khi đã có logo hoặc thông tin hóa đơn người mua nhập.
-- Execution: NOT_EXECUTED (xem mục Thực thi bên dưới khi chạy)
+- Execution: EXECUTED 2026-11-06T06:01:03Z via `deploy/windows/Invoke-TAMigrations.ps1 -Plan 024:037:038`
+  - PRECHECK NOT_APPLIED → DRY-RUN exit 0 (after migration PASS, after rollback NOT_APPLIED, @@TRANCOUNT 0) → PRECHECK unchanged
+  - Backup: latest full 883 min old (< 24 h) → no extra backup; gates PASS (477/477) → REAL RUN exit 0, VERIFY_STATUS=PASS
+  - Log: `.codec/reports/CUSTOMER-PORTAL-FOUNDATION-CHG-20261106T053314Z-D0B894-migrations-20261106T055821Z.log`
 
 ## Test và kết quả
 - `dotnet restore` OK; `dotnet build TAPortal.sln -c Release --no-restore`: 0 errors (2 cảnh báo cũ, không thuộc change).
@@ -56,12 +59,15 @@ Quyết định kỹ thuật:
 - Kiểm tra giao diện: render trang qua test host + Playwright (desktop 1280, mobile 390).
 
 ## Publish
-- Project: TACustomerPortal.Web, TAPortal.Web (Shared đổi), TAPortal.Webhooks (Integrations đổi)
-- Trạng thái: NOT_PUBLISHED
+- DEPLOYED via `Deploy-TARemote.ps1 -Target invoice,webhooks,portal -MigrationsApplied` (audit PASS), source b2f1876 (contains b3a3889), 2026-11-06T06:07Z:
+  - invoice / TACustomerPortal.Web: artifact 6ab8e806f6a9f62c813a64d4ce325aa54c9af9896671a3c34be29de41700a40c, package 62FA897AEEE3243311ACE9D01F2B8AB2DE407249CFE6BD450F8FE957A4910B5A, health 200
+  - webhooks / TAPortal.Webhooks: artifact 203f63b3684c7fce9a506be8349ef6d638f34b558309955398b3d39eb6cce53a, package 1ACA4236D81930400E3DB3BFBAB67D4ECE12DB314276B5439A22B48C66EC7154, health 200
+  - portal / TAPortal.Web: artifact 6920385be54a8cdbde8b4fd0b981f2c185b568a6cac60810c828bf487d42a0fe, package CC52BFC70883ECFDD35A816F1FB6085CEEB1EA949C816A26601E5B1C7548614E, health 200
+- Smoke: https://hoadon.tuvangiaiphapta.vn/pay/<32 ký tự không tồn tại> → 404 (route ẩn danh hoạt động, truy vấn cột PublicToken OK; 503 nếu thiếu cột).
 
 ## Git
 - Branch: feature/customer-portal-mvp01
-- Commit SHA: (xem hand-off)
+- Source commit: b3a3889 (deployed in b2f1876)
 - Merge: PENDING
 
 ## Rủi ro, quyết định và việc còn lại
