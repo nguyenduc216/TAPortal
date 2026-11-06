@@ -4,7 +4,7 @@
 - Change ID: `CUSTOMER-PORTAL-FOUNDATION-CHG-20261106T074510Z-F0495F`
 - Created UTC: 2026-11-06T07:45:10.994455+00:00
 - Tiêu đề: Danh sach don hang: cot trang thai hoa don dien tu
-- Trạng thái: IMPLEMENTED
+- Trạng thái: DEPLOYED
 
 ## Yêu cầu và phạm vi
 Operator (2026-11-06): danh sách Đơn hàng & QR thêm trạng thái xuất hóa đơn để biết đơn đã xuất hay chưa.
@@ -28,7 +28,7 @@ Sửa: cột "Hóa đơn" sau "Trạng thái": badge Đã xuất (xanh, kèm s�
 
 ## Git
 - Branch: feature/customer-portal-mvp01
-- Commit SHA: xem report
+- Commit SHA: 1329373
 - PR:
 - Merge: xem report
 - Merge SHA:

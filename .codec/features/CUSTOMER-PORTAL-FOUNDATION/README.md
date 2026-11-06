@@ -46,4 +46,4 @@ CHECKPOINT_4A: PASS (existing artifact integrity, isolated localhost startup and
 | `CUSTOMER-PORTAL-FOUNDATION-CHG-20261106T071511Z-E55D21` | 2026-11-06 | Trang QR: khach hang ben trai, nguoi ban ben phai, icon ngan hang o giua | fdbc25d | NOT_APPLICABLE | DEPLOYED | MERGED |
 | `CUSTOMER-PORTAL-FOUNDATION-CHG-20261106T072739Z-09CEBF` | 2026-11-06 | Trang QR: anh chia se, nut Chuyen khoan mo app ngan hang, luu thong tin hoa don khi tra cuu duoc MST | 0bb7fe1 | NOT_APPLICABLE | DEPLOYED | MERGED |
 | `CUSTOMER-PORTAL-FOUNDATION-CHG-20261106T073457Z-C2D04D` | 2026-11-06 | Trang QR: dau tich xanh khi da thanh toan, chi tiet hang hoa duoi tieu de | c7b4115 | NOT_APPLICABLE | DEPLOYED | MERGED |
-| `CUSTOMER-PORTAL-FOUNDATION-CHG-20261106T074510Z-F0495F` | 2026-11-06 | Danh sach don hang: cot trang thai hoa don dien tu | — | NOT_APPLICABLE | NOT_PUBLISHED | PENDING_APPROVAL |
+| `CUSTOMER-PORTAL-FOUNDATION-CHG-20261106T074510Z-F0495F` | 2026-11-06 | Danh sach don hang: cot trang thai hoa don dien tu | 1329373 | NOT_APPLICABLE | DEPLOYED | MERGED |

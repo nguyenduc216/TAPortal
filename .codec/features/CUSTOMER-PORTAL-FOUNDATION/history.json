@@ -398,10 +398,10 @@
     "change_id": "CUSTOMER-PORTAL-FOUNDATION-CHG-20261106T074510Z-F0495F",
     "created_at": "2026-11-06T07:45:10.994455+00:00",
     "title": "Danh sach don hang: cot trang thai hoa don dien tu",
-    "status": "IMPLEMENTED",
-    "commit_sha": null,
+    "status": "DEPLOYED",
+    "commit_sha": "1329373",
     "migration_status": "NOT_APPLICABLE",
-    "publish_status": "NOT_PUBLISHED",
-    "merge_status": "PENDING_APPROVAL"
+    "publish_status": "DEPLOYED",
+    "merge_status": "MERGED"
   }
 ]
