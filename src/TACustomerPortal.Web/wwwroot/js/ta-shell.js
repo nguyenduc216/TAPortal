@@ -259,17 +259,19 @@
         });
         document.addEventListener('submit', (event) => {
             const form = event.target;
-            if (event.defaultPrevented || !(form instanceof HTMLFormElement) || form.hasAttribute('data-ta-hard') || form.target) return;
+            const submitter = event.submitter;
+            // A button's formaction / formmethod / formtarget override the form's (e.g. "Lấy mẫu hóa đơn" inside the settings form).
+            const target = submitter?.hasAttribute('formtarget') ? submitter.getAttribute('formtarget') : form.target;
+            if (event.defaultPrevented || !(form instanceof HTMLFormElement) || form.hasAttribute('data-ta-hard') || (target && target !== '_self')) return;
             event.preventDefault();
             if (form.dataset.taSubmitting === 'true') return;
-            const submitter = event.submitter;
             const data = new FormData(form, submitter);
             form.dataset.taSubmitting = 'true';
             const busy = window.setTimeout(() => submitter?.classList.add('is-busy'), 300);
             if (submitter) submitter.disabled = true;
             prefetched.clear();
-            const action = new URL(form.getAttribute('action') || window.location.href, window.location.href);
-            const isPost = (form.getAttribute('method') || 'get').toLowerCase() === 'post';
+            const action = new URL(submitter?.getAttribute('formaction') || form.getAttribute('action') || window.location.href, window.location.href);
+            const isPost = (submitter?.getAttribute('formmethod') || form.getAttribute('method') || 'get').toLowerCase() === 'post';
             if (!isPost) action.search = new URLSearchParams(data).toString();
             const response = request(action.href, isPost ? { method: 'POST', body: data } : undefined).catch(() => null);
             response.then(() => {

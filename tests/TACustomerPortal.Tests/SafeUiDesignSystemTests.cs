@@ -41,6 +41,19 @@ public sealed class SafeUiDesignSystemTests
         Assert.Equal(File.ReadAllBytes(adminFile), File.ReadAllBytes(customerFile));
     }
 
+    // "Lấy mẫu hóa đơn từ MISA" / "Xem thử hóa đơn nháp" (and the Admin sandbox "Tạo nháp" / "Phát hành") are buttons with
+    // formaction inside a form: the background submit must post to the button's action, and formtarget=_blank must go native.
+    [Fact]
+    public void ShellSubmitHonoursButtonFormactionAndFormtarget()
+    {
+        var shell = File.ReadAllText(Path.Combine(CustomerWww, "js", "ta-shell.js"));
+        Assert.Contains("submitter?.getAttribute('formaction') || form.getAttribute('action')", shell);
+        Assert.Contains("submitter?.getAttribute('formmethod') || form.getAttribute('method')", shell);
+        Assert.Contains("submitter?.hasAttribute('formtarget') ? submitter.getAttribute('formtarget') : form.target", shell);
+        var customer = File.ReadAllText(Path.Combine(CustomerWww, "js", "customer.js"));
+        Assert.Contains("event.submitter?.hasAttribute(\"formtarget\")", customer);
+    }
+
     [Fact]
     public void DesignTokensUseTheApprovedPalette()
     {

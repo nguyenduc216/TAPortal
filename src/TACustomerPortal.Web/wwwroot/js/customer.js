@@ -2,6 +2,9 @@
 // Full-page submits only (sign-in, sign-out): forms inside the portal shell are sent in the background by ta-shell.js.
 document.addEventListener("submit", event => {
     if (!(event.target instanceof HTMLFormElement) || event.defaultPrevented) return;
+    // Sent to a new tab (e.g. "Xem thử hóa đơn nháp"): this page stays, so its buttons stay usable.
+    const target = event.submitter?.hasAttribute("formtarget") ? event.submitter.getAttribute("formtarget") : event.target.target;
+    if (target && target !== "_self") return;
     event.target.setAttribute("aria-busy", "true");
     event.target.querySelectorAll("button[type=submit], button:not([type])").forEach(button => {
         button.disabled = true;
