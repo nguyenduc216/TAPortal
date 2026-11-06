@@ -4,7 +4,7 @@
 - Change ID: `TINGEE-INTEGRATION-CHG-20261106T051400Z-A0E31B`
 - Created UTC: 2026-11-06T05:14:00.530222+00:00
 - Tiêu đề: SMTP: them Message-ID de Gmail khong tu choi thu
-- Trạng thái: IMPLEMENTED
+- Trạng thái: DEPLOYED
 
 ## Yêu cầu và phạm vi
 Operator (2026-11-06): Cài đặt thông báo trên Customer Portal báo "Gửi thử thành công" qua kênh Email SMTP của doanh nghiệp nhưng hộp thư Gmail không nhận được thư.
@@ -31,7 +31,7 @@ Sửa: `MailIds.Stamp` thêm `Message-ID: <guid@tên-miền-người-gửi>` cho
 
 ## Git
 - Branch: feature/customer-portal-mvp01
-- Commit SHA: xem report
+- Commit SHA: 7bb181a
 - PR:
 - Merge: xem report
 - Merge SHA:
