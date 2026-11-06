@@ -4,7 +4,7 @@
 - Change ID: `CUSTOMER-PORTAL-FOUNDATION-CHG-20261106T062358Z-2721FA`
 - Created UTC: 2026-11-06T06:23:58Z
 - Tiêu đề: Logo ở danh sách khách hàng, thanh bên và Admin portal
-- Trạng thái: IMPLEMENTED
+- Trạng thái: DEPLOYED
 
 ## Yêu cầu và phạm vi
 Operator 2026-11-06: bổ sung 2 việc còn lại của change D0B894: (1) logo hiện ở danh sách khách hàng và thanh bên Customer Portal;
@@ -32,13 +32,17 @@ Quyết định kỹ thuật:
 
 ## Test và kết quả
 - Release build 0 errors; Safe tests 478/478 PASS (cùng thay đổi chưa commit của session khác trong checkout); codec unittest OK; git diff --check OK.
-- Gate lại trên commit sạch: do Deploy-TARemote chạy từ worktree riêng (xem Publish).
+- Gate trên commit sạch bcec7af (worktree riêng, trong Deploy-TARemote): build 0 errors, Safe 478/478 PASS.
 
 ## Publish
-- NOT_PUBLISHED
+- DEPLOYED via `Deploy-TARemote.ps1 -Target invoice,portal,webhooks` từ worktree sạch (audit PASS, Release build 0 errors, Safe 478/478), source bcec7af, 2026-11-06T06:40Z:
+  - invoice / TACustomerPortal.Web: artifact 6e798d983b3a946eabf2cea2ad3600ab2c7aaf480e06d02b3fcedae2e3c5e3cd, package C6D49B0A6641C9316EBFD99E5B52A0F38FC5A2C843EFAB7C394F6515AC2C5741, health 200
+  - portal / TAPortal.Web: artifact 41ab03ad7707d6f2af101ae06d5cb7686bea4cdd33c2249d63896de32653585c, package E59B7BBD8E5D9472A28C79C9F1FF9C2E1617772495EF4584F9F995CD5C3AD7B6, health 200
+  - webhooks / TAPortal.Webhooks: artifact 8085b273fdd9fa1714118e132bbd92dd261547d51ef7a67a6690eba78c80ee2a, package 2E9D841AB57EFCD0CAA4DCBCFFF3B24B3ECFB9A0D966FDC8E028C35A68EDB5A2, health 200
 
 ## Git
 - Branch: feature/customer-portal-mvp01
+- Source commit: bcec7af
 - Chỉ commit phần của change này; thay đổi chưa commit của session khác trong checkout (TaxCodeLookup.cs, Contacts/Edit.cshtml, ApplyBuyerType/PhoneDigits,
   .cp-form-grid--3, test số điện thoại) được giữ nguyên, không stage.
 

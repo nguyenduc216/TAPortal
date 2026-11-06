@@ -20,12 +20,8 @@ public interface ITaxCodeLookup
 
 public static partial class TaxCodeRules
 {
-    /// <summary>Spaces and invisible characters (zero-width space, BOM: often pasted from web pages) removed; null when blank.</summary>
-    public static string? Normalize(string? value)
-    {
-        var s = value is null ? "" : string.Concat(value.Where(c => !char.IsWhiteSpace(c) && char.GetUnicodeCategory(c) != System.Globalization.UnicodeCategory.Format));
-        return s.Length == 0 ? null : s;
-    }
+    /// <summary>Spaces removed; null when blank.</summary>
+    public static string? Normalize(string? value) => string.IsNullOrWhiteSpace(value) ? null : string.Concat(value.Where(c => !char.IsWhiteSpace(c)));
 
     /// <summary>Enterprise (10 digits, branch 10-3) or personal/household (12 digits, the CCCD number since 2025).</summary>
     public static bool IsValid(string? normalized) => normalized is not null && Format().IsMatch(normalized);

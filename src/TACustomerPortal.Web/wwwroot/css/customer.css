@@ -342,10 +342,6 @@ a.cp-card:hover { background: var(--cp-hover-bg); border-color: var(--cp-hover-l
 .cp-btn--danger:hover { background: var(--cp-red-50); }
 .cp-form-grid { display: grid; gap: 0 16px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
 .cp-form-grid .cp-span { grid-column: 1 / -1; }
-/* Forms whose sections hold three fields: three even columns so a row fills the card instead of crowding the left. */
-.cp-form-grid--3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-@media (max-width: 1099.98px) { .cp-form-grid--3 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-@media (max-width: 639.98px) { .cp-form-grid--3 { grid-template-columns: minmax(0, 1fr); } }
 .cp-input--plain { padding-left: 12px; padding-right: 12px; }
 select.cp-input { appearance: none; padding-right: 32px; background-image: linear-gradient(45deg, transparent 50%, var(--cp-ink-3) 50%), linear-gradient(135deg, var(--cp-ink-3) 50%, transparent 50%); background-position: calc(100% - 15px) 50%, calc(100% - 10px) 50%; background-size: 5px 5px; background-repeat: no-repeat; }
 textarea.cp-input { height: auto; min-height: 72px; padding-top: 8px; padding-bottom: 8px; resize: vertical; }

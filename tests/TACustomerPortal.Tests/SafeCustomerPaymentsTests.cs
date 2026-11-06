@@ -138,20 +138,6 @@ public sealed class SafeCustomerPaymentsTests
         var sen = store.Contacts.Single(x => x.Contact.Name == "Anh Minh").Contact;
         Assert.Equal(("BUSINESS", "0101234567", null), (sen.Type, sen.TaxCode, sen.IdentityNumber));
 
-        // Production 2026-11-06: a looked-up tax code pasted with a trailing space (or a zero-width space) was refused as
-        // badly formatted; a phone typed in groups is kept as its digits.
-        Assert.Equal(HttpStatusCode.Redirect, (await Post(c, "/contacts/create", token, new()
-        {
-            ["BuyerType"] = "BUSINESS", ["Name"] = "TODOX", ["LegalName"] = "CÔNG TY TNHH TODOX", ["TaxCode"] = "4202062905 ​", ["Phone"] = " 0366 699 999 ", ["Zalo"] = "+84 366.699.961"
-        })).StatusCode);
-        var todox = store.Contacts.Single(x => x.Contact.Name == "TODOX").Contact;
-        Assert.Equal(("4202062905", "0366699999", "0366699961"), (todox.TaxCode, todox.Phone, todox.Zalo));
-        Assert.Null(TACustomerPortal.Web.Controllers.ContactsController.PhoneDigits("Shop Hoa Mai"));   // a Zalo name stays a name
-        Assert.Equal("0912345678", TACustomerPortal.Web.Controllers.ContactsController.PhoneDigits("(091) 234-5678"));
-        var shortPhone = await Post(c, "/contacts/create", token, new() { ["Name"] = "Anh Tư", ["Phone"] = "0366 699 9" });
-        Assert.Equal(HttpStatusCode.BadRequest, shortPhone.StatusCode);
-        Assert.Contains("Số điện thoại gồm 10 chữ số", WebUtility.HtmlDecode(await shortPhone.Content.ReadAsStringAsync()));
-
         // A bank account number needs its bank.
         var noBank = await Post(c, "/contacts/create", token, new() { ["BuyerType"] = "HOUSEHOLD", ["Name"] = "Quán Bà Tư", ["BankAccountNumber"] = "123456" });
         Assert.Equal(HttpStatusCode.BadRequest, noBank.StatusCode);

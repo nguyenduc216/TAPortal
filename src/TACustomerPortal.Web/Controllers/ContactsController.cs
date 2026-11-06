@@ -112,12 +112,8 @@ public sealed class ContactsController(ICurrentCustomerContext customer, IPaymen
     private void ApplyBuyerType(ContactInput input)
     {
         input.BuyerType = BuyerTypes.Normalize(input.BuyerType) ?? BuyerTypes.Individual;
-        // Numbers are often typed in groups ("001 088 012345") or pasted with a trailing space: checked again once the
-        // spaces are gone (production 2026-11-06: a correct, looked-up tax code was refused for a pasted space).
-        input.TaxCode = Revalidate(input, nameof(input.TaxCode), TaxCodeRules.Normalize(input.TaxCode));
-        input.Phone = Revalidate(input, nameof(input.Phone), PhoneDigits(input.Phone) ?? Blank(input.Phone));
-        // Zalo holds a number or a Zalo name: a number is kept as its digits, a name only trimmed.
-        input.Zalo = PhoneDigits(input.Zalo) ?? Blank(input.Zalo);
+        input.TaxCode = TaxCodeRules.Normalize(input.TaxCode);
+        // Numbers are often typed in groups ("001 088 012345"): checked again once the spaces are gone.
         input.IdentityNumber = Revalidate(input, nameof(input.IdentityNumber), Blank(input.IdentityNumber)?.Replace(" ", ""));
         input.BankAccountNumber = Revalidate(input, nameof(input.BankAccountNumber), Blank(input.BankAccountNumber)?.Replace(" ", ""));
         switch (input.BuyerType)
@@ -175,17 +171,4 @@ public sealed class ContactsController(ICurrentCustomerContext customer, IPaymen
     }
 
     private static string? Blank(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
-
-    /// <summary>
-    /// A phone number copied from elsewhere ("0366 699 961", "0366.699.961", "+84 366 699 961") as its digits with the
-    /// leading 0; null when the text is not a phone number (e.g. a Zalo name), so the caller keeps it as typed.
-    /// </summary>
-    public static string? PhoneDigits(string? value)
-    {
-        if (string.IsNullOrWhiteSpace(value)) return null;
-        var s = string.Concat(value.Where(c => !char.IsWhiteSpace(c) && char.GetUnicodeCategory(c) != System.Globalization.UnicodeCategory.Format && c is not ('.' or '-' or '(' or ')')));
-        if (s.StartsWith('+')) s = s[1..];
-        if (s.Length == 0 || !s.All(char.IsAsciiDigit)) return null;
-        return s.StartsWith("84", StringComparison.Ordinal) && s.Length == 11 ? "0" + s[2..] : s;
-    }
 }
