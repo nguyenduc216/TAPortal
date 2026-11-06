@@ -7,7 +7,7 @@
     var (label, css) = PaymentText.OrderStatus(Model.Status);
     var transfer = OrderMath.TransferContent(o.OrderNo);
     var pay = "/pay/" + Model.Token;
-    // Link previews (Zalo, Messenger…): the T.A logo and "Thanh toán <tiêu đề>"; absolute URLs, as crawlers require.
+    // Link previews (Zalo, Messenger…): the portal logo (og-share.png) and "Thanh toán <tiêu đề>"; absolute URLs, as crawlers require.
     var origin = $"{Context.Request.Scheme}://{Context.Request.Host}";
     var shareText = "Thanh toán " + Model.Title;
     var message = Model.Status switch

@@ -41,6 +41,21 @@ public sealed class SafeUiDesignSystemTests
         Assert.Equal(File.ReadAllBytes(adminFile), File.ReadAllBytes(customerFile));
     }
 
+    // Operator 2026-11-06: the Customer Portal's own logo, redrawn as a clean vector (straight edges, even gaps); the
+    // favicon and the link-preview image are rendered from it. The Admin portal keeps the T.A logo.
+    [Fact]
+    public void TheCustomerPortalShowsItsVectorLogo()
+    {
+        var layout = File.ReadAllText(Path.Combine(Root, "src", "TACustomerPortal.Web", "Views", "Shared", "_Layout.cshtml"));
+        Assert.Contains("<img src=\"~/images/logo.svg\" class=\"cp-brand__logo\"", layout);
+        var svg = File.ReadAllText(Path.Combine(CustomerWww, "images", "logo.svg"));
+        Assert.StartsWith("<svg ", svg);
+        Assert.Contains("viewBox=", svg);
+        Assert.DoesNotContain("<image", svg);
+        Assert.False(File.Exists(Path.Combine(CustomerWww, "images", "ta-logo.png")));
+        Assert.True(File.Exists(Path.Combine(AdminWww, "images", "ta-logo.png")));
+    }
+
     // Operator 2026-11-06: a flash message at the top of the content was easy to miss; both portals raise it as a toast at
     // the top centre of the screen (close button, auto-hide), and it stays in the page when script is off.
     [Fact]
