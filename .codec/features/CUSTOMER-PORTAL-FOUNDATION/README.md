@@ -38,3 +38,4 @@ CHECKPOINT_4A: PASS (existing artifact integrity, isolated localhost startup and
 | `CUSTOMER-PORTAL-FOUNDATION-CHG-20261105T235309Z-2AA0D3` | 2026-11-05 | Customer Portal: tự đăng ký doanh nghiệp (tra MST) và khách hàng linh hoạt theo loại (khách lẻ/hộ KD/doanh nghiệp/tổ chức) | b3074b4 | EXECUTED | DEPLOYED | PENDING_APPROVAL |
 | `CUSTOMER-PORTAL-FOUNDATION-CHG-20261106T012601Z-147F73` | 2026-11-06 | Customer Portal: MISA e-invoice settings and automatic invoice for paid QR orders | 71cb50a | EXECUTED | DEPLOYED | PENDING_APPROVAL |
 | `CUSTOMER-PORTAL-FOUNDATION-CHG-20261106T042042Z-D6E634` | 2026-11-06 | Shell: button formaction/formtarget (MISA templates, draft preview) | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |
+| `CUSTOMER-PORTAL-FOUNDATION-CHG-20261106T044512Z-10B30D` | 2026-11-06 | MISA template id (GUID): InvoicePattern varchar(50) | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |

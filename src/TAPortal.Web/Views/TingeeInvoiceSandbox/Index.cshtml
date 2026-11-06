@@ -192,7 +192,7 @@
                         <option value="">Tài khoản mặc định</option>
                         @foreach (var a in accounts) { <option value="@a.Id" selected="@(a.Id == inv.AccountId)">@AccountLabel(a)</option> }
                     </select></div>
-                <div class="col-sm-6 col-md-2"><label class="form-label required" for="Invoice_Pattern">Mẫu số</label><div class="ta-input-icon">@UiIcon.Render("file-text")<input class="form-control" id="Invoice_Pattern" name="Invoice.Pattern" value="@inv.Pattern" maxlength="20" required /></div></div>
+                <div class="col-sm-6 col-md-2"><label class="form-label required" for="Invoice_Pattern">Mẫu số</label><div class="ta-input-icon">@UiIcon.Render("file-text")<input class="form-control" id="Invoice_Pattern" name="Invoice.Pattern" value="@inv.Pattern" maxlength="50" required /></div></div>
                 <div class="col-sm-6 col-md-2"><label class="form-label required" for="Invoice_Series">Ký hiệu</label><div class="ta-input-icon">@UiIcon.Render("hash")<input class="form-control" id="Invoice_Series" name="Invoice.Series" value="@inv.Series" maxlength="20" required /></div></div>
                 <div class="col-sm-6 col-md-2"><label class="form-label required" for="Invoice_Code">Mã hóa đơn</label><div class="ta-input-icon">@UiIcon.Render("hash")<input class="form-control" id="Invoice_Code" name="Invoice.Code" value="@inv.Code" maxlength="40" required /></div></div>
                 <div class="col-sm-6 col-md-2"><label class="form-label required" for="Invoice_Date">Ngày lập</label><div class="ta-input-icon">@UiIcon.Render("calendar")<input class="form-control" id="Invoice_Date" name="Invoice.Date" type="date" value="@inv.Date?.ToString("yyyy-MM-dd", inv0)" required /></div></div>

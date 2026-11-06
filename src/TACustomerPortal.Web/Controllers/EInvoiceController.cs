@@ -120,8 +120,8 @@ public sealed class EInvoiceController(ICurrentCustomerContext customer, IPaymen
             (input.Pattern, input.Series) = (pickedPattern, pickedSeries);
             ModelState.Remove("Template.Pattern");
             ModelState.Remove("Template.Series");
-            foreach (var (key, value) in new[] { ("Template.Pattern", pickedPattern), ("Template.Series", pickedSeries) })
-                if (!System.Text.RegularExpressions.Regex.IsMatch(value.Trim(), @"^[A-Za-z0-9/._-]{1,20}$")) ModelState.AddModelError(key, "Mẫu hóa đơn đã chọn không hợp lệ.");
+            foreach (var (key, value, max) in new[] { ("Template.Pattern", pickedPattern, 50), ("Template.Series", pickedSeries, 20) })
+                if (!System.Text.RegularExpressions.Regex.IsMatch(value.Trim(), $"^[A-Za-z0-9/._-]{{1,{max}}}$")) ModelState.AddModelError(key, "Mẫu hóa đơn đã chọn không hợp lệ.");
         }
         input.Pattern = string.IsNullOrWhiteSpace(input.Pattern) ? null : input.Pattern.Trim();
         input.Series = string.IsNullOrWhiteSpace(input.Series) ? null : input.Series.Trim().ToUpperInvariant();

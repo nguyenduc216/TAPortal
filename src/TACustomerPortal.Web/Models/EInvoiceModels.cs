@@ -22,7 +22,8 @@ public sealed class EInvoiceAccountInput
 
 public sealed class EInvoiceTemplateInput
 {
-    [RegularExpression(@"^[A-Za-z0-9/._-]{1,20}$", ErrorMessage = "Mẫu số chỉ gồm chữ, số và / . _ - (tối đa 20 ký tự), VD: 1.")]
+    // MISA identifies a template by a GUID (36 characters), so mẫu số takes up to 50.
+    [RegularExpression(@"^[A-Za-z0-9/._-]{1,50}$", ErrorMessage = "Mẫu số chỉ gồm chữ, số và / . _ - (tối đa 50 ký tự). Bấm \"Lấy mẫu hóa đơn từ MISA\" để chọn.")]
     public string? Pattern { get; set; }
 
     [RegularExpression(@"^[A-Za-z0-9/._-]{1,20}$", ErrorMessage = "Ký hiệu chỉ gồm chữ, số và / . _ - (tối đa 20 ký tự), VD: C26TAA.")]

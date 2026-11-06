@@ -60,7 +60,7 @@ public sealed class TingeeInvoiceSandboxInput
 
     /// <summary>Provider account at Tingee; empty uses the merchant's default account.</summary>
     public long? AccountId { get; set; }
-    [Required(ErrorMessage = "Nhập mẫu số hóa đơn (bấm \"Lấy mẫu\" để chọn)."), StringLength(20)] public string? Pattern { get; set; }
+    [Required(ErrorMessage = "Nhập mẫu số hóa đơn (bấm \"Lấy mẫu\" để chọn)."), StringLength(50)] public string? Pattern { get; set; }
     [Required(ErrorMessage = "Nhập ký hiệu hóa đơn (bấm \"Lấy mẫu\" để chọn)."), StringLength(20)] public string? Series { get; set; }
     [Required(ErrorMessage = "Nhập mã hóa đơn."), RegularExpression("^[A-Za-z0-9_-]{4,40}$", ErrorMessage = "Mã hóa đơn 4–40 ký tự: chữ, số, - hoặc _.")]
     public string? Code { get; set; }

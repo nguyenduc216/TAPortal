@@ -176,6 +176,27 @@ public sealed class SafeCustomerEInvoiceTests
         Assert.DoesNotContain("Tingee", on, StringComparison.OrdinalIgnoreCase);
     }
 
+    // Production 2026-11-06: MISA returns the template id as a GUID (invoice-templates), and a draft with mẫu số "1" is
+    // refused ("Misa API error"). Picking that template must save the whole 36-character id.
+    [Fact]
+    public async Task AMisaTemplateIdentifiedByAGuidCanBePickedAndSaved()
+    {
+        var invoices = new MemoryInvoiceStore();
+        using var f = Factory("OWNER", out var payments, out _, invoiceStore: invoices, invoiceApi: new FakeInvoiceApi());
+        payments.Merchants[A] = 9001;
+        var c = Client(f);
+        var token = await Token(c, "/einvoice");
+        await Post(c, "/einvoice/connect", token, new() { ["Account.TaxCode"] = "0101234567", ["Account.Username"] = "ketoan@a.vn", ["Account.Password"] = "Secret#123" });
+        const string id = "245b1d28-63dc-4288-b009-904ab8f848a0";
+        token = await Token(c, "/einvoice");
+        var r = await Post(c, "/einvoice/save", token, new() { ["Template.Choice"] = id + "|1C26TTA" });
+        Assert.Equal(HttpStatusCode.Redirect, r.StatusCode);
+        Assert.Equal((id, "1C26TTA"), (invoices.Settings[A].InvoicePattern, invoices.Settings[A].InvoiceSeries));
+        token = await Token(c, "/einvoice");
+        r = await Post(c, "/einvoice/save", token, new() { ["Template.Pattern"] = id, ["Template.Series"] = "1C26TTA" });
+        Assert.Equal(HttpStatusCode.Redirect, r.StatusCode);
+    }
+
     [Fact]
     public async Task AutomaticInvoicesNeedAConnectedAccountAndATemplate()
     {

@@ -56,12 +56,13 @@ else if (!Model.ServiceReady) { <aside class="cp-note" style="margin-bottom:14px
                         @foreach (var tpl in list)
                         {
                             var value = $"{tpl.InvoicePattern}|{tpl.InvoiceSeries}";
-                            <label><input type="radio" name="Template.Choice" value="@value" checked="@(tpl.InvoicePattern == s.InvoicePattern && tpl.InvoiceSeries == s.InvoiceSeries)" /><strong>@tpl.InvoiceSeries</strong><small>Mẫu số @tpl.InvoicePattern</small></label>
+                            <label><input type="radio" name="Template.Choice" value="@value" checked="@(tpl.InvoicePattern == s.InvoicePattern && tpl.InvoiceSeries == s.InvoiceSeries)" /><strong>@tpl.InvoiceSeries</strong><small>@(tpl.InvoicePattern.Length > 20 ? "Mẫu trên MISA" : "Mẫu số " + tpl.InvoicePattern)</small></label>
                         }
                     </div>
                 }
                 <div class="cp-form-grid">
-                    <div class="cp-field"><label asp-for="Template.Pattern" class="cp-label">Mẫu số</label><div class="cp-input-wrap">@UiIcon.Render("hash")<input asp-for="Template.Pattern" class="cp-input" maxlength="20" placeholder="VD: 1" disabled="@(!canEdit || !s.IsConnected)" /></div><span asp-validation-for="Template.Pattern" class="cp-error"></span></div>
+                    <div class="cp-field"><label asp-for="Template.Pattern" class="cp-label">Mẫu số</label><div class="cp-input-wrap">@UiIcon.Render("hash")<input asp-for="Template.Pattern" class="cp-input" maxlength="50" placeholder="Bấm Lấy mẫu hóa đơn từ MISA" disabled="@(!canEdit || !s.IsConnected)" /></div><span asp-validation-for="Template.Pattern" class="cp-error"></span>
+                        <div class="cp-hint">MISA dùng mã mẫu riêng (chuỗi dài), không phải số "1": bấm "Lấy mẫu hóa đơn từ MISA", chọn mẫu rồi lưu.</div></div>
                     <div class="cp-field"><label asp-for="Template.Series" class="cp-label">Ký hiệu</label><div class="cp-input-wrap">@UiIcon.Render("hash")<input asp-for="Template.Series" class="cp-input" maxlength="20" placeholder="VD: C26TAA" disabled="@(!canEdit || !s.IsConnected)" /></div><span asp-validation-for="Template.Series" class="cp-error"></span></div>
                 </div>
                 <div class="cp-field">
