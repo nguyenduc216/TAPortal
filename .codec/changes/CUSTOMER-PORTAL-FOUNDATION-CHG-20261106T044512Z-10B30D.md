@@ -4,7 +4,7 @@
 - Change ID: `CUSTOMER-PORTAL-FOUNDATION-CHG-20261106T044512Z-10B30D`
 - Created UTC: 2026-11-06T04:45:12.341599+00:00
 - Tiêu đề: MISA template id (GUID): InvoicePattern varchar(50)
-- Trạng thái: IMPLEMENTED
+- Trạng thái: DEPLOYED
 
 ## Yêu cầu và phạm vi
 Operator (2026-11-06): "Xem thử hóa đơn nháp" báo "Nhà cung cấp hóa đơn từ chối (mã 400): Misa API error".
@@ -30,15 +30,15 @@ Sửa: InvoicePattern varchar(50) (migration 023); validation mẫu số 1–50 
 - `dotnet build TAPortal.sln -c Release`: 0 lỗi. Safe tests 469/469 pass.
 
 ## Publish
-- Project:
-- Destination (chỉ từ config):
-- Trạng thái: NOT_PUBLISHED
-- Artifact SHA256:
-- Smoke test:
+- Project: invoice (TACustomerPortal.Web), portal (TAPortal.Web) qua Deploy-TARemote.ps1 -MigrationsApplied
+- Destination (chỉ từ config): ta-server TA.Invoice, TA.Portal
+- Trạng thái: DEPLOYED 2026-11-06 11:51 (giờ VN), commit 86ea48a; backup server invoice-20261106-115046 / portal-20261106-115056
+- Artifact SHA256: invoice ba1ab5db0fd4665001e79d32111cd4067a5a3e9f96fc3e031cccfcf21b3e5712; portal 43aa35dda10025e14eb92b9881d48803a2987bae9591d847f62d867392fbbea9
+- Smoke test: health HTTP 200 cả hai.
 
 ## Git
 - Branch: feature/customer-portal-mvp01
-- Commit SHA:
+- Commit SHA: 86ea48a
 - PR:
 - Merge: PENDING_APPROVAL
 - Merge SHA:
