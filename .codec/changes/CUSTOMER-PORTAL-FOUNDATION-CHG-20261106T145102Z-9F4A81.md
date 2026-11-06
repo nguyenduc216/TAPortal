@@ -4,7 +4,7 @@
 - Change ID: `CUSTOMER-PORTAL-FOUNDATION-CHG-20261106T145102Z-9F4A81`
 - Created UTC: 2026-11-06T14:51:02.125407+00:00
 - Tiêu đề: Customer Portal logo: clean vector redraw, favicon and link-preview image
-- Trạng thái: IMPLEMENTED
+- Trạng thái: DEPLOYED
 
 ## Yêu cầu và phạm vi
 Operator (2026-11-06): thay logo của Customer Portal (hoadontudong) bằng ảnh operator gửi; ảnh gốc nét không thẳng, lem ⇒ vẽ lại sạch trước khi thay.
@@ -35,9 +35,9 @@ Sửa:
 
 ## Git
 - Branch: feature/customer-portal-mvp01
-- Commit SHA: xem report
+- Commit SHA: 0037f2a
 - PR:
-- Merge: xem report
+- Merge: fast-forward main
 - Merge SHA:
 
 ## Rủi ro, quyết định và việc còn lại
