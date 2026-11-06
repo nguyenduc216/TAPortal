@@ -38,7 +38,7 @@ Trong phạm vi:
 
 ## Git
 - Branch: feature/customer-portal-mvp01
-- Commit SHA: xem report
+- Commit SHA: 71cb50a
 - PR:
 - Merge: xem report
 - Merge SHA:
