@@ -378,6 +378,16 @@
     "change_id": "CUSTOMER-PORTAL-FOUNDATION-CHG-20261106T072739Z-09CEBF",
     "created_at": "2026-11-06T07:27:39.763527+00:00",
     "title": "Trang QR: anh chia se, nut Chuyen khoan mo app ngan hang, luu thong tin hoa don khi tra cuu duoc MST",
+    "status": "DEPLOYED",
+    "commit_sha": "0bb7fe1",
+    "migration_status": "NOT_APPLICABLE",
+    "publish_status": "DEPLOYED",
+    "merge_status": "MERGED"
+  },
+  {
+    "change_id": "CUSTOMER-PORTAL-FOUNDATION-CHG-20261106T073457Z-C2D04D",
+    "created_at": "2026-11-06T07:34:57.923292+00:00",
+    "title": "Trang QR: dau tich xanh khi da thanh toan, chi tiet hang hoa duoi tieu de",
     "status": "IMPLEMENTED",
     "commit_sha": null,
     "migration_status": "NOT_APPLICABLE",

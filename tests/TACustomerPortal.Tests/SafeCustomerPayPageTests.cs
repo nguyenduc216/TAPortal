@@ -57,6 +57,10 @@ public sealed class SafeCustomerPayPageTests
         var bridgeAt = page.IndexOf("class=\"cp-pay__bridge\"", StringComparison.Ordinal);
         Assert.True(buyerAt >= 0 && buyerAt < bridgeAt && bridgeAt < page.IndexOf("cp-pay__party--seller", StringComparison.Ordinal));
         Assert.Contains("M5 6l7 -3l7 3", page[bridgeAt..page.IndexOf("cp-pay__party--seller", StringComparison.Ordinal)]);   // building-bank icon
+        var i = store.Orders.FindIndex(x => x.Order.Id == order.Id);
+        store.Orders[i] = (A, store.Orders[i].Order with { Status = OrderStatus.Paid, PaidAmount = 150_000 });
+        Assert.Contains("class=\"cp-pay__bridge is-paid\"", await c.GetStringAsync(link));   // paid: a green check instead of the bank
+        store.Orders[i] = (A, store.Orders[i].Order with { Status = OrderStatus.Awaiting, PaidAmount = 0 });
         Assert.Contains(link[17..] + "/logo/buyer?v=", page);                 // buyer logo uploaded, seller shows initials
         Assert.DoesNotContain("/logo/seller", page);
         Assert.Contains("Tiệc cuối năm", page);                               // title = description
@@ -85,6 +89,9 @@ public sealed class SafeCustomerPayPageTests
         Assert.Contains("data-cp-poll=\"" + link[17..] + "/status\"", page);
         Assert.False(PartnerText.Mentions(Regex.Replace(page, "<script.*?</script>|<link[^>]*>", "", RegexOptions.Singleline)));
         Assert.DoesNotContain("cp-sidebar", page);                            // its own shell, no portal navigation
+        var title = page.IndexOf("id=\"payTitle\"", StringComparison.Ordinal);
+        var lines = page.IndexOf("cp-pay__lines", StringComparison.Ordinal);
+        Assert.True(title < lines && lines < page.IndexOf("data-cp-open-dialog", StringComparison.Ordinal) && lines < page.IndexOf("id=\"invoice\"", StringComparison.Ordinal));   // goods under the title
 
         var logo = await c.GetAsync(link + "/logo/buyer");
         Assert.Equal("image/png", logo.Content.Headers.ContentType?.MediaType);

@@ -44,4 +44,5 @@ CHECKPOINT_4A: PASS (existing artifact integrity, isolated localhost startup and
 | `CUSTOMER-PORTAL-FOUNDATION-CHG-20261106T062358Z-2721FA` | 2026-11-06 | Logo ở danh sách khách hàng, thanh bên và Admin portal | — | NOT_APPLICABLE | DEPLOYED | MERGED |
 | `CUSTOMER-PORTAL-FOUNDATION-CHG-20261106T064001Z-46830A` | 2026-11-06 | Khach hang: MST dan co khoang trang, dien thoai/Zalo tu bo khoang trang, form rong 3 cot | 7ded836 | NOT_APPLICABLE | DEPLOYED | MERGED |
 | `CUSTOMER-PORTAL-FOUNDATION-CHG-20261106T071511Z-E55D21` | 2026-11-06 | Trang QR: khach hang ben trai, nguoi ban ben phai, icon ngan hang o giua | fdbc25d | NOT_APPLICABLE | DEPLOYED | MERGED |
-| `CUSTOMER-PORTAL-FOUNDATION-CHG-20261106T072739Z-09CEBF` | 2026-11-06 | Trang QR: anh chia se, nut Chuyen khoan mo app ngan hang, luu thong tin hoa don khi tra cuu duoc MST | — | NOT_APPLICABLE | NOT_PUBLISHED | PENDING_APPROVAL |
+| `CUSTOMER-PORTAL-FOUNDATION-CHG-20261106T072739Z-09CEBF` | 2026-11-06 | Trang QR: anh chia se, nut Chuyen khoan mo app ngan hang, luu thong tin hoa don khi tra cuu duoc MST | 0bb7fe1 | NOT_APPLICABLE | DEPLOYED | MERGED |
+| `CUSTOMER-PORTAL-FOUNDATION-CHG-20261106T073457Z-C2D04D` | 2026-11-06 | Trang QR: dau tich xanh khi da thanh toan, chi tiet hang hoa duoi tieu de | — | NOT_APPLICABLE | NOT_PUBLISHED | PENDING_APPROVAL |

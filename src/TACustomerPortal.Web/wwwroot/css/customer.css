@@ -490,6 +490,8 @@ textarea.cp-input { height: auto; min-height: 72px; padding-top: 8px; padding-bo
 .cp-pay__knot { display: grid; place-items: center; width: 34px; height: 34px; flex: none; border-radius: 50%; color: #fff; background: linear-gradient(135deg, var(--cp-blue-600), var(--cp-gold-500)); box-shadow: var(--cp-shadow-md); }
 .cp-pay__knot .ta-icon { width: 18px; height: 18px; }
 @keyframes cp-pay-flow { to { background-position: 22px 0; } }
+.cp-pay__bridge.is-paid .cp-pay__wire { background-image: linear-gradient(90deg, var(--cp-green-700), var(--cp-green-700)); animation: none; }
+.cp-pay__bridge.is-paid .cp-pay__knot { background: var(--cp-green-700); box-shadow: 0 0 0 5px var(--cp-green-100), var(--cp-shadow-md); animation: cp-pop .3s var(--cp-ease) both; }
 .cp-pay__head { display: grid; justify-items: center; gap: 6px; text-align: center; padding-top: 12px; border-top: 1px solid var(--cp-line); }
 .cp-pay__head h1 { margin: 0; font-size: 20px; line-height: 1.3; overflow-wrap: anywhere; }
 .cp-pay__invoice { display: grid; gap: 8px; padding: 14px; border: 1px solid var(--cp-line); border-radius: var(--cp-radius); background: var(--cp-surface-2); }

@@ -55,7 +55,8 @@
                     </span>
                     <figcaption><small>Khách hàng</small><strong>@buyer</strong></figcaption>
                 </figure>
-                <div class="cp-pay__bridge" aria-hidden="true"><span class="cp-pay__wire"></span><span class="cp-pay__knot">@UiIcon.Render("building-bank")</span><span class="cp-pay__wire"></span></div>
+                @* Paid in full: the bank in between becomes a green check (operator 2026-11-06). *@
+                <div class="cp-pay__bridge@(Model.Status == OrderStatus.Paid ? " is-paid" : "")" aria-hidden="true"><span class="cp-pay__wire"></span><span class="cp-pay__knot">@UiIcon.Render(Model.Status == OrderStatus.Paid ? "circle-check" : "building-bank")</span><span class="cp-pay__wire"></span></div>
             }
             <figure class="cp-pay__party cp-pay__party--seller">
                 <span class="cp-pay__logo">
@@ -70,8 +71,23 @@
             <div class="cp-eyebrow">Đơn hàng <span class="cp-code">@o.OrderNo</span></div>
             <h1 id="payTitle">@Model.Title</h1>
             <span class="cp-badge @css" data-cp-order-status="@Model.Status">@label</span>
-            @if (Model.Transfer is not null) {<button class="cp-btn cp-btn--primary cp-pay__transfer" type="button" data-cp-open-dialog="bankApps">@UiIcon.Render("building-bank")<span>Chuyển khoản</span></button>}
         </section>
+
+        @* Goods and services right under the title (operator 2026-11-06), then the transfer button. *@
+        @if (o.Lines.Count > 0)
+        {
+            <details class="cp-pay__lines">
+                <summary>@UiIcon.Render("list-tree")Chi tiết hàng hóa, dịch vụ (@o.Lines.Count)</summary>
+                <ul>
+                    @foreach (var l in o.Lines)
+                    {
+                        <li><span>@l.ItemName <small class="cp-muted">× @l.Quantity.ToString("0.###")@(l.UnitName is null ? "" : " " + l.UnitName)</small></span><strong>@PaymentText.Money(l.Total)</strong></li>
+                    }
+                </ul>
+            </details>
+        }
+
+        @if (Model.Transfer is not null) {<button class="cp-btn cp-btn--primary cp-btn--block cp-pay__transfer" type="button" data-cp-open-dialog="bankApps">@UiIcon.Render("building-bank")<span>Chuyển khoản</span></button>}
 
         @if (TempData["Success"] is string ok) {<div class="cp-flash cp-flash--ok" role="status">@UiIcon.Render("circle-check")<div>@ok</div></div>}
         @if (TempData["Error"] is string err) {<div class="cp-flash cp-flash--error" role="alert">@UiIcon.Render("alert-circle")<div>@err</div></div>}
@@ -141,19 +157,6 @@
             @if (Model.Open && Model.BankName is string bankName) {<div><dt>Ngân hàng nhận</dt><dd>@bankName@if (Model.Account is string acc) {<span> · @acc</span>}</dd></div>}
             <div><dt>Ngày tạo</dt><dd>@PaymentText.VietnamTime(o.CreatedAt)</dd></div>
         </dl>
-
-        @if (o.Lines.Count > 0)
-        {
-            <details class="cp-pay__lines">
-                <summary>@UiIcon.Render("list-tree")Chi tiết hàng hóa, dịch vụ (@o.Lines.Count)</summary>
-                <ul>
-                    @foreach (var l in o.Lines)
-                    {
-                        <li><span>@l.ItemName <small class="cp-muted">× @l.Quantity.ToString("0.###")@(l.UnitName is null ? "" : " " + l.UnitName)</small></span><strong>@PaymentText.Money(l.Total)</strong></li>
-                    }
-                </ul>
-            </details>
-        }
 
         @if (Model.Transfer is { } t)
         {

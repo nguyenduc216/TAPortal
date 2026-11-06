@@ -4,7 +4,7 @@
 - Change ID: `CUSTOMER-PORTAL-FOUNDATION-CHG-20261106T072739Z-09CEBF`
 - Created UTC: 2026-11-06T07:27:39.763527+00:00
 - Tiêu đề: Trang QR: anh chia se, nut Chuyen khoan mo app ngan hang, luu thong tin hoa don khi tra cuu duoc MST
-- Trạng thái: IMPLEMENTED
+- Trạng thái: DEPLOYED
 
 ## Yêu cầu và phạm vi
 Operator (2026-11-06), trang thanh toán QR công khai (/pay/{token}):
@@ -37,7 +37,7 @@ Sửa:
 
 ## Git
 - Branch: feature/customer-portal-mvp01
-- Commit SHA: xem report
+- Commit SHA: 0bb7fe1
 - PR:
 - Merge: xem report
 - Merge SHA:
