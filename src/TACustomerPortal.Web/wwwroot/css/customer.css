@@ -525,6 +525,18 @@ textarea.cp-input { height: auto; min-height: 72px; padding-top: 8px; padding-bo
 .cp-pay__lines li { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; }
 .cp-pay__foot { display: flex; align-items: center; justify-content: center; gap: 6px; color: var(--cp-ink-3); font-size: 12px; text-align: center; }
 .cp-pay__foot .ta-icon { flex: none; color: var(--cp-green-700); }
+/* "Chuyển khoản": opens the payer's banking app with the QR's transfer filled in. */
+.cp-pay__transfer { margin-top: 6px; height: 42px; padding: 0 22px; font-size: 15px; }
+.cp-pay__transfer.cp-btn--block { width: 100%; justify-content: center; margin-top: 0; }
+.cp-pay__apps { width: min(520px, calc(100vw - 24px)); max-height: min(640px, calc(100vh - 24px)); padding: 18px; border: 0; border-radius: 18px; background: var(--cp-surface); color: var(--cp-ink); box-shadow: var(--cp-shadow-lg); }
+.cp-pay__apps::backdrop { background: rgba(15, 23, 42, .45); }
+.cp-pay__apps-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 6px; font-size: 16px; }
+.cp-pay__apps-close { width: 32px; height: 32px; border: 0; border-radius: 8px; background: transparent; color: var(--cp-ink-3); font-size: 22px; line-height: 1; cursor: pointer; }
+.cp-pay__apps-close:hover { background: var(--cp-hover-bg); color: var(--cp-ink); }
+.cp-pay__app-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(88px, 1fr)); gap: 8px; margin: 12px 0; padding: 0; list-style: none; }
+.cp-pay__app-grid a { display: grid; justify-items: center; gap: 6px; padding: 10px 4px; border: 1px solid var(--cp-line); border-radius: 12px; background: var(--cp-surface); color: var(--cp-ink); font-size: 12px; font-weight: 600; text-align: center; text-decoration: none; }
+.cp-pay__app-grid a:hover { background: var(--cp-hover-bg); border-color: var(--cp-hover-line); }
+.cp-pay__app-grid img { width: 44px; height: 44px; border-radius: 11px; object-fit: cover; background: var(--cp-surface-2); }
 @media (max-width: 560px) {
     .cp-pay { padding: 12px 10px 28px; }
     .cp-pay__card { padding: 18px 16px; border-radius: 16px; }

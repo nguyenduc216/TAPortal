@@ -4,7 +4,7 @@
 - Change ID: `CUSTOMER-PORTAL-FOUNDATION-CHG-20261106T071511Z-E55D21`
 - Created UTC: 2026-11-06T07:15:11.121497+00:00
 - Tiêu đề: Trang QR: khach hang ben trai, nguoi ban ben phai, icon ngan hang o giua
-- Trạng thái: IMPLEMENTED
+- Trạng thái: DEPLOYED
 
 ## Yêu cầu và phạm vi
 Operator (2026-11-06): trang thanh toán QR công khai (/pay/{token}) — đổi vị trí hai bên và thay icon giữa bằng icon ngân hàng.
@@ -29,7 +29,7 @@ Sửa: khách hàng bên trái, người bán bên phải (đúng chiều dòng 
 
 ## Git
 - Branch: feature/customer-portal-mvp01
-- Commit SHA: xem report
+- Commit SHA: fdbc25d
 - PR:
 - Merge: xem report
 - Merge SHA:

@@ -7,6 +7,9 @@
     var (label, css) = PaymentText.OrderStatus(Model.Status);
     var transfer = OrderMath.TransferContent(o.OrderNo);
     var pay = "/pay/" + Model.Token;
+    // Link previews (Zalo, Messenger…): the T.A logo and "Thanh toán <tiêu đề>"; absolute URLs, as crawlers require.
+    var origin = $"{Context.Request.Scheme}://{Context.Request.Host}";
+    var shareText = "Thanh toán " + Model.Title;
     var message = Model.Status switch
     {
         OrderStatus.Paid => "Đơn hàng đã được thanh toán đủ. Cảm ơn quý khách!",
@@ -25,6 +28,17 @@
     <link rel="icon" type="image/png" href="~/images/favicon-32x32.png" />
     <meta name="theme-color" content="#A16207" />
     <title>@Model.Title · @Model.SellerName</title>
+    <meta name="description" content="@shareText" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="T.A · Hóa đơn điện tử" />
+    <meta property="og:title" content="@Model.Title · @Model.SellerName" />
+    <meta property="og:description" content="@shareText" />
+    <meta property="og:url" content="@(origin + pay)" />
+    <meta property="og:image" content="@(origin + "/images/og-share.png")" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="T.A — Tư vấn giải pháp" />
+    <meta name="twitter:card" content="summary_large_image" />
     <link rel="stylesheet" href="~/css/customer.css" asp-append-version="true" />
 </head>
 <body class="cp cp-pay-body">
@@ -56,6 +70,7 @@
             <div class="cp-eyebrow">Đơn hàng <span class="cp-code">@o.OrderNo</span></div>
             <h1 id="payTitle">@Model.Title</h1>
             <span class="cp-badge @css" data-cp-order-status="@Model.Status">@label</span>
+            @if (Model.Transfer is not null) {<button class="cp-btn cp-btn--primary cp-pay__transfer" type="button" data-cp-open-dialog="bankApps">@UiIcon.Render("building-bank")<span>Chuyển khoản</span></button>}
         </section>
 
         @if (TempData["Success"] is string ok) {<div class="cp-flash cp-flash--ok" role="status">@UiIcon.Render("circle-check")<div>@ok</div></div>}
@@ -80,12 +95,12 @@
                         </div>
                         <div class="cp-field">
                             <label class="cp-label" for="Name">Tên xuất hóa đơn</label>
-                            <div class="cp-input-wrap">@UiIcon.Render("building")<input class="cp-input" id="Name" name="Name" value="@Model.Input.Name" data-cp-saved="@Model.Saved.Name" maxlength="250" placeholder="Tên đơn vị hoặc người mua" /></div>
+                            <div class="cp-input-wrap">@UiIcon.Render("building")<input class="cp-input" id="Name" name="Name" value="@Model.Input.Name" data-cp-saved="@Model.Saved.Name" maxlength="250" placeholder="Tự điền khi tra cứu mã số thuế" readonly /></div>
                             <span class="cp-error">@Html.ValidationMessage("Name")</span>
                         </div>
-                        <button class="cp-btn cp-btn--primary cp-pay__save" type="submit" data-cp-dirty-save>@UiIcon.Render("device-floppy")<span>Lưu</span></button>
+                        <button class="cp-btn cp-btn--primary cp-pay__save" type="submit">@UiIcon.Render("device-floppy")<span>Lưu</span></button>
                     </div>
-                    <p class="cp-hint">Kiểm tra mã số thuế và tên trước khi thanh toán: hóa đơn điện tử được xuất theo thông tin này.@if (Model.InvoiceUpdatedAt is not null) {<span> Đã cập nhật lúc @PaymentText.VietnamTime(Model.InvoiceUpdatedAt).</span>}</p>
+                    <p class="cp-hint">Nhập mã số thuế, bấm tra cứu rồi Lưu: chỉ lưu được mã số thuế có trong đăng ký kinh doanh, tên đơn vị lấy theo đăng ký. Hóa đơn điện tử được xuất theo thông tin này.@if (Model.InvoiceUpdatedAt is not null) {<span> Đã cập nhật lúc @PaymentText.VietnamTime(Model.InvoiceUpdatedAt).</span>}</p>
                 </form>
             }
             else
@@ -94,7 +109,7 @@
                     <div><dt>Mã số thuế</dt><dd>@(Model.Saved.TaxCode ?? "—")</dd></div>
                     <div><dt>Tên xuất hóa đơn</dt><dd>@(Model.Saved.Name ?? "—")</dd></div>
                 </dl>
-                <p class="cp-hint">@(o.InvoiceStatus == OrderInvoiceStatus.Issued ? "Hóa đơn điện tử đã được xuất cho đơn hàng này." : o.InvoiceStatus == OrderInvoiceStatus.Pending ? "Hóa đơn điện tử đang được xuất." : "Không thể thay đổi thông tin xuất hóa đơn của đơn hàng này.")</p>
+                <p class="cp-hint">@(o.InvoiceStatus == OrderInvoiceStatus.Issued ? "Hóa đơn điện tử đã được xuất cho đơn hàng này." : o.InvoiceStatus == OrderInvoiceStatus.Pending ? "Hóa đơn điện tử đang được xuất." : Model.Saved.TaxCode is not null && Model.Status is not (OrderStatus.Cancelled or OrderStatus.CancelledPaid) ? "Thông tin xuất hóa đơn do người bán cung cấp." : "Không thể thay đổi thông tin xuất hóa đơn của đơn hàng này.")</p>
             }
         </section>
 
@@ -140,9 +155,36 @@
             </details>
         }
 
+        @if (Model.Transfer is { } t)
+        {
+            <button class="cp-btn cp-btn--primary cp-btn--block cp-pay__transfer" type="button" data-cp-open-dialog="bankApps">@UiIcon.Render("building-bank")<span>Chuyển khoản @PaymentText.Money(o.Remaining)</span></button>
+            <dialog class="cp-pay__apps" id="bankApps" aria-labelledby="bankAppsTitle">
+                <div class="cp-pay__apps-head">
+                    <strong id="bankAppsTitle">Chọn ứng dụng ngân hàng</strong>
+                    <button class="cp-pay__apps-close" type="button" aria-label="Đóng" data-cp-close-dialog>×</button>
+                </div>
+                <p class="cp-hint">Ứng dụng mở sẵn số tài khoản, số tiền và nội dung <span class="cp-code">@(t.Content ?? transfer)</span>. Kiểm tra lại rồi xác nhận chuyển khoản.</p>
+                <ul class="cp-pay__app-grid">
+                    @foreach (var app in BankAppLinks.Apps)
+                    {
+                        <li><a href="@BankAppLinks.Link(app, t)" rel="noopener noreferrer"><img src="@BankAppLinks.Icon(app)" alt="" width="44" height="44" loading="lazy" referrerpolicy="no-referrer" /><span>@app.Name</span></a></li>
+                    }
+                </ul>
+                <p class="cp-hint">Trên máy tính: quét mã QR bằng điện thoại.</p>
+            </dialog>
+        }
+
         <footer class="cp-pay__foot">@UiIcon.Render("shield-check")<span>Quét mã bằng ứng dụng ngân hàng. Dịch vụ thanh toán do T.A cung cấp.</span></footer>
     </article>
 </main>
 <script src="~/js/customer.js" asp-append-version="true"></script>
+<script>
+    // "Chuyển khoản": the bank app list (a dialog; closes on ×, Escape or a tap outside).
+    document.addEventListener("click", e => {
+        const open = e.target.closest("[data-cp-open-dialog]");
+        if (open) { document.getElementById(open.dataset.cpOpenDialog)?.showModal(); return; }
+        if (e.target.closest("[data-cp-close-dialog]") || e.target.matches("dialog.cp-pay__apps")) e.target.closest("dialog")?.close();
+    });
+</script>
 </body>
 </html>

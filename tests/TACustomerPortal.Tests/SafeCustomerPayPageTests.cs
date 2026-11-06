@@ -60,11 +60,27 @@ public sealed class SafeCustomerPayPageTests
         Assert.Contains(link[17..] + "/logo/buyer?v=", page);                 // buyer logo uploaded, seller shows initials
         Assert.DoesNotContain("/logo/seller", page);
         Assert.Contains("Tiệc cuối năm", page);                               // title = description
-        Assert.Contains("value=\"0109876543\"", page);                        // invoice details prefilled from the buyer
-        Assert.Contains("value=\"Công ty TNHH Sen Việt\"", page);
+        Assert.Contains("<dd>0109876543</dd>", page);                         // invoice details of the buyer, as recorded
+        Assert.Contains("<dd>Công ty TNHH Sen Việt</dd>", page);
         Assert.Contains("<svg", page);
         Assert.Contains("150.000 ₫", page);
         Assert.Contains("DH2611060001", page);                               // transfer content
+        // Link previews: T.A image and "Thanh toán <title>".
+        Assert.Contains("<meta property=\"og:image\" content=\"https://localhost/images/og-share.png\"", page);
+        Assert.Contains("<meta property=\"og:description\" content=\"Thanh toán Tiệc cuối năm\"", page);
+        // "Chuyển khoản" (twice) opens a banking app with the QR's own transfer, like tapping a QR in Zalo.
+        Assert.Equal(2, Regex.Matches(page, "data-cp-open-dialog=\"bankApps\"").Count);
+        Assert.Contains("href=\"https://dl.vietqr.io/pay?app=mb&amp;ba=", await c.GetStringAsync(link));
+        // The buyer's tax code was recorded by the seller: shown, not editable by the payer.
+        Assert.DoesNotContain("cp-pay__save", page);
+        Assert.Contains("Thông tin xuất hóa đơn do người bán cung cấp.", page);
+        // A forged post (token taken from a walk-in order's page, which has the form) is refused by the server too.
+        var walkIn = OpenOrder(null);
+        store.Orders.Add((A, walkIn));
+        var form = await Token(c, "/pay/" + await pages.TokenAsync(A, walkIn.Id));
+        var refused = await Post(c, link[17..] + "/invoice", form, new() { ["TaxCode"] = "0309999999" });
+        Assert.Equal(HttpStatusCode.Redirect, refused.StatusCode);
+        Assert.Null((await pages.InvoiceBuyerAsync(A, order.Id)).TaxCode);
         Assert.Matches("data-cp-countdown=\"[0-9T:.-]+", page);
         Assert.Contains("data-cp-poll=\"" + link[17..] + "/status\"", page);
         Assert.False(PartnerText.Mentions(Regex.Replace(page, "<script.*?</script>|<link[^>]*>", "", RegexOptions.Singleline)));
@@ -89,18 +105,30 @@ public sealed class SafeCustomerPayPageTests
         var c = Client(f);
         var page = WebUtility.HtmlDecode(await c.GetStringAsync($"/pay/{token}"));
         Assert.Contains("is-single", page);                                   // seller alone
-        Assert.Contains("data-cp-dirty-save", page);
+        // Operator 2026-11-06: the Save button is always there; only a tax code found in the register is saved, with its name.
+        Assert.Matches("<button class=\"cp-btn cp-btn--primary cp-pay__save\" type=\"submit\">", page);
+        Assert.Contains("placeholder=\"Tự điền khi tra cứu mã số thuế\" readonly", page);
 
         var form = await Token(c, $"/pay/{token}");
         var bad = await Post(c, $"/pay/{token}/invoice", form, new() { ["TaxCode"] = "12", ["Name"] = "" });
         Assert.Equal(HttpStatusCode.BadRequest, bad.StatusCode);
-        Assert.Contains("Mã số thuế gồm 10 chữ số", WebUtility.HtmlDecode(await bad.Content.ReadAsStringAsync()));
-        Assert.Equal(HttpStatusCode.BadRequest, (await Post(c, $"/pay/{token}/invoice", form, new() { ["TaxCode"] = "0101234567", ["Name"] = " " })).StatusCode);
+        Assert.Contains("Mã số thuế doanh nghiệp gồm 10 chữ số", WebUtility.HtmlDecode(await bad.Content.ReadAsStringAsync()));
+        Assert.Equal(HttpStatusCode.BadRequest, (await Post(c, $"/pay/{token}/invoice", form, new() { ["TaxCode"] = " ", ["Name"] = "Ai đó" })).StatusCode);
+        var lookup = (SafeCustomerSignupTests.FakeLookup)f.Services.GetRequiredService<ITaxCodeLookup>();
+        lookup.Status = TaxCodeLookupStatus.NotFound;
+        var unknown = await Post(c, $"/pay/{token}/invoice", form, new() { ["TaxCode"] = "0101234567", ["Name"] = "Công ty Bình Minh" });
+        Assert.Equal(HttpStatusCode.BadRequest, unknown.StatusCode);
+        Assert.Contains("Không tìm thấy mã số thuế", WebUtility.HtmlDecode(await unknown.Content.ReadAsStringAsync()));
+        lookup.Status = TaxCodeLookupStatus.Unavailable;
+        Assert.Equal(HttpStatusCode.BadRequest, (await Post(c, $"/pay/{token}/invoice", form, new() { ["TaxCode"] = "0101234567", ["Name"] = "X" })).StatusCode);
+        Assert.Null((await pages.InvoiceBuyerAsync(A, order.Id)).TaxCode);   // nothing saved without a register match
+        lookup.Status = TaxCodeLookupStatus.Found;
 
+        // A typed name is ignored: the registered one is saved.
         var ok = await Post(c, $"/pay/{token}/invoice", form, new() { ["TaxCode"] = " 0101 234 567 ", ["Name"] = " Công ty Bình Minh " });
         Assert.Equal(HttpStatusCode.Redirect, ok.StatusCode);
-        Assert.Equal(new InvoiceBuyer("0101234567", "Công ty Bình Minh", pages.Buyers[order.Id].UpdatedAt), await pages.InvoiceBuyerAsync(A, order.Id));
-        Assert.Contains("value=\"Công ty Bình Minh\"", WebUtility.HtmlDecode(await c.GetStringAsync($"/pay/{token}")));
+        Assert.Equal(new InvoiceBuyer("0101234567", "CÔNG TY TNHH THỬ NGHIỆM", pages.Buyers[order.Id].UpdatedAt), await pages.InvoiceBuyerAsync(A, order.Id));
+        Assert.Contains("value=\"CÔNG TY TNHH THỬ NGHIỆM\"", WebUtility.HtmlDecode(await c.GetStringAsync($"/pay/{token}")));
         // The company sees what the payer entered.
         var details = WebUtility.HtmlDecode(await c.GetStringAsync($"/orders/details/{order.Id}"));
         Assert.Contains("data-cp-invoice-buyer", details);
@@ -166,9 +194,23 @@ public sealed class SafeCustomerPayPageTests
         Assert.False(f.Services.GetRequiredService<MemoryOrderPageStore>().Logos.ContainsKey((A, null)));
     }
 
+    // A dynamic VietQR of the production format: MB (970422), QR account, 54.000 đ, purpose DH2611060001.
+    private const string Payload = "00020101021138570010A000000727012700069704220113VQRQANJPU31080208QRIBFTTA53037045405540005802VN62270107NPS68690812DH2611060001630478BC";
+
+    [Fact]
+    public void TheBankAppLinkCarriesExactlyTheQrsTransfer()
+    {
+        var t = BankAppLinks.Read(Payload)!;
+        Assert.Equal(new QrTransfer("970422", "VQRQANJPU3108", 54000m, "DH2611060001"), t);
+        Assert.Equal("https://dl.vietqr.io/pay?app=vcb&ba=VQRQANJPU3108%40970422&am=54000&tn=DH2611060001", BankAppLinks.Link(BankAppLinks.Apps[0], t));
+        Assert.Null(BankAppLinks.Read("00020101021238570010A000000727"));   // truncated
+        Assert.Null(BankAppLinks.Read(null));
+        Assert.Equal(BankAppLinks.Apps.Count, BankAppLinks.Apps.Select(a => a.Id).Distinct().Count());
+    }
+
     private static Order OpenOrder(Guid? contact) =>
         new(Guid.NewGuid(), "DH261106-0001", contact, null, null, "Tiệc cuối năm", 150_000, 0, OrderStatus.Awaiting, TingeeQrTypes.Static,
-            "00020101021238570010A000000727", "123456789", null, 1440, DateTime.UtcNow.AddHours(2), true, OrderInvoiceStatus.None, null, DateTime.UtcNow,
+            Payload, "123456789", null, 1440, DateTime.UtcNow.AddHours(2), true, OrderInvoiceStatus.None, null, DateTime.UtcNow,
             [TACustomerPortal.Web.Services.OrderMath.Line(1, "Set tiệc", "suất", 1, 150_000, "0")]);
 
     private static Task<HttpResponseMessage> Upload(HttpClient c, string path, string token, string? field, byte[]? bytes, Dictionary<string, string>? data = null)

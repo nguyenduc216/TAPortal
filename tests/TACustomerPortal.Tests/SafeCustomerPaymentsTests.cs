@@ -780,6 +780,8 @@ public sealed class SafeCustomerPaymentsTests
                 services.AddSingleton<TAPortal.Integrations.Branding.ILogoStore>(pages);
                 services.RemoveAll<IOrderPageStore>();
                 services.AddSingleton<IOrderPageStore>(pages);
+                services.RemoveAll<ITaxCodeLookup>();   // never the public register from a test
+                services.AddSingleton<ITaxCodeLookup>(new SafeCustomerSignupTests.FakeLookup());
                 services.RemoveAll<ITingeeApi>();
                 services.AddSingleton<ITingeeApi>(t);
                 services.RemoveAll<IServicePackageStore>();

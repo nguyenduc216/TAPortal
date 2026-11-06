@@ -262,7 +262,7 @@ public sealed class PayInvoiceInput
 /// </summary>
 public sealed record PayPageVm(string Token, string SellerName, string? SellerTaxCode, string? SellerLogo, string? BuyerName, string? BuyerLogo,
     Order Order, string Status, string? QrSvg, string? BankName, string? Account, DateTime UtcNow, bool InvoiceEditable, DateTime? InvoiceUpdatedAt,
-    PayInvoiceInput Saved, PayInvoiceInput Input)
+    PayInvoiceInput Saved, PayInvoiceInput Input, QrTransfer? Transfer = null)
 {
     public string Title => string.IsNullOrWhiteSpace(Order.Description) ? "Đơn hàng " + Order.OrderNo : Order.Description!;
     public bool Open => QrSvg is not null;

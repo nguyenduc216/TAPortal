@@ -51,17 +51,29 @@ public sealed class PayController(IOrderPageStore pages, ILogoStore logos, IPaym
     }
 
     [HttpPost("invoice"), EnableRateLimiting("lookup")]
-    public async Task<IActionResult> Invoice(string token, PayInvoiceInput input)
+    public async Task<IActionResult> Invoice(string token, PayInvoiceInput input, [FromServices] ITaxCodeLookup lookup)
     {
         if (await Find(token) is not { } page) return NotFound();
         var order = await store.OrderAsync(page.CustomerId, page.OrderId);
         if (order is null) return NotFound();
+        if (!await BuyerMayEdit(page, order))
+        {
+            TempData["Error"] = "Thông tin xuất hóa đơn của đơn hàng này do người bán cung cấp, không thể thay đổi tại đây.";
+            return Redirect(Url.Action(nameof(Index), new { token })! + "#invoice");
+        }
+        // Operator 2026-11-06: only a tax code found in the business register is saved, with its registered name.
         input.TaxCode = TaxCodeRules.Normalize(input.TaxCode);
-        input.Name = string.IsNullOrWhiteSpace(input.Name) ? null : input.Name.Trim();
-        if (input.TaxCode is not null && !TaxCodeRules.IsValid(input.TaxCode))
-            ModelState.AddModelError(nameof(input.TaxCode), "Mã số thuế gồm 10 chữ số (chi nhánh: 10 chữ số-3 chữ số) hoặc 12 chữ số.");
-        if (input.TaxCode is not null && input.Name is null)
-            ModelState.AddModelError(nameof(input.Name), "Nhập tên đơn vị theo đăng ký thuế để xuất hóa đơn.");
+        ModelState.Clear();
+        if (input.TaxCode is null) ModelState.AddModelError(nameof(input.TaxCode), "Nhập mã số thuế để xuất hóa đơn.");
+        else if (!TaxCodeRules.IsLookupable(input.TaxCode)) ModelState.AddModelError(nameof(input.TaxCode), "Mã số thuế doanh nghiệp gồm 10 chữ số (chi nhánh: 10 chữ số-3 chữ số).");
+        else
+        {
+            var found = await lookup.LookupAsync(input.TaxCode, HttpContext.RequestAborted);
+            if (found.Info is { } info) input.Name = info.Name;
+            else ModelState.AddModelError(nameof(input.TaxCode), found.Status == TaxCodeLookupStatus.NotFound
+                ? "Không tìm thấy mã số thuế này trong đăng ký kinh doanh. Vui lòng kiểm tra lại."
+                : "Tạm thời chưa tra cứu được mã số thuế. Vui lòng thử lại sau ít phút.");
+        }
         if (!ModelState.IsValid)
         {
             Response.StatusCode = StatusCodes.Status400BadRequest;
@@ -79,6 +91,13 @@ public sealed class PayController(IOrderPageStore pages, ILogoStore logos, IPaym
         controller.Response.Headers["X-Content-Type-Options"] = "nosniff";
         return controller.File(logo.Data, logo.ContentType);
     }
+
+    /// <summary>
+    /// The payer may give the invoice details only for an order created without them: no buyer, or a buyer without a tax
+    /// code. A buyer the seller recorded with a tax code is invoiced as recorded.
+    /// </summary>
+    private async Task<bool> BuyerMayEdit(PayPageOrder page, Order order) =>
+        order.ContactId is not Guid c || (await store.ContactAsync(page.CustomerId, c))?.TaxCode is null;
 
     private Task<PayPageOrder?> Find(string token) =>
         token.Length is >= 20 and <= 40 && token.All(c => char.IsAsciiLetterOrDigit(c) || c is '-' or '_') ? pages.FindAsync(token) : Task.FromResult<PayPageOrder?>(null);
@@ -100,7 +119,8 @@ public sealed class PayController(IOrderPageStore pages, ILogoStore logos, IPaym
         return new PayPageVm(token, page.SellerName, page.SellerTaxCode, sellerLogo is { } s ? LogoImage.Version(s) : null, contact?.Name,
             buyerLogo is { } bl ? LogoImage.Version(bl) : null, order, status, open && order.QrPayload is not null ? QrImage.Svg(order.QrPayload) : null,
             bank?.BankName, order.QrAccount ?? bank?.ReceiveAccount, now,
-            order.InvoiceStatus is OrderInvoiceStatus.None or OrderInvoiceStatus.Failed && status is not (OrderStatus.Cancelled or OrderStatus.CancelledPaid),
-            page.InvoiceBuyerUpdatedAt, defaults, posted ?? defaults);
+            order.InvoiceStatus is OrderInvoiceStatus.None or OrderInvoiceStatus.Failed && status is not (OrderStatus.Cancelled or OrderStatus.CancelledPaid)
+                && contact?.TaxCode is null,
+            page.InvoiceBuyerUpdatedAt, defaults, posted ?? defaults, open ? BankAppLinks.Read(order.QrPayload) : null);
     }
 }
