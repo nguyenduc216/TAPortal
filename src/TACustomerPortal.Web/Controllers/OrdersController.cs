@@ -61,7 +61,7 @@ public sealed class OrdersController(ICurrentCustomerContext customer, IPaymentS
         return RedirectToAction(nameof(Details), new { id = created.Id });
     }
 
-    public async Task<IActionResult> Details(Guid id)
+    public async Task<IActionResult> Details(Guid id, [FromServices] IOrderInvoiceStore invoices)
     {
         if (await Current() is not { } m) return SelectCustomer();
         var order = await store.OrderAsync(m.CustomerId, id);
@@ -72,7 +72,7 @@ public sealed class OrdersController(ICurrentCustomerContext customer, IPaymentS
         var contact = order.ContactId is Guid c ? await store.ContactAsync(m.CustomerId, c) : null;
         var qr = order.QrPayload is not null && status is OrderStatus.Awaiting or OrderStatus.Partial ? QrImage.Svg(order.QrPayload) : null;
         var banks = (await store.BankAccountsAsync(m.CustomerId)).Where(x => x.IsActive && x.ReceiveAccount is not null).ToList();
-        return View(new OrderDetailsVm(m, CanManage(m), order, status, bank, contact, qr, now, banks));
+        return View(new OrderDetailsVm(m, CanManage(m), order, status, bank, contact, qr, now, banks, (await invoices.SettingsAsync(m.CustomerId)).IsReady));
     }
 
     /// <summary>Lightweight status for the details page to poll while the QR is open.</summary>
@@ -124,6 +124,49 @@ public sealed class OrdersController(ICurrentCustomerContext customer, IPaymentS
         var result = await payments.IssueQrAsync(m.CustomerId, merchantId, order with { Status = status, BankAccountId = bank.Id }, bank, Actor);
         Flash(result.Error ?? $"Đã tạo QR mới cho số tiền còn lại {PaymentText.Money(order.Remaining)}.", error: result.Error is not null);
         return RedirectToAction(nameof(Details), new { id });
+    }
+
+    /// <summary>
+    /// Issues the e-invoice of a fully paid order now: an order paid before automatic invoices were on, one without automatic
+    /// invoicing, or one whose automatic attempt failed. The invoice code stays the same, so it can never be issued twice.
+    /// </summary>
+    [HttpPost]
+    public async Task<IActionResult> IssueInvoice(Guid id, [FromServices] OrderInvoicer invoicer)
+    {
+        if (await Current() is not { } m) return SelectCustomer();
+        if (!CanManage(m)) return Forbid();
+        var order = await store.OrderAsync(m.CustomerId, id);
+        if (order is null) return NotFound();
+        if (order.Status != OrderStatus.Paid || order.InvoiceStatus == OrderInvoiceStatus.Issued)
+        {
+            Flash("Chỉ xuất hóa đơn cho đơn đã thanh toán đủ và chưa có hóa đơn.", error: true);
+            return RedirectToAction(nameof(Details), new { id });
+        }
+        var result = await invoicer.IssueAsync(m.CustomerId, id, manual: true, HttpContext.RequestAborted);
+        Flash(result.Message, error: !result.Issued);
+        return RedirectToAction(nameof(Details), new { id });
+    }
+
+    /// <summary>PDF of the issued invoice, opened in the browser.</summary>
+    [HttpGet]
+    public async Task<IActionResult> InvoicePdf(Guid id, [FromServices] ITingeeInvoiceApi invoices, [FromServices] IOrderInvoiceStore settingsStore)
+    {
+        if (await Current() is not { } m) return SelectCustomer();
+        var order = await store.OrderAsync(m.CustomerId, id);
+        if (order is null || order.InvoiceStatus != OrderInvoiceStatus.Issued || order.InvoiceCode is not string code) return NotFound();
+        if (await store.MerchantIdAsync(m.CustomerId) is not long merchantId) return NotFound();
+        var settings = await settingsStore.SettingsAsync(m.CustomerId);
+        try
+        {
+            var pdf = await invoices.DownloadAsync(merchantId, code, settings.ProviderAccountId, HttpContext.RequestAborted);
+            if (string.IsNullOrWhiteSpace(pdf.PdfBase64)) throw new TingeeApiException("EMPTY", "Không nhận được file PDF.");
+            return File(Convert.FromBase64String(pdf.PdfBase64), "application/pdf");
+        }
+        catch (Exception ex) when (ex is FormatException or TingeeApiException or HttpRequestException or TaskCanceledException or TingeeNotConfiguredException)
+        {
+            Flash("Chưa tải được hóa đơn. " + (ex is FormatException ? "File PDF không đúng định dạng." : OrderInvoicer.Reason(ex)), error: true);
+            return RedirectToAction(nameof(Details), new { id });
+        }
     }
 
     [HttpPost]

@@ -16,5 +16,5 @@
         </div>
         @if (Model.CanManage) {<div class="cp-card__foot"><button class="cp-btn cp-btn--primary" type="submit" style="margin-left:auto">@UiIcon.Render("device-floppy")<span>Lưu cài đặt</span></button></div>}
     </form>
-    <aside class="cp-note" style="align-self:start">@UiIcon.Render("info-circle")<div>Hóa đơn chỉ được xuất khi đơn đã nhận đủ tiền. Chức năng kết nối nhà cung cấp hóa đơn điện tử sẽ được T.A kích hoạt ở giai đoạn sau.</div></aside>
+    <aside class="cp-note" style="align-self:start">@UiIcon.Render("info-circle")<div>Hóa đơn chỉ được xuất khi đơn đã nhận đủ tiền, trên tài khoản MISA meInvoice của doanh nghiệp. Kết nối tài khoản, chọn mẫu hóa đơn và bật xuất tự động tại <a class="cp-link" asp-controller="EInvoice" asp-action="Index">Hóa đơn điện tử</a>.</div></aside>
 </div>

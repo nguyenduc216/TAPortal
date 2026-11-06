@@ -25,8 +25,8 @@ namespace TACustomerPortal.Tests;
 public sealed class SafeCustomerPaymentsTests
 {
     private const string TestScheme = "SafePayments";
-    private static readonly Guid UserId = Guid.Parse("70000000-0000-0000-0000-000000000001");
-    private static readonly Guid A = Guid.Parse("a0000000-0000-0000-0000-00000000000a");
+    internal static readonly Guid UserId = Guid.Parse("70000000-0000-0000-0000-000000000001");
+    internal static readonly Guid A = Guid.Parse("a0000000-0000-0000-0000-00000000000a");
     private static readonly Guid B = Guid.Parse("b0000000-0000-0000-0000-00000000000b");
 
     // ---- pure rules ------------------------------------------------------------------------------------
@@ -731,20 +731,23 @@ public sealed class SafeCustomerPaymentsTests
         new(Guid.NewGuid(), "DH261030-0001", null, null, null, null, amount, paid, status, null, null, null, null, 1440, null, true, "NONE", null, DateTime.UtcNow,
             [OrderMath.Line(1, "Hàng", null, 1, amount, "0")]);
 
-    private static async Task<string> Token(HttpClient c, string path) =>
+    internal static async Task<string> Token(HttpClient c, string path) =>
         WebUtility.HtmlDecode(Regex.Match(await c.GetStringAsync(path), "name=\"__RequestVerificationToken\"[^>]*value=\"([^\"]+)\"").Groups[1].Value);
 
-    private static Task<HttpResponseMessage> Post(HttpClient c, string path, string token, Dictionary<string, string> data)
+    internal static Task<HttpResponseMessage> Post(HttpClient c, string path, string token, Dictionary<string, string> data)
     {
         data["__RequestVerificationToken"] = token;
         return c.PostAsync(path, new FormUrlEncodedContent(data));
     }
 
-    private static HttpClient Client(WebApplicationFactory<Program> f) =>
+    internal static HttpClient Client(WebApplicationFactory<Program> f) =>
         f.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false, BaseAddress = new Uri("https://localhost"), HandleCookies = true });
 
-    private static WebApplicationFactory<Program> Factory(string role, out MemoryPaymentStore store, out FakeTingee tingee, MemoryServicePackageStore? packages = null)
+    internal static WebApplicationFactory<Program> Factory(string role, out MemoryPaymentStore store, out FakeTingee tingee, MemoryServicePackageStore? packages = null,
+        IOrderInvoiceStore? invoiceStore = null, ITingeeInvoiceApi? invoiceApi = null)
     {
+        var invoiceSettings = invoiceStore ?? new SafeCustomerEInvoiceTests.MemoryInvoiceStore();
+        var invoicePartner = invoiceApi ?? new SafeCustomerEInvoiceTests.FakeInvoiceApi();
         var s = store = new MemoryPaymentStore();
         var sp = packages ?? new MemoryServicePackageStore(TimeProvider.System);
         var t = tingee = new FakeTingee();
@@ -761,6 +764,10 @@ public sealed class SafeCustomerPaymentsTests
                 services.AddSingleton<ITingeeApi>(t);
                 services.RemoveAll<IServicePackageStore>();
                 services.AddSingleton<IServicePackageStore>(sp);
+                services.RemoveAll<IOrderInvoiceStore>();
+                services.AddSingleton(invoiceSettings);
+                services.RemoveAll<ITingeeInvoiceApi>();
+                services.AddSingleton(invoicePartner);
                 services.RemoveAll<IPaymentTransactionStore>();
                 services.AddSingleton<IPaymentTransactionStore>(Transactions);
                 services.RemoveAll<TAPortal.Integrations.Notifications.INotificationStore>();

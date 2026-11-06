@@ -1,0 +1,92 @@
+@model EInvoiceVm
+@{
+    ViewData["Title"] = "Hóa đơn điện tử";
+    ViewData["Eyebrow"] = "Thanh toán";
+    ViewData["Subtitle"] = "Kết nối MISA meInvoice để xuất hóa đơn điện tử ngay khi đơn hàng QR được thanh toán đủ.";
+    var s = Model.Settings;
+    var t = Model.Template;
+    var canEdit = Model.CanManage && Model.Linked && Model.ServiceReady;
+}
+@if (!Model.Linked) { <partial name="_PaymentsNotLinked" /> }
+else if (!Model.ServiceReady) { <aside class="cp-note" style="margin-bottom:14px" data-cp-not-ready>@UiIcon.Render("info-circle")<div><strong>Dịch vụ hóa đơn điện tử đang được T.A cấu hình.</strong> Vui lòng liên hệ T.A nếu cần gấp.</div></aside> }
+<div asp-validation-summary="ModelOnly" class="cp-alert" role="alert"></div>
+<div class="cp-grid cp-grid--2">
+    <div>
+        <section class="cp-card" style="margin-bottom:14px" data-cp-einvoice-account>
+            <div class="cp-card__head"><span class="cp-blob">@UiIcon.Render("key")</span><h2>1. Tài khoản MISA meInvoice</h2>
+                @if (s.IsConnected) {<span class="cp-badge cp-badge--green" style="margin-left:auto">Đã kết nối</span>} else {<span class="cp-badge cp-badge--soft" style="margin-left:auto">Chưa kết nối</span>}</div>
+            @if (s.IsConnected && !Model.ShowConnect)
+            {
+                <div class="cp-card__body">
+                    <dl class="cp-dl">
+                        <div><dt>@UiIcon.Render("receipt-tax")Mã số thuế</dt><dd><span class="cp-code">@s.ProviderTaxCode</span></dd></div>
+                        <div><dt>@UiIcon.Render("user")Tên đăng nhập</dt><dd>@s.ProviderUsername</dd></div>
+                        <div><dt>@UiIcon.Render("clock")Kết nối lúc</dt><dd>@PaymentText.VietnamTime(s.ConnectedAt)</dd></div>
+                    </dl>
+                </div>
+                @if (canEdit)
+                {
+                    <div class="cp-card__foot">
+                        <form method="post" asp-action="Disconnect" style="margin-left:auto" onsubmit="return confirm('Gỡ kết nối MISA meInvoice? Xuất hóa đơn tự động sẽ tắt.')"><button class="cp-btn cp-btn--danger" type="submit">@UiIcon.Render("trash")<span>Gỡ kết nối</span></button></form>
+                    </div>
+                }
+            }
+            <details class="cp-einvoice-connect" open="@(!s.IsConnected || Model.ShowConnect)" data-cp-einvoice-connect>
+            @if (s.IsConnected) {<summary>@UiIcon.Render("pencil")<span>Đổi tài khoản / mật khẩu MISA</span></summary>}
+            <form method="post" asp-action="Connect">
+                <div class="cp-card__body">
+                    <div class="cp-field"><label asp-for="Account.TaxCode" class="cp-label is-required">Mã số thuế người bán</label><div class="cp-input-wrap">@UiIcon.Render("receipt-tax")<input asp-for="Account.TaxCode" class="cp-input" inputmode="numeric" maxlength="14" autocomplete="off" required disabled="@(!canEdit)" /></div><span asp-validation-for="Account.TaxCode" class="cp-error"></span></div>
+                    <div class="cp-field"><label asp-for="Account.Username" class="cp-label is-required">Tên đăng nhập MISA meInvoice</label><div class="cp-input-wrap">@UiIcon.Render("user")<input asp-for="Account.Username" class="cp-input" maxlength="150" autocomplete="off" required disabled="@(!canEdit)" /></div><span asp-validation-for="Account.Username" class="cp-error"></span></div>
+                    <div class="cp-field"><label asp-for="Account.Password" class="cp-label is-required">Mật khẩu MISA meInvoice</label><div class="cp-input-wrap">@UiIcon.Render("lock")<input asp-for="Account.Password" type="password" class="cp-input" maxlength="200" autocomplete="new-password" required disabled="@(!canEdit)" value="" /></div><span asp-validation-for="Account.Password" class="cp-error"></span>
+                        <div class="cp-hint">Mật khẩu chỉ dùng để xác thực với MISA lúc kết nối; T.A không lưu mật khẩu.</div></div>
+                </div>
+                @if (canEdit) {<div class="cp-card__foot"><button class="cp-btn cp-btn--primary" type="submit" style="margin-left:auto">@UiIcon.Render("lock-open")<span>@(s.IsConnected ? "Kết nối lại" : "Kết nối MISA meInvoice")</span></button></div>}
+            </form>
+            </details>
+        </section>
+
+        <form class="cp-card" method="post" asp-action="Save" data-cp-einvoice-settings>
+            <div class="cp-card__head"><span class="cp-blob cp-blob--gold">@UiIcon.Render("file-text")</span><h2>2. Mẫu hóa đơn và xuất tự động</h2>
+                @if (s.AutoIssueEnabled && s.IsReady) {<span class="cp-badge cp-badge--green" style="margin-left:auto" data-cp-auto-on>Đang tự động xuất</span>} else {<span class="cp-badge cp-badge--soft" style="margin-left:auto">Chưa tự động</span>}</div>
+            <div class="cp-card__body">
+                @if (Model.Templates is { Count: > 0 } list)
+                {
+                    <div class="cp-label">Mẫu hóa đơn trên MISA</div>
+                    <div class="cp-seg" role="radiogroup" aria-label="Mẫu hóa đơn" data-cp-templates>
+                        @foreach (var tpl in list)
+                        {
+                            var value = $"{tpl.InvoicePattern}|{tpl.InvoiceSeries}";
+                            <label><input type="radio" name="Template.Choice" value="@value" checked="@(tpl.InvoicePattern == s.InvoicePattern && tpl.InvoiceSeries == s.InvoiceSeries)" /><strong>@tpl.InvoiceSeries</strong><small>Mẫu số @tpl.InvoicePattern</small></label>
+                        }
+                    </div>
+                }
+                <div class="cp-form-grid">
+                    <div class="cp-field"><label asp-for="Template.Pattern" class="cp-label">Mẫu số</label><div class="cp-input-wrap">@UiIcon.Render("hash")<input asp-for="Template.Pattern" class="cp-input" maxlength="20" placeholder="VD: 1" disabled="@(!canEdit || !s.IsConnected)" /></div><span asp-validation-for="Template.Pattern" class="cp-error"></span></div>
+                    <div class="cp-field"><label asp-for="Template.Series" class="cp-label">Ký hiệu</label><div class="cp-input-wrap">@UiIcon.Render("hash")<input asp-for="Template.Series" class="cp-input" maxlength="20" placeholder="VD: C26TAA" disabled="@(!canEdit || !s.IsConnected)" /></div><span asp-validation-for="Template.Series" class="cp-error"></span></div>
+                </div>
+                <div class="cp-field">
+                    <input type="hidden" name="Template.AutoIssueEnabled" value="false" />
+                    <label class="cp-check"><input type="checkbox" name="Template.AutoIssueEnabled" value="true" checked="@t.AutoIssueEnabled" disabled="@(!canEdit || !s.IsConnected)" /><span><strong>Tự động xuất hóa đơn khi đơn hàng QR được thanh toán đủ</strong><span class="cp-muted" style="display:block">Áp dụng cho đơn có đánh dấu "tự động xuất hóa đơn" và được thanh toán đủ từ lúc bật. Đơn đã thanh toán trước đó: xuất từ trang chi tiết đơn.</span></span></label>
+                </div>
+                <div class="cp-field">
+                    <input type="hidden" name="Template.SendEmail" value="false" />
+                    <label class="cp-check"><input type="checkbox" name="Template.SendEmail" value="true" checked="@t.SendEmail" disabled="@(!canEdit || !s.IsConnected)" /><span><strong>Gửi hóa đơn qua email cho người mua</strong><span class="cp-muted" style="display:block">Khi khách hàng của đơn có email.</span></span></label>
+                </div>
+            </div>
+            @if (canEdit && s.IsConnected)
+            {
+                <div class="cp-card__foot">
+                    <button class="cp-btn cp-btn--ghost" type="submit" formaction="@Url.Action("Templates")" formnovalidate>@UiIcon.Render("refresh")<span>Lấy mẫu hóa đơn từ MISA</span></button>
+                    @if (s.IsReady) {<button class="cp-btn cp-btn--ghost" type="submit" formaction="@Url.Action("Preview")" formtarget="_blank" formnovalidate>@UiIcon.Render("eye")<span>Xem thử hóa đơn nháp</span></button>}
+                    <button class="cp-btn cp-btn--primary" type="submit" style="margin-left:auto">@UiIcon.Render("device-floppy")<span>Lưu cài đặt</span></button>
+                </div>
+            }
+        </form>
+    </div>
+    <aside class="cp-note" style="align-self:start">@UiIcon.Render("info-circle")<div>
+        <strong>Cách hoạt động</strong>
+        <p>Khi đơn hàng thanh toán qua QR nhận đủ tiền, hệ thống xuất hóa đơn trên tài khoản MISA meInvoice của doanh nghiệp: hóa đơn được ký và gửi cơ quan thuế, mỗi đơn chỉ một hóa đơn.</p>
+        <p>Người mua là doanh nghiệp hoặc tổ chức: hóa đơn ghi tên đơn vị và mã số thuế. Khách lẻ: ghi tên khách; đơn không chọn khách ghi "Người mua không lấy hóa đơn".</p>
+        <p>Kết quả xem ở trang chi tiết đơn hàng: số hóa đơn, tải PDF, hoặc xuất lại khi có lỗi.</p>
+    </div></aside>
+</div>

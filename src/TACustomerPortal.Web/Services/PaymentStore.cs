@@ -68,7 +68,8 @@ public sealed record Order(
     Guid Id, string OrderNo, Guid? ContactId, string? ContactName, Guid? BankAccountId, string? Description, decimal Amount, decimal PaidAmount,
     string Status, string? QrType, string? QrPayload, string? QrAccount, string? BillId, int QrExpireMinutes, DateTime? ExpiresAt,
     bool AutoIssueInvoice, string InvoiceStatus, string? LastError, DateTime CreatedAt, IReadOnlyList<OrderLine> Lines,
-    decimal? PartnerPaidAmount = null, DateTime? PartnerCheckedAt = null)
+    decimal? PartnerPaidAmount = null, DateTime? PartnerCheckedAt = null,
+    string? InvoiceCode = null, string? InvoiceNumber = null, DateTime? InvoiceIssuedAt = null, string? InvoiceError = null, DateTime? InvoiceEmailedAt = null)
 {
     public decimal Remaining => Math.Max(0, Amount - PaidAmount);
     public decimal Overpaid => Math.Max(0, PaidAmount - Amount);
@@ -267,14 +268,16 @@ UPDATE dbo.CustomerBuyers SET Code=@code,Name=@name,LegalName=@legal,TaxCode=@ta
     // ---- orders -------------------------------------------------------------------------------------------
     private const string OrderSelect = """
 SELECT o.Id,o.OrderNo,o.ContactId,c.Name,o.BankAccountId,o.Description,o.Amount,o.PaidAmount,o.Status,o.QrType,o.QrPayload,o.QrAccount,o.BillId,
- o.QrExpireMinutes,o.ExpiresAt,o.AutoIssueInvoice,o.InvoiceStatus,o.LastError,o.CreatedAt,o.PartnerPaidAmount,o.PartnerCheckedAt
+ o.QrExpireMinutes,o.ExpiresAt,o.AutoIssueInvoice,o.InvoiceStatus,o.LastError,o.CreatedAt,o.PartnerPaidAmount,o.PartnerCheckedAt,
+ o.InvoiceCode,o.InvoiceNumber,o.InvoiceIssuedAt,o.InvoiceError,o.InvoiceEmailedAt
 FROM dbo.CustomerOrders o LEFT JOIN dbo.CustomerBuyers c ON c.Id=o.ContactId AND c.CustomerId=o.CustomerId
 """;
 
     private static Order ReadOrder(SqlDataReader r, IReadOnlyList<OrderLine> lines) => new(r.GetGuid(0), r.GetString(1), r.IsDBNull(2) ? null : r.GetGuid(2), S(r, 3),
         r.IsDBNull(4) ? null : r.GetGuid(4), S(r, 5), r.GetDecimal(6), r.GetDecimal(7), r.GetString(8), S(r, 9), S(r, 10), S(r, 11), S(r, 12), r.GetInt32(13),
         r.IsDBNull(14) ? null : r.GetDateTime(14), r.GetBoolean(15), r.GetString(16), S(r, 17), r.GetDateTime(18), lines,
-        r.IsDBNull(19) ? null : r.GetDecimal(19), r.IsDBNull(20) ? null : r.GetDateTime(20));
+        r.IsDBNull(19) ? null : r.GetDecimal(19), r.IsDBNull(20) ? null : r.GetDateTime(20),
+        S(r, 21), S(r, 22), r.IsDBNull(23) ? null : r.GetDateTime(23), S(r, 24), r.IsDBNull(25) ? null : r.GetDateTime(25));
 
     public async Task<IReadOnlyList<Order>> OrdersAsync(Guid customerId)
     {

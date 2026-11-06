@@ -424,3 +424,10 @@ textarea.cp-input { height: auto; min-height: 72px; padding-top: 8px; padding-bo
 .cp-form-section { grid-column: 1 / -1; margin: 6px 0 2px; font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--cp-ink-3); }
 [data-cp-when][hidden] { display: none !important; }
 .cp-label.is-required::after { content: " *"; color: #B42318; }
+
+/* Hóa đơn điện tử: the MISA login form folds away once connected. */
+.cp-einvoice-connect > summary { display: flex; align-items: center; gap: 8px; padding: 12px 18px; border-top: 1px solid var(--cp-line); cursor: pointer; color: var(--cp-blue-600); font-weight: 600; list-style: none; transition: background .15s; }
+.cp-einvoice-connect > summary::-webkit-details-marker { display: none; }
+.cp-einvoice-connect > summary:hover { background: var(--cp-hover-bg); }
+.cp-einvoice-connect > summary svg { width: 16px; height: 16px; }
+.cp-einvoice-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }

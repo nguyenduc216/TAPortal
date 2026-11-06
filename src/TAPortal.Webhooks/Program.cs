@@ -14,6 +14,10 @@ if (!string.IsNullOrWhiteSpace(builder.Configuration["Database:ConnectionString"
     builder.Services.AddSingleton<ITingeePaymentLedger, SqlTingeePaymentLedger>();
     builder.Services.AddScoped<TingeePaymentProcessor>();
     builder.Services.AddHostedService<TingeePaymentWorker>();
+    // Paid QR orders get their MISA e-invoice here when the company turned automatic invoices on (OrderInvoicer).
+    builder.Services.AddScoped<IOrderInvoiceStore, SqlOrderInvoiceStore>();
+    builder.Services.AddScoped<OrderInvoicer>();
+    builder.Services.AddHostedService<OrderInvoiceWorker>();
     // Payment notifications (Zalo OA / Telegram / SMTP) are planned and sent from here (NotificationDispatcher).
     TAPortal.Integrations.Notifications.NotificationServiceCollectionExtensions.AddNotifications(builder.Services, worker: true);
 }

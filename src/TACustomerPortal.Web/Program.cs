@@ -23,6 +23,8 @@ builder.Services.AddScoped<ICurrentCustomerContext, CurrentCustomerContext>();
 builder.Services.AddScoped<CustomerCookieEvents>();
 builder.Services.AddScoped<IPaymentStore, SqlPaymentStore>();
 builder.Services.AddScoped<OrderPayments>();
+builder.Services.AddScoped<TAPortal.Integrations.Tingee.IOrderInvoiceStore, TAPortal.Integrations.Tingee.SqlOrderInvoiceStore>();
+builder.Services.AddScoped<TAPortal.Integrations.Tingee.OrderInvoicer>();
 builder.Services.AddScoped<TAPortal.Integrations.Tingee.IPaymentTransactionStore, TAPortal.Integrations.Tingee.SqlPaymentTransactionStore>();
 TAPortal.Integrations.Notifications.NotificationServiceCollectionExtensions.AddNotifications(builder.Services);
 builder.Services.AddScoped<IServicePackageStore, SqlServicePackageStore>();

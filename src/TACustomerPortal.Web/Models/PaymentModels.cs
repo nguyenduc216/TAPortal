@@ -156,7 +156,7 @@ public sealed class OrderLineInput
 
 /// <summary>Banks: the active receiving accounts offered when (re)issuing the QR of a draft or expired order.</summary>
 public sealed record OrderDetailsVm(CustomerMembership Customer, bool CanManage, Order Order, string Status, BankAccount? Bank, Contact? Contact, string? QrSvg, DateTime UtcNow,
-    IReadOnlyList<BankAccount> Banks);
+    IReadOnlyList<BankAccount> Banks, bool InvoiceReady = false);
 
 public sealed class PaymentSettingsInput
 {
