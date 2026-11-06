@@ -4,7 +4,7 @@
 - Change ID: `TAPORTAL-SYSTEM-AUDIT-CHG-20261106T054921Z-5B484C`
 - Created UTC: 2026-11-06T05:49:21.072077+00:00
 - Tiêu đề: Thong bao dang toast giua tren man hinh (Admin + Customer Portal)
-- Trạng thái: IMPLEMENTED
+- Trạng thái: DEPLOYED
 
 ## Yêu cầu và phạm vi
 Operator (2026-11-06): thông báo trên Admin portal và Customer Portal khó nhận biết vì chỉ là một dòng ở đầu nội dung; làm toast ở trên cùng, chính giữa màn hình.
@@ -34,7 +34,7 @@ Trong phạm vi:
 
 ## Git
 - Branch: feature/customer-portal-mvp01
-- Commit SHA: xem report
+- Commit SHA: 1a13b5d
 - PR:
 - Merge: xem report
 - Merge SHA:
