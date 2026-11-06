@@ -1,7 +1,14 @@
 @model CustomerWorkspaceHeader
+@inject TAPortal.Integrations.Branding.ILogoStore Logos
 @* Customer Workspace header + tabs. Tabs come from CustomerWorkspace.Tabs; every link carries the customer id. *@
+@{
+    // The company's logo (Customer Portal / Hồ sơ doanh nghiệp tab); the building icon when there is none or it cannot be read.
+    string? logoVersion = null;
+    try { logoVersion = await Logos.LogoVersionAsync(Model.Id, null) is { } at ? TAPortal.Integrations.Branding.LogoImage.Version(at) : null; } catch (Exception) { logoVersion = null; }
+}
 <div class="ta-ws-head">
-    <span class="ta-ws-head__icon" aria-hidden="true">@UiIcon.Render("building")</span>
+    @if (logoVersion is not null) {<img class="ta-ws-head__icon ta-ws-head__logo" src="@Url.Action("Logo", new { id = Model.Id })?v=@logoVersion" alt="Logo @Model.Name" data-ta-customer-logo />}
+    else {<span class="ta-ws-head__icon" aria-hidden="true">@UiIcon.Render("building")</span>}
     <div class="ta-ws-head__text">
         <h1 class="ta-page-title">@Model.Name</h1>
         <div class="ta-ws-head__meta">

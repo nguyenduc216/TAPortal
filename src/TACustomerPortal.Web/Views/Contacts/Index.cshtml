@@ -23,7 +23,7 @@
                 {
                     <tr data-ta-row>
                         <td><span class="cp-code">@c.Code</span></td>
-                        <td><strong>@c.Name</strong>@if (c.LegalName is string legal) {<div class="cp-muted">@legal</div>}</td>
+                        <td><div class="cp-party">@if (Model.Logos?.TryGetValue(c.Id, out var logoAt) == true) {<img class="cp-party__logo" src="@Url.Action("Logo", new { id = c.Id })?v=@LogoImage.Version(logoAt)" alt="" loading="lazy" data-cp-contact-logo />} else {<span class="cp-party__logo cp-party__logo--initials" aria-hidden="true">@PayPageVm.Initials(c.Name)</span>}<div><strong>@c.Name</strong>@if (c.LegalName is string legal) {<div class="cp-muted">@legal</div>}</div></div></td>
                         <td data-cp-buyer-type="@c.Type"><span class="cp-badge @(c.Type == BuyerTypes.Business ? "cp-badge--blue" : c.Type == BuyerTypes.Individual ? "cp-badge--soft" : "cp-badge--gold")">@BuyerTypes.Label(c.Type)</span>@if (c.BuyerGroup is string g) {<div class="cp-muted">@g</div>}</td>
                         <td>@(c.TaxCode ?? c.IdentityNumber ?? "—")@if (c.TaxCode is null && c.IdentityNumber is not null) {<div class="cp-muted">CCCD</div>}</td>
                         <td>@(c.Phone ?? "—")@if (c.Zalo is string z) {<div class="cp-muted">Zalo: @z</div>}<div class="cp-muted">@c.Email</div></td>

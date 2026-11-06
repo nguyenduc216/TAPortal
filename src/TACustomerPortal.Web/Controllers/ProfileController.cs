@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 using TACustomerPortal.Web.Security;
 using TACustomerPortal.Web.Services;
+using TAPortal.Integrations.Branding;
 
 namespace TACustomerPortal.Web.Controllers;
 [ResponseCache(Location = ResponseCacheLocation.None, NoStore = true)]

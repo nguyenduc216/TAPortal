@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using TACustomerPortal.Web.Models;
 using TACustomerPortal.Web.Security;
 using TACustomerPortal.Web.Services;
+using TAPortal.Integrations.Branding;
 
 namespace TACustomerPortal.Web.Controllers;
 
@@ -12,7 +13,7 @@ public sealed class ContactsController(ICurrentCustomerContext customer, IPaymen
     public async Task<IActionResult> Index()
     {
         if (await Current() is not { } m) return SelectCustomer();
-        return View(new ContactsVm(m, CanManage(m), await store.ContactsAsync(m.CustomerId)));
+        return View(new ContactsVm(m, CanManage(m), await store.ContactsAsync(m.CustomerId), await logos.BuyerLogoVersionsAsync(m.CustomerId)));
     }
 
     [HttpGet]

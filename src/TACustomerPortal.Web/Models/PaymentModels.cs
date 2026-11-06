@@ -28,7 +28,8 @@ public sealed class BankLinkInput
 
 public sealed record BankConfirmVm(BankAccount Account, bool Deleting);
 
-public sealed record ContactsVm(CustomerMembership Customer, bool CanManage, IReadOnlyList<Contact> Contacts);
+/// <summary>Logos: last change of each customer's logo, by contact id (those without one show initials).</summary>
+public sealed record ContactsVm(CustomerMembership Customer, bool CanManage, IReadOnlyList<Contact> Contacts, IReadOnlyDictionary<Guid, DateTime>? Logos = null);
 
 public sealed class ContactInput
 {

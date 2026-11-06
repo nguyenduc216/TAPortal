@@ -4,6 +4,13 @@
 .ta-ws-head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--ta-sp-4); margin-bottom: var(--ta-sp-4); }
 .ta-ws-head__icon { width: 56px; height: 56px; flex: 0 0 56px; display: grid; place-items: center; border-radius: var(--ta-radius-card); background: var(--ta-gold-soft); color: var(--ta-warning-text); }
 .ta-ws-head__icon .ta-icon { width: 28px; height: 28px; }
+.ta-ws-head__logo { object-fit: contain; background: #fff; border: 1px solid var(--ta-border); padding: 4px; }
+/* Customer Workspace → Hồ sơ doanh nghiệp: company logo */
+.ta-logo-picker { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.ta-logo-frame { display: grid; place-items: center; width: 88px; height: 88px; flex: none; border: 1px dashed var(--ta-border); border-radius: 50%; overflow: hidden; background: #fff; color: var(--ta-text-2); }
+.ta-logo-frame img { width: 100%; height: 100%; object-fit: contain; }
+.ta-logo-picker__body { display: grid; gap: 8px; flex: 1 1 260px; min-width: 0; }
+.ta-logo-picker__actions { display: flex; gap: 8px; flex-wrap: wrap; }
 .ta-ws-head__text { flex: 1 1 320px; min-width: 0; }
 .ta-ws-head__meta { display: flex; flex-wrap: wrap; align-items: center; gap: var(--ta-sp-2); margin-top: 6px; }
 .ta-ws-head__actions { display: flex; flex-wrap: wrap; gap: var(--ta-sp-2); margin-left: auto; }

@@ -1,4 +1,5 @@
 @inject TACustomerPortal.Web.Security.ICurrentCustomerContext CurrentCustomer
+@inject TAPortal.Integrations.Branding.ILogoStore Logos
 @functions {
     // Customer Portal navigation, grouped like a SaaS workspace. "Index" entries stay active on every page of their module.
     private static readonly (string Group, string Controller, string Action, string Icon, string Label)[] Nav =
@@ -39,6 +40,12 @@
         // The error page also uses this layout: a failing lookup must not break it.
         try { current = await CurrentCustomer.Get(); } catch (Exception) { current = null; }
     }
+    // The company's logo in the sidebar (version cached for a minute); initials when there is none or it cannot be read.
+    string? logoVersion = null;
+    if (current is not null)
+    {
+        try { logoVersion = await Logos.LogoVersionAsync(current.CustomerId, null) is { } at ? TAPortal.Integrations.Branding.LogoImage.Version(at) : null; } catch (Exception) { logoVersion = null; }
+    }
 }
 <!doctype html>
 <html lang="vi">
@@ -64,7 +71,7 @@
         </div>
         <div id="cpWorkspace" data-ta-swap>
             <a class="cp-workspace" asp-controller="Account" asp-action="SelectCustomer" title="Đổi doanh nghiệp">
-                <span class="cp-workspace__mark" aria-hidden="true">@(current is null ? "?" : Initials(current.Name, 2))</span>
+                @if (logoVersion is not null) {<img class="cp-workspace__mark cp-workspace__mark--logo" src="@Url.Action("CompanyLogo", "Profile")?v=@logoVersion" alt="" data-cp-company-logo />} else {<span class="cp-workspace__mark" aria-hidden="true">@(current is null ? "?" : Initials(current.Name, 2))</span>}
                 <span class="cp-workspace__text"><small>Doanh nghiệp</small><strong>@(current?.Name ?? "Chọn doanh nghiệp")</strong></span>
                 @UiIcon.Render("switch-horizontal")
             </a>

@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.DependencyInjection;
 using TACustomerPortal.Web.Services;
+using TAPortal.Integrations.Branding;
 using TAPortal.Integrations.Tingee;
 using static TACustomerPortal.Tests.SafeCustomerPaymentsTests;
 
@@ -128,6 +129,7 @@ public sealed class SafeCustomerPayPageTests
         var company = WebUtility.HtmlDecode(await c.GetStringAsync("/profile/company"));
         Assert.Contains("/profile/companylogo?v=", company, StringComparison.OrdinalIgnoreCase);
         Assert.Equal("image/png", (await c.GetAsync("/profile/companylogo")).Content.Headers.ContentType?.MediaType);
+        Assert.Contains("data-cp-company-logo", company);                                  // sidebar shows the logo instead of initials
 
         var edit = await Token(c, $"/contacts/edit/{contact.Id}");
         var refused = await Upload(c, $"/contacts/edit/{contact.Id}", edit, "logo", "GIF89a"u8.ToArray(), new() { ["Code"] = "KH001", ["Name"] = "Chị Hoa" });
@@ -136,6 +138,9 @@ public sealed class SafeCustomerPayPageTests
         Assert.Equal(HttpStatusCode.Redirect, (await Upload(c, $"/contacts/edit/{contact.Id}", edit, "logo", Png, new() { ["Code"] = "KH001", ["Name"] = "Chị Hoa" })).StatusCode);
         Assert.True(pages.Logos.ContainsKey((A, contact.Id)));
         Assert.Contains($"/contacts/logo/{contact.Id}?v=", WebUtility.HtmlDecode(await c.GetStringAsync($"/contacts/edit/{contact.Id}")), StringComparison.OrdinalIgnoreCase);
+        var list = WebUtility.HtmlDecode(await c.GetStringAsync("/contacts"));
+        Assert.Contains($"/contacts/logo/{contact.Id}?v=", list, StringComparison.OrdinalIgnoreCase);   // logo in the customer list
+        Assert.Single(Regex.Matches(list, "data-cp-contact-logo"));
         Assert.Equal(HttpStatusCode.Redirect, (await Upload(c, $"/contacts/edit/{contact.Id}", edit, null, null, new() { ["Code"] = "KH001", ["Name"] = "Chị Hoa", ["removeLogo"] = "true" })).StatusCode);
         Assert.False(pages.Logos.ContainsKey((A, contact.Id)));
 
@@ -183,6 +188,8 @@ public sealed class MemoryOrderPageStore(SafeCustomerPaymentsTests.MemoryPayment
     public Dictionary<Guid, InvoiceBuyer> Buyers { get; } = [];
 
     public Task<DateTime?> LogoVersionAsync(Guid customerId, Guid? buyerId) => Task.FromResult(Logos.TryGetValue((customerId, buyerId), out var l) ? l.UpdatedAt : (DateTime?)null);
+    public Task<IReadOnlyDictionary<Guid, DateTime>> BuyerLogoVersionsAsync(Guid customerId) =>
+        Task.FromResult<IReadOnlyDictionary<Guid, DateTime>>(Logos.Where(l => l.Key.Customer == customerId && l.Key.Buyer is not null).ToDictionary(l => l.Key.Buyer!.Value, l => l.Value.UpdatedAt));
     public Task<LogoImage?> LogoAsync(Guid customerId, Guid? buyerId) => Task.FromResult(Logos.GetValueOrDefault((customerId, buyerId)));
     public Task SaveLogoAsync(Guid customerId, Guid? buyerId, LogoImage logo, Guid actor)
     {

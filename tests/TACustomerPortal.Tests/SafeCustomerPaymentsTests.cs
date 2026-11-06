@@ -762,8 +762,8 @@ public sealed class SafeCustomerPaymentsTests
                 services.AddSingleton<IPaymentStore>(s);
                 var pages = new MemoryOrderPageStore(s);
                 services.AddSingleton(pages);
-                services.RemoveAll<ILogoStore>();
-                services.AddSingleton<ILogoStore>(pages);
+                services.RemoveAll<TAPortal.Integrations.Branding.ILogoStore>();
+                services.AddSingleton<TAPortal.Integrations.Branding.ILogoStore>(pages);
                 services.RemoveAll<IOrderPageStore>();
                 services.AddSingleton<IOrderPageStore>(pages);
                 services.RemoveAll<ITingeeApi>();

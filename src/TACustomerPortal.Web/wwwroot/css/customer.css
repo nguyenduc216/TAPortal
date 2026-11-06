@@ -84,6 +84,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .cp-workspace { display: flex; align-items: center; gap: 10px; margin: 12px 12px 0; padding: 9px 10px; border-radius: 8px; background: rgba(0, 0, 0, .16); border: 1px solid var(--cp-side-line); color: #fff; transition: background .15s; }
 .cp-workspace:hover { background: rgba(0, 0, 0, .24); color: #fff; }
 .cp-workspace__mark { width: 30px; height: 30px; flex: 0 0 30px; display: grid; place-items: center; border-radius: 6px; background: var(--cp-blue-600); color: #fff; font-weight: 800; font-size: 12px; }
+.cp-workspace__mark--logo { object-fit: contain; background: #fff; padding: 2px; }
 .cp-workspace__text { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; line-height: 1.25; }
 .cp-workspace__text small { color: var(--cp-side-muted); font-size: 10.5px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
 .cp-workspace__text strong { font-size: 12.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -451,6 +452,11 @@ textarea.cp-input { height: auto; min-height: 72px; padding-top: 8px; padding-bo
 .cp-logo-picker__body { display: grid; gap: 8px; min-width: 0; flex: 1 1 220px; }
 .cp-logo-picker input[type=file] { max-width: 100%; font-size: 12.5px; }
 .cp-logo-picker__actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+
+/* Customer list: logo (or initials) next to the name */
+.cp-party { display: flex; align-items: center; gap: 10px; }
+.cp-party__logo { width: 32px; height: 32px; flex: 0 0 32px; border-radius: 50%; border: 1px solid var(--cp-line); background: #fff; object-fit: contain; }
+.cp-party__logo--initials { display: grid; place-items: center; border: 0; background: linear-gradient(140deg, var(--cp-blue-500), var(--cp-blue-700)); color: #fff; font-size: 11px; font-weight: 700; }
 
 /* Order details: link of the public payment page */
 .cp-paylink { display: grid; gap: 10px; }

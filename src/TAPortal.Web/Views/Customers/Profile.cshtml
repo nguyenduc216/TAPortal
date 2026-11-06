@@ -1,4 +1,5 @@
 @model CustomerProfileTabVm
+@inject TAPortal.Integrations.Branding.ILogoStore Logos
 @{
     var ws = (CustomerWorkspaceHeader)ViewData["Workspace"]!;
     ViewData["Title"] = ws.Code;
@@ -8,6 +9,34 @@
     var p = Model.Profile;
 }
 <partial name="_Workspace" model="ws" />
+@{
+    string? logoVersion = null;
+    var logoAvailable = true;
+    try { logoVersion = await Logos.LogoVersionAsync(Model.Customer.Id, null) is { } at ? TAPortal.Integrations.Branding.LogoImage.Version(at) : null; } catch (Exception) { logoAvailable = false; }
+}
+<section class="card mb-3" aria-labelledby="customerLogo" data-ta-customer-logo-card>
+    <div class="card-header"><h2 class="card-title" id="customerLogo">@UiIcon.Render("photo")Logo doanh nghiệp</h2></div>
+    <div class="card-body">
+        @if (!logoAvailable)
+        {
+            <div class="ta-alert ta-alert--danger" role="alert">@UiIcon.Render("database-off")<div class="ta-alert__body">Không đọc được logo (dbo.CustomerLogos, migration 024). Chi tiết đã ghi vào nhật ký ứng dụng.</div></div>
+        }
+        else
+        {
+            <form class="ta-logo-picker" asp-action="Logo" asp-route-id="@Model.Customer.Id" method="post" enctype="multipart/form-data" data-ta-hard>
+                <span class="ta-logo-frame">@if (logoVersion is not null) {<img src="@Url.Action("Logo", new { id = Model.Customer.Id })?v=@logoVersion" alt="Logo @Model.Customer.Name" />} else {@UiIcon.Render("photo")}</span>
+                <div class="ta-logo-picker__body">
+                    <div class="form-hint mt-0">Logo hiển thị trong Customer Portal và trên trang thanh toán QR khách hàng gửi cho người mua. Ảnh PNG, JPG hoặc WEBP, tối đa 1 MB, nên dùng ảnh vuông. Khách hàng cũng tự thay được trong Customer Portal.</div>
+                    <input type="file" name="logo" accept="@TAPortal.Integrations.Branding.LogoUpload.Accept" aria-label="Chọn ảnh logo" />
+                    <div class="ta-logo-picker__actions">
+                        <button type="submit" class="btn btn-primary btn-sm">@UiIcon.Render("upload")<span>Lưu logo</span></button>
+                        @if (logoVersion is not null) {<button type="submit" class="btn btn-outline-danger btn-sm" name="remove" value="true" onclick="return confirm('Xóa logo của khách hàng này?')">@UiIcon.Render("trash")<span>Xóa logo</span></button>}
+                    </div>
+                </div>
+            </form>
+        }
+    </div>
+</section>
 @if (!Model.StoreAvailable)
 {
     <div class="ta-alert ta-alert--danger" role="alert" data-ta-profile-unavailable>@UiIcon.Render("database-off")<div class="ta-alert__body">Không đọc được hồ sơ doanh nghiệp (dbo.CustomerProfiles). Kiểm tra migration 013 và quyền cơ sở dữ liệu; chi tiết đã ghi vào nhật ký ứng dụng.</div></div>

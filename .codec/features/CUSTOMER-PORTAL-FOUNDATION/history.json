@@ -343,5 +343,15 @@
     "migration_status": "EXECUTED",
     "publish_status": "DEPLOYED",
     "merge_status": "MERGED"
+  },
+  {
+    "change_id": "CUSTOMER-PORTAL-FOUNDATION-CHG-20261106T062358Z-2721FA",
+    "created_at": "2026-11-06T06:23:58.437215+00:00",
+    "title": "Logo ở danh sách khách hàng, thanh bên và Admin portal",
+    "status": "IMPLEMENTED",
+    "commit_sha": null,
+    "migration_status": "NOT_EXECUTED",
+    "publish_status": "NOT_PUBLISHED",
+    "merge_status": "PENDING_APPROVAL"
   }
 ]

@@ -41,3 +41,4 @@ CHECKPOINT_4A: PASS (existing artifact integrity, isolated localhost startup and
 | `CUSTOMER-PORTAL-FOUNDATION-CHG-20261106T044512Z-10B30D` | 2026-11-06 | MISA template id (GUID): InvoicePattern varchar(50) | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |
 | `CUSTOMER-PORTAL-FOUNDATION-CHG-20261106T045730Z-1DF625` | 2026-11-06 | Checkbox hidden fallback order (auto-issue, email, package active) | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |
 | `CUSTOMER-PORTAL-FOUNDATION-CHG-20261106T053314Z-D0B894` | 2026-11-06 | Logo doanh nghiệp và khách hàng; trang QR đơn hàng công khai (/pay/{token}) | 024 | EXECUTED | DEPLOYED | MERGED |
+| `CUSTOMER-PORTAL-FOUNDATION-CHG-20261106T062358Z-2721FA` | 2026-11-06 | Logo ở danh sách khách hàng, thanh bên và Admin portal | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |

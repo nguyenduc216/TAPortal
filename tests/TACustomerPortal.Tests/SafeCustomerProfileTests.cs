@@ -298,6 +298,38 @@ public sealed class SafeCustomerProfileTests
     private static async Task<string> Token(HttpClient c, string path) =>
         WebUtility.HtmlDecode(Regex.Match(await c.GetStringAsync(path), "name=\"__RequestVerificationToken\"[^>]*value=\"([^\"]+)\"").Groups[1].Value);
 
+    [Fact]
+    public async Task StaffSetAndRemoveTheCompanyLogoShownInTheWorkspaceHeader()
+    {
+        using var f = Factory(out _);
+        var logos = (MemoryOrderPageStore)f.Services.GetRequiredService<TAPortal.Integrations.Branding.ILogoStore>();
+        var c = Client(f);
+        var page = WebUtility.HtmlDecode(await c.GetStringAsync($"/customers/profile/{A}"));
+        Assert.Contains("data-ta-customer-logo-card", page);
+        Assert.DoesNotContain("data-ta-customer-logo ", page);                     // no logo yet: building icon in the header
+        var token = Regex.Match(page, "name=\"__RequestVerificationToken\"[^>]*value=\"([^\"]+)\"").Groups[1].Value;
+
+        Assert.Equal(HttpStatusCode.Redirect, (await Upload(c, $"/customers/logo/{A}", token, "<svg onload=alert(1)/>"u8.ToArray())).StatusCode);
+        Assert.False(logos.Logos.ContainsKey((A, null)));
+        Assert.Equal(HttpStatusCode.Redirect, (await Upload(c, $"/customers/logo/{A}", token, [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0, 0])).StatusCode);
+        Assert.Equal("image/png", logos.Logos[(A, null)].ContentType);
+        Assert.False(logos.Logos.ContainsKey((B, null)));                           // scoped to the route customer
+        Assert.Contains("data-ta-customer-logo ", WebUtility.HtmlDecode(await c.GetStringAsync($"/customers/representatives/{A}")));   // every tab's header
+        Assert.Equal("image/png", (await c.GetAsync($"/customers/logo/{A}")).Content.Headers.ContentType?.MediaType);
+        Assert.Equal(HttpStatusCode.NotFound, (await c.GetAsync($"/customers/logo/{B}")).StatusCode);
+
+        var remove = new MultipartFormDataContent { { new StringContent(token), "__RequestVerificationToken" }, { new StringContent("true"), "remove" } };
+        Assert.Equal(HttpStatusCode.Redirect, (await c.PostAsync($"/customers/logo/{A}", remove)).StatusCode);
+        Assert.False(logos.Logos.ContainsKey((A, null)));
+    }
+
+    private static Task<HttpResponseMessage> Upload(HttpClient c, string path, string token, byte[] bytes)
+    {
+        var file = new ByteArrayContent(bytes);
+        file.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("image/png");
+        return c.PostAsync(path, new MultipartFormDataContent { { new StringContent(token), "__RequestVerificationToken" }, { file, "logo", "logo.png" } });
+    }
+
     private static Task<HttpResponseMessage> Post(HttpClient c, string path, string token, Dictionary<string, string> data)
     {
         data["__RequestVerificationToken"] = token;
@@ -319,6 +351,8 @@ public sealed class SafeCustomerProfileTests
                 services.AddSingleton<AdminServices.ICustomerAdminStore>(new Customers());
                 services.RemoveAll<AdminServices.ICustomerProfileStore>();
                 services.AddSingleton<AdminServices.ICustomerProfileStore>(s);
+                services.RemoveAll<TAPortal.Integrations.Branding.ILogoStore>();
+                services.AddSingleton<TAPortal.Integrations.Branding.ILogoStore>(new MemoryOrderPageStore(new SafeCustomerPaymentsTests.MemoryPaymentStore()));
                 services.RemoveAll<AdminServices.ICustomerSecretProtector>();
                 services.AddSingleton<AdminServices.ICustomerSecretProtector>(new FakeProtector(secretsEnabled));
                 services.AddAuthentication().AddScheme<AuthenticationSchemeOptions, TestAuthHandler>(TestScheme, _ => { });
