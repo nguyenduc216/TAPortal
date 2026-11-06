@@ -4,7 +4,7 @@
 - Change ID: `CUSTOMER-PORTAL-FOUNDATION-CHG-20261106T012601Z-147F73`
 - Created UTC: 2026-11-06T01:26:01.233813+00:00
 - Tiêu đề: Customer Portal: MISA e-invoice settings and automatic invoice for paid QR orders
-- Trạng thái: IMPLEMENTED
+- Trạng thái: DEPLOYED
 
 ## Yêu cầu và phạm vi
 Operator (2026-11-06): bổ sung cài đặt hóa đơn điện tử phía khách hàng (giống Hóa đơn Sandbox trên TA Portal), trước hết là cấu hình xuất hóa đơn tự động; khi có cấu hình thì đơn hàng QR thanh toán xong xuất luôn hóa đơn tự động. Chỉ MISA meInvoice.
