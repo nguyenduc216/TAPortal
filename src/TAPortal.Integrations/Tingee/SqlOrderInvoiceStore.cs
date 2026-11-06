@@ -96,9 +96,13 @@ WHERE Id=@id AND CustomerId=@c
 """, ("@id", orderId), ("@c", customerId), ("@code", code), ("@lease", leaseUntil), ("@manual", manual)))
             await claim.ExecuteNonQueryAsync(ct);
 
+        // The tax code and invoice name the payer corrected on the order's payment page (migration 024) replace the buyer
+        // profile; a tax code given for a retail or unknown buyer makes the invoice a company invoice.
         OrderInvoiceJob job;
         await using (var read = Command(cn, tx, """
-SELECT o.OrderNo,o.Description,o.InvoiceCode,o.InvoiceAttempts,m.MerchantId,b.BuyerType,b.Name,b.LegalName,b.TaxCode,b.Address,b.Phone,b.Email
+SELECT o.OrderNo,o.Description,o.InvoiceCode,o.InvoiceAttempts,m.MerchantId,
+ CASE WHEN o.InvoiceBuyerTaxCode IS NOT NULL AND ISNULL(b.BuyerType,'INDIVIDUAL') NOT IN ('HOUSEHOLD','BUSINESS','ORGANIZATION') THEN 'BUSINESS' ELSE b.BuyerType END,
+ COALESCE(o.InvoiceBuyerName,b.Name),COALESCE(o.InvoiceBuyerName,b.LegalName),COALESCE(o.InvoiceBuyerTaxCode,b.TaxCode),b.Address,b.Phone,b.Email
 FROM dbo.CustomerOrders o
 LEFT JOIN dbo.CustomerBuyers b ON b.Id=o.ContactId AND b.CustomerId=o.CustomerId
 OUTER APPLY (SELECT TOP 1 tm.MerchantId FROM dbo.TingeeMerchants tm WHERE tm.CustomerId=o.CustomerId ORDER BY tm.CreatedAt DESC) m

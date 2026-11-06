@@ -99,7 +99,10 @@ public sealed class SafeReleaseRegressionTests
             "Account.ForgotPassword:GET", "Account.ForgotPassword:POST", "Account.ResetPassword:GET", "Account.ResetPassword:POST",
             // Self sign-up (operator 2026-11-06; reviewed: antiforgery, rate-limited, unique tax code/email checked under locks)
             // and the public tax code lookup that fills it (rate-limited, sends only the tax code out).
-            "Account.Register:GET", "Account.Register:POST", "Account.TaxLookup:GET" }, anonymous);
+            "Account.Register:GET", "Account.Register:POST", "Account.TaxLookup:GET",
+            // Public payment page of one order (operator 2026-11-06; reviewed: opened only by a random 32-character token,
+            // rate-limited, antiforgery on the invoice details form, which only writes that order's tax code and invoice name).
+            "Pay.Index:GET", "Pay.Status:GET", "Pay.Logo:GET", "Pay.Invoice:POST" }, anonymous);
         // Everything else falls under the authenticated fallback policy.
         Assert.NotNull(f.Services.GetRequiredService<Microsoft.Extensions.Options.IOptions<AuthorizationOptions>>().Value.FallbackPolicy);
     }

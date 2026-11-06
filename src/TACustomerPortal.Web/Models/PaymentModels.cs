@@ -154,9 +154,12 @@ public sealed class OrderLineInput
     public string TaxRate { get; set; } = "0";
 }
 
-/// <summary>Banks: the active receiving accounts offered when (re)issuing the QR of a draft or expired order.</summary>
+/// <summary>
+/// Banks: the active receiving accounts offered when (re)issuing the QR of a draft or expired order. PayUrl: the order's
+/// public payment page; InvoiceBuyer: the tax code and invoice name the payer corrected there.
+/// </summary>
 public sealed record OrderDetailsVm(CustomerMembership Customer, bool CanManage, Order Order, string Status, BankAccount? Bank, Contact? Contact, string? QrSvg, DateTime UtcNow,
-    IReadOnlyList<BankAccount> Banks, bool InvoiceReady = false);
+    IReadOnlyList<BankAccount> Banks, bool InvoiceReady = false, string? PayUrl = null, InvoiceBuyer? InvoiceBuyer = null);
 
 public sealed class PaymentSettingsInput
 {
@@ -240,4 +243,37 @@ public static class PaymentText
     public static string Money(decimal value) => value.ToString("#,##0", System.Globalization.CultureInfo.GetCultureInfo("vi-VN")) + " ₫";
 
     public static string VietnamTime(DateTime? utc) => utc is { } v ? v.AddHours(7).ToString("dd/MM/yyyy HH:mm") : "—";
+}
+
+/// <summary>Tax code and invoice name the payer may correct on the public payment page.</summary>
+public sealed class PayInvoiceInput
+{
+    [StringLength(20, ErrorMessage = "Mã số thuế tối đa 20 ký tự.")]
+    public string? TaxCode { get; set; }
+
+    [StringLength(250, ErrorMessage = "Tên xuất hóa đơn tối đa 250 ký tự.")]
+    public string? Name { get; set; }
+}
+
+/// <summary>
+/// The public payment page of an order. Logo versions are null when there is no logo (initials are shown instead);
+/// BuyerName is null for a walk-in order, which shows the seller alone. Saved = what is stored, Input = what the form shows.
+/// </summary>
+public sealed record PayPageVm(string Token, string SellerName, string? SellerTaxCode, string? SellerLogo, string? BuyerName, string? BuyerLogo,
+    Order Order, string Status, string? QrSvg, string? BankName, string? Account, DateTime UtcNow, bool InvoiceEditable, DateTime? InvoiceUpdatedAt,
+    PayInvoiceInput Saved, PayInvoiceInput Input)
+{
+    public string Title => string.IsNullOrWhiteSpace(Order.Description) ? "Đơn hàng " + Order.OrderNo : Order.Description!;
+    public bool Open => QrSvg is not null;
+
+    // Legal-form words carry no identity: "Công ty TNHH Sen Việt" → "SV", not "TV".
+    private static readonly HashSet<string> LegalForms = new(["công", "ty", "tnhh", "cổ", "phần", "cp", "mtv", "một", "thành", "viên", "jsc", "co.,", "ltd", "ltd."], StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>Two letters for a missing logo: "Công ty Bình Minh" → "BM".</summary>
+    public static string Initials(string? name)
+    {
+        var all = (name ?? "").Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        var words = all.Where(w => !LegalForms.Contains(w)).ToArray() is { Length: > 0 } named ? named : all;
+        return words.Length == 0 ? "?" : string.Concat(words.TakeLast(Math.Min(2, words.Length)).Select(w => char.ToUpperInvariant(w[0])));
+    }
 }

@@ -1,0 +1,147 @@
+@model PayPageVm
+@using TAPortal.Integrations.Tingee
+@{
+    // Public page: its own minimal shell (no portal navigation), also when a signed-in staff member opens the link.
+    Layout = null;
+    var o = Model.Order;
+    var (label, css) = PaymentText.OrderStatus(Model.Status);
+    var transfer = OrderMath.TransferContent(o.OrderNo);
+    var pay = "/pay/" + Model.Token;
+    var message = Model.Status switch
+    {
+        OrderStatus.Paid => "Đơn hàng đã được thanh toán đủ. Cảm ơn quý khách!",
+        OrderStatus.Cancelled or OrderStatus.CancelledPaid => "Đơn hàng đã hủy. Vui lòng liên hệ người bán nếu cần hỗ trợ.",
+        OrderStatus.Expired or OrderStatus.ExpiredPaid => "Mã QR đã hết hạn. Vui lòng liên hệ người bán để nhận mã mới.",
+        _ => "Đơn hàng chưa có mã QR thanh toán. Vui lòng liên hệ người bán."
+    };
+}
+<!doctype html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="referrer" content="no-referrer" />
+    <link rel="icon" type="image/png" href="~/images/favicon-32x32.png" />
+    <meta name="theme-color" content="#A16207" />
+    <title>@Model.Title · @Model.SellerName</title>
+    <link rel="stylesheet" href="~/css/customer.css" asp-append-version="true" />
+</head>
+<body class="cp cp-pay-body">
+<main class="cp-pay">
+    <article class="cp-pay__card" aria-labelledby="payTitle">
+        <header class="cp-pay__brands @(Model.BuyerName is null ? "is-single" : "")" aria-label="Các bên của đơn hàng">
+            <figure class="cp-pay__party">
+                <span class="cp-pay__logo">
+                    @if (Model.SellerLogo is string sv) {<img src="@pay/logo/seller?v=@sv" alt="Logo @Model.SellerName" />}
+                    else {<span class="cp-pay__initials" aria-hidden="true">@PayPageVm.Initials(Model.SellerName)</span>}
+                </span>
+                <figcaption><small>Người bán</small><strong>@Model.SellerName</strong></figcaption>
+            </figure>
+            @if (Model.BuyerName is string buyer)
+            {
+                <div class="cp-pay__bridge" aria-hidden="true"><span class="cp-pay__wire"></span><span class="cp-pay__knot">@UiIcon.Render("link")</span><span class="cp-pay__wire"></span></div>
+                <figure class="cp-pay__party">
+                    <span class="cp-pay__logo">
+                        @if (Model.BuyerLogo is string bv) {<img src="@pay/logo/buyer?v=@bv" alt="Logo @buyer" />}
+                        else {<span class="cp-pay__initials cp-pay__initials--buyer" aria-hidden="true">@PayPageVm.Initials(buyer)</span>}
+                    </span>
+                    <figcaption><small>Khách hàng</small><strong>@buyer</strong></figcaption>
+                </figure>
+            }
+        </header>
+
+        <section class="cp-pay__head">
+            <div class="cp-eyebrow">Đơn hàng <span class="cp-code">@o.OrderNo</span></div>
+            <h1 id="payTitle">@Model.Title</h1>
+            <span class="cp-badge @css" data-cp-order-status="@Model.Status">@label</span>
+        </section>
+
+        @if (TempData["Success"] is string ok) {<div class="cp-flash cp-flash--ok" role="status">@UiIcon.Render("circle-check")<div>@ok</div></div>}
+        @if (TempData["Error"] is string err) {<div class="cp-flash cp-flash--error" role="alert">@UiIcon.Render("alert-circle")<div>@err</div></div>}
+
+        <section class="cp-pay__invoice" id="invoice" aria-labelledby="invoiceTitle">
+            <div class="cp-pay__section-title" id="invoiceTitle">@UiIcon.Render("receipt-tax")Thông tin xuất hóa đơn</div>
+            @if (Model.InvoiceEditable)
+            {
+                <form method="post" action="@pay/invoice" data-cp-dirty-form>
+                    @Html.AntiForgeryToken()
+                    <div asp-validation-summary="ModelOnly" class="cp-alert" role="alert"></div>
+                    <div class="cp-pay__invoice-row">
+                        <div class="cp-field">
+                            <label class="cp-label" for="TaxCode">Mã số thuế</label>
+                            <div class="cp-lookup">
+                                <div class="cp-input-wrap">@UiIcon.Render("hash")<input class="cp-input" id="TaxCode" name="TaxCode" value="@Model.Input.TaxCode" data-cp-saved="@Model.Saved.TaxCode" inputmode="numeric" maxlength="20" autocomplete="off" placeholder="Không bắt buộc" data-cp-tax-input /></div>
+                                <button class="cp-btn cp-btn--ghost cp-btn--icon" type="button" title="Tra cứu tên theo mã số thuế" aria-label="Tra cứu mã số thuế" data-cp-tax-lookup="@Url.Action("TaxLookup", "Account")" data-cp-fill-name="#Name">@UiIcon.Render("search")</button>
+                            </div>
+                            <div class="cp-lookup-msg" aria-live="polite" data-cp-tax-msg></div>
+                            <span class="cp-error">@Html.ValidationMessage("TaxCode")</span>
+                        </div>
+                        <div class="cp-field">
+                            <label class="cp-label" for="Name">Tên xuất hóa đơn</label>
+                            <div class="cp-input-wrap">@UiIcon.Render("building")<input class="cp-input" id="Name" name="Name" value="@Model.Input.Name" data-cp-saved="@Model.Saved.Name" maxlength="250" placeholder="Tên đơn vị hoặc người mua" /></div>
+                            <span class="cp-error">@Html.ValidationMessage("Name")</span>
+                        </div>
+                        <button class="cp-btn cp-btn--primary cp-pay__save" type="submit" data-cp-dirty-save>@UiIcon.Render("device-floppy")<span>Lưu</span></button>
+                    </div>
+                    <p class="cp-hint">Kiểm tra mã số thuế và tên trước khi thanh toán: hóa đơn điện tử được xuất theo thông tin này.@if (Model.InvoiceUpdatedAt is not null) {<span> Đã cập nhật lúc @PaymentText.VietnamTime(Model.InvoiceUpdatedAt).</span>}</p>
+                </form>
+            }
+            else
+            {
+                <dl class="cp-pay__facts">
+                    <div><dt>Mã số thuế</dt><dd>@(Model.Saved.TaxCode ?? "—")</dd></div>
+                    <div><dt>Tên xuất hóa đơn</dt><dd>@(Model.Saved.Name ?? "—")</dd></div>
+                </dl>
+                <p class="cp-hint">@(o.InvoiceStatus == OrderInvoiceStatus.Issued ? "Hóa đơn điện tử đã được xuất cho đơn hàng này." : o.InvoiceStatus == OrderInvoiceStatus.Pending ? "Hóa đơn điện tử đang được xuất." : "Không thể thay đổi thông tin xuất hóa đơn của đơn hàng này.")</p>
+            }
+        </section>
+
+        <section class="cp-pay__qr" aria-label="Mã QR thanh toán">
+            @if (Model.QrSvg is string svg)
+            {
+                <div class="cp-pay__qr-box" data-cp-poll="@pay/status" data-cp-poll-status="@Model.Status" data-cp-poll-paid="@o.PaidAmount.ToString(System.Globalization.CultureInfo.InvariantCulture)">
+                    @Html.Raw(svg)
+                </div>
+                <div class="cp-pay__amount"><small>Số tiền cần thanh toán</small><strong>@PaymentText.Money(o.Remaining)</strong>@if (o.PaidAmount > 0) {<span class="cp-muted">Đã thanh toán @PaymentText.Money(o.PaidAmount) / @PaymentText.Money(o.Amount)</span>}</div>
+                @if (o.ExpiresAt is DateTime expires)
+                {
+                    <div class="cp-pay__timer" data-cp-countdown="@expires.ToString("o", System.Globalization.CultureInfo.InvariantCulture)" data-cp-countdown-now="@Model.UtcNow.ToString("o", System.Globalization.CultureInfo.InvariantCulture)" role="timer" aria-live="off">
+                        @UiIcon.Render("clock")<span>Mã QR còn hiệu lực</span><strong data-cp-countdown-value>@QrLifetime.Text(Math.Max(0, (int)(expires - Model.UtcNow).TotalMinutes))</strong>
+                    </div>
+                    <div class="cp-muted cp-pay__until">Hết hạn lúc @PaymentText.VietnamTime(expires)</div>
+                }
+            }
+            else
+            {
+                <div class="cp-pay__done @(Model.Status == OrderStatus.Paid ? "is-paid" : "")">@UiIcon.Render(Model.Status == OrderStatus.Paid ? "circle-check" : "qrcode")<p>@message</p></div>
+                <div class="cp-pay__amount"><small>Tổng tiền đơn hàng</small><strong>@PaymentText.Money(o.Amount)</strong></div>
+            }
+        </section>
+
+        <dl class="cp-pay__facts">
+            <div><dt>Mã đơn hàng</dt><dd><span class="cp-code">@o.OrderNo</span></dd></div>
+            @if (Model.Open) {<div><dt>Nội dung chuyển khoản</dt><dd><span class="cp-code">@transfer</span></dd></div>}
+            @if (Model.Open && Model.BankName is string bankName) {<div><dt>Ngân hàng nhận</dt><dd>@bankName@if (Model.Account is string acc) {<span> · @acc</span>}</dd></div>}
+            <div><dt>Ngày tạo</dt><dd>@PaymentText.VietnamTime(o.CreatedAt)</dd></div>
+        </dl>
+
+        @if (o.Lines.Count > 0)
+        {
+            <details class="cp-pay__lines">
+                <summary>@UiIcon.Render("list-tree")Chi tiết hàng hóa, dịch vụ (@o.Lines.Count)</summary>
+                <ul>
+                    @foreach (var l in o.Lines)
+                    {
+                        <li><span>@l.ItemName <small class="cp-muted">× @l.Quantity.ToString("0.###")@(l.UnitName is null ? "" : " " + l.UnitName)</small></span><strong>@PaymentText.Money(l.Total)</strong></li>
+                    }
+                </ul>
+            </details>
+        }
+
+        <footer class="cp-pay__foot">@UiIcon.Render("shield-check")<span>Quét mã bằng ứng dụng ngân hàng. Dịch vụ thanh toán do T.A cung cấp.</span></footer>
+    </article>
+</main>
+<script src="~/js/customer.js" asp-append-version="true"></script>
+</body>
+</html>

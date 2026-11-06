@@ -760,6 +760,12 @@ public sealed class SafeCustomerPaymentsTests
                 services.AddSingleton<ICustomerStore>(new Members(role));
                 services.RemoveAll<IPaymentStore>();
                 services.AddSingleton<IPaymentStore>(s);
+                var pages = new MemoryOrderPageStore(s);
+                services.AddSingleton(pages);
+                services.RemoveAll<ILogoStore>();
+                services.AddSingleton<ILogoStore>(pages);
+                services.RemoveAll<IOrderPageStore>();
+                services.AddSingleton<IOrderPageStore>(pages);
                 services.RemoveAll<ITingeeApi>();
                 services.AddSingleton<ITingeeApi>(t);
                 services.RemoveAll<IServicePackageStore>();

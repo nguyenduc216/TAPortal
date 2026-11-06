@@ -8,7 +8,7 @@
     var type = BuyerTypes.Normalize(Model.BuyerType) ?? BuyerTypes.Individual;
     bool Hide(string types) => !types.Split(' ').Contains(type);
 }
-<form class="cp-card" method="post" asp-action="@(isNew ? "Create" : "Edit")" asp-route-id="@(isNew ? null : Model.Id)" data-cp-buyer-form>
+<form class="cp-card" method="post" asp-action="@(isNew ? "Create" : "Edit")" asp-route-id="@(isNew ? null : Model.Id)" enctype="multipart/form-data" data-cp-buyer-form data-ta-hard>
     <div class="cp-card__body">
         <div asp-validation-summary="ModelOnly" class="cp-alert" role="alert"></div>
         <div class="cp-label">Loại khách hàng</div>
@@ -37,6 +37,23 @@
             </div>
             <div class="cp-field" data-cp-when="HOUSEHOLD BUSINESS ORGANIZATION" hidden="@Hide("HOUSEHOLD BUSINESS ORGANIZATION")"><label asp-for="LegalName" class="cp-label @(type is BuyerTypes.Business or BuyerTypes.Organization ? "is-required" : "")" data-cp-label-when="BUSINESS ORGANIZATION">Tên đơn vị (trên hóa đơn)</label><div class="cp-input-wrap">@UiIcon.Render("building")<input asp-for="LegalName" class="cp-input" maxlength="250" required="@(type is BuyerTypes.Business or BuyerTypes.Organization)" data-cp-required-when="BUSINESS ORGANIZATION" /></div><span asp-validation-for="LegalName" class="cp-error"></span></div>
             <div class="cp-field" data-cp-when="INDIVIDUAL HOUSEHOLD" hidden="@Hide("INDIVIDUAL HOUSEHOLD")"><label asp-for="IdentityNumber" class="cp-label">Số CCCD</label><div class="cp-input-wrap">@UiIcon.Render("id")<input asp-for="IdentityNumber" class="cp-input" maxlength="20" autocomplete="off" /></div><div class="cp-hint">Không bắt buộc. Dùng làm mã định danh người mua khi không có MST.</div><span asp-validation-for="IdentityNumber" class="cp-error"></span></div>
+
+            <div class="cp-form-section">Logo</div>
+            <div class="cp-field cp-span" data-cp-logo-picker>
+                @{ var logoVersion = ViewData["LogoVersion"] as string; }
+                <div class="cp-logo-picker">
+                    <span class="cp-logo-frame">
+                        <img src="@(logoVersion is null ? null : Url.Action("Logo", new { id = Model.Id }) + "?v=" + logoVersion)" alt="Logo @Model.Name" hidden="@(logoVersion is null)" data-cp-logo-preview />
+                        <span data-cp-logo-empty hidden="@(logoVersion is not null)">@UiIcon.Render("photo")</span>
+                    </span>
+                    <div class="cp-logo-picker__body">
+                        <input type="file" name="logo" accept="@LogoUpload.Accept" aria-label="Chọn ảnh logo khách hàng" data-cp-logo-input />
+                        <div class="cp-hint">Hiển thị cạnh logo doanh nghiệp của bạn trên trang thanh toán QR của khách. PNG, JPG hoặc WEBP, tối đa 1 MB.</div>
+                        @if (logoVersion is not null) {<label class="cp-check"><input type="checkbox" name="removeLogo" value="true" /> <span>Xóa logo hiện tại</span></label>}
+                        <span class="cp-error">@Html.ValidationMessage("Logo")</span>
+                    </div>
+                </div>
+            </div>
 
             <div class="cp-form-section">Liên hệ</div>
             <div class="cp-field"><label asp-for="Phone" class="cp-label">Điện thoại</label><div class="cp-input-wrap">@UiIcon.Render("phone")<input asp-for="Phone" class="cp-input" inputmode="tel" maxlength="10" /></div><span asp-validation-for="Phone" class="cp-error"></span></div>

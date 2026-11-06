@@ -37,6 +37,8 @@ public sealed class SafePortalTests : IDisposable
             {
                 s.RemoveAll<ICustomerStore>();
                 s.AddSingleton<ICustomerStore>(store);
+                s.RemoveAll<ILogoStore>();
+                s.AddSingleton<ILogoStore>(new MemoryOrderPageStore(new SafeCustomerPaymentsTests.MemoryPaymentStore()));
                 s.AddDataProtection().UseEphemeralDataProtectionProvider();
             }));
         client = NewClient();

@@ -442,3 +442,85 @@ textarea.cp-input { height: auto; min-height: 72px; padding-top: 8px; padding-bo
 .cp-einvoice-connect > summary:hover { background: var(--cp-hover-bg); }
 .cp-einvoice-connect > summary svg { width: 16px; height: 16px; }
 .cp-einvoice-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+
+/* Logos: the company's own (Hồ sơ doanh nghiệp) and its customers' (Khách hàng) */
+.cp-logo-picker { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.cp-logo-frame { display: grid; place-items: center; width: 88px; height: 88px; flex: none; border: 1px dashed var(--cp-line-2); border-radius: 50%; background: var(--cp-surface-2); overflow: hidden; color: var(--cp-ink-3); }
+.cp-logo-frame img { width: 100%; height: 100%; object-fit: contain; background: #fff; }
+.cp-logo-frame .ta-icon { width: 28px; height: 28px; }
+.cp-logo-picker__body { display: grid; gap: 8px; min-width: 0; flex: 1 1 220px; }
+.cp-logo-picker input[type=file] { max-width: 100%; font-size: 12.5px; }
+.cp-logo-picker__actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+
+/* Order details: link of the public payment page */
+.cp-paylink { display: grid; gap: 10px; }
+.cp-paylink__text { display: grid; gap: 2px; font-size: 13px; }
+.cp-paylink__row { display: flex; gap: 8px; flex-wrap: wrap; }
+.cp-paylink__row .cp-input-wrap { flex: 1 1 220px; min-width: 0; }
+.cp-paylink__row .cp-input { font-family: var(--cp-mono); font-size: 12px; }
+
+/* Public payment page (/pay/{token}): two logos joined by a link, order, invoice details, QR and countdown */
+.cp-pay-body { min-height: 100vh; background: radial-gradient(600px 320px at 10% -10%, var(--cp-gold-100), transparent 70%), radial-gradient(640px 360px at 110% 0%, var(--cp-blue-50), transparent 70%), var(--cp-bg); }
+.cp-pay { display: grid; justify-items: center; padding: 28px 16px 40px; }
+.cp-pay__card { width: min(560px, 100%); display: grid; gap: 18px; padding: 24px; border: 1px solid var(--cp-line); border-radius: 20px; background: var(--cp-surface); box-shadow: var(--cp-shadow-lg); }
+.cp-pay__brands { display: grid; grid-template-columns: 1fr minmax(60px, 120px) 1fr; align-items: start; gap: 6px; padding: 6px 0 2px; }
+.cp-pay__brands.is-single { grid-template-columns: 1fr; }
+.cp-pay__party { display: grid; justify-items: center; gap: 8px; margin: 0; text-align: center; min-width: 0; }
+.cp-pay__party figcaption { display: grid; gap: 1px; min-width: 0; }
+.cp-pay__party small { color: var(--cp-ink-3); font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
+.cp-pay__party strong { font-size: 13.5px; line-height: 1.3; overflow-wrap: anywhere; }
+.cp-pay__logo { display: grid; place-items: center; width: 76px; height: 76px; border-radius: 50%; background: #fff; border: 1px solid var(--cp-line); box-shadow: 0 0 0 5px var(--cp-gold-100), var(--cp-shadow-md); overflow: hidden; }
+.cp-pay__party:last-child:not(:first-child) .cp-pay__logo { box-shadow: 0 0 0 5px var(--cp-blue-50), var(--cp-shadow-md); }
+.cp-pay__logo img { width: 100%; height: 100%; object-fit: contain; }
+.cp-pay__initials { display: grid; place-items: center; width: 100%; height: 100%; font-size: 24px; font-weight: 800; color: #fff; background: linear-gradient(135deg, var(--cp-gold-700), var(--cp-gold-900)); }
+.cp-pay__initials--buyer { background: linear-gradient(135deg, var(--cp-blue-500), var(--cp-blue-700)); }
+.cp-pay__bridge { display: flex; align-items: center; height: 76px; }
+.cp-pay__wire { flex: 1; height: 2px; background: repeating-linear-gradient(90deg, var(--cp-gold-500) 0 6px, transparent 6px 11px); background-size: 22px 2px; animation: cp-pay-flow 1.2s linear infinite; }
+.cp-pay__wire:last-child { background-image: repeating-linear-gradient(90deg, var(--cp-blue-500) 0 6px, transparent 6px 11px); }
+.cp-pay__knot { display: grid; place-items: center; width: 34px; height: 34px; flex: none; border-radius: 50%; color: #fff; background: linear-gradient(135deg, var(--cp-gold-500), var(--cp-blue-600)); box-shadow: var(--cp-shadow-md); }
+.cp-pay__knot .ta-icon { width: 18px; height: 18px; }
+@keyframes cp-pay-flow { to { background-position: 22px 0; } }
+.cp-pay__head { display: grid; justify-items: center; gap: 6px; text-align: center; padding-top: 12px; border-top: 1px solid var(--cp-line); }
+.cp-pay__head h1 { margin: 0; font-size: 20px; line-height: 1.3; overflow-wrap: anywhere; }
+.cp-pay__invoice { display: grid; gap: 8px; padding: 14px; border: 1px solid var(--cp-line); border-radius: var(--cp-radius); background: var(--cp-surface-2); }
+.cp-pay__section-title { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; }
+.cp-pay__section-title .ta-icon { color: var(--cp-gold-700); }
+.cp-pay__invoice-row { display: grid; grid-template-columns: minmax(190px, 1fr) minmax(0, 1.3fr) auto; gap: 10px; align-items: start; }
+.cp-pay__invoice .cp-field { margin-bottom: 0; }
+.cp-pay__invoice .cp-hint { margin: 0; }
+.cp-pay__save { margin-top: 24px; height: 34px; padding: 0 12px; animation: cp-pop .2s var(--cp-ease) both; }
+.cp-btn--icon { width: 34px; padding: 0; }
+.cp-pay__qr { display: grid; justify-items: center; gap: 10px; text-align: center; }
+.cp-pay__qr-box svg { display: block; width: min(260px, 72vw); height: auto; padding: 10px; border-radius: 16px; border: 1px solid var(--cp-line); background: #fff; box-shadow: var(--cp-shadow-md); }
+.cp-pay__amount { display: grid; gap: 2px; }
+.cp-pay__amount small { color: var(--cp-ink-3); font-size: 12px; }
+.cp-pay__amount strong { font-size: 28px; font-weight: 800; letter-spacing: -.01em; color: var(--cp-ink); }
+.cp-pay__timer { display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 999px; background: var(--cp-blue-50); color: var(--cp-blue-700); font-size: 13px; }
+.cp-pay__timer strong { font-family: var(--cp-mono); font-size: 15px; font-variant-numeric: tabular-nums; }
+.cp-pay__timer.is-ending { background: var(--cp-gold-100); color: var(--cp-gold-text); }
+.cp-pay__timer.is-over { background: var(--cp-red-50); color: var(--cp-red); }
+.cp-pay__until { font-size: 12px; }
+.cp-pay__done { display: grid; justify-items: center; gap: 6px; padding: 18px; color: var(--cp-ink-3); }
+.cp-pay__done .ta-icon { width: 44px; height: 44px; }
+.cp-pay__done.is-paid { color: var(--cp-green-700); }
+.cp-pay__done p { margin: 0; font-size: 14px; }
+.cp-pay__facts { display: grid; gap: 0; margin: 0; border: 1px solid var(--cp-line); border-radius: var(--cp-radius); overflow: hidden; }
+.cp-pay__facts > div { display: flex; justify-content: space-between; gap: 12px; padding: 9px 14px; font-size: 13px; }
+.cp-pay__facts > div + div { border-top: 1px solid var(--cp-line); }
+.cp-pay__facts dt { color: var(--cp-ink-3); }
+.cp-pay__facts dd { margin: 0; text-align: right; font-weight: 600; overflow-wrap: anywhere; }
+.cp-pay__invoice .cp-pay__facts { background: var(--cp-surface); }
+.cp-pay__lines summary { display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px; font-weight: 600; color: var(--cp-ink-2); }
+.cp-pay__lines ul { margin: 10px 0 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+.cp-pay__lines li { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; }
+.cp-pay__foot { display: flex; align-items: center; justify-content: center; gap: 6px; color: var(--cp-ink-3); font-size: 12px; text-align: center; }
+.cp-pay__foot .ta-icon { flex: none; color: var(--cp-green-700); }
+@media (max-width: 560px) {
+    .cp-pay { padding: 12px 10px 28px; }
+    .cp-pay__card { padding: 18px 16px; border-radius: 16px; }
+    .cp-pay__logo { width: 64px; height: 64px; }
+    .cp-pay__bridge { height: 64px; }
+    .cp-pay__invoice-row { grid-template-columns: 1fr; }
+    .cp-pay__save { margin-top: 0; justify-self: end; }
+}
+@media (prefers-reduced-motion: reduce) { .cp-pay__wire { animation: none; } }

@@ -26,4 +26,36 @@
         </div>
         <div class="cp-card__foot"><a class="cp-btn cp-btn--ghost cp-btn--block" asp-controller="Account" asp-action="SelectCustomer">@UiIcon.Render("switch-horizontal")<span>Đổi doanh nghiệp</span></a></div>
     </section>
+    <section class="cp-card" aria-labelledby="companyLogo" data-cp-company-logo>
+        <div class="cp-card__head"><span class="cp-blob cp-blob--blue">@UiIcon.Render("photo")</span><h2 id="companyLogo">Logo doanh nghiệp</h2></div>
+        <div class="cp-card__body">
+            @if (ViewData["LogoUnavailable"] is true)
+            {
+                <p class="cp-muted">Chức năng logo đang được T.A cập nhật, vui lòng quay lại sau.</p>
+            }
+            else
+            {
+                var version = ViewData["LogoVersion"] as string;
+                var canManage = TACustomerPortal.Web.Controllers.CustomerAreaController.CanManage(Model);
+                <form class="cp-logo-picker" method="post" asp-action="Logo" enctype="multipart/form-data" data-cp-logo-picker data-ta-hard>
+                    <span class="cp-logo-frame">
+                        <img src="@(version is null ? null : Url.Action("CompanyLogo") + "?v=" + version)" alt="Logo @Model.Name" hidden="@(version is null)" data-cp-logo-preview />
+                        <span data-cp-logo-empty hidden="@(version is not null)">@UiIcon.Render("photo")</span>
+                    </span>
+                    <div class="cp-logo-picker__body">
+                        <p class="cp-hint" style="margin:0">Hiển thị trên trang thanh toán QR gửi cho khách hàng. Ảnh PNG, JPG hoặc WEBP, tối đa 1 MB, nên dùng ảnh vuông.</p>
+                        @if (canManage)
+                        {
+                            <input type="file" name="logo" accept="@LogoUpload.Accept" aria-label="Chọn ảnh logo" data-cp-logo-input />
+                            <div class="cp-logo-picker__actions">
+                                <button class="cp-btn cp-btn--primary cp-btn--sm" type="submit">@UiIcon.Render("upload")<span>Lưu logo</span></button>
+                                @if (version is not null) {<button class="cp-btn cp-btn--danger cp-btn--sm" type="submit" name="remove" value="true" onclick="return confirm('Xóa logo doanh nghiệp?')">@UiIcon.Render("trash")<span>Xóa logo</span></button>}
+                            </div>
+                        }
+                        else {<p class="cp-muted" style="margin:0">Chủ sở hữu hoặc quản trị viên doanh nghiệp có thể thay logo.</p>}
+                    </div>
+                </form>
+            }
+        </div>
+    </section>
 </div>

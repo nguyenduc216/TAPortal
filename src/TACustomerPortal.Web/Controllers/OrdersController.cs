@@ -61,7 +61,7 @@ public sealed class OrdersController(ICurrentCustomerContext customer, IPaymentS
         return RedirectToAction(nameof(Details), new { id = created.Id });
     }
 
-    public async Task<IActionResult> Details(Guid id, [FromServices] IOrderInvoiceStore invoices)
+    public async Task<IActionResult> Details(Guid id, [FromServices] IOrderInvoiceStore invoices, [FromServices] IOrderPageStore pages)
     {
         if (await Current() is not { } m) return SelectCustomer();
         var order = await store.OrderAsync(m.CustomerId, id);
@@ -72,7 +72,11 @@ public sealed class OrdersController(ICurrentCustomerContext customer, IPaymentS
         var contact = order.ContactId is Guid c ? await store.ContactAsync(m.CustomerId, c) : null;
         var qr = order.QrPayload is not null && status is OrderStatus.Awaiting or OrderStatus.Partial ? QrImage.Svg(order.QrPayload) : null;
         var banks = (await store.BankAccountsAsync(m.CustomerId)).Where(x => x.IsActive && x.ReceiveAccount is not null).ToList();
-        return View(new OrderDetailsVm(m, CanManage(m), order, status, bank, contact, qr, now, banks, (await invoices.SettingsAsync(m.CustomerId)).IsReady));
+        // The public payment page (/pay/{token}) the customer's own customer scans; the token is created the first time.
+        var token = await pages.TokenAsync(m.CustomerId, order.Id);
+        var payUrl = token is null ? null : Url.Action("Index", "Pay", new { token }, Request.Scheme);
+        return View(new OrderDetailsVm(m, CanManage(m), order, status, bank, contact, qr, now, banks, (await invoices.SettingsAsync(m.CustomerId)).IsReady,
+            payUrl, await pages.InvoiceBuyerAsync(m.CustomerId, order.Id)));
     }
 
     /// <summary>Lightweight status for the details page to poll while the QR is open.</summary>

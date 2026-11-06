@@ -7,7 +7,7 @@ namespace TACustomerPortal.Web.Controllers;
 
 // The customer's own customers (payers and e-invoice buyers). Soft state only: contacts are deactivated, never deleted,
 // because orders keep pointing at them.
-public sealed class ContactsController(ICurrentCustomerContext customer, IPaymentStore store) : CustomerAreaController(customer)
+public sealed class ContactsController(ICurrentCustomerContext customer, IPaymentStore store, ILogoStore logos, TimeProvider clock) : CustomerAreaController(customer)
 {
     public async Task<IActionResult> Index()
     {
@@ -28,7 +28,9 @@ public sealed class ContactsController(ICurrentCustomerContext customer, IPaymen
         if (await Current() is not { } m) return SelectCustomer();
         if (!CanManage(m)) return Forbid();
         var c = await store.ContactAsync(m.CustomerId, id);
-        return c is null ? NotFound() : View(new ContactInput
+        if (c is null) return NotFound();
+        await LogoVersion(m, c.Id);
+        return View(new ContactInput
         {
             Id = c.Id, Code = c.Code, Name = c.Name, LegalName = c.LegalName, TaxCode = c.TaxCode, Phone = c.Phone, Email = c.Email, Address = c.Address, Note = c.Note,
             BuyerType = c.Type, BuyerGroup = c.BuyerGroup, IdentityNumber = c.IdentityNumber, Zalo = c.Zalo, BankName = c.BankName, BankAccountNumber = c.BankAccountNumber,
@@ -37,16 +39,27 @@ public sealed class ContactsController(ICurrentCustomerContext customer, IPaymen
     }
 
     [HttpPost]
-    public Task<IActionResult> Create(ContactInput input) { input.Id = Guid.Empty; return Save(input); }
+    public Task<IActionResult> Create(ContactInput input, IFormFile? logo) { input.Id = Guid.Empty; return Save(input, logo, false); }
 
     [HttpPost]
-    public Task<IActionResult> Edit(Guid id, ContactInput input) { input.Id = id; return Save(input); }
+    public Task<IActionResult> Edit(Guid id, ContactInput input, IFormFile? logo, bool removeLogo) { input.Id = id; return Save(input, logo, removeLogo); }
 
-    private async Task<IActionResult> Save(ContactInput input)
+    /// <summary>The customer's logo, shown on its orders' payment pages next to the company's.</summary>
+    [HttpGet]
+    public async Task<IActionResult> Logo(Guid id)
+    {
+        if (await Current() is not { } m) return SelectCustomer();
+        if (await store.ContactAsync(m.CustomerId, id) is null) return NotFound();
+        return await logos.LogoAsync(m.CustomerId, id) is { } image ? PayController.LogoFile(this, image) : NotFound();
+    }
+
+    private async Task<IActionResult> Save(ContactInput input, IFormFile? logo, bool removeLogo)
     {
         if (await Current() is not { } m) return SelectCustomer();
         if (!CanManage(m)) return Forbid();
         if (input.Id != Guid.Empty && await store.ContactAsync(m.CustomerId, input.Id) is null) return NotFound();
+        var (image, logoError) = await LogoUpload.ReadAsync(logo, clock.GetUtcNow().UtcDateTime, HttpContext.RequestAborted);
+        if (logoError is not null) ModelState.AddModelError("Logo", logoError);
         input.Code = input.Code?.Trim().ToUpperInvariant() ?? "";
         var creating = input.Id == Guid.Empty;
         if (creating && input.Code.Length == 0)
@@ -63,6 +76,13 @@ public sealed class ContactsController(ICurrentCustomerContext customer, IPaymen
                 Blank(input.BankAccountName)?.ToUpperInvariant());
             if (await store.SaveContactAsync(m.CustomerId, contact, Actor))
             {
+                // A new contact's id is found by its code (unique per company).
+                var savedId = input.Id != Guid.Empty ? input.Id : (await store.ContactsAsync(m.CustomerId)).FirstOrDefault(c => c.Code == contact.Code)?.Id;
+                if (savedId is Guid logoOwner)
+                {
+                    if (image is not null) await logos.SaveLogoAsync(m.CustomerId, logoOwner, image, Actor);
+                    else if (removeLogo) await logos.RemoveLogoAsync(m.CustomerId, logoOwner);
+                }
                 Flash(input.Id == Guid.Empty ? $"Đã thêm khách hàng {contact.Name}." : $"Đã cập nhật khách hàng {contact.Name}.");
                 return RedirectToAction(nameof(Index));
             }
@@ -76,8 +96,12 @@ public sealed class ContactsController(ICurrentCustomerContext customer, IPaymen
             ModelState.AddModelError(nameof(input.Code), creating ? $"Mã khách hàng đã được dùng ({taken}). Đã đề xuất mã mới {input.Code}, bấm Lưu để dùng mã này." : "Mã khách hàng đã được dùng.");
         }
         Response.StatusCode = StatusCodes.Status400BadRequest;
+        if (input.Id != Guid.Empty) await LogoVersion(m, input.Id);
         return View("Edit", input);
     }
+
+    private async Task LogoVersion(CustomerMembership m, Guid contactId) =>
+        ViewData["LogoVersion"] = await logos.LogoVersionAsync(m.CustomerId, contactId) is { } at ? LogoImage.Version(at) : null;
 
     /// <summary>
     /// Rules per buyer type (operator 2026-11-06): a business gives a tax code and its registered name; a household or an

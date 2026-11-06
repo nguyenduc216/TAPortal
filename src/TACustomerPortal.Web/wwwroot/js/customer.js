@@ -208,3 +208,65 @@ document.addEventListener("change", event => {
 });
 document.addEventListener("ta:load", initBuyerForms);
 if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", initBuyerForms); else initBuyerForms();
+
+// Public payment page (/pay/{token}): countdown to the QR expiry. The server's clock is the reference (data-cp-countdown-now),
+// so a wrong device clock does not shorten it; at zero the page reloads and the server shows the expired state.
+const startCountdowns = () => document.querySelectorAll("[data-cp-countdown]").forEach(box => {
+    if (box.dataset.cpTicking) return;
+    box.dataset.cpTicking = "1";
+    const end = Date.parse(box.dataset.cpCountdown);
+    const skew = Date.now() - Date.parse(box.dataset.cpCountdownNow || new Date().toISOString());
+    const out = box.querySelector("[data-cp-countdown-value]");
+    const two = n => String(n).padStart(2, "0");
+    const tick = () => {
+        const left = Math.max(0, Math.floor((end - (Date.now() - skew)) / 1000));
+        const days = Math.floor(left / 86400), h = Math.floor(left % 86400 / 3600), m = Math.floor(left % 3600 / 60), s = left % 60;
+        out.textContent = (days ? days + " ngày " : "") + two(h) + ":" + two(m) + ":" + two(s);
+        box.classList.toggle("is-ending", left > 0 && left < 300);
+        if (left > 0) return;
+        clearInterval(timer);
+        box.classList.add("is-over");
+        out.textContent = "Đã hết hạn";
+        setTimeout(() => location.reload(), 2500);
+    };
+    const timer = setInterval(tick, 1000);
+    tick();
+});
+// Forms whose small save button only appears once a field differs from what is stored (data-cp-saved).
+const syncDirty = form => {
+    const dirty = [...form.querySelectorAll("[data-cp-saved]")].some(i => i.value.trim() !== (i.dataset.cpSaved || ""));
+    // After a refused save (validation messages shown) the button stays, so the corrected values can be sent again.
+    const invalid = !!form.querySelector(".field-validation-error, .validation-summary-errors");
+    form.querySelectorAll("[data-cp-dirty-save]").forEach(b => { b.hidden = !dirty && !invalid; });
+};
+const initDirtyForms = () => document.querySelectorAll("form[data-cp-dirty-form]").forEach(syncDirty);
+document.addEventListener("input", event => { const form = event.target.closest?.("form[data-cp-dirty-form]"); if (form) syncDirty(form); });
+// The tax code lookup fills the name without an input event: re-check once it answered.
+document.addEventListener("click", event => {
+    const form = event.target.closest("form[data-cp-dirty-form]");
+    if (form && event.target.closest("[data-cp-tax-lookup]")) setTimeout(() => syncDirty(form), 1500);
+});
+document.addEventListener("change", event => { const form = event.target.closest?.("form[data-cp-dirty-form]"); if (form) setTimeout(() => syncDirty(form), 1500); });
+// Order details: copy the payment page link.
+document.addEventListener("click", event => {
+    const button = event.target.closest("[data-cp-copy]");
+    const source = button?.closest("[data-cp-paylink]")?.querySelector("[data-cp-copy-source]");
+    if (!source) return;
+    const done = () => { const text = button.querySelector("span"); if (text) { text.textContent = "Đã sao chép"; setTimeout(() => { text.textContent = "Sao chép"; }, 2000); } };
+    if (navigator.clipboard) navigator.clipboard.writeText(source.value).then(done, () => { source.select(); });
+    else { source.select(); document.execCommand?.("copy"); done(); }
+});
+// Logo pickers: preview the chosen file before saving.
+document.addEventListener("change", event => {
+    if (!event.target.matches?.("input[type=file][data-cp-logo-input]")) return;
+    const file = event.target.files?.[0];
+    const box = event.target.closest("[data-cp-logo-picker]");
+    const img = box?.querySelector("[data-cp-logo-preview]");
+    if (!file || !img) return;
+    img.src = URL.createObjectURL(file);
+    img.hidden = false;
+    box.querySelector("[data-cp-logo-empty]")?.setAttribute("hidden", "");
+});
+const initPayPage = () => { startCountdowns(); initDirtyForms(); };
+document.addEventListener("ta:load", initPayPage);
+if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", initPayPage); else initPayPage();

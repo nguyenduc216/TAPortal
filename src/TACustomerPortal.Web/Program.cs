@@ -23,6 +23,9 @@ builder.Services.AddScoped<ICurrentCustomerContext, CurrentCustomerContext>();
 builder.Services.AddScoped<CustomerCookieEvents>();
 builder.Services.AddScoped<IPaymentStore, SqlPaymentStore>();
 builder.Services.AddScoped<OrderPayments>();
+builder.Services.AddScoped<SqlOrderPageStore>();
+builder.Services.AddScoped<ILogoStore>(s => s.GetRequiredService<SqlOrderPageStore>());
+builder.Services.AddScoped<IOrderPageStore>(s => s.GetRequiredService<SqlOrderPageStore>());
 builder.Services.AddScoped<TAPortal.Integrations.Tingee.IOrderInvoiceStore, TAPortal.Integrations.Tingee.SqlOrderInvoiceStore>();
 builder.Services.AddScoped<TAPortal.Integrations.Tingee.OrderInvoicer>();
 builder.Services.AddScoped<TAPortal.Integrations.Tingee.IPaymentTransactionStore, TAPortal.Integrations.Tingee.SqlPaymentTransactionStore>();
@@ -63,6 +66,8 @@ builder.Services.AddRateLimiter(o =>
         await context.HttpContext.Response.WriteAsync("Quá nhiều yêu cầu đăng nhập từ địa chỉ này. Vui lòng đợi 1 phút rồi thử lại.", token);
     };
     o.AddPolicy("lookup", context => RateLimitPartition.GetFixedWindowLimiter(context.Connection.RemoteIpAddress?.ToString() ?? "unknown", _ => new FixedWindowRateLimiterOptions { PermitLimit = 20, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
+    // Public order payment pages (/pay/{token}): page, logos and the status poll.
+    o.AddPolicy("pay", context => RateLimitPartition.GetFixedWindowLimiter(context.Connection.RemoteIpAddress?.ToString() ?? "unknown", _ => new FixedWindowRateLimiterOptions { PermitLimit = 120, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
     o.AddPolicy("login", context => RateLimitPartition.GetFixedWindowLimiter(context.Connection.RemoteIpAddress?.ToString() ?? "unknown", _ => new FixedWindowRateLimiterOptions { PermitLimit = 10, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
 });
 // Read configuration when options are resolved, including host-supplied configuration.

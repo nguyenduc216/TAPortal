@@ -31,6 +31,11 @@
                     <div data-cp-invoice="@o.InvoiceStatus"><dt>@UiIcon.Render("file-text")Hóa đơn điện tử</dt><dd>@(o.AutoIssueInvoice ? "Tự động xuất khi thanh toán đủ" : "Không tự động") <span class="cp-badge @invoiceCss">@invoiceLabel</span>
                         @if (o.InvoiceNumber is string number) {<div>Số hóa đơn <span class="cp-code">@number</span> · @PaymentText.VietnamTime(o.InvoiceIssuedAt)</div>}
                         @if (o.InvoiceEmailedAt is not null) {<div class="cp-muted">Đã gửi email cho người mua.</div>}</dd></div>
+                    @if (Model.InvoiceBuyer is { IsSet: true } payer)
+                    {
+                        <div data-cp-invoice-buyer><dt>@UiIcon.Render("receipt-tax")Thông tin xuất hóa đơn</dt><dd>@(payer.Name ?? "—")@if (payer.TaxCode is string tax) {<span> · MST <span class="cp-code">@tax</span></span>}
+                            <div class="cp-muted">Người mua cập nhật qua trang thanh toán · @PaymentText.VietnamTime(payer.UpdatedAt)</div></dd></div>
+                    }
                     <div><dt>@UiIcon.Render("qrcode")Loại QR</dt><dd>@(o.QrType == TingeeQrTypes.Recurring ? "QR động (trả nhiều lần đến khi đủ)" : o.QrType == TingeeQrTypes.Static ? $"QR tĩnh (nội dung: {OrderMath.TransferContent(o.OrderNo)})" : "—")</dd></div>
                 </dl>
                 <div class="cp-progress" style="margin-top:14px" role="progressbar" aria-valuenow="@percent" aria-valuemin="0" aria-valuemax="100" aria-label="Tỷ lệ đã thanh toán"><span style="width:@(percent)%"></span></div>
@@ -80,6 +85,17 @@
         else
         {
             <div class="cp-qr cp-muted">@UiIcon.Render("qrcode")<p>@(Model.Status switch { OrderStatus.Paid => "Đơn đã được thanh toán đủ.", OrderStatus.Cancelled => "Đơn đã hủy.", OrderStatus.Expired => "Mã QR đã hết hạn.", OrderStatus.ExpiredPaid => "Mã QR đã hết hạn và có giao dịch cần đối soát.", OrderStatus.CancelledPaid => "Đơn đã hủy và có giao dịch cần đối soát.", _ => "Đơn chưa có mã QR." })</p></div>
+        }
+        @if (Model.PayUrl is string payUrl)
+        {
+            <div class="cp-card__foot cp-paylink" data-cp-paylink>
+                <div class="cp-paylink__text"><strong>Link QR cho khách hàng</strong><span class="cp-muted">Gửi link để khách quét QR, xem đơn và cập nhật thông tin xuất hóa đơn.</span></div>
+                <div class="cp-paylink__row">
+                    <div class="cp-input-wrap">@UiIcon.Render("link")<input class="cp-input" value="@payUrl" readonly aria-label="Link trang thanh toán" data-cp-copy-source /></div>
+                    <button class="cp-btn cp-btn--ghost" type="button" data-cp-copy title="Sao chép link">@UiIcon.Render("copy")<span>Sao chép</span></button>
+                    <a class="cp-btn cp-btn--primary" href="@payUrl" target="_blank" rel="noopener" data-ta-hard>@UiIcon.Render("external-link")<span>Xem link QR</span></a>
+                </div>
+            </div>
         }
     </section>
 </div>
