@@ -4,7 +4,7 @@
 - Change ID: `CUSTOMER-PORTAL-FOUNDATION-CHG-20261106T073457Z-C2D04D`
 - Created UTC: 2026-11-06T07:34:57.923292+00:00
 - Tiêu đề: Trang QR: dau tich xanh khi da thanh toan, chi tiet hang hoa duoi tieu de
-- Trạng thái: IMPLEMENTED
+- Trạng thái: DEPLOYED
 
 ## Yêu cầu và phạm vi
 Operator (2026-11-06), trang /pay: (1) khi đơn đã thanh toán đủ, icon giữa đổi thành icon thành công màu xanh lá; (2) phần "Chi tiết hàng hóa, dịch vụ" đưa lên ngay dưới tiêu đề đơn hàng.
@@ -30,7 +30,7 @@ Ghi chú vận hành: đơn DH261106-0001 đã nhận webhook thanh toán lúc 2
 
 ## Git
 - Branch: feature/customer-portal-mvp01
-- Commit SHA: xem report
+- Commit SHA: c7b4115
 - PR:
 - Merge: xem report
 - Merge SHA:
