@@ -1,0 +1,12 @@
+[
+  {
+    "change_id": "CONTRACTS-AND-TASKS-CHG-20261107T062339Z-50D5E9",
+    "created_at": "2026-11-07T06:23:39.023750+00:00",
+    "title": "Hop dong theo khach hang, giao viec, viec cua toi, viec lap, bao cao tien do",
+    "status": "IMPLEMENTED",
+    "commit_sha": null,
+    "migration_status": "NOT_EXECUTED",
+    "publish_status": "NOT_PUBLISHED",
+    "merge_status": "PENDING_APPROVAL"
+  }
+]
