@@ -129,12 +129,13 @@ public static class WorkTaskSql
     public const string ActorEmployee = "SELECT TOP 1 Id,FullName FROM dbo.Employees WHERE UserId=@actor AND IsDeleted=0 ORDER BY CreatedAt;";
 
     // @all=1 for supervisors; otherwise the owner, a co-worker or the creator. @emp NULL (no linked employee) matches nothing.
-    public const string Visible = """
+    public const string Visible = "\n" + """
 (@all=1 OR t.CreatedBy=@actor OR t.OwnerEmployeeId=@emp
  OR EXISTS(SELECT 1 FROM dbo.WorkTaskMembers vm WHERE vm.TaskId=t.Id AND vm.EmployeeId=@emp AND vm.IsActive=1))
 """;
 
-    public const string RowColumns = """
+    // Raw string literals drop their last line break, so every piece below starts with a line break of its own.
+    public const string RowColumns = "\n" + """
 t.Id,t.TaskNo,t.Title,t.Status,t.Priority,t.StartDate,t.DueDate,t.OwnerEmployeeId,o.FullName,c.Name,t.Progress,t.LastActivityAt,t.CreatedBy,
 (SELECT COUNT(1) FROM dbo.WorkTaskChecklistItems i WHERE i.TaskId=t.Id AND i.IsDeleted=0),
 (SELECT COUNT(1) FROM dbo.WorkTaskChecklistItems i WHERE i.TaskId=t.Id AND i.IsDeleted=0 AND i.IsDone=1),
@@ -142,43 +143,37 @@ CASE WHEN EXISTS(SELECT 1 FROM dbo.WorkTaskMembers m WHERE m.TaskId=t.Id AND m.E
 (SELECT COUNT(1) FROM dbo.WorkTaskMembers m WHERE m.TaskId=t.Id AND m.IsActive=1),
 t.CompletedAt,t.CreatedAt,t.TemplateId
 FROM dbo.WorkTasks t JOIN dbo.Employees o ON o.Id=t.OwnerEmployeeId LEFT JOIN dbo.Customers c ON c.Id=t.CustomerId
-""";
+""" + "\n";
 
     // "Việc của tôi": open tasks the actor works on (owner or co-worker), with their checklist and latest three comments.
-    public const string MyOpen = """
-DECLARE @ids TABLE(Id uniqueidentifier PRIMARY KEY);
-INSERT @ids(Id) SELECT t.Id FROM dbo.WorkTasks t
-WHERE t.IsDeleted=0 AND t.Status IN ('NEW','IN_PROGRESS') AND @emp IS NOT NULL AND (t.OwnerEmployeeId=@emp
- OR EXISTS(SELECT 1 FROM dbo.WorkTaskMembers m WHERE m.TaskId=t.Id AND m.EmployeeId=@emp AND m.IsActive=1));
-SELECT
-""" + RowColumns + """
- WHERE t.Id IN (SELECT Id FROM @ids);
-""" + CardChildren;
+    // Read-only (no table variable), so the text also runs through deploy/windows/Invoke-TAReadQuery.ps1 for checks.
+    private const string MyOpenIds = """
+SELECT t.Id FROM dbo.WorkTasks t WHERE t.IsDeleted=0 AND t.Status IN ('NEW','IN_PROGRESS') AND @emp IS NOT NULL AND (t.OwnerEmployeeId=@emp
+ OR EXISTS(SELECT 1 FROM dbo.WorkTaskMembers m WHERE m.TaskId=t.Id AND m.EmployeeId=@emp AND m.IsActive=1))
+""";
 
-    public const string Card = """
-DECLARE @ids TABLE(Id uniqueidentifier PRIMARY KEY);
-INSERT @ids(Id) SELECT t.Id FROM dbo.WorkTasks t WHERE t.Id=@id AND t.IsDeleted=0 AND
-""" + Visible + """
-;
-SELECT
-""" + RowColumns + """
- WHERE t.Id IN (SELECT Id FROM @ids);
-""" + CardChildren;
+    private const string CardIds = "SELECT t.Id FROM dbo.WorkTasks t WHERE t.Id=@id AND t.IsDeleted=0 AND " + Visible;
 
-    private const string CardChildren = """
+    public const string MyOpen = "SELECT" + RowColumns + "WHERE t.Id IN (" + MyOpenIds + ");\n" + ChecklistOf + MyOpenIds + ")\n ORDER BY i.SortOrder,i.CreatedAt;\n" + CommentsOf + MyOpenIds + CommentsTail;
+
+    public const string Card = "SELECT" + RowColumns + "WHERE t.Id IN (" + CardIds + ");\n" + ChecklistOf + CardIds + ")\n ORDER BY i.SortOrder,i.CreatedAt;\n" + CommentsOf + CardIds + CommentsTail;
+
+    private const string ChecklistOf = """
 SELECT i.TaskId,i.Id,i.Title,i.IsDone,i.DoneAt,du.DisplayName FROM dbo.WorkTaskChecklistItems i LEFT JOIN dbo.Users du ON du.Id=i.DoneBy
-WHERE i.TaskId IN (SELECT Id FROM @ids) AND i.IsDeleted=0 ORDER BY i.SortOrder,i.CreatedAt;
+WHERE i.IsDeleted=0 AND i.TaskId IN (
+""";
+    private const string CommentsOf = """
 SELECT x.TaskId,x.Id,x.Kind,x.Body,x.StatusFrom,x.StatusTo,x.CreatedAt,x.DisplayName FROM (
  SELECT a.TaskId,a.Id,a.Kind,a.Body,a.StatusFrom,a.StatusTo,a.CreatedAt,u.DisplayName,ROW_NUMBER() OVER (PARTITION BY a.TaskId ORDER BY a.CreatedAt DESC) AS rn
- FROM dbo.WorkTaskActivities a LEFT JOIN dbo.Users u ON u.Id=a.CreatedBy WHERE a.TaskId IN (SELECT Id FROM @ids) AND a.Kind='COMMENT'
+ FROM dbo.WorkTaskActivities a LEFT JOIN dbo.Users u ON u.Id=a.CreatedBy WHERE a.Kind='COMMENT' AND a.TaskId IN (
+""";
+    private const string CommentsTail = """
+)
 ) x WHERE x.rn<=3 ORDER BY x.CreatedAt;
 """;
 
-    public const string List = """
-SELECT TOP 500
-""" + RowColumns + """
- WHERE t.IsDeleted=0 AND
-""" + Visible + """
+    public const string List = "SELECT TOP 500" + RowColumns + "WHERE t.IsDeleted=0 AND " + Visible + """
+
  AND (@scope<>'mine' OR t.OwnerEmployeeId=@emp OR EXISTS(SELECT 1 FROM dbo.WorkTaskMembers sm WHERE sm.TaskId=t.Id AND sm.EmployeeId=@emp AND sm.IsActive=1))
  AND (@scope<>'created' OR t.CreatedBy=@actor)
  AND (@status IS NULL OR t.Status=@status OR (@status='open' AND t.Status IN ('NEW','IN_PROGRESS'))
@@ -189,11 +184,7 @@ SELECT TOP 500
 ORDER BY CASE WHEN t.Status IN ('NEW','IN_PROGRESS') THEN 0 ELSE 1 END, CASE WHEN t.DueDate IS NULL THEN 1 ELSE 0 END, t.DueDate, t.LastActivityAt DESC;
 """;
 
-    public const string Detail = """
-SELECT
-""" + RowColumns + """
- WHERE t.Id=@id AND t.IsDeleted=0 AND
-""" + Visible + """
+    public const string Detail = "SELECT" + RowColumns + "WHERE t.Id=@id AND t.IsDeleted=0 AND " + Visible + """
 ;
 SELECT t.Description,t.CustomerId,t.ContractId,k.ContractNo,k.Title,cu.DisplayName,tp.Title,t.RowVersion FROM dbo.WorkTasks t
 LEFT JOIN dbo.CustomerContracts k ON k.Id=t.ContractId LEFT JOIN dbo.Users cu ON cu.Id=t.CreatedBy LEFT JOIN dbo.WorkTaskTemplates tp ON tp.Id=t.TemplateId

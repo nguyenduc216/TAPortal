@@ -151,6 +151,14 @@ public sealed class SafeAdminWorkTests
         Assert.DoesNotContain("STRING_AGG", all);
         Assert.DoesNotContain("DELETE FROM", all);                                                              // soft delete only
         Assert.DoesNotMatch(@"\bOFFSET\b|\bFETCH\b|CREATE OR ALTER|DROP\s", all);
+        // Pieces joined from raw string literals (which drop their last line break) must never glue two tokens together:
+        // production 2026-11-07 failed with "Incorrect syntax near 'SELECTt'".
+        foreach (var sql in new[] { S.WorkTaskSql.MyOpen, S.WorkTaskSql.Card, S.WorkTaskSql.List, S.WorkTaskSql.Detail })
+        {
+            Assert.DoesNotMatch(@"SELECT(\s+TOP\s+\d+)?t\.", sql);
+            Assert.DoesNotMatch(@"[A-Za-z0-9_)]WHERE\b|\bAND\(", sql);
+            Assert.Matches(@"SELECT(\s+TOP\s+\d+)?\nt\.Id,t\.TaskNo", sql.Replace("\r", ""));
+        }
     }
 
     [Fact]

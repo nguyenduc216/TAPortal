@@ -105,7 +105,8 @@ public sealed class SqlDashboardStore(IConfiguration configuration, TimeProvider
                 var list = new List<AuditEntry>();
                 await using var cmd = new SqlCommand(DashboardSql.RecentAudit, cn);
                 await using var r = await cmd.ExecuteReaderAsync();
-                while (await r.ReadAsync()) list.Add(new(r.GetDateTime(0), r.GetString(1), r.IsDBNull(2) ? null : r.GetString(2)));
+                // Older rows (HR core bootstrap) have no Action: shown as an unnamed change instead of failing the dashboard.
+                while (await r.ReadAsync()) list.Add(new(r.GetDateTime(0), r.IsDBNull(1) ? "" : r.GetString(1), r.IsDBNull(2) ? null : r.GetString(2)));
                 recent = list;
             }
             catch (SqlException ex)
