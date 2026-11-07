@@ -48,4 +48,4 @@ CHECKPOINT_4A: PASS (existing artifact integrity, isolated localhost startup and
 | `CUSTOMER-PORTAL-FOUNDATION-CHG-20261106T073457Z-C2D04D` | 2026-11-06 | Trang QR: dau tich xanh khi da thanh toan, chi tiet hang hoa duoi tieu de | c7b4115 | NOT_APPLICABLE | DEPLOYED | MERGED |
 | `CUSTOMER-PORTAL-FOUNDATION-CHG-20261106T074510Z-F0495F` | 2026-11-06 | Danh sach don hang: cot trang thai hoa don dien tu | 1329373 | NOT_APPLICABLE | DEPLOYED | MERGED |
 | `CUSTOMER-PORTAL-FOUNDATION-CHG-20261106T145102Z-9F4A81` | 2026-11-06 | Customer Portal logo: clean vector redraw, favicon and link-preview image | 0037f2a | NOT_APPLICABLE | DEPLOYED | MERGED |
-| `CUSTOMER-PORTAL-FOUNDATION-CHG-20261106T235029Z-86E87C` | 2026-11-06 | E-invoice: create a draft (status DRAFT) when MISA cannot sign, instead of failing | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |
+| `CUSTOMER-PORTAL-FOUNDATION-CHG-20261106T235029Z-86E87C` | 2026-11-06 | E-invoice: create a draft (status DRAFT) when MISA cannot sign, instead of failing | 4c6618d | EXECUTED | DEPLOYED | MERGED |

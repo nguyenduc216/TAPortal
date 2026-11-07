@@ -4,7 +4,7 @@
 - Change ID: `CUSTOMER-PORTAL-FOUNDATION-CHG-20261106T235029Z-86E87C`
 - Created UTC: 2026-11-06T23:50:29.958496+00:00
 - Tiêu đề: E-invoice: create a draft (status DRAFT) when MISA cannot sign, instead of failing
-- Trạng thái: IMPLEMENTED
+- Trạng thái: DEPLOYED
 
 ## Yêu cầu và phạm vi
 Operator (2026-11-07): với khách hàng dùng MISA trên Customer Portal, nếu chưa ký được hóa đơn vì thiếu thông tin chữ ký số thì không báo lỗi mà tự động tạo hóa đơn nháp, trạng thái "Đã xuất nháp".
@@ -26,7 +26,7 @@ Sửa:
 ## Migration SQL (KHÔNG tự chạy)
 - Database: TAPortalSys
 - `026-order-invoice-draft.sql`: CK_CO_InvoiceStatus thêm 'DRAFT' (chỉ nới CHECK, không đổi dòng nào). Verify 041, rollback 042 (từ chối nếu đã có đơn DRAFT).
-- Execution: xem report
+- Execution: EXECUTED 2026-11-06T23:53:11Z
 
 ## Test và kết quả
 - Release build 0 lỗi; Safe tests 485/485 (mới: WhenSigningFailsADraftIsCreatedInsteadOfAnError, ADraftCanBeIssuedAgainByHandOnceSigningWorks, OnlySigningFailuresBecomeDraftsAndAFailedDraftIsReported, ADraftOrderShowsItsStatusWithoutAnError).
@@ -36,9 +36,9 @@ Sửa:
 
 ## Git
 - Branch: feature/customer-portal-mvp01
-- Commit SHA: xem report
+- Commit SHA: 4c6618d
 - PR:
-- Merge: xem report
+- Merge: fast-forward main
 - Merge SHA:
 
 ## Rủi ro, quyết định và việc còn lại
