@@ -54,6 +54,8 @@
             </div>
         }
     </section>
+    @if (AdminPermissions.Has(User, AdminPermissions.PurchasesManage))
+    {
     <form class="card" method="post" asp-action="CreateServicePurchase" asp-route-id="@ws.Id" style="align-self:start" data-sp-admin-buy>
         <div class="card-header"><h2 class="card-title">@UiIcon.Render("plus")Tạo giao dịch mua gói</h2></div>
         <div class="card-body">
@@ -72,4 +74,5 @@
         </div>
         @if (Model.Packages.Count > 0 && ws.Operational) {<div class="card-footer d-flex justify-content-end"><button class="btn btn-primary" type="submit">@UiIcon.Render("plus")<span>Tạo giao dịch</span></button></div>}
     </form>
+    }
 </div>

@@ -5,7 +5,7 @@ namespace TAPortal.Web.Controllers;
 
 // The standalone "Tài khoản Customer Portal" page was retired: memberships are managed in each customer's workspace and
 // listed in Customers → "Tài khoản Portal". Old links and bookmarks are redirected without losing customer context.
-[Authorize(Policy = "SystemAdminOnly")]
+[Authorize(Policy = AdminPermissions.Policy.CustomerPortalManage)]
 public sealed class CustomerPortalAccountsController : Controller
 {
     [HttpGet]

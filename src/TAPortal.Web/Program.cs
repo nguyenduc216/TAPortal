@@ -43,6 +43,7 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
             if (!string.IsNullOrWhiteSpace(user.Email)) claims.Add(new(System.Security.Claims.ClaimTypes.Email, user.Email));
             claims.AddRange(user.Roles.Select(r => new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.Role, r)));
             claims.AddRange(user.Permissions.Select(p => new System.Security.Claims.Claim("permission", p)));
+            claims.AddRange((user.RoleNames ?? []).Select(n => new System.Security.Claims.Claim("role_name", n)));
             context.ReplacePrincipal(new System.Security.Claims.ClaimsPrincipal(new System.Security.Claims.ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme)));
         }
     };
@@ -59,6 +60,7 @@ builder.Services.AddScoped<MembershipAdminStore>();
 builder.Services.AddScoped<ICustomerPortalAccounts, SqlCustomerPortalAccounts>();
 builder.Services.AddScoped<IUserRoleStore, SqlUserRoleStore>();
 builder.Services.AddScoped<IUserAccountStore, SqlUserAccountStore>();
+builder.Services.AddScoped<IRoleAdminStore, SqlRoleAdminStore>();
 builder.Services.AddScoped<ICustomerAdminStore, SqlCustomerAdminStore>();
 builder.Services.AddScoped<ICustomerProfileStore, SqlCustomerProfileStore>();
 builder.Services.AddScoped<ICustomerImportStore, SqlCustomerImportStore>();

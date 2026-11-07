@@ -7,7 +7,7 @@
     var vi = System.Globalization.CultureInfo.GetCultureInfo("vi-VN");
 }
 @section PageActions {
-    <a class="btn btn-ta-gold" asp-action="Create">@UiIcon.Render("plus")<span>Thêm khách hàng</span></a>
+    @if (AdminPermissions.Has(User, AdminPermissions.CustomersCreate)) {<a class="btn btn-ta-gold" asp-action="Create">@UiIcon.Render("plus")<span>Thêm khách hàng</span></a>}
 }
 <partial name="_CustomersTabs" model="@("list")" />
 <section class="card ta-table-card" aria-label="Danh sách khách hàng">
@@ -37,7 +37,7 @@
                         <td class="ta-col-actions">
                             <div class="ta-actions">
                                 <a class="btn btn-sm btn-soft-primary" asp-action="Details" asp-route-id="@x.Id" aria-label="Mở hồ sơ @x.Code">@UiIcon.Render("eye")<span>Hồ sơ</span></a>
-                                <a class="btn btn-sm" asp-action="Edit" asp-route-id="@x.Id" aria-label="Sửa @x.Code">@UiIcon.Render("pencil")<span>Sửa</span></a>
+                                @if (AdminPermissions.Has(User, AdminPermissions.CustomersUpdate)) {<a class="btn btn-sm" asp-action="Edit" asp-route-id="@x.Id" aria-label="Sửa @x.Code">@UiIcon.Render("pencil")<span>Sửa</span></a>}
                             </div>
                         </td>
                     </tr>

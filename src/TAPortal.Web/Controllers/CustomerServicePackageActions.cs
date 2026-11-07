@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 using TAPortal.Shared;
@@ -30,6 +31,7 @@ public sealed partial class CustomersController
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [Authorize(Policy = AdminPermissions.Policy.PurchasesManage)]
     public async Task<IActionResult> CreateServicePurchase(Guid id, Guid packageId, [FromServices] IServicePackageStore services)
     {
         var customer = await customers.GetAsync(id);

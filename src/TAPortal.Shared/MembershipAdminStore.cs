@@ -28,19 +28,15 @@ public sealed record MembershipAdminRow(Guid UserId, Guid CustomerId, string Dis
 public sealed class MembershipAdminStore(IConfiguration configuration)
 {
     private SqlConnection Connection() => new(configuration["Database:ConnectionString"]);
-    // MVP 01 deliberately has no delegated Agent scope. Never accept actor identity from request data.
+    // Admin portal permission that unlocks this store (SYS_ADMIN always qualifies). Never accept actor identity from request data.
+    public const string ManagePermission = "CUSTOMERS.PORTAL.MANAGE";
+
+    // Re-checked in SQL inside the same transaction: SYS_ADMIN, or an active role / direct grant of CUSTOMERS.PORTAL.MANAGE
+    // without a direct DENY (ActorPermissionSql). MVP 01 still has no per-customer delegated scope.
     private static async Task RequireSystemAdmin(SqlConnection cn, SqlTransaction? tx, Guid actor)
     {
-        await using var cmd = new SqlCommand("""
-SELECT COUNT(*) FROM dbo.Users u
-JOIN dbo.UserRoles ur ON ur.UserId=u.Id
-JOIN dbo.Roles r ON r.Id=ur.RoleId
-WHERE u.Id=@actor AND u.IsActive=1 AND u.IsDeleted=0 AND u.Status='ACTIVE'
-AND r.Code='SYS_ADMIN' AND r.IsActive=1 AND r.IsDeleted=0;
-""", cn, tx);
-        cmd.Parameters.AddWithValue("@actor", actor);
-        if (Convert.ToInt32(await cmd.ExecuteScalarAsync()) == 0)
-            throw new UnauthorizedAccessException("Only active SYS_ADMIN users can manage customer portal accounts.");
+        if (!await ActorPermissionSql.HasPermissionAsync(cn, tx, actor, ManagePermission))
+            throw new UnauthorizedAccessException("Only active SYS_ADMIN users or users granted CUSTOMERS.PORTAL.MANAGE can manage customer portal accounts.");
     }
 
     public async Task<List<MembershipAdminRow>> List(Guid actor, Guid? customerId)

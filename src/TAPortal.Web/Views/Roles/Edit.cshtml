@@ -1,0 +1,109 @@
+@model RoleEditVm
+@{
+    var role = Model.Role;
+    ViewData["Title"] = Model.IsCreate ? "Thêm vai trò" : Model.ReadOnly ? "Xem vai trò" : "Phân quyền vai trò";
+    ViewData["Heading"] = Model.IsCreate ? "Thêm vai trò" : "Vai trò: " + role!.Name;
+    ViewData["Subtitle"] = Model.IsSystemAdmin ? "Quản trị hệ thống luôn có toàn quyền; vai trò này chỉ để xem."
+        : Model.ReadOnly ? "Bạn chỉ có quyền xem vai trò." : "Đánh dấu các chức năng mà người dùng có vai trò này được phép sử dụng.";
+    ViewData["PageIcon"] = "shield-lock";
+    ViewData["ParentTitle"] = "Vai trò & phân quyền";
+    ViewData["ParentController"] = "Roles";
+    var ro = Model.ReadOnly;
+    var canDelete = !Model.IsCreate && !ro && role!.UserCount == 0;
+}
+<form asp-action="@(Model.IsCreate ? "Create" : "Edit")" asp-route-id="@role?.Id" method="post" novalidate data-ta-role-form>
+    <input type="hidden" asp-for="Input.Stamp" />
+    <div class="row g-4">
+    <div class="col-xl-4">
+        <section class="card" aria-labelledby="roleInfoTitle">
+            <div class="card-header"><h2 class="card-title" id="roleInfoTitle">@UiIcon.Render("shield-check")Thông tin vai trò</h2>
+                @if (role is not null) {<span class="ta-badge ms-auto @(role.IsActive ? "ta-badge--success" : "ta-badge--neutral")">@(role.IsActive ? "Hoạt động" : "Ngừng")</span>}</div>
+            <div class="card-body">
+                <div asp-validation-summary="ModelOnly" class="ta-alert ta-alert--danger" role="alert"></div>
+                <div class="ta-form-grid ta-form-grid--1">
+                    <div>
+                        <label class="form-label @(Model.IsCreate ? "required" : "")" for="roleCode">Mã vai trò</label>
+                        @if (Model.IsCreate)
+                        {
+                            <div class="ta-input-icon">@UiIcon.Render("hash")<input id="roleCode" name="Input.Code" value="@Model.Input.Code" class="form-control" maxlength="30" required pattern="[A-Za-z0-9_]{2,30}" autocomplete="off" /></div>
+                            <div class="form-hint">Chữ in hoa không dấu, chữ số, dấu gạch dưới (2–30 ký tự), ví dụ KE_TOAN. Không đổi được sau khi tạo.</div>
+                        }
+                        else {<div class="ta-input-icon">@UiIcon.Render("hash")<input id="roleCode" class="form-control" value="@role!.Code" readonly disabled /></div>}
+                        <span asp-validation-for="Input.Code" class="invalid-feedback d-block"></span>
+                    </div>
+                    <div><label asp-for="Input.Name" class="form-label required">Tên vai trò</label><div class="ta-input-icon">@UiIcon.Render("id")<input asp-for="Input.Name" class="form-control" maxlength="200" required disabled="@ro" /></div><span asp-validation-for="Input.Name" class="invalid-feedback d-block"></span></div>
+                    <div><label asp-for="Input.Description" class="form-label">Mô tả</label><div class="ta-input-icon">@UiIcon.Render("file-text")<textarea asp-for="Input.Description" class="form-control" rows="3" maxlength="1000" disabled="@ro"></textarea></div><span asp-validation-for="Input.Description" class="invalid-feedback d-block"></span></div>
+                    <div>
+                        <label class="form-check form-switch"><input asp-for="Input.IsActive" class="form-check-input" type="checkbox" disabled="@ro" /><span class="form-check-label fw-semibold">Đang hoạt động</span></label>
+                        <div class="form-hint">Ngừng hoạt động sẽ thu hồi mọi quyền của vai trò ở request kế tiếp của người dùng (vai trò vẫn được gán).</div>
+                    </div>
+                </div>
+                @if (role is not null)
+                {
+                    <dl class="ta-dl mt-3"><dt>Người dùng đang có vai trò</dt><dd data-ta-role-users>@role.UserCount</dd></dl>
+                }
+            </div>
+            <div class="card-footer ta-form-actions">
+                <a asp-action="Index" class="btn">@UiIcon.Render("arrow-left")<span>Quay lại</span></a>
+                @if (!ro) {<button type="submit" class="btn btn-primary ms-auto" data-ta-loading data-ta-loading-text="Đang lưu...">@UiIcon.Render("device-floppy")<span>@(Model.IsCreate ? "Tạo vai trò" : "Lưu vai trò")</span></button>}
+            </div>
+        </section>
+        @if (!Model.IsCreate && !ro)
+        {
+            <section class="card mt-4" aria-labelledby="roleDeleteTitle">
+                <div class="card-header"><h2 class="card-title" id="roleDeleteTitle">@UiIcon.Render("trash")Xóa vai trò</h2></div>
+                <div class="card-body">
+                    @if (canDelete)
+                    {
+                        <p class="text-secondary mb-3">Xóa mềm: vai trò không còn hiển thị và không thể gán; lịch sử được giữ nguyên.</p>
+                        <button type="submit" form="roleDeleteForm" class="btn btn-outline-danger" data-ta-role-delete onclick="return confirm('Xóa vai trò này?')">@UiIcon.Render("trash")<span>Xóa vai trò</span></button>
+                    }
+                    else {<p class="text-secondary mb-0">Vai trò đang được gán cho @role!.UserCount người dùng: gỡ vai trò khỏi các tài khoản trước khi xóa.</p>}
+                </div>
+            </section>
+        }
+    </div>
+    <div class="col-xl-8">
+        <section class="card" aria-labelledby="rolePermTitle" data-ta-permission-matrix>
+            <div class="card-header"><h2 class="card-title" id="rolePermTitle">@UiIcon.Render("key")Chức năng được phép</h2></div>
+            <div class="card-body">
+                <span asp-validation-for="Input.Permissions" class="invalid-feedback d-block mb-2"></span>
+                @if (Model.IsSystemAdmin)
+                {
+                    <div class="ta-alert ta-alert--info mb-3" role="note">@UiIcon.Render("info-circle")<div class="ta-alert__body">Quản trị hệ thống (SYS_ADMIN) luôn có mọi quyền, kể cả các chức năng thêm sau này.</div></div>
+                }
+                @foreach (var module in AdminPermissions.Modules)
+                {
+                    var groupId = "perm-" + module.Key.ToLowerInvariant();
+                    <fieldset class="mb-4" data-ta-perm-module="@module.Key">
+                        <legend class="d-flex align-items-center gap-2 fs-5 fw-semibold">
+                            <span>@module.Name</span>
+                            @if (!ro)
+                            {
+                                <label class="form-check ms-auto mb-0 fs-6 fw-normal" for="@(groupId)-all"><input class="form-check-input" type="checkbox" id="@(groupId)-all" data-ta-perm-all
+                                    checked="@module.Permissions.All(p => Model.Granted(p.Code))"
+                                    onchange="this.closest('fieldset').querySelectorAll('input[name=&quot;Input.Permissions&quot;]:not(:disabled)').forEach(function(c){c.checked=this.checked;},this)" /><span class="form-check-label">Chọn tất cả</span></label>
+                            }
+                        </legend>
+                        <div class="ta-check-list">
+                        @foreach (var p in module.Permissions)
+                        {
+                            var available = Model.Available.Contains(p.Code);
+                            var id = "perm-" + p.Code.Replace('.', '-').ToLowerInvariant();
+                            <label class="ta-check-card" for="@id">
+                                <input class="form-check-input" type="checkbox" name="Input.Permissions" value="@p.Code" id="@id" checked="@Model.Granted(p.Code)" disabled="@(ro || !available)" />
+                                <span><span class="fw-semibold">@p.Name</span><span class="d-block form-hint mt-1"><span class="ta-code">@p.Code</span>@if (!available && !Model.IsSystemAdmin) {<span class="ms-2">chưa khởi tạo trong cơ sở dữ liệu (migration 028)</span>}</span></span>
+                            </label>
+                        }
+                        </div>
+                    </fieldset>
+                }
+            </div>
+        </section>
+    </div>
+    </div>
+</form>
+@if (canDelete)
+{
+    <form id="roleDeleteForm" asp-action="Delete" asp-route-id="@role!.Id" method="post"><input type="hidden" name="stamp" value="@role.Stamp" /></form>
+}

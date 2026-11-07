@@ -26,8 +26,10 @@ public sealed class AdminAuditOptions
 
 public sealed record UserAccountSnapshot(
     Guid Id, string Username, string DisplayName, string? Email, string? Phone, bool IsActive, string Status,
-    IReadOnlyList<string> RoleNames, IReadOnlySet<Guid> SystemAdminIds, int ActiveMembershipCount)
+    IReadOnlyList<string> RoleNames, IReadOnlySet<Guid> SystemAdminIds, int ActiveMembershipCount, bool HoldsSystemAdminRole = false)
 {
+    // Holds the SYS_ADMIN role assignment, whether or not the account is currently active.
+    public bool IsSystemAdminAccount => HoldsSystemAdminRole || SystemAdminIds.Contains(Id);
     public string Stamp => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(string.Join("\u001f", DisplayName, Email ?? "", Phone ?? "", IsActive ? "1" : "0", Status))));
     public bool LoginEligible => AccountStatusPolicy.IsLoginEligible(IsActive, Status, false);
 }
@@ -39,9 +41,14 @@ public sealed record AccountChangeResult(AccountChangeOutcome Outcome, bool Audi
 public static class AccountChangePolicy
 {
     // Shared by profile/active updates and soft delete. Status is never changed here (no approved meaning for other values).
-    public static AccountChangeOutcome Evaluate(UserAccountSnapshot target, Guid actorId, string? expectedStamp, bool remainsLoginEligible, bool isDeletion)
+    // actorHasPermission: the actor holds AUTH.USERS.UPDATE (edit) or AUTH.USERS.DELETE (deletion), re-read from the database.
+    public static AccountChangeOutcome Evaluate(UserAccountSnapshot target, Guid actorId, string? expectedStamp, bool remainsLoginEligible, bool isDeletion, bool actorHasPermission = false)
     {
-        if (!target.SystemAdminIds.Contains(actorId))
+        var actorIsSystemAdmin = target.SystemAdminIds.Contains(actorId);
+        if (!actorIsSystemAdmin && !actorHasPermission)
+            return AccountChangeOutcome.Forbidden;
+        // Only a SYS_ADMIN may edit, lock or delete an account that holds SYS_ADMIN.
+        if (!actorIsSystemAdmin && target.IsSystemAdminAccount)
             return AccountChangeOutcome.Forbidden;
         if (!string.Equals(expectedStamp, target.Stamp, StringComparison.Ordinal))
             return AccountChangeOutcome.Conflict;
@@ -66,7 +73,7 @@ public interface IUserAccountStore
 public static class UserAccountSql
 {
     public const string User = "SELECT Id,Username,DisplayName,Email,Phone,IsActive,Status FROM dbo.Users WITH (UPDLOCK, HOLDLOCK) WHERE Id=@u AND IsDeleted=0;";
-    public const string Roles = "SELECT r.Name FROM dbo.UserRoles ur JOIN dbo.Roles r ON r.Id=ur.RoleId WHERE ur.UserId=@u AND r.IsDeleted=0 ORDER BY r.Name;";
+    public const string Roles = "SELECT r.Name,r.Code FROM dbo.UserRoles ur JOIN dbo.Roles r ON r.Id=ur.RoleId WHERE ur.UserId=@u AND r.IsDeleted=0 ORDER BY r.Name;";
     public const string SystemAdmins = """
 SELECT DISTINCT u.Id FROM dbo.UserRoles ur WITH (UPDLOCK, HOLDLOCK)
 JOIN dbo.Roles r ON r.Id=ur.RoleId JOIN dbo.Users u WITH (UPDLOCK, HOLDLOCK) ON u.Id=ur.UserId
@@ -133,7 +140,8 @@ public sealed class SqlUserAccountStore(IConfiguration configuration, AdminAudit
             var before = await Read(cn, tx, userId);
             if (before is null) return new(AccountChangeOutcome.NotFound);
             var remainsEligible = AccountStatusPolicy.IsLoginEligible(remainsActive, before.Status, deletion);
-            var outcome = AccountChangePolicy.Evaluate(before, actorId, stamp, remainsEligible, deletion);
+            var mayChange = await ActorPermissionSql.HasPermissionAsync(cn, tx, actorId, deletion ? "AUTH.USERS.DELETE" : "AUTH.USERS.UPDATE");
+            var outcome = AccountChangePolicy.Evaluate(before, actorId, stamp, remainsEligible, deletion, mayChange);
             if (outcome != AccountChangeOutcome.Updated) return new(outcome);
             outcome = await apply(cn, tx, before);
             if (outcome != AccountChangeOutcome.Updated) return new(outcome);
@@ -167,18 +175,23 @@ public sealed class SqlUserAccountStore(IConfiguration configuration, AdminAudit
             user = new(r.GetGuid(0), r.GetString(1), r.GetString(2), r.IsDBNull(3) ? null : r.GetString(3), r.IsDBNull(4) ? null : r.GetString(4), r.GetBoolean(5), r.GetString(6), [], new HashSet<Guid>(), 0);
         }
         var roles = new List<string>();
+        var holdsSystemAdmin = false;
         await using (var cmd = new SqlCommand(UserAccountSql.Roles, cn, tx))
         {
             cmd.Parameters.AddWithValue("@u", userId);
             await using var r = await cmd.ExecuteReaderAsync();
-            while (await r.ReadAsync()) roles.Add(r.GetString(0));
+            while (await r.ReadAsync())
+            {
+                roles.Add(r.GetString(0));
+                holdsSystemAdmin |= r.GetString(1) == RoleChangePolicy.SystemAdminCode;
+            }
         }
         var admins = new HashSet<Guid>();
         await using (var cmd = new SqlCommand(UserAccountSql.SystemAdmins, cn, tx))
         await using (var r = await cmd.ExecuteReaderAsync())
             while (await r.ReadAsync()) admins.Add(r.GetGuid(0));
         var memberships = Convert.ToInt32(await Scalar(cn, tx, UserAccountSql.Memberships, ("@u", userId)));
-        return user with { RoleNames = roles, SystemAdminIds = admins, ActiveMembershipCount = memberships };
+        return user with { RoleNames = roles, SystemAdminIds = admins, ActiveMembershipCount = memberships, HoldsSystemAdminRole = holdsSystemAdmin };
     }
 
     private static object Db(string? value) => string.IsNullOrWhiteSpace(value) ? DBNull.Value : value.Trim();

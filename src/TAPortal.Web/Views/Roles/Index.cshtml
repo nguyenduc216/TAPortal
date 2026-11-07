@@ -1,14 +1,20 @@
-@model IReadOnlyList<PortalRole>
+@model RolesIndexVm
 @{
     ViewData["Title"] = "Vai trò & phân quyền";
-    ViewData["Subtitle"] = "Cấu trúc RBAC: User → Role → Permission.";
+    ViewData["Subtitle"] = "Tạo vai trò, chọn chức năng được phép dùng, rồi gán vai trò cho người dùng.";
     ViewData["PageIcon"] = "shield-check";
+    var canManage = AdminPermissions.Has(User, AdminPermissions.RolesManage);
+    var total = AdminPermissions.All.Count;
 }
+@section PageActions {
+    @if (canManage) {<a class="btn btn-primary" asp-action="Create" data-ta-role-create>@UiIcon.Render("plus")<span>Thêm vai trò</span></a>}
+}
+@if (Model.Error is not null) {<div class="ta-alert ta-alert--danger" role="alert">@UiIcon.Render("alert-circle")<div class="ta-alert__body">@Model.Error</div></div>}
 <section class="card ta-table-card" aria-label="Danh sách vai trò">
     <div class="ta-table-toolbar">
         <div class="ta-search">@UiIcon.Render("search")<input class="form-control" type="search" aria-label="Tìm vai trò" placeholder="Tìm theo mã, tên hoặc mô tả vai trò..." oninput="taFilterRows(this.value,'rolesTable')" /></div>
     </div>
-    @if (Model.Count == 0)
+    @if (Model.Roles.Count == 0)
     {
         <div class="ta-empty"><span class="ta-empty__icon">@UiIcon.Render("shield-check")</span><p class="ta-empty__title">Chưa có vai trò</p></div>
     }
@@ -16,11 +22,19 @@
     {
         <div class="ta-table-wrap">
             <table class="ta-table ta-table-stack" id="rolesTable" data-ta-pager="10">
-                <thead><tr><th scope="col">Mã vai trò</th><th scope="col">Tên vai trò</th><th scope="col">Mô tả</th><th scope="col">Loại</th><th scope="col">Trạng thái</th></tr></thead>
+                <thead><tr><th scope="col">Mã vai trò</th><th scope="col">Tên vai trò</th><th scope="col">Mô tả</th><th scope="col">Người dùng</th><th scope="col">Quyền</th><th scope="col">Trạng thái</th><th scope="col"><span class="ta-visually-hidden">Thao tác</span></th></tr></thead>
                 <tbody>
-                @foreach (var x in Model)
+                @foreach (var x in Model.Roles)
                 {
-                    <tr data-ta-row><td data-label="Mã vai trò"><span class="ta-code">@x.Code</span></td><td class="ta-cell-strong">@x.Name</td><td data-label="Mô tả">@x.Description</td><td data-label="Loại"><span class="ta-badge ta-badge--plain @(x.IsSystem ? "ta-badge--info" : "ta-badge--neutral")">@(x.IsSystem ? "Hệ thống" : "Tùy chỉnh")</span></td><td data-label="Trạng thái"><span class="ta-badge @(x.IsActive ? "ta-badge--success" : "ta-badge--neutral")">@(x.IsActive ? "Hoạt động" : "Ngừng")</span></td></tr>
+                    <tr data-ta-row data-ta-role="@x.Code">
+                        <td data-label="Mã vai trò"><span class="ta-code">@x.Code</span></td>
+                        <td class="ta-cell-strong">@x.Name @if (x.IsSystemAdmin) {<span class="ta-badge ta-badge--danger ta-badge--plain ms-1">Toàn quyền</span>}</td>
+                        <td data-label="Mô tả">@x.Description</td>
+                        <td data-label="Người dùng">@x.UserCount</td>
+                        <td data-label="Quyền">@(x.IsSystemAdmin ? "Tất cả" : $"{x.PermissionCount}/{total}")</td>
+                        <td data-label="Trạng thái"><span class="ta-badge @(x.IsActive ? "ta-badge--success" : "ta-badge--neutral")">@(x.IsActive ? "Hoạt động" : "Ngừng")</span></td>
+                        <td class="text-end"><a class="btn btn-sm @(canManage && !x.IsSystemAdmin ? "btn-soft-primary" : "")" asp-action="Edit" asp-route-id="@x.Id" aria-label="@(canManage && !x.IsSystemAdmin ? "Sửa" : "Xem") vai trò @x.Code">@UiIcon.Render(canManage && !x.IsSystemAdmin ? "pencil" : "eye")<span>@(canManage && !x.IsSystemAdmin ? "Phân quyền" : "Xem")</span></a></td>
+                    </tr>
                 }
                 </tbody>
             </table>

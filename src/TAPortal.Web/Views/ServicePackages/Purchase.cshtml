@@ -41,7 +41,7 @@
             </dl>
         </div>
     </section>
-    @if (pending)
+    @if (pending && AdminPermissions.Has(User, AdminPermissions.PurchasesManage))
     {
         <div class="d-flex flex-column gap-3">
             <form class="card" method="post" asp-action="ConfirmPaid" asp-route-id="@p.Id" novalidate data-sp-confirm>

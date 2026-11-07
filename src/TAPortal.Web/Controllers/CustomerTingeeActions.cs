@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 using TAPortal.Integrations.Tingee;
@@ -21,6 +22,7 @@ public sealed partial class CustomersController
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [Authorize(Policy = AdminPermissions.Policy.CustomersUpdate)]
     public async Task<IActionResult> CreateTingeeMerchant(Guid id, [Bind(Prefix = "Create")] TingeeMerchantCreateInput input, [FromServices] ITingeeMerchantStore tingee, [FromServices] ITingeeApi api)
     {
         var customer = await customers.GetAsync(id);
@@ -55,6 +57,7 @@ public sealed partial class CustomersController
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [Authorize(Policy = AdminPermissions.Policy.CustomersUpdate)]
     public async Task<IActionResult> LinkTingeeMerchant(Guid id, [FromForm] long? merchantId, [FromServices] ITingeeMerchantStore tingee, [FromServices] ITingeeApi api)
     {
         var customer = await customers.GetAsync(id);
@@ -83,6 +86,7 @@ public sealed partial class CustomersController
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [Authorize(Policy = AdminPermissions.Policy.CustomersUpdate)]
     public async Task<IActionResult> UnlinkTingeeMerchant(Guid id, [FromServices] ITingeeMerchantStore tingee)
     {
         if (await customers.GetAsync(id) is null) return NotFound();

@@ -3,7 +3,7 @@
 <nav aria-label="Quản lý khách hàng">
     <ul class="ta-tabs">
         <li><a class="ta-tabs__link" asp-controller="Customers" asp-action="Index" data-ta-keep-scroll data-ta-tab="list" aria-current="@(Model == "list" ? "page" : null)">@UiIcon.Render("building")<span>Danh sách khách hàng</span></a></li>
-        <li><a class="ta-tabs__link" asp-controller="Customers" asp-action="Accounts" data-ta-keep-scroll data-ta-tab="accounts" aria-current="@(Model == "accounts" ? "page" : null)">@UiIcon.Render("users-group")<span>Tài khoản Portal</span></a></li>
-        <li><a class="ta-tabs__link" asp-controller="Customers" asp-action="Import" data-ta-keep-scroll data-ta-tab="import" aria-current="@(Model == "import" ? "page" : null)">@UiIcon.Render("file-text")<span>Nhập từ Excel</span></a></li>
+        @if (AdminPermissions.Has(User, AdminPermissions.CustomerPortalManage)) {<li><a class="ta-tabs__link" asp-controller="Customers" asp-action="Accounts" data-ta-keep-scroll data-ta-tab="accounts" aria-current="@(Model == "accounts" ? "page" : null)">@UiIcon.Render("users-group")<span>Tài khoản Portal</span></a></li>}
+        @if (AdminPermissions.Has(User, AdminPermissions.CustomersCreate) && AdminPermissions.Has(User, AdminPermissions.CustomersUpdate)) {<li><a class="ta-tabs__link" asp-controller="Customers" asp-action="Import" data-ta-keep-scroll data-ta-tab="import" aria-current="@(Model == "import" ? "page" : null)">@UiIcon.Render("file-text")<span>Nhập từ Excel</span></a></li>}
     </ul>
 </nav>

@@ -274,8 +274,12 @@ public sealed class SafePortalTests : IDisposable
         var auth = scope.ServiceProvider.GetRequiredService<IAuthorizationService>();
         var user = new ClaimsPrincipal(new ClaimsIdentity(new[] { new Claim(ClaimTypes.Role, role), new Claim("permission", "CUSTOMERS.PORTAL.MANAGE") }, "test"));
         Assert.Equal(allowed, (await auth.AuthorizeAsync(user, null, "SystemAdminOnly")).Succeeded);
-        foreach (var type in new[] { typeof(admin::TAPortal.Web.Controllers.CustomerPortalAccountsController), typeof(admin::TAPortal.Web.Controllers.CustomersController), typeof(admin::TAPortal.Web.Controllers.UsersController), typeof(admin::TAPortal.Web.Controllers.HomeController) })
-            Assert.Contains(type.GetCustomAttributes(typeof(AuthorizeAttribute), true).Cast<AuthorizeAttribute>(), a => a.Policy == "SystemAdminOnly");
+        // ADMIN-ROLE-PERMISSIONS: the controllers now require catalogue permissions instead of SystemAdminOnly.
+        foreach (var (type, policy) in new[] { (typeof(admin::TAPortal.Web.Controllers.CustomerPortalAccountsController), "PERM:CUSTOMERS.PORTAL.MANAGE"), (typeof(admin::TAPortal.Web.Controllers.CustomersController), "PERM:CRM.CUSTOMERS.VIEW"), (typeof(admin::TAPortal.Web.Controllers.UsersController), "PERM:AUTH.USERS.VIEW"), (typeof(admin::TAPortal.Web.Controllers.HomeController), "PERM:DASHBOARD.VIEW") })
+            Assert.Contains(type.GetCustomAttributes(typeof(AuthorizeAttribute), true).Cast<AuthorizeAttribute>(), a => a.Policy == policy);
+        // A Customer Portal role name never satisfies an Admin permission policy; only SYS_ADMIN or the permission claim does.
+        var portalOnly = new ClaimsPrincipal(new ClaimsIdentity(new[] { new Claim(ClaimTypes.Role, role) }, "test"));
+        Assert.Equal(role == "SYS_ADMIN", (await auth.AuthorizeAsync(portalOnly, null, "PERM:CUSTOMERS.PORTAL.MANAGE")).Succeeded);
     }
 
     [Fact]

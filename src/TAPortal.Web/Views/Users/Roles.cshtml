@@ -10,6 +10,10 @@
     var isSelf = string.Equals(actorId, Model.UserId.ToString(), StringComparison.OrdinalIgnoreCase);
     var adminCount = Model.SystemAdminIds.Count;
     var active = Model.UserActive && Model.Status == "ACTIVE";
+    // Only a SYS_ADMIN may grant/revoke SYS_ADMIN or change the roles of an account holding it (re-checked on the server).
+    var actorIsSystemAdmin = AdminPermissions.IsSystemAdmin(User);
+    var targetIsSystemAdmin = Model.Roles.Any(r => r.Code == RoleChangePolicy.SystemAdminCode && Model.AssignedRoleIds.Contains(r.Id));
+    var locked = !actorIsSystemAdmin && targetIsSystemAdmin;
 }
 <div class="row g-4">
 <div class="col-xl-7">
@@ -18,7 +22,8 @@
     <div class="card-header"><h2 class="card-title">@UiIcon.Render("shield-check")Vai trò quản trị TAPortal</h2><span class="ms-auto d-flex gap-2"><span class="ta-badge @(active ? "ta-badge--success" : "ta-badge--danger")">@(active ? "Hoạt động" : "Ngừng")</span>@if (isSelf) {<span class="ta-badge ta-badge--warning ta-badge--plain">Tài khoản của bạn</span>}</span></div>
     <div class="card-body">
         <div asp-validation-summary="ModelOnly" class="ta-alert ta-alert--danger" role="alert"></div>
-        <fieldset>
+        @if (locked) {<div class="ta-alert ta-alert--warning" role="note" data-ta-sysadmin-locked>@UiIcon.Render("lock")<div class="ta-alert__body">Tài khoản này có vai trò Quản trị hệ thống (SYS_ADMIN): chỉ quản trị hệ thống mới được thay đổi vai trò của tài khoản này.</div></div>}
+        <fieldset disabled="@locked">
             <legend class="ta-visually-hidden">Vai trò quản trị TAPortal</legend>
             <div class="ta-check-list">
             @foreach (var role in Model.Roles)
@@ -29,6 +34,12 @@
                     if (assigned) {<label class="ta-check-card" for="role-@role.Id"><input class="form-check-input" type="checkbox" checked disabled id="role-@role.Id" /><span data-ta-role-code="@role.Code"><span class="text-secondary">@role.Name</span><span class="d-block form-hint mt-1">Vai trò đã ngừng hoạt động, được giữ nguyên</span></span></label>}
                     continue;
                 }
+                var sysAdminRole = role.Code == RoleChangePolicy.SystemAdminCode;
+                if (sysAdminRole && !actorIsSystemAdmin)
+                {
+                    <label class="ta-check-card" for="role-@role.Id"><input class="form-check-input" type="checkbox" checked="@assigned" disabled id="role-@role.Id" /><span data-ta-role-code="@role.Code"><span class="fw-semibold">@role.Name</span><span class="d-block form-hint mt-1">Chỉ quản trị hệ thống mới được gán hoặc gỡ vai trò này</span></span></label>
+                    continue;
+                }
                 <label class="ta-check-card" for="role-@role.Id">
                     <input class="form-check-input" type="checkbox" name="roleIds" value="@role.Id" id="role-@role.Id" checked="@assigned" />
                     <span data-ta-role-code="@role.Code"><span class="fw-semibold">@role.Name</span>@if (role.Code == RoleChangePolicy.SystemAdminCode) {<span class="ta-badge ta-badge--danger ta-badge--plain ms-2">Toàn quyền hệ thống</span>}</span>
@@ -37,7 +48,7 @@
             </div>
         </fieldset>
         <div class="form-hint mt-3">
-            Chỉ SYS_ADMIN được thay đổi vai trò. Không thể gỡ SYS_ADMIN khỏi quản trị viên hoạt động cuối cùng (hiện có @adminCount quản trị viên hoạt động).
+            Cần quyền "Tạo, sửa, xóa vai trò; gán vai trò cho người dùng"; chỉ SYS_ADMIN được gán hoặc gỡ vai trò SYS_ADMIN. Không thể gỡ SYS_ADMIN khỏi quản trị viên hoạt động cuối cùng (hiện có @adminCount quản trị viên hoạt động).
             Thay đổi có hiệu lực từ request kế tiếp của người dùng; mật khẩu, tên đăng nhập và quyền Customer Portal (OWNER/ADMIN/VIEWER) không bị ảnh hưởng.
         </div>
         @if (Model.IsLastSystemAdmin) {<div class="ta-alert ta-alert--info mt-3 mb-0" role="note" data-ta-last-admin>@UiIcon.Render("info-circle")<div class="ta-alert__body">Đây là quản trị viên hệ thống (SYS_ADMIN) hoạt động cuối cùng: không thể gỡ vai trò SYS_ADMIN của tài khoản này.</div></div>}
@@ -45,7 +56,7 @@
     </div>
     <div class="card-footer ta-form-actions">
         <a asp-action="Index" class="btn">@UiIcon.Render("arrow-left")<span>Quay lại</span></a>
-        <button type="submit" class="btn btn-primary ms-auto" data-ta-loading data-ta-loading-text="Đang lưu...">@UiIcon.Render("device-floppy")<span>Lưu vai trò</span></button>
+        <button type="submit" class="btn btn-primary ms-auto" disabled="@locked" data-ta-loading data-ta-loading-text="Đang lưu...">@UiIcon.Render("device-floppy")<span>Lưu vai trò</span></button>
     </div>
 </form>
 </div>

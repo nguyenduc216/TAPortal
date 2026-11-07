@@ -27,7 +27,7 @@ public sealed class AccountController(PortalDb db, IAdminAuthStore auth, Passwor
     [HttpGet]
     public IActionResult Login(string? returnUrl = null)
     {
-        if (User.Identity?.IsAuthenticated == true) return User.IsInRole("SYS_ADMIN") ? RedirectToAction("Index", "Home") : RedirectToAction(nameof(Profile));
+        if (User.Identity?.IsAuthenticated == true) return Landing(User);
         ViewBag.ReturnUrl = returnUrl;
         return View(new LoginVm());
     }
@@ -74,6 +74,7 @@ public sealed class AccountController(PortalDb db, IAdminAuthStore auth, Passwor
         if (!string.IsNullOrWhiteSpace(user.Email)) claims.Add(new Claim(ClaimTypes.Email, user.Email));
         claims.AddRange(grants.Roles.Select(r => new Claim(ClaimTypes.Role, r)));
         claims.AddRange(grants.Permissions.Select(p => new Claim("permission", p)));
+        claims.AddRange((grants.RoleNames ?? []).Select(n => new Claim("role_name", n)));
 
         var principal = new ClaimsPrincipal(new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme));
         await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal,
@@ -81,8 +82,12 @@ public sealed class AccountController(PortalDb db, IAdminAuthStore auth, Passwor
         await auth.TouchLoginAsync(user.Id);
 
         if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl)) return LocalRedirect(returnUrl);
-        return grants.Roles.Contains("SYS_ADMIN") ? RedirectToAction("Index", "Home") : RedirectToAction(nameof(Profile));
+        return Landing(principal);
     }
+
+    // Dashboard when allowed, else the first page (sidebar order) the account may open, else the profile.
+    private IActionResult Landing(ClaimsPrincipal user) =>
+        AdminNavigation.FirstAllowed(user) is { } page ? RedirectToAction(page.Action, page.Controller) : RedirectToAction(nameof(Profile));
 
     [Authorize]
     [HttpPost]

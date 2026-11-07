@@ -11,7 +11,7 @@ public sealed record PaymentReconciliationVm(Guid? CustomerId, bool Unattributed
 // T.A reconciliation of payment notifications (operator decision 2026-11-05): every bank notification of every customer,
 // including money on accounts linked to no customer. T.A can filter by customer, assign an unmatched transaction to any
 // customer's order, accept a REVIEW transaction or close one with a note. System administrators only.
-[Authorize(Policy = "SystemAdminOnly")]
+[Authorize(Policy = AdminPermissions.Policy.ReconciliationView)]
 public sealed class PaymentReconciliationController(IPaymentTransactionStore transactions, ILogger<PaymentReconciliationController> logger) : Controller
 {
     [HttpGet]
@@ -36,6 +36,7 @@ public sealed class PaymentReconciliationController(IPaymentTransactionStore tra
     }
 
     [HttpPost, ValidateAntiForgeryToken]
+    [Authorize(Policy = AdminPermissions.Policy.ReconciliationManage)]
     public async Task<IActionResult> Assign(long id, Guid? orderCustomerId, string? orderNo, string? note, string? back)
     {
         if (UsersController.ActorId(User) is not Guid actor) return Forbid();
@@ -50,6 +51,7 @@ public sealed class PaymentReconciliationController(IPaymentTransactionStore tra
     }
 
     [HttpPost, ValidateAntiForgeryToken]
+    [Authorize(Policy = AdminPermissions.Policy.ReconciliationManage)]
     public async Task<IActionResult> Accept(long id, string? note, string? back)
     {
         if (UsersController.ActorId(User) is not Guid actor) return Forbid();
@@ -59,6 +61,7 @@ public sealed class PaymentReconciliationController(IPaymentTransactionStore tra
     }
 
     [HttpPost, ValidateAntiForgeryToken]
+    [Authorize(Policy = AdminPermissions.Policy.ReconciliationManage)]
     public async Task<IActionResult> Close(long id, string? note, string? back)
     {
         if (UsersController.ActorId(User) is not Guid actor) return Forbid();

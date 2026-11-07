@@ -11,7 +11,7 @@ public sealed record NotificationSettingsVm(IReadOnlyList<ChannelView> Channels,
 // They notify the companies that use the e-invoice portal (at the addresses each company sets in its portal) and T.A's
 // staff group. Companies' own channels are configured by each company in the Customer Portal and are not shown here.
 // Secrets are encrypted (DPAPI) and never sent back to the page. System administrators only.
-[Authorize(Policy = "SystemAdminOnly")]
+[Authorize(Policy = AdminPermissions.Policy.NotificationsManage)]
 public sealed class NotificationSettingsController(NotificationSettings settings, ILogger<NotificationSettingsController> logger) : Controller
 {
     [HttpGet]

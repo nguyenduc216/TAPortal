@@ -3,11 +3,12 @@ using TAPortal.Web.Models;
 
 namespace TAPortal.Web.Services;
 
-public sealed record AuthUserSnapshot(Guid Id, string Username, string DisplayName, string? Email, string? Phone, string PasswordHash, IReadOnlyList<string> Roles, IReadOnlyList<string> Permissions);
+public sealed record AuthUserSnapshot(Guid Id, string Username, string DisplayName, string? Email, string? Phone, string PasswordHash, IReadOnlyList<string> Roles, IReadOnlyList<string> Permissions, IReadOnlyList<string>? RoleNames = null);
 
 // Login-eligible user row only (IsDeleted=0 AND IsActive=1 AND Status='ACTIVE'); ineligible accounts look exactly like unknown ones.
 public sealed record LoginCandidate(Guid Id, string Username, string DisplayName, string? Email, string? Phone, string PasswordHash);
-public sealed record AuthGrants(IReadOnlyList<string> Roles, IReadOnlyList<string> Permissions);
+// RoleNames: display names of the active roles (shown in the top bar instead of codes).
+public sealed record AuthGrants(IReadOnlyList<string> Roles, IReadOnlyList<string> Permissions, IReadOnlyList<string>? RoleNames = null);
 
 // AUD-23: the login pipeline performs one lookup, then PBKDF2, and loads roles/permissions only after the password matched,
 // so a wrong password for an existing account does the same database work as an unknown username.
@@ -42,7 +43,7 @@ public sealed class PortalDb : IAdminAuthStore
         var candidate = await FindLoginCandidateAsync(username);
         if (candidate is null) return null;
         var grants = await LoadGrantsAsync(candidate.Id);
-        return new(candidate.Id, candidate.Username, candidate.DisplayName, candidate.Email, candidate.Phone, candidate.PasswordHash, grants.Roles, grants.Permissions);
+        return new(candidate.Id, candidate.Username, candidate.DisplayName, candidate.Email, candidate.Phone, candidate.PasswordHash, grants.Roles, grants.Permissions, grants.RoleNames);
     }
 
     public async Task<LoginCandidate?> FindLoginCandidateAsync(string username)
@@ -66,15 +67,16 @@ WHERE NormalizedUsername=@u AND IsDeleted=0 AND IsActive=1 AND Status='ACTIVE';
         await using var cn = Open();
         await cn.OpenAsync();
         var roles = new List<string>();
+        var roleNames = new List<string>();
         const string roleSql = """
-SELECT r.Code FROM dbo.UserRoles ur JOIN dbo.Roles r ON r.Id=ur.RoleId
-WHERE ur.UserId=@id AND r.IsDeleted=0 AND r.IsActive=1;
+SELECT r.Code,r.Name FROM dbo.UserRoles ur JOIN dbo.Roles r ON r.Id=ur.RoleId
+WHERE ur.UserId=@id AND r.IsDeleted=0 AND r.IsActive=1 ORDER BY r.Name;
 """;
         await using (var roleCmd = new SqlCommand(roleSql, cn))
         {
             roleCmd.Parameters.AddWithValue("@id", id);
             await using var rr = await roleCmd.ExecuteReaderAsync();
-            while (await rr.ReadAsync()) roles.Add(rr.GetString(0));
+            while (await rr.ReadAsync()) { roles.Add(rr.GetString(0)); roleNames.Add(rr.GetString(1)); }
         }
 
         var permissions = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -110,7 +112,7 @@ WHERE up.UserId=@id AND up.Effect='DENY' AND p.IsDeleted=0;
             while (await dr.ReadAsync()) permissions.Remove(dr.GetString(0));
         }
 
-        return new(roles, permissions.ToList());
+        return new(roles, permissions.ToList(), roleNames);
     }
 
     public async Task TouchLoginAsync(Guid userId)
@@ -136,6 +138,14 @@ WHERE up.UserId=@id AND up.Effect='DENY' AND p.IsDeleted=0;
         return Convert.ToInt32(await cmd.ExecuteScalarAsync()) > 0;
     }
 
+    public const string CreateUserRoleSql = """
+INSERT dbo.UserRoles(UserId,RoleId,CreatedBy)
+SELECT @u,r.Id,@by FROM dbo.Roles r
+WHERE r.Id=@r AND r.IsActive=1 AND r.IsDeleted=0
+ AND (r.Code<>'SYS_ADMIN' OR EXISTS(SELECT 1 FROM dbo.Users a JOIN dbo.UserRoles aur ON aur.UserId=a.Id JOIN dbo.Roles ar ON ar.Id=aur.RoleId
+  WHERE a.Id=@by AND a.IsActive=1 AND a.IsDeleted=0 AND a.Status='ACTIVE' AND ar.Code='SYS_ADMIN' AND ar.IsActive=1 AND ar.IsDeleted=0));
+""";
+
     public async Task<Guid> CreateUserAsync(UserCreateVm vm, string passwordHash, Guid? createdBy = null)
     {
         await using var cn = Open(); await cn.OpenAsync();
@@ -160,11 +170,13 @@ VALUES(@id,@username,@nu,@email,@ne,@phone,@name,@hash,'ACTIVE',1,@createdBy);
         }
         if (vm.RoleId.HasValue)
         {
-            await using var roleCmd = new SqlCommand("INSERT dbo.UserRoles(UserId,RoleId,CreatedBy) VALUES(@u,@r,@by)", cn, tx);
+            // Only an active, non-deleted role; SYS_ADMIN only when the creator is an active SYS_ADMIN (re-checked here).
+            await using var roleCmd = new SqlCommand(CreateUserRoleSql, cn, tx);
             roleCmd.Parameters.AddWithValue("@u", id);
             roleCmd.Parameters.AddWithValue("@r", vm.RoleId.Value);
-            roleCmd.Parameters.AddWithValue("@by", (object?)createdBy ?? DBNull.Value);
-            await roleCmd.ExecuteNonQueryAsync();
+            roleCmd.Parameters.Add("@by", System.Data.SqlDbType.UniqueIdentifier).Value = (object?)createdBy ?? DBNull.Value;
+            if (await roleCmd.ExecuteNonQueryAsync() != 1)
+                throw new UnauthorizedAccessException("The selected role cannot be granted by this account.");
         }
         // AUD-35: account creation (possibly with SYS_ADMIN) is audited in the same transaction; throws AuditUnavailableException when mandatory.
         await AuditSql.WriteOrThrowAsync(cn, tx, _audit.RequireDurableAudit, createdBy, "USER_CREATED", "dbo.Users", id.ToString(), "{}",

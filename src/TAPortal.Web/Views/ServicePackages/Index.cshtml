@@ -7,7 +7,7 @@
     string TypeBadge(string t) => t switch { ServicePackageTypes.Invoice => "ta-badge--info", ServicePackageTypes.Transaction => "ta-badge--warning", _ => "ta-badge--success" };
 }
 @section PageActions {
-    <a class="btn btn-ta-gold" asp-action="Create" data-sp-create>@UiIcon.Render("plus")<span>Thêm gói</span></a>
+    @if (AdminPermissions.Has(User, AdminPermissions.PackagesManage)) {<a class="btn btn-ta-gold" asp-action="Create" data-sp-create>@UiIcon.Render("plus")<span>Thêm gói</span></a>}
 }
 @if (Model.StoreError is not null)
 {
@@ -35,11 +35,13 @@
                             <td data-label="Thời hạn">@ServicePackageRules.Validity(p.ValidityDays)</td>
                             <td data-label="Trạng thái"><span class="ta-badge @(p.IsActive ? "ta-badge--success" : "ta-badge--neutral")">@(p.IsActive ? "Đang bán" : "Ngừng bán")</span></td>
                             <td class="text-end text-nowrap">
+                                @if (AdminPermissions.Has(User, AdminPermissions.PackagesManage)) {
                                 <a class="btn btn-sm" asp-action="Edit" asp-route-id="@p.Id">@UiIcon.Render("pencil")<span>Sửa</span></a>
                                 <form class="d-inline" method="post" asp-action="SetActive" asp-route-id="@p.Id">
                                     <input type="hidden" name="active" value="@(p.IsActive ? "false" : "true")" />
                                     <button class="btn btn-sm" type="submit">@UiIcon.Render(p.IsActive ? "ban" : "check")<span>@(p.IsActive ? "Ngừng bán" : "Mở bán")</span></button>
                                 </form>
+                                }
                             </td>
                         </tr>
                     }

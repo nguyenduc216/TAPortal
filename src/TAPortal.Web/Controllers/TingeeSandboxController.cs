@@ -18,7 +18,7 @@ namespace TAPortal.Web.Controllers;
 // sends to the webhook site (Tingee__WebhookBaseUrl + /tingee/*). With a Master Merchant key (Tingee__Mode=Master) every call acts on one child
 // merchant that is already linked to a customer in Admin; with a normal Merchant key (Direct) on T.A's own merchant.
 // Nothing is stored here except what Tingee itself sends to the webhook inbox.
-[Authorize(Policy = "SystemAdminOnly")]
+[Authorize(Policy = AdminPermissions.Policy.IntegrationsSandbox)]
 public sealed partial class TingeeSandboxController(
     ITingeeApi tingee,
     IOptions<TingeeOptions> options,

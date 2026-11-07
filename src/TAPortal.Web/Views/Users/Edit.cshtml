@@ -53,7 +53,7 @@
                 <dt>Doanh nghiệp đang truy cập</dt><dd>@account.ActiveMembershipCount</dd>
             </dl>
         </div>
-        <div class="card-footer"><a asp-action="Roles" asp-route-id="@Model.Id" class="btn w-100">@UiIcon.Render("shield-lock")<span>Quản lý vai trò</span></a></div>
+        @if (AdminPermissions.Has(User, AdminPermissions.RolesManage)) {<div class="card-footer"><a asp-action="Roles" asp-route-id="@Model.Id" class="btn w-100">@UiIcon.Render("shield-lock")<span>Quản lý vai trò</span></a></div>}
     </section>
 </div>
 </div>

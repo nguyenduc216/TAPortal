@@ -11,7 +11,7 @@ public sealed record TingeeLogsVm(
 // Tingee call log: every request TAPortal/Customer sent to the Tingee Open API (headers, body, Tingee's answer) under a log
 // code shown with each error, so the exact request can be looked up and sent to Tingee support. System administrators only:
 // bodies hold account numbers and ID numbers. The secret key is never stored.
-[Authorize(Policy = "SystemAdminOnly")]
+[Authorize(Policy = AdminPermissions.Policy.IntegrationsLogsView)]
 public sealed class TingeeLogsController(ITingeeCallLog log, ILogger<TingeeLogsController> logger) : Controller
 {
     [HttpGet]

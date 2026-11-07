@@ -69,10 +69,11 @@ public sealed class SafeAdminCrudTests
     [InlineData("POST", "/customers/edit/6f9619ff-8b86-d011-b42d-00cf4fc964ff")]
     [InlineData("GET", "/customerportalaccounts")]
     [InlineData("POST", "/customers/saveportalaccount/11111111-2222-3333-4444-555555555555")]
-    public async Task GrantedPermissionsWithoutSystemAdminAreForbidden(string method, string path)
+    public async Task GrantedPermissionsWithoutTheModulePermissionAreForbidden(string method, string path)
     {
-        // Customer Portal roles and fine-grained permissions must never unlock SYS_ADMIN-only management.
-        using var f = Factory("OWNER", "AUTH.USERS.UPDATE", "CRM.CUSTOMERS.CREATE", "CRM.CUSTOMERS.UPDATE", "CUSTOMERS.PORTAL.MANAGE");
+        // ADMIN-ROLE-PERMISSIONS: write permissions alone never unlock a module; the module's view permission
+        // (AUTH.USERS.VIEW, CRM.CUSTOMERS.VIEW) and CUSTOMERS.PORTAL.MANAGE for portal accounts are required as well.
+        using var f = Factory("OWNER", "AUTH.USERS.UPDATE", "CRM.CUSTOMERS.CREATE", "CRM.CUSTOMERS.UPDATE");
         var response = await Client(f).SendAsync(new HttpRequestMessage(new HttpMethod(method), path) { Content = method == "POST" ? new FormUrlEncodedContent(new Dictionary<string, string>()) : null });
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
@@ -92,13 +93,15 @@ public sealed class SafeAdminCrudTests
     }
 
     [Fact]
-    public void EveryAdminPostActionValidatesAntiforgeryAndManagementControllersRequireSystemAdmin()
+    public void EveryAdminPostActionValidatesAntiforgeryAndManagementControllersRequirePermissions()
     {
         foreach (var type in AdminControllerTypes)
             foreach (var action in type.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly).Where(m => m.GetCustomAttribute<HttpPostAttribute>() is not null))
                 Assert.True(action.GetCustomAttribute<ValidateAntiForgeryTokenAttribute>() is not null, $"{type.Name}.{action.Name} lacks CSRF validation");
-        foreach (var type in new[] { typeof(AdminControllers.UsersController), typeof(AdminControllers.CustomersController), typeof(AdminControllers.CustomerPortalAccountsController) })
-            Assert.Contains(type.GetCustomAttributes<AuthorizeAttribute>(true), a => a.Policy == "SystemAdminOnly");
+        // ADMIN-ROLE-PERMISSIONS: SYS_ADMIN-only was replaced by catalogue permissions (SYS_ADMIN still passes every one).
+        Assert.Contains(typeof(AdminControllers.UsersController).GetCustomAttributes<AuthorizeAttribute>(true), a => a.Policy == "PERM:AUTH.USERS.VIEW");
+        Assert.Contains(typeof(AdminControllers.CustomersController).GetCustomAttributes<AuthorizeAttribute>(true), a => a.Policy == "PERM:CRM.CUSTOMERS.VIEW");
+        Assert.Contains(typeof(AdminControllers.CustomerPortalAccountsController).GetCustomAttributes<AuthorizeAttribute>(true), a => a.Policy == "PERM:CUSTOMERS.PORTAL.MANAGE");
     }
 
     [Theory]

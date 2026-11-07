@@ -12,7 +12,7 @@ namespace TAPortal.Web.Controllers;
 // Hóa đơn Sandbox: T.A tests Tingee's e-invoice API with the Admin site's Tingee key, on the same merchant scope as the Tingee
 // Sandbox (Direct: T.A's own merchant; Master: a child merchant already linked to a customer). Steps follow Tingee's flow:
 // provider account → templates → draft PDF → issue → download / email. Nothing is stored here; provider passwords go to Tingee only.
-[Authorize(Policy = "SystemAdminOnly")]
+[Authorize(Policy = AdminPermissions.Policy.IntegrationsSandbox)]
 public sealed class TingeeInvoiceSandboxController(
     ITingeeInvoiceApi invoices,
     IOptions<TingeeOptions> options,

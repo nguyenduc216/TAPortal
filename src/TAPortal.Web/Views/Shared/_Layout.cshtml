@@ -1,5 +1,6 @@
 @functions {
-    private bool HasPermission(string code) => User.Claims.Any(c => c.Type == "permission" && string.Equals(c.Value, code, StringComparison.OrdinalIgnoreCase));
+    // SYS_ADMIN sees everything; other accounts see only the items their permissions open (same rule as the policies).
+    private bool Can(string code) => AdminPermissions.Has(User, code);
 
     private string CurrentController => ViewContext.RouteData.Values["controller"]?.ToString() ?? "";
 
@@ -16,10 +17,21 @@
 }
 @{
     var isAdmin = User.IsInRole("SYS_ADMIN");
-    var canRoles = isAdmin || HasPermission("AUTH.ROLES.VIEW");
-    var canMenus = isAdmin || HasPermission("SYSTEM.MENUS.MANAGE");
+    var canDashboard = Can(AdminPermissions.DashboardView);
+    var canCustomers = Can(AdminPermissions.CustomersView);
+    var canReconciliation = Can(AdminPermissions.ReconciliationView);
+    var canPackages = Can(AdminPermissions.PackagesView);
+    var canPurchases = Can(AdminPermissions.PurchasesView);
+    var canSandbox = Can(AdminPermissions.IntegrationsSandbox);
+    var canLogs = Can(AdminPermissions.IntegrationsLogsView);
+    var canNotifications = Can(AdminPermissions.NotificationsManage);
+    var canUsers = Can(AdminPermissions.UsersView);
+    var canRoles = Can(AdminPermissions.RolesView);
+    var canMenus = Can(AdminPermissions.MenusManage);
     var displayName = User.FindFirst("display_name")?.Value ?? User.Identity?.Name;
-    var roleLabel = isAdmin ? "Quản trị hệ thống" : "Người dùng TAPortal";   // role codes are never shown
+    // Role names (never codes); "Người dùng TAPortal" only when no role name is known.
+    var roleNames = User.FindAll("role_name").Select(c => c.Value).Where(v => !string.IsNullOrWhiteSpace(v)).Distinct().ToList();
+    var roleLabel = isAdmin ? "Quản trị hệ thống" : roleNames.Count > 0 ? string.Join(", ", roleNames) : "Người dùng TAPortal";
     var heading = ViewData["Heading"] as string ?? ViewData["Title"] as string;
     var parentTitle = ViewData["ParentTitle"] as string;
     var parentController = ViewData["ParentController"] as string;
@@ -47,49 +59,58 @@
     <a class="ta-skip-link" href="#taMain">Bỏ qua đến nội dung chính</a>
     <aside class="ta-sidebar" id="taSidebar" aria-label="Điều hướng chính">
         <div class="ta-sidebar__brand">
-            <a class="ta-brand" asp-controller="Home" asp-action="Index" title="T.A Portal">
+            <a class="ta-brand" asp-controller="@(canDashboard ? "Home" : "Account")" asp-action="@(canDashboard ? "Index" : "Profile")" title="T.A Portal">
                 <img src="~/images/ta-logo.png" class="ta-brand__logo" alt="" width="36" height="36" />
                 <span class="ta-brand__text">T.A Portal</span>
             </a>
             <button type="button" class="ta-sidebar__close" data-ta-drawer-close aria-label="Đóng menu">@UiIcon.Render("x")</button>
         </div>
         <nav class="ta-nav" aria-label="Menu quản trị" id="taNav" data-ta-swap>
-            @if (isAdmin)
+            @if (canDashboard)
             {
                 <div class="ta-nav__group">
                     <ul class="ta-nav__list">
                         <li><a class="ta-nav__link" asp-controller="Home" asp-action="Index" title="Tổng quan" aria-current="@(IsCurrent("Home", "Index") ? "page" : null)"><span class="ta-nav__icon">@UiIcon.Render("layout-dashboard")</span><span class="ta-nav__label">Tổng quan</span></a></li>
                     </ul>
                 </div>
+            }
+            @if (canCustomers || canReconciliation)
+            {
                 <div class="ta-nav__group">
                     <p class="ta-nav__section">Quản lý khách hàng</p>
                     <ul class="ta-nav__list">
                         @* Customer Portal accounts are managed inside each customer's workspace (tab "Tài khoản Portal"). *@
-                        <li><a class="ta-nav__link" asp-controller="Customers" asp-action="Index" title="Khách hàng" aria-current="@(IsCurrent("Customers") || IsCurrent("CustomerPortalAccounts") ? "page" : null)"><span class="ta-nav__icon">@UiIcon.Render("building")</span><span class="ta-nav__label">Khách hàng</span></a></li>
-                        <li><a class="ta-nav__link" asp-controller="PaymentReconciliation" asp-action="Index" title="Đối soát giao dịch" aria-current="@(IsCurrent("PaymentReconciliation") ? "page" : null)"><span class="ta-nav__icon">@UiIcon.Render("report-money")</span><span class="ta-nav__label">Đối soát giao dịch</span></a></li>
+                        @if (canCustomers) {<li><a class="ta-nav__link" asp-controller="Customers" asp-action="Index" title="Khách hàng" aria-current="@(IsCurrent("Customers") || IsCurrent("CustomerPortalAccounts") ? "page" : null)"><span class="ta-nav__icon">@UiIcon.Render("building")</span><span class="ta-nav__label">Khách hàng</span></a></li>}
+                        @if (canReconciliation) {<li><a class="ta-nav__link" asp-controller="PaymentReconciliation" asp-action="Index" title="Đối soát giao dịch" aria-current="@(IsCurrent("PaymentReconciliation") ? "page" : null)"><span class="ta-nav__icon">@UiIcon.Render("report-money")</span><span class="ta-nav__label">Đối soát giao dịch</span></a></li>}
                     </ul>
                 </div>
+            }
+            @if (canPackages || canPurchases)
+            {
                 <div class="ta-nav__group">
                     <p class="ta-nav__section">Gói dịch vụ</p>
                     <ul class="ta-nav__list">
-                        <li><a class="ta-nav__link" asp-controller="ServicePackages" asp-action="Index" title="Danh sách gói" aria-current="@(IsCurrent("ServicePackages", "Index") || IsCurrent("ServicePackages", "Create") || IsCurrent("ServicePackages", "Edit") ? "page" : null)"><span class="ta-nav__icon">@UiIcon.Render("package")</span><span class="ta-nav__label">Danh sách gói</span></a></li>
-                        <li><a class="ta-nav__link" asp-controller="ServicePackages" asp-action="Purchases" title="Giao dịch mua gói" aria-current="@(IsCurrent("ServicePackages", "Purchases") || IsCurrent("ServicePackages", "Purchase") ? "page" : null)"><span class="ta-nav__icon">@UiIcon.Render("receipt-tax")</span><span class="ta-nav__label">Giao dịch mua gói</span></a></li>
+                        @if (canPackages) {<li><a class="ta-nav__link" asp-controller="ServicePackages" asp-action="Index" title="Danh sách gói" aria-current="@(IsCurrent("ServicePackages", "Index") || IsCurrent("ServicePackages", "Create") || IsCurrent("ServicePackages", "Edit") ? "page" : null)"><span class="ta-nav__icon">@UiIcon.Render("package")</span><span class="ta-nav__label">Danh sách gói</span></a></li>}
+                        @if (canPurchases) {<li><a class="ta-nav__link" asp-controller="ServicePackages" asp-action="Purchases" title="Giao dịch mua gói" aria-current="@(IsCurrent("ServicePackages", "Purchases") || IsCurrent("ServicePackages", "Purchase") ? "page" : null)"><span class="ta-nav__icon">@UiIcon.Render("receipt-tax")</span><span class="ta-nav__label">Giao dịch mua gói</span></a></li>}
                     </ul>
                 </div>
+            }
+            @if (canSandbox || canLogs || canNotifications)
+            {
                 <div class="ta-nav__group">
                     <p class="ta-nav__section">Tingee</p>
                     <ul class="ta-nav__list">
-                        <li><a class="ta-nav__link" asp-controller="TingeeSandbox" asp-action="Index" title="Tingee Sandbox" aria-current="@(IsCurrent("TingeeSandbox") ? "page" : null)"><span class="ta-nav__icon">@UiIcon.Render("qrcode")</span><span class="ta-nav__label">Tingee Sandbox</span></a></li>
-                        <li><a class="ta-nav__link" asp-controller="TingeeInvoiceSandbox" asp-action="Index" title="Hóa đơn Sandbox" aria-current="@(IsCurrent("TingeeInvoiceSandbox") ? "page" : null)"><span class="ta-nav__icon">@UiIcon.Render("file-invoice")</span><span class="ta-nav__label">Hóa đơn Sandbox</span></a></li>
-                        <li><a class="ta-nav__link" asp-controller="TingeeLogs" asp-action="Index" title="Tingee log" aria-current="@(IsCurrent("TingeeLogs") ? "page" : null)"><span class="ta-nav__icon">@UiIcon.Render("history")</span><span class="ta-nav__label">Tingee log</span></a></li>
-                        <li><a class="ta-nav__link" asp-controller="NotificationSettings" asp-action="Index" title="Cài đặt thông báo" aria-current="@(IsCurrent("NotificationSettings") ? "page" : null)"><span class="ta-nav__icon">@UiIcon.Render("bell")</span><span class="ta-nav__label">Cài đặt thông báo</span></a></li>
+                        @if (canSandbox) {<li><a class="ta-nav__link" asp-controller="TingeeSandbox" asp-action="Index" title="Tingee Sandbox" aria-current="@(IsCurrent("TingeeSandbox") ? "page" : null)"><span class="ta-nav__icon">@UiIcon.Render("qrcode")</span><span class="ta-nav__label">Tingee Sandbox</span></a></li>
+                        <li><a class="ta-nav__link" asp-controller="TingeeInvoiceSandbox" asp-action="Index" title="Hóa đơn Sandbox" aria-current="@(IsCurrent("TingeeInvoiceSandbox") ? "page" : null)"><span class="ta-nav__icon">@UiIcon.Render("file-invoice")</span><span class="ta-nav__label">Hóa đơn Sandbox</span></a></li>}
+                        @if (canLogs) {<li><a class="ta-nav__link" asp-controller="TingeeLogs" asp-action="Index" title="Tingee log" aria-current="@(IsCurrent("TingeeLogs") ? "page" : null)"><span class="ta-nav__icon">@UiIcon.Render("history")</span><span class="ta-nav__label">Tingee log</span></a></li>}
+                        @if (canNotifications) {<li><a class="ta-nav__link" asp-controller="NotificationSettings" asp-action="Index" title="Cài đặt thông báo" aria-current="@(IsCurrent("NotificationSettings") ? "page" : null)"><span class="ta-nav__icon">@UiIcon.Render("bell")</span><span class="ta-nav__label">Cài đặt thông báo</span></a></li>}
                     </ul>
                 </div>
             }
             <div class="ta-nav__group">
                 <p class="ta-nav__section">Quản lý hệ thống</p>
                 <ul class="ta-nav__list">
-                    @if (isAdmin)
+                    @if (canUsers)
                     {
                         <li><a class="ta-nav__link" asp-controller="Users" asp-action="Index" title="Người dùng" aria-current="@(IsCurrent("Users") ? "page" : null)"><span class="ta-nav__icon">@UiIcon.Render("users")</span><span class="ta-nav__label">Người dùng</span></a></li>
                     }
@@ -113,7 +134,7 @@
             <button type="button" class="ta-icon-btn" data-ta-sidebar-toggle aria-controls="taSidebar" aria-expanded="true" aria-label="Thu gọn/mở rộng menu">@UiIcon.Render("menu-2")</button>
             <nav class="ta-breadcrumb" aria-label="Breadcrumb" id="taCrumbs" data-ta-swap>
                 <ol>
-                    <li>@if (isAdmin) {<a asp-controller="Home" asp-action="Index" aria-label="Tổng quan">@UiIcon.Render("home")</a>} else {@UiIcon.Render("home")}</li>
+                    <li>@if (canDashboard) {<a asp-controller="Home" asp-action="Index" aria-label="Tổng quan">@UiIcon.Render("home")</a>} else {@UiIcon.Render("home")}</li>
                     @if (parentTitle is not null && parentController is not null) {<li><a asp-controller="@parentController" asp-action="@parentAction">@parentTitle</a></li>}
                     <li><span aria-current="page">@ViewData["Title"]</span></li>
                 </ol>

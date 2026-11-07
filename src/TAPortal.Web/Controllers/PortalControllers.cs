@@ -9,7 +9,7 @@ using TAPortal.Web.Services;
 
 namespace TAPortal.Web.Controllers;
 
-[Authorize(Policy = "SystemAdminOnly")]
+[Authorize(Policy = AdminPermissions.Policy.DashboardView)]
 public sealed class HomeController(IDashboardStore dashboard, AdminAuditOptions audit, AdminLoginThrottleOptions throttle, ILogger<HomeController> logger) : Controller
 {
     public async Task<IActionResult> Index()
@@ -35,7 +35,7 @@ public sealed class HomeController(IDashboardStore dashboard, AdminAuditOptions 
     }
 }
 
-[Authorize(Policy = "SystemAdminOnly")]
+[Authorize(Policy = AdminPermissions.Policy.UsersView)]
 public sealed class UsersController(PortalDb db, PasswordService passwords, IUserRoleStore roleStore, IUserAccountStore accounts, ILogger<UsersController> logger) : Controller
 {
     public async Task<IActionResult> Index() => await IndexView();
@@ -58,6 +58,10 @@ public sealed class UsersController(PortalDb db, PasswordService passwords, IUse
         if (!policy.IsValid) ModelState.AddModelError(nameof(vm.Password), policy.Error);
         if (!string.IsNullOrWhiteSpace(vm.Username) && await db.UsernameExistsAsync(vm.Username)) ModelState.AddModelError(nameof(vm.Username), "Tên đăng nhập đã tồn tại.");
         if (ModelState.IsValid && await db.EmailInUseAsync(vm.Email, null)) ModelState.AddModelError(nameof(vm.Email), "Email đã được sử dụng bởi tài khoản khác.");
+        // Only a SYS_ADMIN may create an account holding SYS_ADMIN (re-checked again in SQL by PortalDb.CreateUserRoleSql).
+        if (ModelState.IsValid && vm.RoleId is Guid roleId && !AdminPermissions.IsSystemAdmin(User)
+            && (await db.GetRolesAsync()).Any(r => r.Id == roleId && r.Code == RoleChangePolicy.SystemAdminCode))
+            ModelState.AddModelError(nameof(vm.RoleId), SystemAdminGrantMessage);
         if (ModelState.IsValid)
         {
             try
@@ -73,6 +77,10 @@ public sealed class UsersController(PortalDb db, PasswordService passwords, IUse
             catch (AuditUnavailableException)
             {
                 ModelState.AddModelError(string.Empty, "Không thể ghi nhật ký audit (dbo.AuditLogs) nên tài khoản chưa được tạo. Liên hệ quản trị cơ sở dữ liệu.");
+            }
+            catch (UnauthorizedAccessException)
+            {
+                ModelState.AddModelError(nameof(vm.RoleId), "Vai trò đã chọn không hợp lệ, đã ngừng hoạt động hoặc bạn không được phép gán vai trò này.");
             }
         }
         // Re-render instead of redirecting so the entered values (except the password) are kept and the modal reopens.
@@ -158,6 +166,8 @@ public sealed class UsersController(PortalDb db, PasswordService passwords, IUse
         return View(nameof(Delete), account);
     }
 
+    internal const string SystemAdminGrantMessage = "Chỉ quản trị hệ thống (SYS_ADMIN) mới được gán vai trò Quản trị hệ thống.";
+
     private static string AccountMessage(AccountChangeOutcome outcome) => outcome switch
     {
         AccountChangeOutcome.SelfDeletion => "Không thể tự xóa tài khoản đang đăng nhập.",
@@ -233,13 +243,9 @@ public sealed class UsersController(PortalDb db, PasswordService passwords, IUse
     internal static Guid? ActorId(ClaimsPrincipal user) => Guid.TryParse(user.FindFirstValue(ClaimTypes.NameIdentifier), out var id) ? id : null;
 }
 
-[Authorize(Policy = PermissionPolicies.Prefix + "AUTH.ROLES.VIEW")]
-public sealed class RolesController(PortalDb db) : Controller
-{
-    public async Task<IActionResult> Index() => View(await db.GetRolesAsync());
-}
-
-[Authorize(Policy = "SystemAdminOnly")]
+// Every action needs CRM.CUSTOMERS.VIEW; each write action declares its own permission as well
+// (SafeAdminPermissionTests: no POST action of a view-level controller lacks one).
+[Authorize(Policy = AdminPermissions.Policy.CustomersView)]
 public sealed partial class CustomersController(PortalDb db, ICustomerAdminStore customers, ICustomerPortalAccounts portal, PasswordService passwords, ILogger<CustomersController> logger) : Controller
 {
     public async Task<IActionResult> Index() => View(await db.GetCustomersAsync());
@@ -247,6 +253,7 @@ public sealed partial class CustomersController(PortalDb db, ICustomerAdminStore
     // Customers → tab "Tài khoản Portal": every membership of every customer (replaces the old standalone page).
     // Read-only overview; each row opens the customer's workspace tab where the membership is managed.
     [HttpGet]
+    [Authorize(Policy = AdminPermissions.Policy.CustomerPortalManage)]
     public async Task<IActionResult> Accounts()
     {
         if (ActorOrNull() is not Guid actor) return Forbid();
@@ -273,6 +280,8 @@ public sealed partial class CustomersController(PortalDb db, ICustomerAdminStore
         if (customer is null) return NotFound();
         if (ActorOrNull() is not Guid actor) return Forbid();
         PortalAccountSummary? summary = null;
+        // The portal-account summary is only for accounts that may manage them; others see the overview without it.
+        if (AdminPermissions.Has(User, AdminPermissions.CustomerPortalManage))
         try
         {
             var rows = await portal.ListAsync(actor, id);
@@ -286,6 +295,7 @@ public sealed partial class CustomersController(PortalDb db, ICustomerAdminStore
     }
 
     [HttpGet]
+    [Authorize(Policy = AdminPermissions.Policy.CustomerPortalManage)]
     public async Task<IActionResult> PortalAccounts(Guid id)
     {
         var customer = await customers.GetAsync(id);
@@ -303,6 +313,7 @@ public sealed partial class CustomersController(PortalDb db, ICustomerAdminStore
     // admin role) and grant it. Creating a membership never silently creates a user.
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [Authorize(Policy = AdminPermissions.Policy.CustomerPortalManage)]
     public async Task<IActionResult> SavePortalAccount(Guid id, [FromForm] string? mode, MembershipInput input)
     {
         if (input.CustomerId != Guid.Empty && input.CustomerId != id) return BadRequest();
@@ -357,6 +368,7 @@ public sealed partial class CustomersController(PortalDb db, ICustomerAdminStore
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [Authorize(Policy = AdminPermissions.Policy.CustomerPortalManage)]
     public async Task<IActionResult> SetPortalAccountActive(Guid id, [FromForm] Guid userId, [FromForm] bool active, [FromForm] Guid? customerId)
     {
         if (customerId is { } posted && posted != id) return BadRequest();
@@ -392,6 +404,7 @@ public sealed partial class CustomersController(PortalDb db, ICustomerAdminStore
     /// </summary>
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [Authorize(Policy = AdminPermissions.Policy.CustomerPortalManage)]
     public async Task<IActionResult> ResetPortalPassword(Guid id, [FromForm] Guid userId)
     {
         if (await customers.GetAsync(id) is null) return NotFound();

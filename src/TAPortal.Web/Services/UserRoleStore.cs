@@ -34,13 +34,19 @@ public static class RoleChangePolicy
     public static string Stamp(IEnumerable<Guid> roleIds) =>
         Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(string.Join(",", roleIds.Select(r => r.ToString("N")).Order(StringComparer.Ordinal)))));
 
-    public static RoleChangePlan Evaluate(UserRoleSnapshot target, Guid actorId, IReadOnlyCollection<Guid> requested, string? expectedStamp)
+    // actorHasPermission: the actor holds AUTH.ROLES.MANAGE (re-read from the database in the same transaction).
+    public static RoleChangePlan Evaluate(UserRoleSnapshot target, Guid actorId, IReadOnlyCollection<Guid> requested, string? expectedStamp, bool actorHasPermission = false)
     {
         var none = new HashSet<Guid>();
-        // Only an active SYS_ADMIN (re-read from the database, not from the cookie) may change roles.
-        if (!target.SystemAdminIds.Contains(actorId))
+        // An active SYS_ADMIN, or an active user granted AUTH.ROLES.MANAGE (both re-read from the database, not from the cookie).
+        var actorIsSystemAdmin = target.SystemAdminIds.Contains(actorId);
+        if (!actorIsSystemAdmin && !actorHasPermission)
             return new(RoleChangeOutcome.Forbidden, none, [], []);
         var catalog = target.Roles.ToDictionary(r => r.Id);
+        var systemAdminRoleIds = target.Roles.Where(r => r.Code == SystemAdminCode).Select(r => r.Id).ToHashSet();
+        // Only a SYS_ADMIN may grant or revoke SYS_ADMIN, or change the roles of a user who holds it.
+        if (!actorIsSystemAdmin && (target.AssignedRoleIds.Overlaps(systemAdminRoleIds) || requested.Any(systemAdminRoleIds.Contains)))
+            return new(RoleChangeOutcome.Forbidden, none, [], []);
         // Unknown, deleted or inactive roles cannot be newly assigned; the client may only choose from the active catalog.
         if (requested.Any(id => !catalog.TryGetValue(id, out var role) || !role.IsActive))
             return new(RoleChangeOutcome.InvalidRole, none, [], []);
@@ -113,7 +119,8 @@ public sealed class SqlUserRoleStore(IConfiguration configuration, AdminAuditOpt
             var target = await Read(cn, tx, userId);
             if (target is null)
                 return new(RoleChangeOutcome.NotFound);
-            var plan = RoleChangePolicy.Evaluate(target, actorId, requestedRoleIds, expectedStamp);
+            var mayManage = await ActorPermissionSql.HasPermissionAsync(cn, tx, actorId, "AUTH.ROLES.MANAGE");
+            var plan = RoleChangePolicy.Evaluate(target, actorId, requestedRoleIds, expectedStamp, mayManage);
             if (plan.Outcome != RoleChangeOutcome.Updated)
                 return new(plan.Outcome);
 

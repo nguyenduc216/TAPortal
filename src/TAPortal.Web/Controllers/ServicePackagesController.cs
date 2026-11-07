@@ -10,11 +10,13 @@ namespace TAPortal.Web.Controllers;
 // validity) and every purchase. A purchase starts PENDING (customer request or admin entry); until automatic payment is
 // connected, an admin confirms the payment, which starts the balance lot. Purchases keep a snapshot of the package, so
 // editing a package never changes what a customer already bought.
-[Authorize(Policy = "SystemAdminOnly")]
+// Signed-in staff only at class level; every action declares its permission (catalogue: PACKAGES.*).
+[Authorize]
 public sealed class ServicePackagesController(IServicePackageStore store, TimeProvider clock, ILogger<ServicePackagesController> logger) : Controller
 {
     public const string StoreUnavailable = "Không đọc được dữ liệu gói dịch vụ (bảng của migration 018 chưa có hoặc thiếu quyền). Chi tiết đã ghi vào nhật ký ứng dụng.";
 
+    [Authorize(Policy = AdminPermissions.Policy.PackagesView)]
     public async Task<IActionResult> Index()
     {
         try { return View(new ServicePackagesVm(await store.PackagesAsync(activeOnly: false), null)); }
@@ -22,13 +24,16 @@ public sealed class ServicePackagesController(IServicePackageStore store, TimePr
     }
 
     [HttpGet]
+    [Authorize(Policy = AdminPermissions.Policy.PackagesManage)]
     public IActionResult Create() => View("Edit", new ServicePackageEditVm(null, new ServicePackageInput()));
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [Authorize(Policy = AdminPermissions.Policy.PackagesManage)]
     public Task<IActionResult> Create([Bind(Prefix = "Input")] ServicePackageInput input) => Save(null, input);
 
     [HttpGet]
+    [Authorize(Policy = AdminPermissions.Policy.PackagesManage)]
     public async Task<IActionResult> Edit(Guid id)
     {
         var package = await store.PackageAsync(id);
@@ -37,10 +42,12 @@ public sealed class ServicePackagesController(IServicePackageStore store, TimePr
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [Authorize(Policy = AdminPermissions.Policy.PackagesManage)]
     public Task<IActionResult> Edit(Guid id, [Bind(Prefix = "Input")] ServicePackageInput input) => Save(id, input);
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [Authorize(Policy = AdminPermissions.Policy.PackagesManage)]
     public async Task<IActionResult> SetActive(Guid id, bool active)
     {
         if (UsersController.ActorId(User) is not Guid actor) return Forbid();
@@ -51,6 +58,7 @@ public sealed class ServicePackagesController(IServicePackageStore store, TimePr
         return RedirectToAction(nameof(Index));
     }
 
+    [Authorize(Policy = AdminPermissions.Policy.PurchasesView)]
     public async Task<IActionResult> Purchases(string? status, string? q)
     {
         status = ServicePurchaseStatus.All.Contains(status ?? "") ? status : null;
@@ -69,6 +77,7 @@ public sealed class ServicePackagesController(IServicePackageStore store, TimePr
         catch (SqlException ex) { logger.LogError(ex, "SERVICE_PURCHASES_UNAVAILABLE"); return View(new ServicePurchasesVm([], status, q, now, StoreUnavailable)); }
     }
 
+    [Authorize(Policy = AdminPermissions.Policy.PurchasesView)]
     public async Task<IActionResult> Purchase(Guid id)
     {
         var purchase = await store.PurchaseAsync(id);
@@ -77,6 +86,7 @@ public sealed class ServicePackagesController(IServicePackageStore store, TimePr
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [Authorize(Policy = AdminPermissions.Policy.PurchasesManage)]
     public async Task<IActionResult> ConfirmPaid(Guid id, [Bind(Prefix = "Confirm")] ServicePurchaseConfirmInput input)
     {
         if (UsersController.ActorId(User) is not Guid actor) return Forbid();
@@ -95,6 +105,7 @@ public sealed class ServicePackagesController(IServicePackageStore store, TimePr
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [Authorize(Policy = AdminPermissions.Policy.PurchasesManage)]
     public async Task<IActionResult> CancelPurchase(Guid id, string? reason)
     {
         if (UsersController.ActorId(User) is not Guid actor) return Forbid();
