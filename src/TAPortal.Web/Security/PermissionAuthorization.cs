@@ -17,7 +17,9 @@ public sealed class PermissionHandler : AuthorizationHandler<PermissionRequireme
 {
     protected override Task HandleRequirementAsync(AuthorizationHandlerContext context, PermissionRequirement requirement)
     {
-        if (context.User.IsInRole("SYS_ADMIN") || context.User.Claims.Any(c => c.Type == "permission" && string.Equals(c.Value, requirement.Permission, StringComparison.OrdinalIgnoreCase)))
+        // Role management stays with SYS_ADMIN (operator 2026-11-07): a granted AUTH.ROLES.MANAGE claim is ignored.
+        var systemAdminOnly = string.Equals(requirement.Permission, TAPortal.Shared.ActorPermissionSql.SystemAdminOnlyPermission, StringComparison.OrdinalIgnoreCase);
+        if (context.User.IsInRole("SYS_ADMIN") || !systemAdminOnly && context.User.Claims.Any(c => c.Type == "permission" && string.Equals(c.Value, requirement.Permission, StringComparison.OrdinalIgnoreCase)))
             context.Succeed(requirement);
         return Task.CompletedTask;
     }

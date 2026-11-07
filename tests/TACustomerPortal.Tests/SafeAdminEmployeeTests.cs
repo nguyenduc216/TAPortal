@@ -82,7 +82,7 @@ public sealed class SafeAdminEmployeeTests
         Assert.Contains("t.DepartmentId=x.Id AND t.IsDeleted=0", S.HrCatalogSql.Departments);
         Assert.DoesNotContain("BranchId", S.HrCatalogSql.DepartmentCodeTaken);       // company-wide unique code
         Assert.Contains("BranchId=@branch", S.HrCatalogSql.TeamCodeTaken);
-        Assert.Contains("r.Code<>'SYS_ADMIN' OR EXISTS", S.PortalDb.CreateUserRoleSql);   // account creation reuses the SYS_ADMIN re-check
+        Assert.Contains("ar.Code='SYS_ADMIN'", S.PortalDb.CreateUserRoleSql);   // any role at account creation needs a SYS_ADMIN creator
     }
 
     // ---- Policies ----------------------------------------------------------------------------------------------
@@ -120,7 +120,8 @@ public sealed class SafeAdminEmployeeTests
         Assert.False(S.EmployeePolicy.IsLeaving("MATERNITY"));
 
         var roles = Roles();
-        Assert.Equal(S.EmployeeOutcome.Saved, S.EmployeePolicy.EvaluateRoles(roles, [EditorRole], false));
+        Assert.Equal(S.EmployeeOutcome.RoleForbidden, S.EmployeePolicy.EvaluateRoles(roles, [EditorRole], false));   // roles: SYS_ADMIN only
+        Assert.Equal(S.EmployeeOutcome.Saved, S.EmployeePolicy.EvaluateRoles(roles, [], false));
         Assert.Equal(S.EmployeeOutcome.RoleForbidden, S.EmployeePolicy.EvaluateRoles(roles, [SysAdminRole], false));
         Assert.Equal(S.EmployeeOutcome.Saved, S.EmployeePolicy.EvaluateRoles(roles, [SysAdminRole, EditorRole], true));
         Assert.Equal(S.EmployeeOutcome.InvalidRole, S.EmployeePolicy.EvaluateRoles(roles, [Guid.NewGuid()], true));
@@ -281,8 +282,8 @@ public sealed class SafeAdminEmployeeTests
         var page = WebUtility.HtmlDecode(await c.GetStringAsync($"/employees/details/{E2}"));
         Assert.Contains("data-ta-account-create", page);
         Assert.Contains("value=\"binh@ta.vn\"", page);                       // e-mail defaults to the company e-mail
-        Assert.DoesNotContain($"name=\"RoleIds\" value=\"{SysAdminRole}\"", page); // SYS_ADMIN not offered to a non-SYS_ADMIN
-        Assert.Contains($"name=\"RoleIds\" value=\"{EditorRole}\"", page);
+        Assert.DoesNotContain("name=\"RoleIds\"", page);                     // roles are given by a SYS_ADMIN only
+        Assert.Contains("Vai trò do quản trị hệ thống gán", page);
 
         var weak = await c.PostAsync($"/employees/createaccount/{E2}", Form(Token(page), ("Stamp", Stamp(page)), ("Username", "binh.tran2"), ("Password", "short")));
         Assert.Equal(HttpStatusCode.BadRequest, weak.StatusCode);
@@ -290,16 +291,16 @@ public sealed class SafeAdminEmployeeTests
 
         var forged = await c.PostAsync($"/employees/createaccount/{E2}", Form(Token(page), ("Stamp", Stamp(page)), ("Username", "binh.tran2"), ("Password", "Secret#2026"), ("RoleIds", SysAdminRole.ToString())));
         Assert.Equal(HttpStatusCode.BadRequest, forged.StatusCode);
-        Assert.Contains("Chỉ quản trị hệ thống (SYS_ADMIN) mới được gán vai trò Quản trị hệ thống.", WebUtility.HtmlDecode(await forged.Content.ReadAsStringAsync()));
+        Assert.Contains("Chỉ quản trị hệ thống (SYS_ADMIN) mới được gán vai trò cho tài khoản.", WebUtility.HtmlDecode(await forged.Content.ReadAsStringAsync()));
         Assert.Null(store.Get(E2)!.Account);
 
         var created = await c.PostAsync($"/employees/createaccount/{E2}", Form(Token(page), ("Stamp", Stamp(page)), ("Username", "binh.tran2"), ("Email", "binh@ta.vn"),
-            ("Password", "Secret#2026"), ("RoleIds", EditorRole.ToString())));
+            ("Password", "Secret#2026")));
         Assert.Equal(HttpStatusCode.Redirect, created.StatusCode);
         var account = store.Get(E2)!.Account!;
         Assert.Equal("binh.tran2", account.Username);
         Assert.Equal("Trần Thị Bình", account.DisplayName);                  // display name = full name
-        Assert.Equal(new[] { "Kế toán" }, account.RoleNames);
+        Assert.Empty(account.RoleNames);                                      // a SYS_ADMIN assigns roles afterwards
         Assert.True(store.LastPasswordHash!.Length > 20 && !store.LastPasswordHash.Contains("Secret#2026"));
 
         // Deleting is refused while linked; unlinking keeps the account; then deletion works.

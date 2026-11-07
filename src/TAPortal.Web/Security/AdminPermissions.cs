@@ -175,7 +175,6 @@ public static class AdminPermissions
             new(UsersUpdate, "Sửa, khóa/mở người dùng", "UPDATE"),
             new(UsersDelete, "Xóa (mềm) người dùng", "DELETE"),
             new(RolesView, "Xem vai trò và phân quyền", "VIEW"),
-            new(RolesManage, "Tạo, sửa, xóa vai trò; gán vai trò cho người dùng", "MANAGE"),
             new(MenusManage, "Xem cấu hình menu", "MANAGE")
         ])
     ];
@@ -185,7 +184,8 @@ public static class AdminPermissions
     public static readonly IReadOnlySet<string> Codes = All.Select(p => p.Code).ToHashSet(StringComparer.OrdinalIgnoreCase);
 
     // Codes inserted by migration 028: every module except HR, whose rows come from the HR core bootstrap of TAPortalSys.
-    public static readonly IReadOnlyList<string> MigrationCodes = Modules.Where(m => m.Key != HrModuleKey).SelectMany(m => m.Permissions).Select(p => p.Code).ToList();
+    // AUTH.ROLES.MANAGE is inserted too but is not grantable: role management is SYS_ADMIN only (operator 2026-11-07).
+    public static readonly IReadOnlyList<string> MigrationCodes = Modules.Where(m => m.Key != HrModuleKey).SelectMany(m => m.Permissions).Select(p => p.Code).Append(RolesManage).ToList();
 
     public static bool IsCatalogued(string? code) => code is not null && Codes.Contains(code);
 
@@ -193,7 +193,8 @@ public static class AdminPermissions
 
     // Same rule as PermissionHandler: SYS_ADMIN has every permission; otherwise a "permission" claim (refreshed per request).
     public static bool Has(ClaimsPrincipal user, string code) =>
-        IsSystemAdmin(user) || user.Claims.Any(c => c.Type == "permission" && string.Equals(c.Value, code, StringComparison.OrdinalIgnoreCase));
+        IsSystemAdmin(user) || !string.Equals(code, RolesManage, StringComparison.OrdinalIgnoreCase)
+            && user.Claims.Any(c => c.Type == "permission" && string.Equals(c.Value, code, StringComparison.OrdinalIgnoreCase));
 }
 
 public sealed record AdminLandingPage(string Permission, string Controller, string Action);

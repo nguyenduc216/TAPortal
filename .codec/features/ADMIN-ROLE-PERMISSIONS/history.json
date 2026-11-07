@@ -18,5 +18,15 @@
     "migration_status": "NOT_APPLICABLE",
     "publish_status": "DEPLOYED",
     "merge_status": "MERGED"
+  },
+  {
+    "change_id": "ADMIN-ROLE-PERMISSIONS-CHG-20261107T041034Z-BA9E56",
+    "created_at": "2026-11-07T04:10:34.649105+00:00",
+    "title": "Only SYS_ADMIN manages roles and assigns roles to accounts",
+    "status": "IMPLEMENTED",
+    "commit_sha": null,
+    "migration_status": "NOT_APPLICABLE",
+    "publish_status": "NOT_PUBLISHED",
+    "merge_status": "PENDING_APPROVAL"
   }
 ]

@@ -38,8 +38,12 @@ SELECT CASE WHEN EXISTS(
         return Convert.ToInt32(await cmd.ExecuteScalarAsync()) == 1;
     }
 
+    /// <summary>Operator 2026-11-07: only a SYS_ADMIN creates, edits or assigns roles; a grant of this code never counts.</summary>
+    public const string SystemAdminOnlyPermission = "AUTH.ROLES.MANAGE";
+
     public static async Task<bool> HasPermissionAsync(SqlConnection cn, SqlTransaction? tx, Guid actor, string permission)
     {
+        if (string.Equals(permission, SystemAdminOnlyPermission, StringComparison.OrdinalIgnoreCase)) return await IsSystemAdminAsync(cn, tx, actor);
         await using var cmd = new SqlCommand(HasPermission, cn, tx);
         cmd.Parameters.AddWithValue("@actor", actor);
         cmd.Parameters.Add("@permission", System.Data.SqlDbType.VarChar, 200).Value = permission;

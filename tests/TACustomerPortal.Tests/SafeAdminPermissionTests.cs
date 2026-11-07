@@ -82,7 +82,8 @@ public sealed class SafeAdminPermissionTests
                 var actionPerms = action.GetCustomAttributes<AuthorizeAttribute>().Select(a => a.Policy).Where(p => p?.StartsWith("PERM:") == true).ToList();
                 if (classPerms.Count + actionPerms.Count == 0) problems.Add($"{type.Name}.{action.Name}: no permission");
                 if (action.GetCustomAttribute<HttpPostAttribute>() is not null && viewOnlyClass && actionPerms.Count == 0) problems.Add($"{type.Name}.{action.Name}: POST without its own permission");
-                foreach (var p in classPerms.Concat(actionPerms))
+                // AUTH.ROLES.MANAGE is not grantable: only a SYS_ADMIN passes it (operator 2026-11-07).
+                foreach (var p in classPerms.Concat(actionPerms).Where(p => p != AdminSecurity.AdminPermissions.Policy.RolesManage))
                     if (!AdminSecurity.AdminPermissions.IsCatalogued(p!["PERM:".Length..])) problems.Add($"{type.Name}.{action.Name}: {p} not in the catalogue");
             }
         }
@@ -185,7 +186,15 @@ public sealed class SafeAdminPermissionTests
     public async Task RoleCreateEditAndPermissionTicksRoundTrip()
     {
         var roles = new MemoryRoles();
-        using var f = Factory("STAFF", roles, new MemoryUserRoles(false), "AUTH.ROLES.VIEW", "AUTH.ROLES.MANAGE");
+        // Operator 2026-11-07: only a SYS_ADMIN manages roles; a granted AUTH.ROLES.MANAGE is ignored.
+        using (var staff = Factory("STAFF", roles, new MemoryUserRoles(false), "AUTH.ROLES.VIEW", "AUTH.ROLES.MANAGE"))
+        {
+            var s = Client(staff);
+            Assert.Equal(HttpStatusCode.Forbidden, (await s.GetAsync("/roles/create")).StatusCode);
+            Assert.DoesNotContain("data-ta-role-create", WebUtility.HtmlDecode(await s.GetStringAsync("/roles")));
+        }
+        Assert.DoesNotContain(AdminSecurity.AdminPermissions.All, p => p.Code == "AUTH.ROLES.MANAGE");   // not offered on the Roles page
+        using var f = Factory("SYS_ADMIN", roles, new MemoryUserRoles(true), "AUTH.ROLES.VIEW");
         var c = Client(f);
         var token = await Token(c, "/roles/create");
         var created = await c.PostAsync("/roles/create", new FormUrlEncodedContent([
@@ -301,28 +310,38 @@ public sealed class SafeAdminPermissionTests
     }
 
     [Fact]
-    public async Task RoleManagerCannotGrantSystemAdminOverHttp()
+    public async Task OnlyASystemAdminAssignsRolesOverHttp()
     {
+        // Operator 2026-11-07: only a SYS_ADMIN assigns roles, even to an account holding a granted AUTH.ROLES.MANAGE.
         var store = new MemoryUserRoles(false);
-        using var f = Factory("STAFF", new MemoryRoles(), store, "AUTH.USERS.VIEW", "AUTH.ROLES.MANAGE");
+        using (var staff = Factory("STAFF", new MemoryRoles(), store, "AUTH.USERS.VIEW", "AUTH.ROLES.MANAGE"))
+        {
+            var s = Client(staff);
+            Assert.Equal(HttpStatusCode.Forbidden, (await s.GetAsync($"/users/roles/{Target}")).StatusCode);
+            // The Users list reads the database directly, so its role picker is checked on the view source.
+            var users = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "TAPortal.Web", "Views", "Users", "Index.cshtml"));
+            Assert.Contains("@if (isSystemAdmin) {<div class=\"ta-span-2\"><label class=\"form-label\" for=\"newRole\">", users);
+            Assert.Contains("Vai trò do quản trị hệ thống gán", users);
+        }
+        Assert.Empty(store.RolesOf(Target));
+        var admin = new MemoryUserRoles(true);
+        using var f = Factory("SYS_ADMIN", new MemoryRoles(), admin, "AUTH.USERS.VIEW");
         var c = Client(f);
         var html = WebUtility.HtmlDecode(await c.GetStringAsync($"/users/roles/{Target}"));
-        Assert.DoesNotContain($"name=\"roleIds\" value=\"{SysAdminRole}\"", html);     // SYS_ADMIN not offered
-        Assert.Contains($"name=\"roleIds\" value=\"{EditorRole}\"", html);
         var token = WebUtility.HtmlDecode(Regex.Match(html, "name=\"__RequestVerificationToken\"[^>]*value=\"([^\"]+)\"").Groups[1].Value);
         var stamp = Regex.Match(html, "name=\"stamp\" value=\"([0-9A-F]+)\"").Groups[1].Value;
-        var forged = await c.PostAsync($"/users/roles/{Target}", new FormUrlEncodedContent([new("__RequestVerificationToken", token), new("stamp", stamp), new("roleIds", SysAdminRole.ToString())]));
-        Assert.Equal(HttpStatusCode.Forbidden, forged.StatusCode);
-        Assert.Empty(store.RolesOf(Target));
         var ok = await c.PostAsync($"/users/roles/{Target}", new FormUrlEncodedContent([new("__RequestVerificationToken", token), new("stamp", stamp), new("roleIds", EditorRole.ToString())]));
         Assert.Equal(HttpStatusCode.Redirect, ok.StatusCode);
-        Assert.Equal(new[] { EditorRole }, store.RolesOf(Target).ToArray());
+        Assert.Equal(new[] { EditorRole }, admin.RolesOf(Target).ToArray());
     }
 
     [Fact]
     public void SqlRechecksKeepSystemAdminProtected()
     {
-        Assert.Contains("r.Code<>'SYS_ADMIN' OR EXISTS", AdminServices.PortalDb.CreateUserRoleSql);
+        // Any role at account creation needs an active SYS_ADMIN creator; AUTH.ROLES.MANAGE re-checks are SYS_ADMIN only.
+        Assert.DoesNotContain("r.Code<>'SYS_ADMIN' OR EXISTS", AdminServices.PortalDb.CreateUserRoleSql);
+        Assert.Contains("ar.Code='SYS_ADMIN'", AdminServices.PortalDb.CreateUserRoleSql);
+        Assert.Equal("AUTH.ROLES.MANAGE", TAPortal.Shared.ActorPermissionSql.SystemAdminOnlyPermission);
         Assert.Contains("up.Effect='DENY'", TAPortal.Shared.ActorPermissionSql.HasPermission);
         Assert.Contains("u.Status='ACTIVE'", TAPortal.Shared.ActorPermissionSql.HasPermission);
         Assert.Equal("CUSTOMERS.PORTAL.MANAGE", TAPortal.Shared.MembershipAdminStore.ManagePermission);

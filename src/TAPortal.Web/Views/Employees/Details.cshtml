@@ -19,7 +19,7 @@
     var canLink = Model.Accounts is not null;
     var canCreateAccount = canLink && AdminPermissions.Has(User, AdminPermissions.UsersCreate);
     var canEditUser = AdminPermissions.Has(User, AdminPermissions.UsersUpdate);
-    var grantable = (Model.Accounts?.Roles ?? []).Where(r => r.IsActive && (isSystemAdmin || r.Code != RoleChangePolicy.SystemAdminCode)).ToList();
+    var grantable = isSystemAdmin ? (Model.Accounts?.Roles ?? []).Where(r => r.IsActive).ToList() : [];   // roles are given by a SYS_ADMIN only
     var draftRoles = Model.AccountDraft.RoleIds ?? [];
 }
 @section PageActions {
@@ -185,7 +185,8 @@
                             {
                                 <label class="form-check"><input class="form-check-input" type="checkbox" name="RoleIds" value="@r.Id" checked="@draftRoles.Contains(r.Id)" /><span class="form-check-label">@r.Name@(r.Code == RoleChangePolicy.SystemAdminCode ? " (toàn quyền hệ thống)" : "")</span></label>
                             }
-                            @if (grantable.Count == 0) {<div class="text-secondary">Chưa có vai trò đang hoạt động.</div>}
+                            @if (!isSystemAdmin) {<div class="text-secondary">Vai trò do quản trị hệ thống gán sau khi tạo tài khoản.</div>}
+                            else if (grantable.Count == 0) {<div class="text-secondary">Chưa có vai trò đang hoạt động.</div>}
                         </fieldset>
                         <button type="submit" class="btn btn-primary w-100" data-ta-loading data-ta-loading-text="Đang tạo...">@UiIcon.Render("user-plus")<span>Tạo và liên kết tài khoản</span></button>
                     </form>

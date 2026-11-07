@@ -142,8 +142,8 @@ WHERE up.UserId=@id AND up.Effect='DENY' AND p.IsDeleted=0;
 INSERT dbo.UserRoles(UserId,RoleId,CreatedBy)
 SELECT @u,r.Id,@by FROM dbo.Roles r
 WHERE r.Id=@r AND r.IsActive=1 AND r.IsDeleted=0
- AND (r.Code<>'SYS_ADMIN' OR EXISTS(SELECT 1 FROM dbo.Users a JOIN dbo.UserRoles aur ON aur.UserId=a.Id JOIN dbo.Roles ar ON ar.Id=aur.RoleId
-  WHERE a.Id=@by AND a.IsActive=1 AND a.IsDeleted=0 AND a.Status='ACTIVE' AND ar.Code='SYS_ADMIN' AND ar.IsActive=1 AND ar.IsDeleted=0));
+ AND EXISTS(SELECT 1 FROM dbo.Users a JOIN dbo.UserRoles aur ON aur.UserId=a.Id JOIN dbo.Roles ar ON ar.Id=aur.RoleId
+  WHERE a.Id=@by AND a.IsActive=1 AND a.IsDeleted=0 AND a.Status='ACTIVE' AND ar.Code='SYS_ADMIN' AND ar.IsActive=1 AND ar.IsDeleted=0);
 """;
 
     public async Task<Guid> CreateUserAsync(UserCreateVm vm, string passwordHash, Guid? createdBy = null)
@@ -182,7 +182,7 @@ VALUES(@id,@username,@nu,@email,@ne,@phone,@name,@hash,'ACTIVE',1,@createdBy);
         }
         foreach (var roleId in roleIds.Distinct())
         {
-            // Only an active, non-deleted role; SYS_ADMIN only when the creator is an active SYS_ADMIN (re-checked here).
+            // Only an active, non-deleted role, and only when the creator is an active SYS_ADMIN (role management is SYS_ADMIN only).
             await using var roleCmd = new SqlCommand(CreateUserRoleSql, cn, tx);
             roleCmd.Parameters.AddWithValue("@u", id);
             roleCmd.Parameters.AddWithValue("@r", roleId);

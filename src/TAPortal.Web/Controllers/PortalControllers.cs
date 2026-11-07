@@ -62,8 +62,7 @@ public sealed class UsersController(PortalDb db, PasswordService passwords, IUse
         if (!string.IsNullOrWhiteSpace(vm.Username) && await db.UsernameExistsAsync(vm.Username)) ModelState.AddModelError(nameof(vm.Username), "Tên đăng nhập đã tồn tại.");
         if (ModelState.IsValid && await db.EmailInUseAsync(vm.Email, null)) ModelState.AddModelError(nameof(vm.Email), "Email đã được sử dụng bởi tài khoản khác.");
         // Only a SYS_ADMIN may create an account holding SYS_ADMIN (re-checked again in SQL by PortalDb.CreateUserRoleSql).
-        if (ModelState.IsValid && vm.RoleId is Guid roleId && !AdminPermissions.IsSystemAdmin(User)
-            && (await db.GetRolesAsync()).Any(r => r.Id == roleId && r.Code == RoleChangePolicy.SystemAdminCode))
+        if (ModelState.IsValid && vm.RoleId is not null && !AdminPermissions.IsSystemAdmin(User))
             ModelState.AddModelError(nameof(vm.RoleId), SystemAdminGrantMessage);
         if (ModelState.IsValid)
         {
@@ -169,7 +168,7 @@ public sealed class UsersController(PortalDb db, PasswordService passwords, IUse
         return View(nameof(Delete), account);
     }
 
-    internal const string SystemAdminGrantMessage = "Chỉ quản trị hệ thống (SYS_ADMIN) mới được gán vai trò Quản trị hệ thống.";
+    internal const string SystemAdminGrantMessage = "Chỉ quản trị hệ thống (SYS_ADMIN) mới được gán vai trò cho tài khoản.";
 
     private static string AccountMessage(AccountChangeOutcome outcome) => outcome switch
     {

@@ -316,7 +316,7 @@ public static class EmployeePolicy
         {
             var role = catalog.FirstOrDefault(r => r.Id == id);
             if (role is null || !role.IsActive) return EmployeeOutcome.InvalidRole;
-            if (role.Code == RoleChangePolicy.SystemAdminCode && !actorIsSystemAdmin) return EmployeeOutcome.RoleForbidden;
+            if (!actorIsSystemAdmin) return EmployeeOutcome.RoleForbidden;   // roles are given by a SYS_ADMIN only
         }
         return EmployeeOutcome.Saved;
     }
