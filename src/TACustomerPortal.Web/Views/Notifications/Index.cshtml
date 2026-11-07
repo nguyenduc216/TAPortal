@@ -5,6 +5,11 @@
     ViewData["Eyebrow"] = "Thanh toán";
     ViewData["Subtitle"] = "Nơi T.A gửi thông báo cho doanh nghiệp, và các kênh doanh nghiệp dùng để báo cho khách hàng của mình khi nhận tiền.";
     var r = Model.Recipients;
+    var readOnly = !Model.CanManage;
+}
+@if (readOnly)
+{
+    <aside class="cp-note" style="margin-bottom:14px" data-cp-readonly>@UiIcon.Render("lock")<div>Bạn có quyền xem cài đặt thông báo. Người có quyền quản lý thông báo mới thay đổi được.</div></aside>
 }
 @if (Model.Errors.Count > 0)
 {
@@ -12,7 +17,7 @@
 }
 <form class="cp-card" method="post" asp-action="Recipients" style="margin-bottom:14px" data-cp-recipients>
     <div class="cp-card__head"><span class="cp-blob">@UiIcon.Render("bell")</span><h2>Nhận thông báo từ T.A</h2></div>
-    <div class="cp-card__body">
+    <fieldset class="cp-card__body" disabled="@readOnly" style="border:0;margin:0;min-width:0">
         <p class="cp-muted">T.A gửi thông báo đơn hàng nhận tiền và giao dịch cần xử lý của doanh nghiệp tới các địa chỉ dưới đây. Để trống nếu không muốn nhận qua kênh đó.</p>
         <div class="cp-form-grid">
             <div class="cp-field"><label class="cp-label" for="rEmail">Email</label><div class="cp-input-wrap">@UiIcon.Render("mail")<input class="cp-input" id="rEmail" type="email" name="email" value="@r.Email" maxlength="256" placeholder="ketoan@congty.vn" /></div></div>
@@ -23,8 +28,8 @@
         {
             <div class="cp-field"><label class="cp-check"><input type="checkbox" name="events" value="@code" checked="@r.Events.Contains(code)" /><span>Nhận khi: @label</span></label></div>
         }
-    </div>
-    <div class="cp-card__foot"><button class="cp-btn cp-btn--primary" type="submit" style="margin-left:auto">@UiIcon.Render("device-floppy")<span>Lưu nơi nhận</span></button></div>
+    </fieldset>
+    @if (!readOnly) {<div class="cp-card__foot"><button class="cp-btn cp-btn--primary" type="submit" style="margin-left:auto">@UiIcon.Render("device-floppy")<span>Lưu nơi nhận</span></button></div>}
 </form>
 
 <div class="cp-grid">
@@ -34,7 +39,7 @@
         <div class="cp-card__head"><span class="cp-blob @(c.IsEnabled ? "cp-blob--green" : "")">@UiIcon.Render("send")</span><h2>@c.Label</h2>
             <span class="cp-badge @(c.IsEnabled ? "cp-badge--green" : "cp-badge--soft")" style="margin-left:auto">@(c.IsEnabled ? "Đang bật" : "Đang tắt")</span></div>
         <form method="post" asp-action="Save">
-            <div class="cp-card__body">
+            <fieldset class="cp-card__body" disabled="@readOnly" style="border:0;margin:0;min-width:0">
                 <input type="hidden" name="channel" value="@c.Channel" />
                 <p class="cp-muted">@c.Audience</p>
                 @if (Model.ErrorChannel == c.Channel && Model.Errors.Count > 0) {<div class="cp-error" style="margin-bottom:10px">@string.Join(" ", Model.Errors)</div>}
@@ -65,9 +70,11 @@
                     <div class="cp-field"><label class="cp-check"><input type="checkbox" name="events" value="@code" checked="@c.Events.Contains(code)" /><span>Gửi khi: @label</span></label></div>
                 }
                 <div class="cp-field"><label class="cp-check"><input type="checkbox" name="enabled" value="true" checked="@c.IsEnabled" /><span><strong>Bật kênh này</strong></span></label></div>
-            </div>
-            <div class="cp-card__foot"><button class="cp-btn cp-btn--primary" type="submit" style="margin-left:auto">@UiIcon.Render("device-floppy")<span>Lưu kênh</span></button></div>
+            </fieldset>
+            @if (!readOnly) {<div class="cp-card__foot"><button class="cp-btn cp-btn--primary" type="submit" style="margin-left:auto">@UiIcon.Render("device-floppy")<span>Lưu kênh</span></button></div>}
         </form>
+        @if (!readOnly)
+        {
         <form method="post" asp-action="Test" class="cp-card__foot cp-inline-form">
             <input type="hidden" name="channel" value="@c.Channel" />
             @if (c.Channel == NotificationChannelKind.Smtp)
@@ -81,6 +88,7 @@
             <button class="cp-btn cp-btn--ghost" type="submit">@UiIcon.Render("send")<span>Gửi thử</span></button>
             @if (c.LastTestResult is string t) {<span class="cp-muted" style="font-size:12px">@PaymentText.VietnamTime(c.LastTestAtUtc): @PartnerText.Scrub(t)</span>}
         </form>
+        }
     </section>
 }
 </div>

@@ -21,7 +21,7 @@
     <section class="cp-card" aria-labelledby="yourRole">
         <div class="cp-card__head"><span class="cp-blob cp-blob--gold">@UiIcon.Render("shield-check")</span><h2 id="yourRole">Quyền của bạn</h2></div>
         <div class="cp-card__body">
-            <span class="cp-badge cp-badge--green" style="font-size:14px;padding:6px 14px">@PortalRoleText.Label(Model.Role)</span>
+            <span class="cp-badge cp-badge--green" style="font-size:14px;padding:6px 14px">@CustomerAccess.RoleLabel(Model.Role)</span>
             <p class="cp-hint" style="margin-top:12px">Quyền chỉ áp dụng cho doanh nghiệp này trong Customer Portal.</p>
         </div>
         <div class="cp-card__foot"><a class="cp-btn cp-btn--ghost cp-btn--block" asp-controller="Account" asp-action="SelectCustomer">@UiIcon.Render("switch-horizontal")<span>Đổi doanh nghiệp</span></a></div>
@@ -36,7 +36,7 @@
             else
             {
                 var version = ViewData["LogoVersion"] as string;
-                var canManage = TACustomerPortal.Web.Controllers.CustomerAreaController.CanManage(Model);
+                var canManage = CustomerAccess.CanManage(Model, CustomerModules.Profile);
                 <form class="cp-logo-picker" method="post" asp-action="Logo" enctype="multipart/form-data" data-cp-logo-picker data-ta-hard>
                     <span class="cp-logo-frame">
                         <img src="@(version is null ? null : Url.Action("CompanyLogo") + "?v=" + version)" alt="Logo @Model.Name" hidden="@(version is null)" data-cp-logo-preview />
@@ -52,7 +52,7 @@
                                 @if (version is not null) {<button class="cp-btn cp-btn--danger cp-btn--sm" type="submit" name="remove" value="true" onclick="return confirm('Xóa logo doanh nghiệp?')">@UiIcon.Render("trash")<span>Xóa logo</span></button>}
                             </div>
                         }
-                        else {<p class="cp-muted" style="margin:0">Chủ sở hữu hoặc quản trị viên doanh nghiệp có thể thay logo.</p>}
+                        else {<p class="cp-muted" style="margin:0">Tài khoản có quyền quản lý hồ sơ doanh nghiệp có thể thay logo.</p>}
                     </div>
                 </form>
             }

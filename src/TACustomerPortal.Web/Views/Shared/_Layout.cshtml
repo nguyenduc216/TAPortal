@@ -2,20 +2,22 @@
 @inject TAPortal.Integrations.Branding.ILogoStore Logos
 @functions {
     // Customer Portal navigation, grouped like a SaaS workspace. "Index" entries stay active on every page of their module.
-    private static readonly (string Group, string Controller, string Action, string Icon, string Label)[] Nav =
+    // Module: the entry shows only when the member may view that module (CustomerAccess); null = always (own account).
+    private static readonly (string Group, string Controller, string Action, string Icon, string Label, string? Module)[] Nav =
     [
-        ("Không gian làm việc", "Dashboard", "Index", "layout-dashboard", "Tổng quan"),
-        ("Không gian làm việc", "Profile", "Company", "building", "Hồ sơ doanh nghiệp"),
-        ("Thanh toán", "Orders", "Index", "file-invoice", "Đơn hàng & QR"),
-        ("Thanh toán", "Transactions", "Index", "receipt-tax", "Đối soát giao dịch"),
-        ("Thanh toán", "Contacts", "Index", "users", "Khách hàng"),
-        ("Thanh toán", "Banks", "Index", "building-bank", "Tài khoản ngân hàng"),
-        ("Thanh toán", "PaymentSettings", "Index", "settings", "Cài đặt thanh toán"),
-        ("Thanh toán", "EInvoice", "Index", "file-text", "Hóa đơn điện tử"),
-        ("Thanh toán", "Notifications", "Index", "bell", "Cài đặt thông báo"),
-        ("Dịch vụ", "ServicePackages", "Index", "package", "Gói dịch vụ"),
-        ("Tài khoản", "Profile", "Personal", "id", "Thông tin cá nhân"),
-        ("Tài khoản", "Account", "ChangePassword", "shield-lock", "Bảo mật & mật khẩu"),
+        ("Không gian làm việc", "Dashboard", "Index", "layout-dashboard", "Tổng quan", null),
+        ("Không gian làm việc", "Profile", "Company", "building", "Hồ sơ doanh nghiệp", CustomerModules.Profile),
+        ("Không gian làm việc", "Members", "Index", "user-cog", "Tài khoản & phân quyền", CustomerModules.Members),
+        ("Thanh toán", "Orders", "Index", "file-invoice", "Đơn hàng & QR", CustomerModules.Orders),
+        ("Thanh toán", "Transactions", "Index", "receipt-tax", "Đối soát giao dịch", CustomerModules.Transactions),
+        ("Thanh toán", "Contacts", "Index", "users", "Khách hàng", CustomerModules.Contacts),
+        ("Thanh toán", "Banks", "Index", "building-bank", "Tài khoản ngân hàng", CustomerModules.Banks),
+        ("Thanh toán", "PaymentSettings", "Index", "settings", "Cài đặt thanh toán", CustomerModules.PaymentSettings),
+        ("Thanh toán", "EInvoice", "Index", "file-text", "Hóa đơn điện tử", CustomerModules.EInvoice),
+        ("Thanh toán", "Notifications", "Index", "bell", "Cài đặt thông báo", CustomerModules.Notifications),
+        ("Dịch vụ", "ServicePackages", "Index", "package", "Gói dịch vụ", CustomerModules.Packages),
+        ("Tài khoản", "Profile", "Personal", "id", "Thông tin cá nhân", null),
+        ("Tài khoản", "Account", "ChangePassword", "shield-lock", "Bảo mật & mật khẩu", null),
     ];
 
     private bool IsCurrent(string controller, string action) =>
@@ -77,7 +79,7 @@
             </a>
         </div>
         <nav class="cp-side-nav" id="cpNav" data-ta-swap aria-label="Menu khách hàng">
-            @foreach (var group in Nav.GroupBy(n => n.Group))
+            @foreach (var group in Nav.Where(n => n.Module is null || (current is not null && CustomerAccess.CanView(current, n.Module))).GroupBy(n => n.Group))
             {
                 <p class="cp-side-nav__label">@group.Key</p>
                 @foreach (var n in group)

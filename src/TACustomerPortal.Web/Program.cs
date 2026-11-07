@@ -17,6 +17,7 @@ builder.Services.AddSingleton<PasswordService>();
 builder.Services.AddSingleton<LoginAttemptLimiter>();
 builder.Services.AddScoped<ICustomerStore, CustomerStore>();
 builder.Services.AddScoped<ISignupStore, SqlSignupStore>();
+builder.Services.AddScoped<ICustomerMemberStore, SqlCustomerMemberStore>();
 builder.Services.AddHttpClient(VietQrTaxCodeLookup.ClientName, c => { c.BaseAddress = new Uri("https://api.vietqr.io/"); c.Timeout = TimeSpan.FromSeconds(6); });
 builder.Services.AddSingleton<ITaxCodeLookup, VietQrTaxCodeLookup>();
 builder.Services.AddScoped<ICurrentCustomerContext, CurrentCustomerContext>();

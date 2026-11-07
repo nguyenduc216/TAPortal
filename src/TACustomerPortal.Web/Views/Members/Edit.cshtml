@@ -1,0 +1,74 @@
+@model MemberDetailsVm
+@{
+    var x = Model.Member;
+    ViewData["Title"] = x.DisplayName;
+    ViewData["Eyebrow"] = "Tài khoản & phân quyền";
+    ViewData["Subtitle"] = "Quyền của tài khoản trên từng chức năng của doanh nghiệp " + Model.Customer.Name + ".";
+}
+<div class="cp-grid cp-grid--2">
+    <form class="cp-card" method="post" asp-action="Permissions" asp-route-id="@x.UserId" data-cp-member-permissions>
+        <div class="cp-card__head"><span class="cp-blob">@UiIcon.Render("user-shield")</span><h2>Phân quyền</h2>
+            <span class="cp-badge @(x.Role == CustomerAccess.Owner ? "cp-badge--gold" : "cp-badge--soft")" style="margin-left:auto">@CustomerAccess.Summary(x.Role, x.Permissions)</span></div>
+        <div class="cp-card__body">
+            @if (Model.ReadOnlyReason is string reason) {<aside class="cp-note" style="margin-bottom:12px" data-cp-readonly>@UiIcon.Render("lock")<div>@reason</div></aside>}
+            else if (x.Role != CustomerAccess.Member) {<aside class="cp-note" style="margin-bottom:12px">@UiIcon.Render("info-circle")<div>Tài khoản đang có vai trò <strong>@CustomerAccess.RoleLabel(x.Role)</strong> do T.A cấp. Khi lưu phân quyền tại đây, tài khoản trở thành Thành viên với đúng các quyền được tích.</div></aside>}
+            @await Html.PartialAsync("_PermissionMatrix", new PermissionMatrixVm(Model.Levels, Model.Editable))
+        </div>
+        @if (Model.Editable)
+        {
+            <div class="cp-card__foot">
+                <a class="cp-btn cp-btn--ghost" asp-action="Index">@UiIcon.Render("arrow-left")<span>Quay lại</span></a>
+                <button class="cp-btn cp-btn--primary" type="submit" style="margin-left:auto">@UiIcon.Render("device-floppy")<span>Lưu phân quyền</span></button>
+            </div>
+        }
+        else
+        {
+            <div class="cp-card__foot"><a class="cp-btn cp-btn--ghost" asp-action="Index">@UiIcon.Render("arrow-left")<span>Quay lại</span></a></div>
+        }
+    </form>
+
+    <div style="display:grid;gap:14px;align-content:start">
+        <section class="cp-card">
+            <div class="cp-card__head"><span class="cp-blob cp-blob--ink">@UiIcon.Render("user-circle")</span><h2>Tài khoản</h2>
+                <span class="cp-badge @(x.IsActive ? "cp-badge--green" : "cp-badge--red")" style="margin-left:auto">@(x.IsActive ? "Đang hoạt động" : "Đã ngừng")</span></div>
+            <div class="cp-card__body">
+                <dl class="cp-dl">
+                    <div><dt>@UiIcon.Render("id")Tên đăng nhập</dt><dd><span class="cp-code">@x.Username</span></dd></div>
+                    <div><dt>@UiIcon.Render("mail")Email</dt><dd>@(x.Email ?? "—")</dd></div>
+                    <div><dt>@UiIcon.Render("phone")Điện thoại</dt><dd>@(x.Phone ?? "—")</dd></div>
+                    <div><dt>@UiIcon.Render("calendar")Ngày tạo</dt><dd>@PaymentText.VietnamTime(x.CreatedAt)</dd></div>
+                </dl>
+            </div>
+            @if (Model.Editable)
+            {
+                <form method="post" asp-action="SetActive" asp-route-id="@x.UserId" class="cp-card__foot" onsubmit="@(x.IsActive ? $"return confirm('Ngừng tài khoản {x.Username} trong doanh nghiệp?')" : null)">
+                    <input type="hidden" name="active" value="@(x.IsActive ? "false" : "true")" />
+                    <span class="cp-muted" style="font-size:12px">@(x.IsActive ? "Ngừng: tài khoản không vào được doanh nghiệp này nữa." : "Kích hoạt lại quyền truy cập doanh nghiệp.")</span>
+                    <button class="cp-btn cp-btn--sm @(x.IsActive ? "cp-btn--danger" : "cp-btn--primary")" type="submit" style="margin-left:auto">@UiIcon.Render(x.IsActive ? "ban" : "check")<span>@(x.IsActive ? "Ngừng tài khoản" : "Kích hoạt lại")</span></button>
+                </form>
+            }
+        </section>
+
+        @if (Model.Editable)
+        {
+            <section class="cp-card" data-cp-member-password>
+                <div class="cp-card__head"><span class="cp-blob cp-blob--gold">@UiIcon.Render("key")</span><h2>Đặt mật khẩu mới</h2></div>
+                @if (Model.CanResetPassword)
+                {
+                    <form method="post" asp-action="Password" asp-route-id="@x.UserId" autocomplete="off">
+                        <div class="cp-card__body">
+                            <div class="cp-field"><label class="cp-label" for="newPassword">Mật khẩu mới</label><div class="cp-input-wrap">@UiIcon.Render("lock")<input class="cp-input" id="newPassword" name="newPassword" type="password" autocomplete="new-password" required /></div></div>
+                            <div class="cp-field"><label class="cp-label" for="confirmPassword">Nhập lại mật khẩu</label><div class="cp-input-wrap">@UiIcon.Render("lock")<input class="cp-input" id="confirmPassword" name="confirmPassword" type="password" autocomplete="new-password" required /></div></div>
+                            <p class="cp-hint" style="margin:0">Ít nhất @PasswordPolicy.MinimumLength ký tự, có chữ, số và ký tự đặc biệt. Người dùng bị đăng xuất và đổi mật khẩu ở lần đăng nhập tiếp theo.</p>
+                        </div>
+                        <div class="cp-card__foot"><button class="cp-btn cp-btn--primary cp-btn--sm" type="submit" style="margin-left:auto">@UiIcon.Render("key")<span>Đặt mật khẩu</span></button></div>
+                    </form>
+                }
+                else
+                {
+                    <div class="cp-card__body"><p class="cp-muted" style="margin:0">Tài khoản này còn dùng cho doanh nghiệp khác nên chỉ T.A đặt lại được mật khẩu.</p></div>
+                }
+            </section>
+        }
+    </div>
+</div>

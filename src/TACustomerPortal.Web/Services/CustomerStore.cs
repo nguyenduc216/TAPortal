@@ -2,7 +2,8 @@ using Microsoft.Data.SqlClient;
 
 namespace TACustomerPortal.Web.Services;
 public sealed record CustomerUser(Guid Id, string Username, string DisplayName, string? Email, string PasswordHash, bool MustChangePassword = false);
-public sealed record CustomerMembership(Guid CustomerId, string Code, string Name, string? TaxCode, string? Email, string? Phone, string? Address, string Role);
+public sealed record CustomerMembership(Guid CustomerId, string Code, string Name, string? TaxCode, string? Email, string? Phone, string? Address, string Role,
+    string? Permissions = null);
 public interface ICustomerStore
 {
     Task<CustomerUser?> FindUser(string username);
@@ -27,21 +28,31 @@ public sealed class CustomerStore(IConfiguration configuration) : ICustomerStore
 
     public Task<CustomerUser?> FindUser(string username) => ReadUser("NormalizedUsername=@value", username.Trim().ToUpperInvariant());
     public Task<CustomerUser?> FindUser(Guid id) => ReadUser("Id=@value", id);
-    public async Task<IReadOnlyList<CustomerMembership>> Memberships(Guid userId)
-    {
-        await using var cn = Connection();
-        await cn.OpenAsync();
-        await using var cmd = new SqlCommand("""
-SELECT c.Id,c.Code,c.Name,c.TaxCode,c.Email,c.Phone,c.Address,m.PortalRole
+    // Permissions comes from migration 029. Until it runs the column is missing (error 207): memberships load without it,
+    // so OWNER/ADMIN/VIEWER keep working and a MEMBER simply has no module.
+    private const string MembershipSql = """
+SELECT c.Id,c.Code,c.Name,c.TaxCode,c.Email,c.Phone,c.Address,m.PortalRole,{0}
 FROM dbo.CustomerPortalMemberships m JOIN dbo.Customers c ON c.Id=m.CustomerId JOIN dbo.Users u ON u.Id=m.UserId
 WHERE m.UserId=@u AND m.IsActive=1 AND c.IsActive=1 AND c.IsDeleted=0 AND c.Status='ACTIVE'
 AND u.IsActive=1 AND u.IsDeleted=0 AND u.Status='ACTIVE' ORDER BY c.Name
-""", cn);
+""";
+
+    public async Task<IReadOnlyList<CustomerMembership>> Memberships(Guid userId)
+    {
+        try { return await ReadMemberships(userId, "m.Permissions"); }
+        catch (SqlException ex) when (ex.Number == 207) { return await ReadMemberships(userId, "CAST(NULL AS varchar(500))"); }
+    }
+
+    private async Task<IReadOnlyList<CustomerMembership>> ReadMemberships(Guid userId, string permissionsColumn)
+    {
+        await using var cn = Connection();
+        await cn.OpenAsync();
+        await using var cmd = new SqlCommand(string.Format(MembershipSql, permissionsColumn), cn);
         cmd.Parameters.AddWithValue("@u", userId);
         var list = new List<CustomerMembership>();
         await using var r = await cmd.ExecuteReaderAsync();
         while (await r.ReadAsync())
-            list.Add(new(r.GetGuid(0), r.GetString(1), r.GetString(2), Text(r, 3), Text(r, 4), Text(r, 5), Text(r, 6), r.GetString(7)));
+            list.Add(new(r.GetGuid(0), r.GetString(1), r.GetString(2), Text(r, 3), Text(r, 4), Text(r, 5), Text(r, 6), r.GetString(7), Text(r, 8)));
         return list;
     }
 

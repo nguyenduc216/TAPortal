@@ -12,6 +12,7 @@ namespace TACustomerPortal.Web.Controllers;
 
 // Bank accounts linked through Tingee with the customer's own form (no Tingee SDK): create-va → OTP confirm-va, or an
 // asynchronous bank-side confirmation (VCB/TPBank). Calls use T.A's Master Merchant key with the customer's merchantId.
+[CustomerModule(CustomerModules.Banks)]
 public sealed partial class BanksController(ICurrentCustomerContext customer, IPaymentStore store, ITingeeApi tingee, Microsoft.Extensions.Options.IOptions<TingeeOptions> tingeeOptions, TimeProvider clock, ILogger<BanksController> logger)
     : CustomerAreaController(customer)
 {
@@ -21,14 +22,14 @@ public sealed partial class BanksController(ICurrentCustomerContext customer, IP
     {
         if (await Current() is not { } m) return SelectCustomer();
         var merchant = await store.MerchantIdAsync(m.CustomerId);
-        return View(new BanksVm(m, merchant is not null, tingee.IsConfigured, CanManage(m), await store.BankAccountsAsync(m.CustomerId)));
+        return View(new BanksVm(m, merchant is not null, tingee.IsConfigured, CanManage(m, CustomerModules.Banks), await store.BankAccountsAsync(m.CustomerId)));
     }
 
     [HttpGet]
     public async Task<IActionResult> Add(string? bin, string? type)
     {
         if (await Current() is not { } m) return SelectCustomer();
-        if (!CanManage(m)) return Forbid();
+        if (!CanManage(m, CustomerModules.Banks)) return Denied(CustomerModules.Banks);
         var bank = TingeeBankCatalog.Find(bin);
         type = bank is not null && type is not null && bank.AccountTypes.Contains(type) ? type : null;
         return View(new BankAddVm(m, await store.MerchantIdAsync(m.CustomerId) is not null, tingee.IsConfigured, bank, type, new BankLinkInput { Bin = bank?.Bin, AccountType = type }));
@@ -38,7 +39,7 @@ public sealed partial class BanksController(ICurrentCustomerContext customer, IP
     public async Task<IActionResult> Add(BankLinkInput input)
     {
         if (await Current() is not { } m) return SelectCustomer();
-        if (!CanManage(m)) return Forbid();
+        if (!CanManage(m, CustomerModules.Banks)) return Denied(CustomerModules.Banks);
         var merchant = await store.MerchantIdAsync(m.CustomerId);
         var bank = TingeeBankCatalog.Find(input.Bin);
         var type = bank is not null && input.AccountType is not null && bank.AccountTypes.Contains(input.AccountType) ? input.AccountType : null;
@@ -122,7 +123,7 @@ public sealed partial class BanksController(ICurrentCustomerContext customer, IP
     public async Task<IActionResult> LinkSession(string? bin)
     {
         if (await Current() is not { } m) return SelectCustomer();
-        if (!CanManage(m)) return Forbid();
+        if (!CanManage(m, CustomerModules.Banks)) return Denied(CustomerModules.Banks);
         IActionResult Fail(string message) => Json(new { ok = false, error = PartnerText.Scrub(message) });
         var bank = TingeeBankCatalog.Find(bin);
         if (bank is null) return Fail("Vui lòng chọn ngân hàng.");
@@ -148,7 +149,7 @@ public sealed partial class BanksController(ICurrentCustomerContext customer, IP
     public async Task<IActionResult> Confirm(Guid id)
     {
         if (await Current() is not { } m) return SelectCustomer();
-        if (!CanManage(m)) return Forbid();
+        if (!CanManage(m, CustomerModules.Banks)) return Denied(CustomerModules.Banks);
         var account = await store.BankAccountAsync(m.CustomerId, id);
         if (account is null || account.ConfirmId is null || account.Status is not (BankStatus.PendingOtp or BankStatus.PendingDelete)) return NotFound();
         return View(new BankConfirmVm(account, account.Status == BankStatus.PendingDelete));
@@ -158,7 +159,7 @@ public sealed partial class BanksController(ICurrentCustomerContext customer, IP
     public async Task<IActionResult> Confirm(Guid id, [FromForm] string? otp)
     {
         if (await Current() is not { } m) return SelectCustomer();
-        if (!CanManage(m)) return Forbid();
+        if (!CanManage(m, CustomerModules.Banks)) return Denied(CustomerModules.Banks);
         var account = await store.BankAccountAsync(m.CustomerId, id);
         if (account is null || account.ConfirmId is null || account.Status is not (BankStatus.PendingOtp or BankStatus.PendingDelete)) return NotFound();
         var deleting = account.Status == BankStatus.PendingDelete;
@@ -217,7 +218,7 @@ public sealed partial class BanksController(ICurrentCustomerContext customer, IP
     public async Task<IActionResult> Delete(Guid id)
     {
         if (await Current() is not { } m) return SelectCustomer();
-        if (!CanManage(m)) return Forbid();
+        if (!CanManage(m, CustomerModules.Banks)) return Denied(CustomerModules.Banks);
         var account = await store.BankAccountAsync(m.CustomerId, id);
         if (account is null) return NotFound();
         if (!account.IsActive || account.VaAccountNumber is null)
@@ -259,7 +260,7 @@ public sealed partial class BanksController(ICurrentCustomerContext customer, IP
     public async Task<IActionResult> SetDefault(Guid id)
     {
         if (await Current() is not { } m) return SelectCustomer();
-        if (!CanManage(m)) return Forbid();
+        if (!CanManage(m, CustomerModules.Banks)) return Denied(CustomerModules.Banks);
         await store.SetDefaultBankAccountAsync(m.CustomerId, id, Actor);
         Flash("Đã đặt tài khoản nhận tiền mặc định.");
         return RedirectToAction(nameof(Index));
@@ -273,7 +274,7 @@ public sealed partial class BanksController(ICurrentCustomerContext customer, IP
     public async Task<IActionResult> Sync()
     {
         if (await Current() is not { } m) return SelectCustomer();
-        if (!CanManage(m)) return Forbid();
+        if (!CanManage(m, CustomerModules.Banks)) return Denied(CustomerModules.Banks);
         if (await store.MerchantIdAsync(m.CustomerId) is not long merchantId || !tingee.IsConfigured)
         {
             Flash("Dịch vụ thanh toán chưa sẵn sàng.", error: true);
