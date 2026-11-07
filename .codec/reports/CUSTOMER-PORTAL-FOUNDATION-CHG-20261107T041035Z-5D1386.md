@@ -3,11 +3,14 @@
 Feature ID: `CUSTOMER-PORTAL-FOUNDATION`
 Change ID: `CUSTOMER-PORTAL-FOUNDATION-CHG-20261107T041035Z-5D1386`
 
-1. Mục tiêu và kết quả thực tế:
-2. Danh sách file cập nhật (relative + nếu cần absolute):
-3. Database `TAPortalSys`: migration path + thứ tự + trạng thái NOT_EXECUTED/OPERATOR_CONFIRMED:
-4. Build/test: lệnh, pass/fail/not run:
-5. Publish: project, destination đã duyệt, artifact SHA256, status:
-6. Git: branch, commit SHA, PR, merge SHA hoặc PENDING_APPROVAL:
-7. Rủi ro/rollback/việc operator cần làm:
-8. Bằng chứng kiểm tra (URL/log, không có secrets):
+1. Mục tiêu và kết quả thực tế: xóa cột Permissions và giá trị MEMBER của 029 khỏi dbo.CustomerPortalMemberships.
+2. Danh sách file cập nhật: xem `.codec/changes/CUSTOMER-PORTAL-FOUNDATION-CHG-20261107T041035Z-5D1386.md`.
+3. Database: migration 030-drop-customer-member-permissions.sql (verify 049, rollback 050): pre-check NOT_APPLIED 04:11:28Z; dry-run (migration → verify PASS → rollback → verify NOT_APPLIED → ROLLBACK, @@TRANCOUNT=0) PASS; backup full 260 phút (trong 24 giờ); gates 562/562 PASS; real run 04:13:24Z VERIFY_STATUS=PASS ⇒ EXECUTED.
+4. Build/test: Release build 0 lỗi; Safe tests 562/562 (cả trong audit của từng deploy).
+5. Publish (source commit 9d2764d, 2026-11-07 +07; manifest `.codec/reports/ADMIN-ROLE-PERMISSIONS-CHG-20261107T041034Z-BA9E56-*.sha256`):
+   - portal DEPLOYED 11:16: artifact 6bf4fa938442553033e20940b4b703cab278cef70690137317f3c7625c2fe1ef, gói 3F4F24185461FB1A4EDF86D0EBEBED6CAAE917D780A984025CA0348728A1C0A5, backup C:\TADeploy\backups\portal-20261107-111629, health 200.
+   - invoice DEPLOYED 11:18: artifact 441868eef956fad9bdb0d148a4447eb1daddd367231cdbe12955fcc8d93d73bb, gói 6BEA8C3DE536114255C08B61D689ECC9EAED58A17D3E8D11BC53C57C0FA8FF9D, backup C:\TADeploy\backups\invoice-20261107-111848, health 200.
+   - webhooks DEPLOYED 11:21: artifact a18173563fb3cbae40cb01b41a98d930367d67caf1686e30b35dc02bbd0dcf54, gói D761DB1B0763623E2279FCDA5BBC8A9C7866174BAF0D3AF6728247703B68FD93, backup C:\TADeploy\backups\webhooks-20261107-112106, health 200.
+6. Git: branch `feature/customer-portal-mvp01`, source commit 9d2764d; main fast-forward.
+7. Rủi ro/việc còn lại: chưa đăng nhập thử trên production.
+8. Bằng chứng: log migration/deploy; SafeAdminPermissionTests, SafeAdminEmployeeTests.

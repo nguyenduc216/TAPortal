@@ -4,7 +4,7 @@
 - Change ID: `ADMIN-ROLE-PERMISSIONS-CHG-20261107T041034Z-BA9E56`
 - Created UTC: 2026-11-07T04:10:34.649105+00:00
 - Tiêu đề: Only SYS_ADMIN manages roles and assigns roles to accounts
-- Trạng thái: IMPLEMENTED
+- Trạng thái: DEPLOYED
 
 ## Yêu cầu và phạm vi
 Operator (2026-11-07), trả lời câu hỏi giới hạn người có quyền "Quản lý vai trò": "Chỉ có admin phân quyền".
@@ -31,9 +31,9 @@ Sửa:
 
 ## Git
 - Branch: feature/customer-portal-mvp01
-- Commit SHA: xem report
+- Commit SHA: 9d2764d
 - PR:
-- Merge: xem report
+- Merge: fast-forward main
 - Merge SHA:
 
 ## Rủi ro, quyết định và việc còn lại
