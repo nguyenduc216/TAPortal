@@ -9,6 +9,7 @@ namespace TACustomerPortal.Web.Controllers;
 
 // Orders with a payment QR. Everyone in the company sees every order (operator decision); creating, re-issuing a QR and
 // cancelling need OWNER/ADMIN. The order is saved first, then the QR is requested, so a Tingee failure never loses it.
+[CustomerModule(CustomerModules.Orders)]
 public sealed class OrdersController(ICurrentCustomerContext customer, IPaymentStore store, ITingeeApi tingee, OrderPayments payments, TimeProvider clock)
     : CustomerAreaController(customer)
 {
@@ -21,14 +22,14 @@ public sealed class OrdersController(ICurrentCustomerContext customer, IPaymentS
         var all = (await store.OrdersAsync(m.CustomerId)).Select(o => o with { Status = OrderMath.EffectiveStatus(o, now) }).ToList();
         var cards = OrderSummary.Cards(all);
         var orders = string.IsNullOrEmpty(status) ? all : all.Where(o => OrderSummary.Matches(o, status)).ToList();
-        return View(new OrdersVm(m, CanManage(m), await store.MerchantIdAsync(m.CustomerId) is not null, status, orders, now, cards));
+        return View(new OrdersVm(m, CanManage(m, CustomerModules.Orders), await store.MerchantIdAsync(m.CustomerId) is not null, status, orders, now, cards));
     }
 
     [HttpGet]
     public async Task<IActionResult> Create(Guid? contactId)
     {
         if (await Current() is not { } m) return SelectCustomer();
-        if (!CanManage(m)) return Forbid();
+        if (!CanManage(m, CustomerModules.Orders)) return Denied(CustomerModules.Orders);
         var settings = await store.SettingsAsync(m.CustomerId);
         var banks = (await store.BankAccountsAsync(m.CustomerId)).Where(b => b.IsActive && b.ReceiveAccount is not null).ToList();
         var input = new OrderInput { ContactId = contactId, BankAccountId = banks.FirstOrDefault(b => b.IsDefault)?.Id ?? banks.FirstOrDefault()?.Id, QrExpireMinutes = settings.DefaultQrExpireMinutes, AutoIssueInvoice = settings.AutoIssueInvoiceDefault };
@@ -39,7 +40,7 @@ public sealed class OrdersController(ICurrentCustomerContext customer, IPaymentS
     public async Task<IActionResult> Create(OrderInput input)
     {
         if (await Current() is not { } m) return SelectCustomer();
-        if (!CanManage(m)) return Forbid();
+        if (!CanManage(m, CustomerModules.Orders)) return Denied(CustomerModules.Orders);
         input.QrExpireMinutes = QrLifetime.Apply(ModelState, nameof(input.QrExpireMinutes), input.QrExpireMinutes, input.QrExpireDays, input.QrExpireHours, input.QrExpireMins);
         var merchant = await store.MerchantIdAsync(m.CustomerId);
         if (merchant is null) ModelState.AddModelError(string.Empty, "Doanh nghiệp chưa được T.A kích hoạt dịch vụ thanh toán.");
@@ -75,7 +76,7 @@ public sealed class OrdersController(ICurrentCustomerContext customer, IPaymentS
         // The public payment page (/pay/{token}) the customer's own customer scans; the token is created the first time.
         var token = await pages.TokenAsync(m.CustomerId, order.Id);
         var payUrl = token is null ? null : Url.Action("Index", "Pay", new { token }, Request.Scheme);
-        return View(new OrderDetailsVm(m, CanManage(m), order, status, bank, contact, qr, now, banks, (await invoices.SettingsAsync(m.CustomerId)).IsReady,
+        return View(new OrderDetailsVm(m, CanManage(m, CustomerModules.Orders), order, status, bank, contact, qr, now, banks, (await invoices.SettingsAsync(m.CustomerId)).IsReady,
             payUrl, await pages.InvoiceBuyerAsync(m.CustomerId, order.Id)));
     }
 
@@ -108,7 +109,7 @@ public sealed class OrdersController(ICurrentCustomerContext customer, IPaymentS
     public async Task<IActionResult> IssueQr(Guid id, Guid? bankAccountId)
     {
         if (await Current() is not { } m) return SelectCustomer();
-        if (!CanManage(m)) return Forbid();
+        if (!CanManage(m, CustomerModules.Orders)) return Denied(CustomerModules.Orders);
         var order = await store.OrderAsync(m.CustomerId, id);
         if (order is null) return NotFound();
         var now = clock.GetUtcNow().UtcDateTime;
@@ -138,7 +139,7 @@ public sealed class OrdersController(ICurrentCustomerContext customer, IPaymentS
     public async Task<IActionResult> IssueInvoice(Guid id, [FromServices] OrderInvoicer invoicer)
     {
         if (await Current() is not { } m) return SelectCustomer();
-        if (!CanManage(m)) return Forbid();
+        if (!CanManage(m, CustomerModules.Orders)) return Denied(CustomerModules.Orders);
         var order = await store.OrderAsync(m.CustomerId, id);
         if (order is null) return NotFound();
         if (order.Status != OrderStatus.Paid || order.InvoiceStatus == OrderInvoiceStatus.Issued)
@@ -177,7 +178,7 @@ public sealed class OrdersController(ICurrentCustomerContext customer, IPaymentS
     public async Task<IActionResult> Cancel(Guid id)
     {
         if (await Current() is not { } m) return SelectCustomer();
-        if (!CanManage(m)) return Forbid();
+        if (!CanManage(m, CustomerModules.Orders)) return Denied(CustomerModules.Orders);
         var order = await store.OrderAsync(m.CustomerId, id);
         if (order is null) return NotFound();
         var result = await payments.CancelAsync(m.CustomerId, await store.MerchantIdAsync(m.CustomerId), order, Actor);

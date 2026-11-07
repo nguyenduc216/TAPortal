@@ -1,0 +1,33 @@
+@model PermissionMatrixVm
+@* One row per function: Xem / Quản lý (ticking Quản lý also ticks Xem; customer.js). The server reads the ticks itself. *@
+<div data-cp-perm-matrix>
+    @if (Model.Editable)
+    {
+        <div class="cp-perm-presets" role="group" aria-label="Mẫu phân quyền nhanh">
+            <span class="cp-label" style="margin:0">Mẫu nhanh:</span>
+            @foreach (var p in CustomerPresets.All)
+            {
+                <button class="cp-btn cp-btn--sm cp-btn--ghost" type="button" title="@p.Hint" data-cp-preset="@CustomerAccess.Format(p.Levels)" data-cp-preset-code="@p.Code">@p.Label</button>
+            }
+            <button class="cp-btn cp-btn--sm cp-btn--ghost" type="button" title="Bỏ tất cả quyền" data-cp-preset="">Bỏ chọn</button>
+        </div>
+    }
+    <div class="cp-table-wrap">
+        <table class="cp-table cp-perm-table">
+            <thead><tr><th>Chức năng</th><th class="cp-perm-col">Xem</th><th class="cp-perm-col">Quản lý</th></tr></thead>
+            <tbody>
+                <tr><td>Tổng quan</td><td class="cp-perm-col"><input type="checkbox" checked disabled aria-label="Xem Tổng quan" /></td><td class="cp-perm-col"><span class="cp-muted">—</span></td></tr>
+                @foreach (var (code, label) in CustomerModules.All)
+                {
+                    var level = Model.Levels.GetValueOrDefault(code);
+                    <tr data-cp-perm-row="@code">
+                        <td>@label</td>
+                        <td class="cp-perm-col"><input type="checkbox" name="View" value="@code" checked="@(level >= CustomerAccessLevel.View)" disabled="@(!Model.Editable)" aria-label="Xem @label" data-cp-perm="V" /></td>
+                        <td class="cp-perm-col"><input type="checkbox" name="Manage" value="@code" checked="@(level == CustomerAccessLevel.Manage)" disabled="@(!Model.Editable)" aria-label="Quản lý @label" data-cp-perm="M" /></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    <p class="cp-hint" style="margin:8px 0 0">Quản lý = xem và thay đổi (tạo, sửa, xử lý). Chức năng không được tích sẽ bị ẩn khỏi menu của tài khoản.</p>
+</div>

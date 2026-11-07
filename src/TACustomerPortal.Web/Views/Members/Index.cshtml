@@ -1,0 +1,47 @@
+@model MembersVm
+@{
+    ViewData["Title"] = "Tài khoản & phân quyền";
+    ViewData["Eyebrow"] = "Không gian làm việc";
+    ViewData["Subtitle"] = "Tài khoản nhân viên của doanh nghiệp và quyền của từng tài khoản trên mỗi chức năng: Xem hoặc Quản lý.";
+}
+<section class="cp-card" data-cp-members>
+    <div class="cp-toolbar">
+        <div class="cp-search">@UiIcon.Render("search")<input class="cp-input" type="search" aria-label="Tìm tài khoản" placeholder="Tìm theo họ tên, tên đăng nhập, email, điện thoại..." oninput="taFilterRows(this.value,'membersTable')" /></div>
+        @if (Model.CanManage) {<div class="cp-toolbar__end"><a class="cp-btn cp-btn--primary" asp-action="Create">@UiIcon.Render("user-plus")<span>Thêm tài khoản</span></a></div>}
+    </div>
+    @if (Model.Members.Count == 0)
+    {
+        <div class="cp-empty">@UiIcon.Render("users")<p>Chưa có tài khoản nào.</p></div>
+    }
+    else
+    {
+        <div class="cp-table-wrap">
+            <table class="cp-table" id="membersTable" data-ta-pager="20">
+                <thead><tr><th>Họ tên</th><th>Tên đăng nhập</th><th>Liên hệ</th><th>Vai trò / quyền</th><th>Trạng thái</th><th>Ngày tạo</th><th class="cp-actions">Thao tác</th></tr></thead>
+                <tbody>
+                @foreach (var x in Model.Members)
+                {
+                    var self = x.UserId == Model.Actor;
+                    var owner = x.Role == CustomerAccess.Owner;
+                    <tr data-ta-row data-cp-member="@x.Username">
+                        <td><strong>@x.DisplayName</strong>@if (self) {<span class="cp-badge cp-badge--blue" style="margin-left:6px">Bạn</span>}</td>
+                        <td><span class="cp-code">@x.Username</span></td>
+                        <td>@(x.Phone ?? "—")<div class="cp-muted">@x.Email</div></td>
+                        <td><span class="cp-badge @(owner ? "cp-badge--gold" : x.Role == CustomerAccess.Member ? "cp-badge--soft" : "cp-badge--blue")">@CustomerAccess.Summary(x.Role, x.Permissions)</span></td>
+                        <td><span class="cp-badge @(x.IsActive ? "cp-badge--green" : "cp-badge--red")">@(x.IsActive ? "Đang hoạt động" : "Đã ngừng")</span></td>
+                        <td>@PaymentText.VietnamTime(x.CreatedAt)</td>
+                        <td class="cp-actions">
+                            <a class="cp-btn cp-btn--sm cp-btn--ghost" asp-action="Edit" asp-route-id="@x.UserId">@UiIcon.Render(Model.CanManage && !owner && !self ? "pencil" : "eye")<span>@(Model.CanManage && !owner && !self ? "Phân quyền" : "Xem quyền")</span></a>
+                            @if (Model.CanManage && !owner && !self)
+                            {
+                                <form method="post" asp-action="SetActive" asp-route-id="@x.UserId" onsubmit="@(x.IsActive ? $"return confirm('Ngừng tài khoản {x.Username} trong doanh nghiệp?')" : null)"><input type="hidden" name="active" value="@(x.IsActive ? "false" : "true")" /><button class="cp-btn cp-btn--sm @(x.IsActive ? "cp-btn--danger" : "cp-btn--ghost")" type="submit">@(x.IsActive ? "Ngừng" : "Kích hoạt")</button></form>
+                            }
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    }
+</section>
+<aside class="cp-note" style="margin-top:14px">@UiIcon.Render("info-circle")<div>Chủ sở hữu và quản trị doanh nghiệp quản lý tất cả chức năng; tài khoản "Chỉ xem" xem được mọi mục trừ trang này. Tài khoản thêm tại đây là <strong>Thành viên</strong>: chỉ dùng được những chức năng được tích. Tài khoản chủ sở hữu không thay đổi được tại đây; không ai tự đổi quyền của chính mình.</div></aside>

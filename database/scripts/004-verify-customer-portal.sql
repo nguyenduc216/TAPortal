@@ -36,7 +36,7 @@ FROM dbo.Permissions WHERE Code='CUSTOMERS.VIEW';
 SET @msg=N'CUSTOMERS.VIEW: total='+CONVERT(nvarchar(20),@n)+N', active='+CONVERT(nvarchar(20),@active);
 IF @n=1 AND @active=1 PRINT N'PASS: '+@msg;
 ELSE BEGIN PRINT N'FAIL: '+@msg; SET @fail+=1; END;
-SELECT @bad=COUNT(*) FROM dbo.CustomerPortalMemberships WHERE PortalRole IS NULL OR PortalRole NOT IN ('OWNER','ADMIN','VIEWER');
+SELECT @bad=COUNT(*) FROM dbo.CustomerPortalMemberships WHERE PortalRole IS NULL OR PortalRole NOT IN ('OWNER','ADMIN','VIEWER','MEMBER');  -- MEMBER: migration 029
 IF @bad=0 PRINT N'PASS: No invalid PortalRole';
 ELSE BEGIN PRINT N'FAIL: Invalid PortalRole rows='+CONVERT(nvarchar(20),@bad); SET @fail+=1; END;
 SELECT @dup=COUNT(*) FROM (SELECT UserId,CustomerId FROM dbo.CustomerPortalMemberships GROUP BY UserId,CustomerId HAVING COUNT(*)>1) d;

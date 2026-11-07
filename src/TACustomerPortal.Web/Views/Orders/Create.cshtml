@@ -11,7 +11,7 @@
 @if (!Model.Linked) { <partial name="_PaymentsNotLinked" /> }
 else if (Model.Banks.Count == 0)
 {
-    <aside class="cp-note" style="margin-bottom:14px">@UiIcon.Render("info-circle")<div>Chưa có tài khoản ngân hàng nào đang hoạt động. <a class="cp-link" asp-controller="Banks" asp-action="Index">Liên kết tài khoản ngân hàng</a> trước khi tạo đơn.</div></aside>
+    <aside class="cp-note" style="margin-bottom:14px">@UiIcon.Render("info-circle")<div>Chưa có tài khoản ngân hàng nào đang hoạt động. @if (CustomerAccess.CanView(Model.Customer, CustomerModules.Banks)) {<a class="cp-link" asp-controller="Banks" asp-action="Index">Liên kết tài khoản ngân hàng</a>} else {<span>Liên kết tài khoản ngân hàng</span>} trước khi tạo đơn.</div></aside>
 }
 <form method="post" asp-action="Create" data-cp-order-form>
     <div asp-validation-summary="ModelOnly" class="cp-alert" role="alert"></div>

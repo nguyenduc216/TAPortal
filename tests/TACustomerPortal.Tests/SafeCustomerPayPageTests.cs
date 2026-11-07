@@ -33,7 +33,7 @@ public sealed class SafeCustomerPayPageTests
     [Fact]
     public async Task ThePaymentPageShowsBothPartiesTheOrderTheQrAndACountdown()
     {
-        using var f = Factory("MEMBER", out var store, out _);
+        using var f = Factory("VIEWER", out var store, out _);
         var pages = f.Services.GetRequiredService<MemoryOrderPageStore>();
         var contact = new Contact(Guid.NewGuid(), "KH001", "Nhà hàng Sen", "Công ty TNHH Sen Việt", "0109876543", null, null, null, null, true, BuyerTypes.Business);
         store.Contacts.Add((A, contact));
@@ -104,7 +104,7 @@ public sealed class SafeCustomerPayPageTests
     [Fact]
     public async Task ThePayerCorrectsInvoiceDetailsUntilTheInvoiceIsIssued()
     {
-        using var f = Factory("MEMBER", out var store, out _);
+        using var f = Factory("VIEWER", out var store, out _);
         var pages = f.Services.GetRequiredService<MemoryOrderPageStore>();
         var order = OpenOrder(null);   // walk-in: no buyer profile
         store.Orders.Add((A, order));
@@ -193,7 +193,7 @@ public sealed class SafeCustomerPayPageTests
     [Fact]
     public async Task MembersCannotChangeTheCompanyLogo()
     {
-        using var f = Factory("MEMBER", out _, out _);
+        using var f = Factory("VIEWER", out _, out _);
         var c = Client(f);
         var token = await Token(c, "/profile/company");
         Assert.DoesNotContain("data-cp-logo-input", await c.GetStringAsync("/profile/company"));

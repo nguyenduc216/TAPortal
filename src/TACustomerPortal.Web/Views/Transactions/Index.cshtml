@@ -57,7 +57,7 @@
                         <td class="cp-num">@(t.Direction == "DEBIT" ? "−" : "")@PaymentText.Money(t.Amount)</td>
                         <td>@(t.Content ?? "—")</td>
                         <td>@t.Bank @(t.VaAccountNumber ?? t.AccountNumber)</td>
-                        <td>@if (t.OrderId is Guid oid) {<a class="cp-link" asp-controller="Orders" asp-action="Details" asp-route-id="@oid">@t.OrderNo</a>} else {<span>—</span>}</td>
+                        <td>@if (t.OrderId is Guid oid && CustomerAccess.CanView(Model.Customer, CustomerModules.Orders)) {<a class="cp-link" asp-controller="Orders" asp-action="Details" asp-route-id="@oid">@t.OrderNo</a>} else {<span>@(t.OrderNo ?? "—")</span>}</td>
                         <td class="cp-num">@(t.SystemPaidAfter is decimal sp ? PaymentText.Money(sp) : "—")</td>
                         <td class="cp-num">@(t.PartnerPaidTotal is decimal pp ? PaymentText.Money(pp) : "—")</td>
                         <td>

@@ -8,26 +8,27 @@ namespace TACustomerPortal.Web.Controllers;
 
 // The customer's own customers (payers and e-invoice buyers). Soft state only: contacts are deactivated, never deleted,
 // because orders keep pointing at them.
+[CustomerModule(CustomerModules.Contacts)]
 public sealed class ContactsController(ICurrentCustomerContext customer, IPaymentStore store, ILogoStore logos, TimeProvider clock) : CustomerAreaController(customer)
 {
     public async Task<IActionResult> Index()
     {
         if (await Current() is not { } m) return SelectCustomer();
-        return View(new ContactsVm(m, CanManage(m), await store.ContactsAsync(m.CustomerId), await logos.BuyerLogoVersionsAsync(m.CustomerId)));
+        return View(new ContactsVm(m, CanManage(m, CustomerModules.Contacts), await store.ContactsAsync(m.CustomerId), await logos.BuyerLogoVersionsAsync(m.CustomerId)));
     }
 
     [HttpGet]
     public async Task<IActionResult> Create()
     {
         if (await Current() is not { } m) return SelectCustomer();
-        return CanManage(m) ? View("Edit", new ContactInput { Code = NextCode(await store.ContactsAsync(m.CustomerId)) }) : Forbid();
+        return CanManage(m, CustomerModules.Contacts) ? View("Edit", new ContactInput { Code = NextCode(await store.ContactsAsync(m.CustomerId)) }) : Denied(CustomerModules.Contacts);
     }
 
     [HttpGet]
     public async Task<IActionResult> Edit(Guid id)
     {
         if (await Current() is not { } m) return SelectCustomer();
-        if (!CanManage(m)) return Forbid();
+        if (!CanManage(m, CustomerModules.Contacts)) return Denied(CustomerModules.Contacts);
         var c = await store.ContactAsync(m.CustomerId, id);
         if (c is null) return NotFound();
         await LogoVersion(m, c.Id);
@@ -57,7 +58,7 @@ public sealed class ContactsController(ICurrentCustomerContext customer, IPaymen
     private async Task<IActionResult> Save(ContactInput input, IFormFile? logo, bool removeLogo)
     {
         if (await Current() is not { } m) return SelectCustomer();
-        if (!CanManage(m)) return Forbid();
+        if (!CanManage(m, CustomerModules.Contacts)) return Denied(CustomerModules.Contacts);
         if (input.Id != Guid.Empty && await store.ContactAsync(m.CustomerId, input.Id) is null) return NotFound();
         var (image, logoError) = await LogoUpload.ReadAsync(logo, clock.GetUtcNow().UtcDateTime, HttpContext.RequestAborted);
         if (logoError is not null) ModelState.AddModelError("Logo", logoError);
@@ -148,7 +149,7 @@ public sealed class ContactsController(ICurrentCustomerContext customer, IPaymen
     public async Task<IActionResult> SetActive(Guid id, [FromForm] bool active)
     {
         if (await Current() is not { } m) return SelectCustomer();
-        if (!CanManage(m)) return Forbid();
+        if (!CanManage(m, CustomerModules.Contacts)) return Denied(CustomerModules.Contacts);
         if (await store.ContactAsync(m.CustomerId, id) is not { } c) return NotFound();
         await store.SetContactActiveAsync(m.CustomerId, id, active, Actor);
         Flash(active ? $"Đã kích hoạt lại {c.Name}." : $"Đã ngừng sử dụng {c.Name}. Đơn hàng cũ vẫn giữ thông tin.");
