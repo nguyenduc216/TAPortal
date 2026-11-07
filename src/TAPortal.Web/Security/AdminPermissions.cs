@@ -67,6 +67,20 @@ public static class AdminPermissions
     public const string JobTitlesUpdate = "HR.JOB_TITLE.UPDATE";
     public const string JobTitlesDelete = "HR.JOB_TITLE.DELETE";
 
+    // Hợp đồng và Công việc (rows inserted by migration 031, not 028).
+    public const string ContractsModuleKey = "CONTRACTS";
+    public const string TasksModuleKey = "TASKS";
+    public const string ContractsView = "CONTRACTS.VIEW";
+    public const string ContractsCreate = "CONTRACTS.CREATE";
+    public const string ContractsUpdate = "CONTRACTS.UPDATE";
+    public const string ContractsDelete = "CONTRACTS.DELETE";
+    public const string TasksView = "TASKS.VIEW";
+    public const string TasksCreate = "TASKS.CREATE";
+    public const string TasksAssign = "TASKS.ASSIGN";
+    public const string TasksViewAll = "TASKS.VIEW_ALL";
+    public const string TaskTemplatesManage = "TASKS.TEMPLATES.MANAGE";
+    public const string TaskReportView = "TASKS.REPORT.VIEW";
+
     // Policy names for [Authorize(Policy = ...)] (PermissionPolicyProvider resolves "PERM:<code>").
     public static class Policy
     {
@@ -110,6 +124,13 @@ public static class AdminPermissions
         public const string JobTitlesCreate = PermissionPolicies.Prefix + AdminPermissions.JobTitlesCreate;
         public const string JobTitlesUpdate = PermissionPolicies.Prefix + AdminPermissions.JobTitlesUpdate;
         public const string JobTitlesDelete = PermissionPolicies.Prefix + AdminPermissions.JobTitlesDelete;
+        public const string ContractsView = PermissionPolicies.Prefix + AdminPermissions.ContractsView;
+        public const string ContractsCreate = PermissionPolicies.Prefix + AdminPermissions.ContractsCreate;
+        public const string ContractsUpdate = PermissionPolicies.Prefix + AdminPermissions.ContractsUpdate;
+        public const string ContractsDelete = PermissionPolicies.Prefix + AdminPermissions.ContractsDelete;
+        public const string TasksView = PermissionPolicies.Prefix + AdminPermissions.TasksView;
+        public const string TaskTemplatesManage = PermissionPolicies.Prefix + AdminPermissions.TaskTemplatesManage;
+        public const string TaskReportView = PermissionPolicies.Prefix + AdminPermissions.TaskReportView;
     }
 
     public static readonly IReadOnlyList<AdminPermissionModule> Modules =
@@ -143,6 +164,22 @@ public static class AdminPermissions
             new(IntegrationsSandbox, "Dùng Tingee Sandbox và Hóa đơn Sandbox", "USE"),
             new(IntegrationsLogsView, "Xem nhật ký gọi Tingee", "VIEW"),
             new(NotificationsManage, "Cài đặt thông báo", "MANAGE")
+        ]),
+        new(TasksModuleKey, "Công việc",
+        [
+            new(TasksView, "Dùng \"Việc của tôi\": xem và cập nhật việc mình tham gia", "VIEW"),
+            new(TasksCreate, "Tự tạo việc cho mình", "CREATE"),
+            new(TasksAssign, "Giao việc cho nhân viên khác", "ASSIGN"),
+            new(TasksViewAll, "Giám sát: xem và tương tác mọi công việc", "VIEW_ALL"),
+            new(TaskTemplatesManage, "Quản lý việc lặp theo kỳ", "MANAGE"),
+            new(TaskReportView, "Xem báo cáo tiến độ từng nhân viên", "VIEW")
+        ]),
+        new(ContractsModuleKey, "Hợp đồng",
+        [
+            new(ContractsView, "Xem hợp đồng và file đính kèm", "VIEW"),
+            new(ContractsCreate, "Thêm hợp đồng", "CREATE"),
+            new(ContractsUpdate, "Sửa hợp đồng, đính kèm hoặc gỡ file", "UPDATE"),
+            new(ContractsDelete, "Xóa (mềm) hợp đồng", "DELETE")
         ]),
         new(HrModuleKey, "Nhân sự",
         [
@@ -185,7 +222,12 @@ public static class AdminPermissions
 
     // Codes inserted by migration 028: every module except HR, whose rows come from the HR core bootstrap of TAPortalSys.
     // AUTH.ROLES.MANAGE is inserted too but is not grantable: role management is SYS_ADMIN only (operator 2026-11-07).
-    public static readonly IReadOnlyList<string> MigrationCodes = Modules.Where(m => m.Key != HrModuleKey).SelectMany(m => m.Permissions).Select(p => p.Code).Append(RolesManage).ToList();
+    public static readonly IReadOnlyList<string> MigrationCodes = Modules.Where(m => m.Key is not (HrModuleKey or ContractsModuleKey or TasksModuleKey))
+        .SelectMany(m => m.Permissions).Select(p => p.Code).Append(RolesManage).ToList();
+
+    // Codes inserted by migration 031 (Công việc, Hợp đồng).
+    public static readonly IReadOnlyList<string> Migration031Codes = Modules.Where(m => m.Key is ContractsModuleKey or TasksModuleKey)
+        .SelectMany(m => m.Permissions).Select(p => p.Code).ToList();
 
     public static bool IsCatalogued(string? code) => code is not null && Codes.Contains(code);
 
@@ -204,9 +246,12 @@ public static class AdminNavigation
 {
     public static readonly IReadOnlyList<AdminLandingPage> Pages =
     [
+        new(AdminPermissions.TasksView, "Work", "Index"),          // "Việc của tôi" is every employee's landing page
         new(AdminPermissions.DashboardView, "Home", "Index"),
         new(AdminPermissions.CustomersView, "Customers", "Index"),
         new(AdminPermissions.ReconciliationView, "PaymentReconciliation", "Index"),
+        new(AdminPermissions.ContractsView, "Contracts", "Index"),
+        new(AdminPermissions.TaskReportView, "Work", "Report"),
         new(AdminPermissions.EmployeesView, "Employees", "Index"),
         new(AdminPermissions.DepartmentsView, "Departments", "Index"),
         new(AdminPermissions.TeamsView, "Teams", "Index"),
