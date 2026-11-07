@@ -4,7 +4,7 @@
 - Change ID: `CONTRACTS-AND-TASKS-CHG-20261107T074015Z-920E5B`
 - Created UTC: 2026-11-07T07:40:15.563872+00:00
 - Tiêu đề: Sua loi SQL Viec cua toi va loi Tong quan khi nhat ky thieu Action
-- Trạng thái: IMPLEMENTED
+- Trạng thái: DEPLOYED
 
 ## Yêu cầu và phạm vi
 Operator (2026-11-07) gửi ảnh "Không thể xử lý yêu cầu", mã 00-71414085193f743268885eafef5d39ce-…: "kiểm tra lỗi này".
@@ -30,9 +30,9 @@ Kiểm chứng: mọi câu SELECT của WorkTaskSql và ContractSql (MyOpen, Car
 
 ## Git
 - Branch: feature/customer-portal-mvp01
-- Commit SHA: xem report
+- Commit SHA: 92c17c7
 - PR:
-- Merge: xem report
+- Merge: fast-forward main
 - Merge SHA:
 
 ## Rủi ro, quyết định và việc còn lại
