@@ -17,7 +17,7 @@
         <form method="post" asp-action="SelectCustomer" data-ta-row><input type="hidden" name="customerId" value="@c.CustomerId" />
             <button type="submit" class="cp-company">
                 <span class="cp-company__mark" aria-hidden="true">@mark</span>
-                <span class="cp-company__body"><span class="cp-company__name">@c.Name</span><span class="cp-company__meta"><span class="cp-code">@c.Code</span><span class="cp-badge cp-badge--gold">@CustomerAccess.RoleLabel(c.Role)</span></span></span>
+                <span class="cp-company__body"><span class="cp-company__name">@c.Name</span><span class="cp-company__meta"><span class="cp-code">@c.Code</span><span class="cp-badge cp-badge--gold">@PortalRoleText.Label(c.Role)</span></span></span>
                 @UiIcon.Render("chevron-right")
             </button>
         </form>

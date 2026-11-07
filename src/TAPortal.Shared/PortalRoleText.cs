@@ -11,9 +11,5 @@ public static class PortalRoleText
         ("OWNER", "Chủ sở hữu"),
     ];
 
-    /// <summary>MEMBER (migration 029): permissions per function, set by the company on the Customer Portal; never offered for assignment here.</summary>
-    public const string Member = "MEMBER", MemberLabel = "Thành viên (phân quyền riêng)";
-
-    public static string Label(string? code) => string.Equals(code, Member, StringComparison.OrdinalIgnoreCase) ? MemberLabel
-        : Roles.FirstOrDefault(r => string.Equals(r.Code, code, StringComparison.OrdinalIgnoreCase)).Label ?? code ?? "";
+    public static string Label(string? code) => Roles.FirstOrDefault(r => string.Equals(r.Code, code, StringComparison.OrdinalIgnoreCase)).Label ?? code ?? "";
 }

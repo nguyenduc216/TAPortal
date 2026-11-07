@@ -267,24 +267,6 @@ document.addEventListener("change", event => {
     img.hidden = false;
     box.querySelector("[data-cp-logo-empty]")?.setAttribute("hidden", "");
 });
-// "Tài khoản & phân quyền": ticking Quản lý also ticks Xem, unticking Xem unticks Quản lý; presets fill the matrix.
-document.addEventListener("change", event => {
-    const box = event.target.closest?.("[data-cp-perm-matrix] input[data-cp-perm]");
-    const row = box?.closest("[data-cp-perm-row]");
-    if (!row) return;
-    if (box.dataset.cpPerm === "M" && box.checked) row.querySelector("[data-cp-perm=V]").checked = true;
-    if (box.dataset.cpPerm === "V" && !box.checked) row.querySelector("[data-cp-perm=M]").checked = false;
-});
-document.addEventListener("click", event => {
-    const button = event.target.closest("[data-cp-perm-matrix] [data-cp-preset]");
-    if (!button) return;
-    const levels = Object.fromEntries((button.dataset.cpPreset || "").split(";").filter(Boolean).map(p => p.split(":")));
-    button.closest("[data-cp-perm-matrix]").querySelectorAll("[data-cp-perm-row]").forEach(row => {
-        const level = levels[row.dataset.cpPermRow];
-        row.querySelector("[data-cp-perm=V]").checked = level === "V" || level === "M";
-        row.querySelector("[data-cp-perm=M]").checked = level === "M";
-    });
-});
 const initPayPage = () => { startCountdowns(); initDirtyForms(); };
 document.addEventListener("ta:load", initPayPage);
 if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", initPayPage); else initPayPage();

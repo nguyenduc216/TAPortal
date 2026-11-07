@@ -31,7 +31,7 @@
                         <td class="cp-actions">
                             @if (Model.CanManage)
                             {
-                                @if (c.IsActive && CustomerAccess.CanManage(Model.Customer, CustomerModules.Orders)) {<a class="cp-btn cp-btn--sm cp-btn--ghost" asp-controller="Orders" asp-action="Create" asp-route-contactId="@c.Id">@UiIcon.Render("qrcode")<span>Tạo đơn</span></a>}
+                                @if (c.IsActive) {<a class="cp-btn cp-btn--sm cp-btn--ghost" asp-controller="Orders" asp-action="Create" asp-route-contactId="@c.Id">@UiIcon.Render("qrcode")<span>Tạo đơn</span></a>}
                                 <a class="cp-btn cp-btn--sm cp-btn--ghost" asp-action="Edit" asp-route-id="@c.Id">@UiIcon.Render("pencil")<span>Sửa</span></a>
                                 <form method="post" asp-action="SetActive" asp-route-id="@c.Id"><input type="hidden" name="active" value="@(c.IsActive ? "false" : "true")" /><button class="cp-btn cp-btn--sm @(c.IsActive ? "cp-btn--danger" : "cp-btn--ghost")" type="submit">@(c.IsActive ? "Ngừng" : "Kích hoạt")</button></form>
                             }

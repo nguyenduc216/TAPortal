@@ -9,7 +9,6 @@ namespace TACustomerPortal.Web.Controllers;
 // Hóa đơn điện tử (operator request 2026-11-06, MISA meInvoice only): the company connects its own MISA account, picks the
 // template (mẫu số + ký hiệu) and turns on automatic invoices for paid QR orders. Calls go through T.A's e-invoice partner
 // with the company's merchant; the MISA password is passed on once and never stored. Same flow as the Admin "Hóa đơn Sandbox".
-[CustomerModule(CustomerModules.EInvoice)]
 public sealed class EInvoiceController(ICurrentCustomerContext customer, IPaymentStore payments, IOrderInvoiceStore store, ITingeeInvoiceApi invoices,
     TimeProvider clock, ILogger<EInvoiceController> logger) : CustomerAreaController(customer)
 {
@@ -23,7 +22,7 @@ public sealed class EInvoiceController(ICurrentCustomerContext customer, IPaymen
     public async Task<IActionResult> Connect([Bind(Prefix = "Account")] EInvoiceAccountInput input)
     {
         if (await Current() is not { } m) return SelectCustomer();
-        if (!CanManage(m, CustomerModules.EInvoice)) return Denied(CustomerModules.EInvoice);
+        if (!CanManage(m)) return Forbid();
         var settings = await store.SettingsAsync(m.CustomerId);
         input.TaxCode = input.TaxCode?.Trim();
         input.Username = input.Username?.Trim();
@@ -69,7 +68,7 @@ public sealed class EInvoiceController(ICurrentCustomerContext customer, IPaymen
     public async Task<IActionResult> Disconnect()
     {
         if (await Current() is not { } m) return SelectCustomer();
-        if (!CanManage(m, CustomerModules.EInvoice)) return Denied(CustomerModules.EInvoice);
+        if (!CanManage(m)) return Forbid();
         var settings = await store.SettingsAsync(m.CustomerId);
         if (settings.ProviderAccountId is long accountId && await payments.MerchantIdAsync(m.CustomerId) is long merchantId)
         {
@@ -93,7 +92,7 @@ public sealed class EInvoiceController(ICurrentCustomerContext customer, IPaymen
     public async Task<IActionResult> Templates()
     {
         if (await Current() is not { } m) return SelectCustomer();
-        if (!CanManage(m, CustomerModules.EInvoice)) return Denied(CustomerModules.EInvoice);
+        if (!CanManage(m)) return Forbid();
         var settings = await store.SettingsAsync(m.CustomerId);
         if (!settings.IsConnected || await payments.MerchantIdAsync(m.CustomerId) is not long merchantId)
             return await Page(m, settings, error: "Kết nối tài khoản MISA meInvoice trước.");
@@ -114,7 +113,7 @@ public sealed class EInvoiceController(ICurrentCustomerContext customer, IPaymen
     public async Task<IActionResult> Save([Bind(Prefix = "Template")] EInvoiceTemplateInput input)
     {
         if (await Current() is not { } m) return SelectCustomer();
-        if (!CanManage(m, CustomerModules.EInvoice)) return Denied(CustomerModules.EInvoice);
+        if (!CanManage(m)) return Forbid();
         var settings = await store.SettingsAsync(m.CustomerId);
         if (input.Choice?.Split('|') is [var pickedPattern, var pickedSeries])
         {
@@ -160,7 +159,7 @@ public sealed class EInvoiceController(ICurrentCustomerContext customer, IPaymen
     public async Task<IActionResult> Preview()
     {
         if (await Current() is not { } m) return SelectCustomer();
-        if (!CanManage(m, CustomerModules.EInvoice)) return Denied(CustomerModules.EInvoice);
+        if (!CanManage(m)) return Forbid();
         var settings = await store.SettingsAsync(m.CustomerId);
         if (!settings.IsReady || await payments.MerchantIdAsync(m.CustomerId) is not long merchantId)
         {
@@ -194,6 +193,6 @@ public sealed class EInvoiceController(ICurrentCustomerContext customer, IPaymen
         account ??= new EInvoiceAccountInput { TaxCode = settings.ProviderTaxCode ?? m.TaxCode, Username = settings.ProviderUsername };
         template ??= new EInvoiceTemplateInput { Pattern = settings.InvoicePattern, Series = settings.InvoiceSeries, AutoIssueEnabled = settings.AutoIssueEnabled, SendEmail = settings.SendEmail, IssueMode = settings.Mode };
         var linked = await payments.MerchantIdAsync(m.CustomerId) is not null;
-        return View("Index", new EInvoiceVm(m, CanManage(m, CustomerModules.EInvoice), linked, invoices.IsConfigured, settings, account, template, templates, connect || !settings.IsConnected));
+        return View("Index", new EInvoiceVm(m, CanManage(m), linked, invoices.IsConfigured, settings, account, template, templates, connect || !settings.IsConnected));
     }
 }

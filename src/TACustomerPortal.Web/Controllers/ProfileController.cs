@@ -10,8 +10,6 @@ namespace TACustomerPortal.Web.Controllers;
 [ResponseCache(Location = ResponseCacheLocation.None, NoStore = true)]
 public sealed class ProfileController(ICurrentCustomerContext customer, ICustomerStore store, ILogoStore logos, TimeProvider clock, ILogger<ProfileController> logger) : Controller
 {
-    // Module PROFILE on the company pages only: "Thông tin cá nhân" and the logo image (sidebar, pay pages) stay open.
-    [CustomerModule(CustomerModules.Profile)]
     public async Task<IActionResult> Company()
     {
         var current = await customer.Get();
@@ -22,12 +20,12 @@ public sealed class ProfileController(ICurrentCustomerContext customer, ICustome
         return View(current);
     }
 
-    /// <summary>The company's logo (used on its order payment pages too). PNG, JPG or WEBP up to 1 MB; PROFILE manage right.</summary>
-    [HttpPost, CustomerModule(CustomerModules.Profile)]
+    /// <summary>The company's logo (used on its order payment pages too). PNG, JPG or WEBP up to 1 MB; OWNER/ADMIN only.</summary>
+    [HttpPost]
     public async Task<IActionResult> Logo(IFormFile? logo, bool remove)
     {
         if (await customer.Get() is not { } current) return RedirectToAction("SelectCustomer", "Account");
-        if (!CustomerAccess.CanManage(current, CustomerModules.Profile)) return ModuleDenied.Result(CustomerModules.Profile, manage: true, ModelState);
+        if (!CustomerAreaController.CanManage(current)) return Forbid();
         var actor = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
         if (remove)
         {

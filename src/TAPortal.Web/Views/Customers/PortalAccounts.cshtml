@@ -52,7 +52,7 @@
                         <td data-label="Vai trò">
                             <form asp-action="SavePortalAccount" asp-route-id="@c.Id" method="post" class="d-flex gap-1 justify-content-end justify-content-md-start">
                                 <input type="hidden" name="mode" value="assign" /><input type="hidden" name="UserId" value="@r.UserId" />
-                                <select name="PortalRole" class="form-select form-select-sm" style="width:auto" aria-label="Vai trò của @r.Username" disabled="@(!ws.Operational)">@if (r.Role == PortalRoleText.Member) {<option selected value="@PortalRoleText.Member">@PortalRoleText.MemberLabel</option>}@foreach (var (code, label) in PortalRoleText.Roles) {<option selected="@(r.Role == code)" value="@code">@label</option>}</select>
+                                <select name="PortalRole" class="form-select form-select-sm" style="width:auto" aria-label="Vai trò của @r.Username" disabled="@(!ws.Operational)">@foreach (var (code, label) in PortalRoleText.Roles) {<option selected="@(r.Role == code)" value="@code">@label</option>}</select>
                                 <button type="submit" class="btn btn-sm ta-btn-icon" title="Lưu vai trò (đồng thời kích hoạt quyền truy cập)" aria-label="Lưu vai trò của @r.Username" disabled="@(!ws.Operational)">@UiIcon.Render("check")</button>
                             </form>
                         </td>

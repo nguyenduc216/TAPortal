@@ -40,7 +40,7 @@
     </section>
 </div>
 
-<div class="cp-section"><h2>Chọn gói</h2><p>@(Model.CanManage ? "Sau khi bạn đặt mua, T.A xác nhận thanh toán và số lượng được cộng ngay vào doanh nghiệp." : "Tài khoản của bạn chỉ có quyền xem gói dịch vụ; người có quyền quản lý gói dịch vụ mới đặt mua được.")</p></div>
+<div class="cp-section"><h2>Chọn gói</h2><p>@(Model.CanManage ? "Sau khi bạn đặt mua, T.A xác nhận thanh toán và số lượng được cộng ngay vào doanh nghiệp." : "Chỉ chủ sở hữu hoặc quản trị doanh nghiệp được mua gói.")</p></div>
 @if (Model.Packages.Count == 0)
 {
     <section class="cp-card"><div class="cp-empty" data-sp-no-packages>@UiIcon.Render("package")<p>Hiện chưa có gói dịch vụ đang mở bán. Vui lòng liên hệ T.A.</p></div></section>

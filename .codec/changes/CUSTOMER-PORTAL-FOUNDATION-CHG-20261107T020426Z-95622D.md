@@ -39,6 +39,7 @@ Sửa:
 - Merge SHA:
 
 ## Rủi ro, quyết định và việc còn lại
+- REVERTED 2026-11-07 theo yêu cầu operator (chỉ làm trên T.A Portal): xem `CUSTOMER-PORTAL-FOUNDATION-CHG-20261107T022032Z-9A2C1B`.
 - Bốn điểm agent tự quyết cần operator xác nhận: không cấp quá quyền mình; không đặt lại mật khẩu cho tài khoản thuộc doanh nghiệp khác; bắt đổi mật khẩu lần đầu; lưu phân quyền cho tài khoản ADMIN/VIEWER chuyển nó thành MEMBER.
 - VIEWER nay xem được trang Thông báo ở chế độ chỉ đọc.
 - Chưa xem giao diện trên trình duyệt với dữ liệu thật.

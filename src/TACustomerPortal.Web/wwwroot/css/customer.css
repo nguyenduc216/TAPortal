@@ -554,9 +554,3 @@ textarea.cp-input { height: auto; min-height: 72px; padding-top: 8px; padding-bo
     .cp-pay__save { margin-top: 0; justify-self: end; }
 }
 @media (prefers-reduced-motion: reduce) { .cp-pay__wire { animation: none; } }
-
-/* "Tài khoản & phân quyền": permission matrix (Xem / Quản lý) and its quick presets. */
-.cp-perm-presets { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 12px; }
-.cp-perm-table .cp-perm-col { width: 96px; text-align: center; }
-.cp-perm-table input[type=checkbox] { width: 16px; height: 16px; accent-color: var(--cp-blue-600); cursor: pointer; }
-.cp-perm-table input[type=checkbox]:disabled { cursor: default; }

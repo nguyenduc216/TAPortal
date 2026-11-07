@@ -758,9 +758,8 @@ public sealed class SafeCustomerPaymentsTests
         f.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false, BaseAddress = new Uri("https://localhost"), HandleCookies = true });
 
     internal static WebApplicationFactory<Program> Factory(string role, out MemoryPaymentStore store, out FakeTingee tingee, MemoryServicePackageStore? packages = null,
-        IOrderInvoiceStore? invoiceStore = null, ITingeeInvoiceApi? invoiceApi = null, string? permissions = null, ICustomerMemberStore? members = null)
+        IOrderInvoiceStore? invoiceStore = null, ITingeeInvoiceApi? invoiceApi = null)
     {
-        var memberStore = members ?? new SafeCustomerMembersTests.MemoryMemberStore();
         var invoiceSettings = invoiceStore ?? new SafeCustomerEInvoiceTests.MemoryInvoiceStore();
         var invoicePartner = invoiceApi ?? new SafeCustomerEInvoiceTests.FakeInvoiceApi();
         var s = store = new MemoryPaymentStore();
@@ -772,9 +771,7 @@ public sealed class SafeCustomerPaymentsTests
             {
                 services.AddDataProtection().UseEphemeralDataProtectionProvider();
                 services.RemoveAll<ICustomerStore>();
-                services.AddSingleton<ICustomerStore>(new Members(role, permissions));
-                services.RemoveAll<ICustomerMemberStore>();
-                services.AddSingleton(memberStore);
+                services.AddSingleton<ICustomerStore>(new Members(role));
                 services.RemoveAll<IPaymentStore>();
                 services.AddSingleton<IPaymentStore>(s);
                 var pages = new MemoryOrderPageStore(s);
@@ -806,13 +803,13 @@ public sealed class SafeCustomerPaymentsTests
             }));
     }
 
-    private sealed class Members(string role, string? permissions) : ICustomerStore
+    private sealed class Members(string role) : ICustomerStore
     {
         private static readonly CustomerUser User = new(UserId, "member", "Thành viên", null, "hash");
         public Task<CustomerUser?> FindUser(string username) => Task.FromResult<CustomerUser?>(User);
         public Task<CustomerUser?> FindUser(Guid id) => Task.FromResult<CustomerUser?>(id == UserId ? User : null);
         public Task<IReadOnlyList<CustomerMembership>> Memberships(Guid userId) => Task.FromResult<IReadOnlyList<CustomerMembership>>(
-            [new(A, "KH-A", "Công ty A", "0101234567", null, null, null, role, permissions), new(B, "KH-B", "Công ty B", null, null, null, null, "OWNER")]);
+            [new(A, "KH-A", "Công ty A", "0101234567", null, null, null, role), new(B, "KH-B", "Công ty B", null, null, null, null, "OWNER")]);
         public Task<bool> ChangePassword(Guid id, string oldHash, string newHash) => Task.FromResult(false);
         public Task TouchLogin(Guid id) => Task.CompletedTask;
     }
@@ -888,7 +885,7 @@ public sealed class SafeCustomerPaymentsTests
     [Fact]
     public async Task OnlyOwnersAndAdminsResolveTransactions()
     {
-        using var f = Factory("VIEWER", out _, out _);
+        using var f = Factory("MEMBER", out _, out _);
         lock (Transactions.Items) Transactions.Items.Add(MemoryTransactionStore.Tx(9201, A, PaymentTxStatus.Unmatched, "CK member 9201"));
         var c = Client(f);
         var page = WebUtility.HtmlDecode(await c.GetStringAsync("/transactions"));

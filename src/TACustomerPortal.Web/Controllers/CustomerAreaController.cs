@@ -8,10 +8,8 @@ using TACustomerPortal.Web.Services;
 namespace TACustomerPortal.Web.Controllers;
 
 /// <summary>
-/// Base for the company area (bank accounts, contacts, orders, settings, ...): everything is scoped to the customer selected
-/// at sign-in. Each controller names its module with [CustomerModule] (view right, checked before the action); changing
-/// actions check the manage right of that module (CustomerAccess: OWNER/ADMIN everything, VIEWER view-only, MEMBER per
-/// function).
+/// Base for the payments area (bank accounts, contacts, orders, settings): everything is scoped to the customer selected
+/// at sign-in. Viewing is open to every member; changes need OWNER or ADMIN until the flexible role model replaces it.
 /// </summary>
 [ResponseCache(Location = ResponseCacheLocation.None, NoStore = true)]
 [PaymentsDataUnavailable]
@@ -21,12 +19,7 @@ public abstract class CustomerAreaController(ICurrentCustomerContext customer) :
 
     protected Guid Actor => Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
-    public static bool CanManage(CustomerMembership membership, string module) => CustomerAccess.CanManage(membership, module);
-
-    public static bool CanView(CustomerMembership membership, string module) => CustomerAccess.CanView(membership, module);
-
-    /// <summary>The friendly 403 page: the member lacks the manage right on the module.</summary>
-    protected IActionResult Denied(string module) => ModuleDenied.Result(module, manage: true, ModelState);
+    public static bool CanManage(CustomerMembership membership) => membership.Role is "OWNER" or "ADMIN";
 
     protected IActionResult SelectCustomer() => RedirectToAction("SelectCustomer", "Account");
 

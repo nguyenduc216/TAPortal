@@ -8,7 +8,7 @@ public sealed class MembershipInput
     public Guid CustomerId { get; set; }
     public Guid? UserId { get; set; }
 
-    [Required, RegularExpression("OWNER|ADMIN|VIEWER|MEMBER")]
+    [Required, RegularExpression("OWNER|ADMIN|VIEWER")]
     public string PortalRole { get; set; } = "VIEWER";
 
     [StringLength(100)]
