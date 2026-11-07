@@ -4,7 +4,7 @@
 - Change ID: `CUSTOMER-PORTAL-FOUNDATION-CHG-20261107T004158Z-0D7E07`
 - Created UTC: 2026-11-07T00:41:58.166699+00:00
 - Tiêu đề: E-invoice settings: MISA HSM warning and issue mode (HSM signed / draft for manual signing / none)
-- Trạng thái: IMPLEMENTED
+- Trạng thái: DEPLOYED
 
 ## Yêu cầu và phạm vi
 Operator (2026-11-07): trên trang cài đặt hóa đơn điện tử (MISA) phải cảnh báo rõ là cần mua HSM của MISA mới ký số tự động được, và cho chọn một trong ba: (1) đã mua HSM — ký số tự động; (2) chưa mua HSM — xuất hóa đơn nháp, duyệt thủ công; (3) không xuất hóa đơn tự động. Chọn (1) được lưu lại làm ghi nhận doanh nghiệp xác nhận đã mua HSM (không bắt buộc, chỉ lưu vết). Đặt trên trang Hóa đơn điện tử (operator chọn), form đơn hàng giữ nguyên.
@@ -24,7 +24,7 @@ Sửa:
 ## Migration SQL (KHÔNG tự chạy)
 - Database: TAPortalSys
 - `027-einvoice-issue-mode.sql`: thêm 3 cột NULL + CK_CIS_IssueMode; không đổi dòng nào. Verify 043, rollback 044 (từ chối khi đã có lựa chọn/xác nhận).
-- Execution: xem report
+- Execution: EXECUTED 2026-11-07T00:44:31Z
 
 ## Test và kết quả
 - Release build 0 lỗi; Safe tests 487/487 (mới: InDraftModePaidOrdersGetADraftAndNothingIsSigned, TheSettingsPageWarnsAboutHsmAndOffersThreeWaysToIssue).
@@ -35,9 +35,9 @@ Sửa:
 
 ## Git
 - Branch: feature/customer-portal-mvp01
-- Commit SHA: xem report
+- Commit SHA: a917153
 - PR:
-- Merge: xem report
+- Merge: fast-forward main
 - Merge SHA:
 
 ## Rủi ro, quyết định và việc còn lại
