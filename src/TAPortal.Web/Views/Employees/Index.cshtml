@@ -1,0 +1,79 @@
+@model EmployeesIndexVm
+@{
+    ViewData["Title"] = "Nhân viên";
+    ViewData["Heading"] = "Quản lý nhân viên";
+    ViewData["Subtitle"] = "Hồ sơ nhân sự T.A, phân công phòng ban và tài khoản đăng nhập.";
+    ViewData["PageIcon"] = "id";
+    var f = Model.Filter;
+    var canUpdate = AdminPermissions.Has(User, AdminPermissions.EmployeesUpdate);
+}
+@section PageActions {
+    @if (AdminPermissions.Has(User, AdminPermissions.EmployeesCreate)) {<a class="btn btn-ta-gold" asp-action="Create" data-ta-employee-create>@UiIcon.Render("user-plus")<span>Thêm nhân viên</span></a>}
+}
+@if (Model.Error is not null) {<div class="ta-alert ta-alert--danger" role="alert">@UiIcon.Render("alert-circle")<div class="ta-alert__body">@Model.Error</div></div>}
+<section class="card ta-table-card" aria-label="Danh sách nhân viên">
+    <form class="ta-table-toolbar d-flex flex-wrap gap-2 align-items-center" method="get" asp-action="Index">
+        <div class="ta-search">@UiIcon.Render("search")<input class="form-control" type="search" name="q" value="@f.Q" maxlength="100" aria-label="Tìm nhân viên" placeholder="Họ tên, mã NV, điện thoại, email..." /></div>
+        <select class="form-select w-auto" name="branchId" aria-label="Chi nhánh">
+            <option value="">Tất cả chi nhánh</option>
+            @foreach (var b in Model.Lookups.Branches) {<option value="@b.Id" selected="@(b.Id == f.BranchId)">@b.Name</option>}
+        </select>
+        <select class="form-select w-auto" name="departmentId" aria-label="Phòng ban">
+            <option value="">Tất cả phòng ban</option>
+            @foreach (var g in Model.Lookups.Departments.GroupBy(d => d.BranchId))
+            {
+                <optgroup label="@(Model.Lookups.BranchName(g.Key) ?? "—")">
+                    @foreach (var d in g) {<option value="@d.Id" selected="@(d.Id == f.DepartmentId)">@d.Name</option>}
+                </optgroup>
+            }
+        </select>
+        <select class="form-select w-auto" name="statusId" aria-label="Trạng thái">
+            <option value="">Tất cả trạng thái</option>
+            @foreach (var s in Model.Lookups.Statuses) {<option value="@s.Id" selected="@(s.Id == f.StatusId)">@s.Name</option>}
+        </select>
+        <select class="form-select w-auto" name="account" aria-label="Tài khoản đăng nhập">
+            <option value="">Tài khoản: tất cả</option>
+            <option value="linked" selected="@(f.Account == "linked")">Đã có tài khoản</option>
+            <option value="unlinked" selected="@(f.Account == "unlinked")">Chưa có tài khoản</option>
+        </select>
+        <button class="btn" type="submit">@UiIcon.Render("search")<span>Lọc</span></button>
+    </form>
+    @if (Model.Items is null)
+    {
+        <div class="ta-empty"><span class="ta-empty__icon">@UiIcon.Render("database-off")</span><p class="ta-empty__title">Không tải được dữ liệu</p></div>
+    }
+    else if (Model.Items.Count == 0)
+    {
+        <div class="ta-empty"><span class="ta-empty__icon">@UiIcon.Render("id")</span><p class="ta-empty__title">Không có nhân viên phù hợp</p><p class="ta-empty__text">Đổi điều kiện lọc hoặc bấm "Thêm nhân viên".</p></div>
+    }
+    else
+    {
+        <div class="ta-table-wrap">
+            <table class="ta-table ta-table-stack" id="employeesTable" data-ta-pager="20">
+                <thead><tr><th scope="col">Mã NV</th><th scope="col">Họ và tên</th><th scope="col">Phòng ban / Nhóm</th><th scope="col">Chức danh</th><th scope="col">Điện thoại</th><th scope="col">Email công ty</th><th scope="col">Trạng thái</th><th scope="col">Tài khoản</th><th scope="col" class="ta-col-actions">Thao tác</th></tr></thead>
+                <tbody>
+                @foreach (var x in Model.Items)
+                {
+                    <tr data-ta-row data-ta-employee="@x.Code">
+                        <td data-label="Mã NV"><span class="ta-code">@x.Code</span></td>
+                        <td class="ta-cell-strong"><a class="text-reset" asp-action="Details" asp-route-id="@x.Id">@x.FullName</a><div class="ta-cell-sub">@x.BranchName</div></td>
+                        <td data-label="Phòng ban / Nhóm">@(x.DepartmentName ?? "—")@if (x.TeamName is not null) {<div class="ta-cell-sub">@x.TeamName</div>}</td>
+                        <td data-label="Chức danh">@(x.JobTitleName ?? "—")</td>
+                        <td class="ta-nowrap" data-label="Điện thoại">@(x.MobilePhone ?? x.CompanyPhone)</td>
+                        <td class="ta-nowrap" data-label="Email công ty">@x.CompanyEmail</td>
+                        <td data-label="Trạng thái"><span class="ta-badge @EmployeePolicy.StatusBadge(x.StatusCode)">@(x.StatusName ?? "Chưa đặt")</span></td>
+                        <td data-label="Tài khoản">@if (x.Username is null) {<span class="text-secondary">Chưa liên kết</span>} else {<span class="ta-code">@x.Username</span>@if (!x.AccountLoginEligible) {<span class="ta-badge ta-badge--warning ta-badge--plain ms-1">Không đăng nhập được</span>}}</td>
+                        <td class="ta-col-actions">
+                            <div class="ta-actions">
+                                <a class="btn btn-sm btn-soft-primary" asp-action="Details" asp-route-id="@x.Id" aria-label="Mở hồ sơ @x.Code">@UiIcon.Render("eye")<span>Hồ sơ</span></a>
+                                @if (canUpdate) {<a class="btn btn-sm" asp-action="Edit" asp-route-id="@x.Id" aria-label="Sửa @x.Code">@UiIcon.Render("pencil")<span>Sửa</span></a>}
+                            </div>
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+        <div class="ta-table-footer" data-ta-pager-for="employeesTable" data-ta-unit="nhân viên"></div>
+    }
+</section>

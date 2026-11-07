@@ -150,6 +150,18 @@ WHERE r.Id=@r AND r.IsActive=1 AND r.IsDeleted=0
     {
         await using var cn = Open(); await cn.OpenAsync();
         await using var tx = (SqlTransaction)await cn.BeginTransactionAsync();
+        var id = await InsertUserAsync(cn, tx, _audit.RequireDurableAudit, vm, passwordHash, createdBy, vm.RoleId.HasValue ? [vm.RoleId.Value] : [], null);
+        await tx.CommitAsync();
+        return id;
+    }
+
+    // The single user-creation path (Users page and employee accounts), run inside the caller's transaction: inserts the
+    // ACTIVE user, grants each role through CreateUserRoleSql (active roles only; SYS_ADMIN only when the creator is an
+    // active SYS_ADMIN, else UnauthorizedAccessException) and writes the USER_CREATED audit row (AuditUnavailableException
+    // when durable audit is mandatory and could not be written). Nothing is committed here.
+    public static async Task<Guid> InsertUserAsync(SqlConnection cn, SqlTransaction tx, bool requireDurableAudit, UserCreateVm vm, string passwordHash,
+        Guid? createdBy, IReadOnlyCollection<Guid> roleIds, string? ipAddress)
+    {
         var id = Guid.NewGuid();
         const string sql = """
 INSERT dbo.Users(Id,Username,NormalizedUsername,Email,NormalizedEmail,Phone,DisplayName,PasswordHash,Status,IsActive,CreatedBy)
@@ -168,20 +180,22 @@ VALUES(@id,@username,@nu,@email,@ne,@phone,@name,@hash,'ACTIVE',1,@createdBy);
             cmd.Parameters.AddWithValue("@createdBy", (object?)createdBy ?? DBNull.Value);
             await cmd.ExecuteNonQueryAsync();
         }
-        if (vm.RoleId.HasValue)
+        foreach (var roleId in roleIds.Distinct())
         {
             // Only an active, non-deleted role; SYS_ADMIN only when the creator is an active SYS_ADMIN (re-checked here).
             await using var roleCmd = new SqlCommand(CreateUserRoleSql, cn, tx);
             roleCmd.Parameters.AddWithValue("@u", id);
-            roleCmd.Parameters.AddWithValue("@r", vm.RoleId.Value);
+            roleCmd.Parameters.AddWithValue("@r", roleId);
             roleCmd.Parameters.Add("@by", System.Data.SqlDbType.UniqueIdentifier).Value = (object?)createdBy ?? DBNull.Value;
             if (await roleCmd.ExecuteNonQueryAsync() != 1)
                 throw new UnauthorizedAccessException("The selected role cannot be granted by this account.");
         }
         // AUD-35: account creation (possibly with SYS_ADMIN) is audited in the same transaction; throws AuditUnavailableException when mandatory.
-        await AuditSql.WriteOrThrowAsync(cn, tx, _audit.RequireDurableAudit, createdBy, "USER_CREATED", "dbo.Users", id.ToString(), "{}",
-            AuditSql.Json(("username", vm.Username.Trim()), ("displayName", vm.DisplayName.Trim()), ("email", vm.Email), ("roleId", vm.RoleId)), null);
-        await tx.CommitAsync();
+        var roles = roleIds.Distinct().ToList();
+        await AuditSql.WriteOrThrowAsync(cn, tx, requireDurableAudit, createdBy, "USER_CREATED", "dbo.Users", id.ToString(), "{}",
+            roles.Count <= 1
+                ? AuditSql.Json(("username", vm.Username.Trim()), ("displayName", vm.DisplayName.Trim()), ("email", vm.Email), ("roleId", roles.Count == 1 ? roles[0] : null))
+                : AuditSql.Json(("username", vm.Username.Trim()), ("displayName", vm.DisplayName.Trim()), ("email", vm.Email), ("roleIds", string.Join(",", roles))), ipAddress);
         return id;
     }
 

@@ -28,6 +28,10 @@
     var canUsers = Can(AdminPermissions.UsersView);
     var canRoles = Can(AdminPermissions.RolesView);
     var canMenus = Can(AdminPermissions.MenusManage);
+    var canEmployees = Can(AdminPermissions.EmployeesView);
+    var canDepartments = Can(AdminPermissions.DepartmentsView);
+    var canTeams = Can(AdminPermissions.TeamsView);
+    var canJobTitles = Can(AdminPermissions.JobTitlesView);
     var displayName = User.FindFirst("display_name")?.Value ?? User.Identity?.Name;
     // Role names (never codes); "Người dùng TAPortal" only when no role name is known.
     var roleNames = User.FindAll("role_name").Select(c => c.Value).Where(v => !string.IsNullOrWhiteSpace(v)).Distinct().ToList();
@@ -82,6 +86,18 @@
                         @* Customer Portal accounts are managed inside each customer's workspace (tab "Tài khoản Portal"). *@
                         @if (canCustomers) {<li><a class="ta-nav__link" asp-controller="Customers" asp-action="Index" title="Khách hàng" aria-current="@(IsCurrent("Customers") || IsCurrent("CustomerPortalAccounts") ? "page" : null)"><span class="ta-nav__icon">@UiIcon.Render("building")</span><span class="ta-nav__label">Khách hàng</span></a></li>}
                         @if (canReconciliation) {<li><a class="ta-nav__link" asp-controller="PaymentReconciliation" asp-action="Index" title="Đối soát giao dịch" aria-current="@(IsCurrent("PaymentReconciliation") ? "page" : null)"><span class="ta-nav__icon">@UiIcon.Render("report-money")</span><span class="ta-nav__label">Đối soát giao dịch</span></a></li>}
+                    </ul>
+                </div>
+            }
+            @if (canEmployees || canDepartments || canTeams || canJobTitles)
+            {
+                <div class="ta-nav__group">
+                    <p class="ta-nav__section">Nhân sự</p>
+                    <ul class="ta-nav__list">
+                        @if (canEmployees) {<li><a class="ta-nav__link" asp-controller="Employees" asp-action="Index" title="Nhân viên" aria-current="@(IsCurrent("Employees") ? "page" : null)"><span class="ta-nav__icon">@UiIcon.Render("id")</span><span class="ta-nav__label">Nhân viên</span></a></li>}
+                        @if (canDepartments) {<li><a class="ta-nav__link" asp-controller="Departments" asp-action="Index" title="Phòng ban" aria-current="@(IsCurrent("Departments") ? "page" : null)"><span class="ta-nav__icon">@UiIcon.Render("building")</span><span class="ta-nav__label">Phòng ban</span></a></li>}
+                        @if (canTeams) {<li><a class="ta-nav__link" asp-controller="Teams" asp-action="Index" title="Nhóm" aria-current="@(IsCurrent("Teams") ? "page" : null)"><span class="ta-nav__icon">@UiIcon.Render("users-group")</span><span class="ta-nav__label">Nhóm</span></a></li>}
+                        @if (canJobTitles) {<li><a class="ta-nav__link" asp-controller="JobTitles" asp-action="Index" title="Chức danh" aria-current="@(IsCurrent("JobTitles") ? "page" : null)"><span class="ta-nav__icon">@UiIcon.Render("user-cog")</span><span class="ta-nav__label">Chức danh</span></a></li>}
                     </ul>
                 </div>
             }

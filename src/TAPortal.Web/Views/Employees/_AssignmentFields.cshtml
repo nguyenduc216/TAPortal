@@ -1,0 +1,43 @@
+@model EmployeeAssignmentFieldsVm
+@{
+    var L = Model.Lookups;
+    var c = Model.Current;
+    var id = Model.Prefix.Length == 0 ? "asg" : "new";
+}
+@* Departments and teams are grouped by branch; the server refuses a department/team of another branch. *@
+<div class="ta-form-grid">
+    <div>
+        <label class="form-label required" for="@(id)Branch">Chi nhánh</label>
+        <select id="@(id)Branch" class="form-select" name="@(Model.Prefix)BranchId" required>
+            <option value="">-- Chọn chi nhánh --</option>
+            @foreach (var b in L.Branches.Where(b => b.IsActive || b.Id == c?.BranchId)) {<option value="@b.Id" selected="@(b.Id == Model.BranchId)">@b.Name@(b.CompanyName is null ? "" : " — " + b.CompanyName)</option>}
+        </select>
+    </div>
+    <div>
+        <label class="form-label" for="@(id)Dept">Phòng ban</label>
+        <select id="@(id)Dept" class="form-select" name="@(Model.Prefix)DepartmentId">
+            <option value="">-- Không chọn --</option>
+            @foreach (var g in L.Departments.Where(d => d.IsActive || d.Id == c?.DepartmentId).GroupBy(d => d.BranchId))
+            {
+                <optgroup label="@(L.BranchName(g.Key) ?? "—")">@foreach (var d in g) {<option value="@d.Id" selected="@(d.Id == Model.DepartmentId)">@d.Name</option>}</optgroup>
+            }
+        </select>
+    </div>
+    <div>
+        <label class="form-label" for="@(id)Team">Nhóm</label>
+        <select id="@(id)Team" class="form-select" name="@(Model.Prefix)TeamId">
+            <option value="">-- Không chọn --</option>
+            @foreach (var g in L.Teams.Where(t => t.IsActive || t.Id == c?.TeamId).GroupBy(t => (t.BranchId, t.DepartmentId)))
+            {
+                <optgroup label="@(L.BranchName(g.Key.BranchId) ?? "—")@(g.Key.DepartmentId is null ? "" : " / " + L.DepartmentName(g.Key.DepartmentId))">@foreach (var t in g) {<option value="@t.Id" selected="@(t.Id == Model.TeamId)">@t.Name</option>}</optgroup>
+            }
+        </select>
+    </div>
+    <div>
+        <label class="form-label" for="@(id)Job">Chức danh</label>
+        <select id="@(id)Job" class="form-select" name="@(Model.Prefix)JobTitleId">
+            <option value="">-- Không chọn --</option>
+            @foreach (var j in L.JobTitles.Where(j => j.IsActive || j.Id == c?.JobTitleId)) {<option value="@j.Id" selected="@(j.Id == Model.JobTitleId)">@j.Name</option>}
+        </select>
+    </div>
+</div>

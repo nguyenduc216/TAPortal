@@ -36,16 +36,19 @@ public sealed class HomeController(IDashboardStore dashboard, AdminAuditOptions 
 }
 
 [Authorize(Policy = AdminPermissions.Policy.UsersView)]
-public sealed class UsersController(PortalDb db, PasswordService passwords, IUserRoleStore roleStore, IUserAccountStore accounts, ILogger<UsersController> logger) : Controller
+public sealed class UsersController(PortalDb db, PasswordService passwords, IUserRoleStore roleStore, IUserAccountStore accounts, IEmployeeStore employees, ILogger<UsersController> logger) : Controller
 {
     public async Task<IActionResult> Index() => await IndexView();
 
-    // The list view needs the role catalogue (create modal) and each user's role names; loaded here instead of in the view.
+    // The list view needs the role catalogue (create modal), each user's role names and the linked employee (Nhân sự);
+    // loaded here instead of in the view.
     private async Task<IActionResult> IndexView()
     {
         var users = await db.GetUsersAsync();
         ViewData["Roles"] = await db.GetRolesAsync();
         ViewData["RoleMap"] = await db.GetUserRoleMapAsync();
+        try { ViewData["EmployeeMap"] = await employees.LinkedEmployeesAsync(); }
+        catch (SqlException ex) { logger.LogWarning(ex, "Linked employees unavailable for the Users list."); }
         return View(nameof(Index), users);
     }
 

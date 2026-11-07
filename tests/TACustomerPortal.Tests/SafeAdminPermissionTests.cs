@@ -42,7 +42,8 @@ public sealed class SafeAdminPermissionTests
         var migration = File.ReadAllText(Path.Combine(root, "database", "migrations", "028-admin-permission-catalogue.sql"));
         var verify = File.ReadAllText(Path.Combine(root, "database", "scripts", "045-verify-admin-permission-catalogue.sql"));
         var rollback = File.ReadAllText(Path.Combine(root, "database", "scripts", "046-rollback-admin-permission-catalogue.sql"));
-        var expected = AdminSecurity.AdminPermissions.Codes.Order(StringComparer.Ordinal).ToList();
+        // Every module except HR (Nhân sự), whose rows already exist in dbo.Permissions (HR core bootstrap, see SafeAdminEmployeeTests).
+        var expected = AdminSecurity.AdminPermissions.MigrationCodes.Order(StringComparer.Ordinal).ToList();
         Assert.Equal(expected, Regex.Matches(migration, @"\('([A-Z.]+)',\s+N'").Select(m => m.Groups[1].Value).Order(StringComparer.Ordinal).ToList());
         Assert.Equal(expected, Regex.Matches(verify, @"\('([A-Z.]+)'\)").Select(m => m.Groups[1].Value).Order(StringComparer.Ordinal).ToList());
         const string marker = "A0000028-0000-4000-8000-000000000028";
@@ -106,7 +107,7 @@ public sealed class SafeAdminPermissionTests
         var nav = html[html.IndexOf("id=\"taNav\"", StringComparison.Ordinal)..html.IndexOf("</nav>", html.IndexOf("id=\"taNav\"", StringComparison.Ordinal), StringComparison.Ordinal)];
         Assert.Contains("href=\"/Customers\"", nav);
         Assert.Contains("href=\"/Roles\"", nav);
-        foreach (var hidden in new[] { "href=\"/\"", "/PaymentReconciliation", "/ServicePackages", "/TingeeSandbox", "/TingeeInvoiceSandbox", "/TingeeLogs", "/NotificationSettings", "/Users", "/Menus" })
+        foreach (var hidden in new[] { "href=\"/\"", "/PaymentReconciliation", "/ServicePackages", "/TingeeSandbox", "/TingeeInvoiceSandbox", "/TingeeLogs", "/NotificationSettings", "/Users", "/Menus", "/Employees", "/Departments", "/Teams", "/JobTitles" })
             Assert.DoesNotContain(hidden, nav);
         Assert.Contains("Kế toán", html);                       // role name instead of "Người dùng TAPortal"
         Assert.DoesNotContain("Người dùng TAPortal", html);
@@ -118,7 +119,7 @@ public sealed class SafeAdminPermissionTests
     {
         using var f = Factory("SYS_ADMIN", new MemoryRoles(), new MemoryUserRoles(true));
         var html = WebUtility.HtmlDecode(await Client(f).GetStringAsync("/roles"));
-        foreach (var link in new[] { "href=\"/\"", "/Customers", "/PaymentReconciliation", "/ServicePackages", "/ServicePackages/Purchases", "/TingeeSandbox", "/TingeeInvoiceSandbox", "/TingeeLogs", "/NotificationSettings", "/Users", "/Roles", "/Menus" })
+        foreach (var link in new[] { "href=\"/\"", "/Customers", "/PaymentReconciliation", "/ServicePackages", "/ServicePackages/Purchases", "/TingeeSandbox", "/TingeeInvoiceSandbox", "/TingeeLogs", "/NotificationSettings", "/Users", "/Roles", "/Menus", "/Employees", "/Departments", "/Teams", "/JobTitles" })
             Assert.Contains(link, html);
         Assert.Contains("data-ta-role-create", html);
     }
@@ -199,7 +200,8 @@ public sealed class SafeAdminPermissionTests
         Assert.Matches("value=\"CRM.CUSTOMERS.VIEW\"[^>]*checked=\"checked\"", page);
         Assert.DoesNotMatch("value=\"AUTH.USERS.VIEW\"[^>]*checked=\"checked\"", page);
         Assert.Contains("data-ta-perm-all", page);              // per-module "select all"
-        Assert.DoesNotContain("HR.", page);                     // only catalogue codes are shown
+        Assert.DoesNotContain("HR.SPECIALIZATION.", page);      // only catalogue codes are shown
+        Assert.DoesNotContain("HR.EMPLOYEE_DOCUMENT.", page);
         var stamp = Regex.Match(page, "name=\"Input.Stamp\" value=\"([0-9A-F]+)\"").Groups[1].Value;
         token = WebUtility.HtmlDecode(Regex.Match(page, "name=\"__RequestVerificationToken\"[^>]*value=\"([^\"]+)\"").Groups[1].Value);
 
