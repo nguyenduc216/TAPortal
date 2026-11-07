@@ -1,0 +1,102 @@
+@model ContractDetailsVm
+@{
+    var c = Model.Contract;
+    var vi = System.Globalization.CultureInfo.GetCultureInfo("vi-VN");
+    string Day(DateTime? d) => d?.ToString("dd/MM/yyyy", vi) ?? "—";
+    ViewData["ParentTitle"] = "Hợp đồng";
+    ViewData["ParentController"] = "Contracts";
+    ViewData["Title"] = c.ContractNo;
+    ViewData["Heading"] = c.Title;
+    ViewData["Subtitle"] = $"Hợp đồng số {c.ContractNo} · {c.CustomerName}";
+    ViewData["PageIcon"] = "file-text";
+    var canUpdate = AdminPermissions.Has(User, AdminPermissions.ContractsUpdate);
+    var canDelete = AdminPermissions.Has(User, AdminPermissions.ContractsDelete);
+    var canCustomer = AdminPermissions.Has(User, AdminPermissions.CustomersView);
+}
+@section PageActions {
+    @if (canUpdate) {<a class="btn btn-primary" asp-action="Edit" asp-route-id="@c.Id">@UiIcon.Render("pencil")<span>Sửa hợp đồng</span></a>}
+}
+<div class="row g-4">
+<div class="col-xl-8 d-flex flex-column gap-4">
+    <section class="card" aria-labelledby="contractInfoTitle">
+        <div class="card-header">
+            <h2 class="card-title" id="contractInfoTitle">@UiIcon.Render("file-text")Thông tin hợp đồng</h2>
+            <span class="ms-auto d-inline-flex gap-2">
+                @if (c.IsExpiringSoon(Model.Today)) {<span class="ta-badge ta-badge--warning ta-badge--plain" data-ta-expiring>Sắp hết hạn</span>}
+                <span class="ta-badge @ContractPolicy.StatusBadge(c.Status)">@ContractPolicy.StatusLabel(c.Status)</span>
+            </span>
+        </div>
+        <div class="card-body">
+            <dl class="ta-dl">
+                <dt>Số hợp đồng</dt><dd><span class="ta-code">@c.ContractNo</span></dd>
+                <dt>Tên hợp đồng</dt><dd>@c.Title</dd>
+                <dt>Khách hàng</dt><dd>@if (canCustomer) {<a asp-controller="Customers" asp-action="Details" asp-route-id="@c.CustomerId">@c.CustomerName</a>} else {@c.CustomerName}@if (c.CustomerCode is not null) {<span class="ta-code ms-2">@c.CustomerCode</span>}</dd>
+                <dt>Dịch vụ</dt><dd>@(c.ServiceDescription ?? "—")</dd>
+                <dt>Ngày ký</dt><dd>@Day(c.SignedDate)</dd>
+                <dt>Hiệu lực</dt><dd>@Day(c.StartDate) – @Day(c.EndDate)</dd>
+                <dt>Giá trị hợp đồng</dt><dd>@(c.ContractValue is decimal v ? v.ToString("N0", vi) + " đ" : "—")</dd>
+                <dt>Chu kỳ thanh toán</dt><dd>@ContractPolicy.BillingCycleLabel(c.BillingCycle)</dd>
+                <dt>Người phụ trách</dt><dd>@(c.OwnerName ?? "—")</dd>
+                @if (c.Note is not null) {<dt>Ghi chú</dt><dd style="white-space: pre-line">@c.Note</dd>}
+                <dt>Tạo lúc</dt><dd>@c.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm", vi)@if (c.UpdatedAt is DateTime u) {<span class="text-secondary"> · sửa lần cuối @u.ToLocalTime().ToString("dd/MM/yyyy HH:mm", vi)</span>}</dd>
+            </dl>
+        </div>
+    </section>
+
+    <section class="card" aria-labelledby="contractFilesTitle" data-ta-contract-files>
+        <div class="card-header"><h2 class="card-title" id="contractFilesTitle">@UiIcon.Render("file-invoice")File đính kèm</h2><span class="ta-badge ta-badge--neutral ta-badge--plain ms-auto">@c.Files.Count file</span></div>
+        @if (c.Files.Count == 0)
+        {
+            <div class="card-body"><p class="text-secondary mb-0">Chưa có file đính kèm.</p></div>
+        }
+        else
+        {
+            <ul class="ta-list">
+                @foreach (var file in c.Files)
+                {
+                    <li data-ta-contract-file="@file.Id">
+                        <div>
+                            <a asp-action="Download" asp-route-id="@c.Id" asp-route-fileId="@file.Id" download data-ta-hard>@UiIcon.Render("file-text")<span class="ms-1">@file.FileName</span></a>
+                            <div class="ta-cell-sub">@ContractPolicy.Size(file.SizeBytes) · @file.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm", vi)</div>
+                        </div>
+                        @if (canUpdate)
+                        {
+                            <form asp-action="DeleteFile" asp-route-id="@c.Id" method="post" data-ta-confirm="Gỡ file @file.FileName khỏi hợp đồng?">
+                                <input type="hidden" name="fileId" value="@file.Id" />
+                                <button type="submit" class="btn btn-sm btn-outline-danger" aria-label="Gỡ file @file.FileName">@UiIcon.Render("trash")<span>Gỡ</span></button>
+                            </form>
+                        }
+                    </li>
+                }
+            </ul>
+        }
+        @if (canUpdate)
+        {
+            <form class="card-footer d-flex flex-wrap gap-2 align-items-center" asp-action="UploadFile" asp-route-id="@c.Id" method="post" enctype="multipart/form-data" data-ta-hard data-ta-contract-upload>
+                <div class="ta-input-icon flex-grow-1">@UiIcon.Render("file-text")<input class="form-control" type="file" name="file" accept="@ContractPolicy.Accept" required aria-label="Chọn file đính kèm" /></div>
+                <button type="submit" class="btn btn-primary" data-ta-loading data-ta-loading-text="Đang tải lên...">@UiIcon.Render("upload")<span>Tải lên</span></button>
+                <div class="form-hint w-100 mt-0">@ContractPolicy.AllowedText mỗi file.</div>
+            </form>
+        }
+    </section>
+</div>
+<div class="col-xl-4 d-flex flex-column gap-4">
+    <section class="card" aria-labelledby="contractLinksTitle">
+        <div class="card-header"><h2 class="card-title" id="contractLinksTitle">@UiIcon.Render("building")Khách hàng</h2></div>
+        <div class="card-body d-flex flex-column gap-2">
+            <div class="ta-cell-strong">@c.CustomerName</div>
+            <a asp-action="Index" asp-route-customerId="@c.CustomerId">Các hợp đồng của khách hàng này →</a>
+        </div>
+    </section>
+    @if (canDelete)
+    {
+        <section class="card" aria-labelledby="contractDeleteTitle">
+            <div class="card-header"><h2 class="card-title" id="contractDeleteTitle">@UiIcon.Render("trash")Xóa hợp đồng</h2></div>
+            <form class="card-body" asp-action="Delete" asp-route-id="@c.Id" method="post" data-ta-confirm="Xóa (mềm) hợp đồng @c.ContractNo? File đính kèm được giữ lại trong cơ sở dữ liệu.">
+                <input type="hidden" name="stamp" value="@c.Stamp" />
+                <button type="submit" class="btn btn-outline-danger w-100">@UiIcon.Render("trash")<span>Xóa (mềm) hợp đồng</span></button>
+            </form>
+        </section>
+    }
+</div>
+</div>
