@@ -173,7 +173,7 @@ public sealed class SafeAdminDashboardUxTests
     [Theory]
     [InlineData(null, "/Account/Login", "Đăng nhập")]
     [InlineData("OWNER", "/Account/Profile", "Về hồ sơ cá nhân")]
-    [InlineData("SYS_ADMIN", "/", "Về tổng quan")]
+    [InlineData("SYS_ADMIN", "/Work", "Về việc của tôi")]
     public async Task AccessDeniedOffersAReachableDestination(string? role, string href, string label)
     {
         using var f = Factory(role, new FakeDashboard(Sample()));

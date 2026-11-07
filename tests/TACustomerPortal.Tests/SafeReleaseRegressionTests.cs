@@ -35,10 +35,14 @@ public sealed class SafeReleaseRegressionTests
     private static HttpClient Client<T>(WebApplicationFactory<T> f) where T : class =>
         f.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false, BaseAddress = new Uri("https://localhost") });
 
-    private static void AssertSecurityHeaders(HttpResponseMessage r)
+    // The Admin site allows the microphone on its own origin (speech-to-text buttons, Công việc); every other header is shared.
+    private static void AssertSecurityHeaders(HttpResponseMessage r, bool admin = false)
     {
         foreach (var (name, value) in SecurityHeaders.Values)
-            Assert.True(r.Headers.TryGetValues(name, out var v) && v.Single() == value, $"{r.RequestMessage!.RequestUri} missing {name}");
+        {
+            var expected = admin && name == "Permissions-Policy" ? admin::TAPortal.Web.Services.AdminHeaders.PermissionsPolicy : value;
+            Assert.True(r.Headers.TryGetValues(name, out var v) && v.Single() == expected, $"{r.RequestMessage!.RequestUri} missing {name}");
+        }
     }
 
     [Theory]
@@ -52,7 +56,7 @@ public sealed class SafeReleaseRegressionTests
         using var f = Admin();
         var r = await Client(f).GetAsync(path);
         Assert.Equal(expected, r.StatusCode);
-        AssertSecurityHeaders(r);
+        AssertSecurityHeaders(r, admin: true);
     }
 
     [Theory]

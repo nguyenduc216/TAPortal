@@ -1,0 +1,71 @@
+@model WorkListVm
+@{
+    ViewData["Title"] = "Danh sách công việc";
+    ViewData["PageIcon"] = "list-tree";
+    ViewData["ParentTitle"] = "Việc của tôi";
+    ViewData["ParentController"] = "Work";
+    var f = Model.Filter;
+    var a = Model.Actor;
+    var vi = System.Globalization.CultureInfo.GetCultureInfo("vi-VN");
+    ViewData["Subtitle"] = a?.ViewAll == true ? "Bạn có quyền giám sát: thấy mọi công việc." : "Chỉ hiện việc bạn phụ trách, cùng làm hoặc đã tạo.";
+}
+@section PageActions {
+    @if (a?.CanCreateAny == true) {<a class="btn btn-ta-gold" asp-action="Create">@UiIcon.Render("plus")<span>@(a.CanAssign ? "Tạo / giao việc" : "Tạo việc cho tôi")</span></a>}
+}
+@if (Model.Error is not null) {<div class="ta-alert ta-alert--danger" role="alert">@UiIcon.Render("alert-circle")<div class="ta-alert__body">@Model.Error</div></div>}
+<section class="card ta-table-card" aria-label="Danh sách công việc">
+    <form class="ta-table-toolbar d-flex flex-wrap gap-2 align-items-center" method="get" asp-action="Tasks">
+        <div class="ta-search">@UiIcon.Render("search")<input class="form-control" type="search" name="q" value="@f.Q" maxlength="100" aria-label="Tìm công việc" placeholder="Tên hoặc mã công việc..." /></div>
+        <select class="form-select w-auto" name="scope" aria-label="Phạm vi">
+            <option value="mine" selected="@(f.Scope == "mine")">Việc tôi làm</option>
+            <option value="created" selected="@(f.Scope == "created")">Việc tôi đã tạo / giao</option>
+            @if (a?.ViewAll == true) {<option value="all" selected="@(f.Scope == "all")">Tất cả công việc</option>}
+        </select>
+        <select class="form-select w-auto" name="status" aria-label="Trạng thái">
+            <option value="">Mọi trạng thái</option>
+            <option value="open" selected="@(f.Status == "open")">Chưa hoàn thành</option>
+            <option value="overdue" selected="@(f.Status == "overdue")">Quá hạn</option>
+            @foreach (var s in WorkTaskPolicy.Statuses) {<option value="@s" selected="@(f.Status == s)">@WorkTaskPolicy.StatusLabel(s)</option>}
+        </select>
+        @if (a?.ViewAll == true || a?.CanAssign == true)
+        {
+            <select class="form-select w-auto" name="owner" aria-label="Người phụ trách">
+                <option value="">Mọi người phụ trách</option>
+                @foreach (var e in Model.Lookups.Employees) {<option value="@e.Id" selected="@(e.Id == f.Owner)">@e.Name</option>}
+            </select>
+        }
+        <select class="form-select w-auto" name="customer" aria-label="Khách hàng">
+            <option value="">Mọi khách hàng</option>
+            @foreach (var c in Model.Lookups.Customers) {<option value="@c.Id" selected="@(c.Id == f.Customer)">@c.Name</option>}
+        </select>
+        <button class="btn" type="submit">@UiIcon.Render("search")<span>Lọc</span></button>
+    </form>
+    @if (Model.Tasks is { Count: 0 })
+    {
+        <div class="ta-empty"><span class="ta-empty__icon">@UiIcon.Render("inbox")</span><p class="ta-empty__text">Không có công việc phù hợp.</p></div>
+    }
+    else if (Model.Tasks is not null)
+    {
+        <div class="ta-table-wrap">
+            <table class="table ta-table">
+                <thead><tr><th>Công việc</th><th>Phụ trách</th><th>Khách hàng</th><th>Hạn</th><th>Tiến độ</th><th>Trạng thái</th></tr></thead>
+                <tbody>
+                @foreach (var t in Model.Tasks)
+                {
+                    var overdue = WorkTaskPolicy.IsOverdue(t.Status, t.DueDate, Model.Today);
+                    var soon = WorkTaskPolicy.IsDueSoon(t.Status, t.DueDate, Model.Today);
+                    <tr class="@(overdue ? "ta-row--overdue" : soon ? "ta-row--soon" : null)">
+                        <td><a asp-action="Details" asp-route-id="@t.Id"><strong>@t.Title</strong></a><div class="text-secondary small">@t.TaskNo@(t.Priority is "HIGH" or "URGENT" ? " · " + WorkTaskPolicy.PriorityLabel(t.Priority) : "")</div></td>
+                        <td>@t.OwnerName@if (t.MemberCount > 0) {<div class="text-secondary small">+@t.MemberCount người cùng làm</div>}</td>
+                        <td>@(t.CustomerName ?? "—")</td>
+                        <td>@(t.DueDate?.ToString("dd/MM/yyyy", vi) ?? "—")@if (overdue) {<div><span class="ta-badge ta-badge--danger">Quá hạn</span></div>} else if (soon) {<div><span class="ta-badge ta-badge--warning">Sắp đến hạn</span></div>}</td>
+                        <td><div class="ta-progress ta-progress--sm" aria-hidden="true"><span style="width:@(t.Progress)%"></span></div><span class="small text-secondary">@t.Progress% · @t.ChecklistDone/@t.ChecklistTotal</span></td>
+                        <td><span class="ta-badge ta-badge--@WorkTaskPolicy.StatusTone(t.Status)">@WorkTaskPolicy.StatusLabel(t.Status)</span></td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+        @if (Model.Tasks.Count >= 500) {<div class="ta-table-footer text-secondary small">Hiển thị 500 công việc đầu tiên; hãy lọc để thu hẹp.</div>}
+    }
+</section>

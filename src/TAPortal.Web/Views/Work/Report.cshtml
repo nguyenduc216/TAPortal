@@ -1,0 +1,49 @@
+@model WorkReportVm
+@{
+    ViewData["Title"] = "Báo cáo tiến độ";
+    ViewData["PageIcon"] = "chart-bar";
+    var vi = System.Globalization.CultureInfo.GetCultureInfo("vi-VN");
+    ViewData["Subtitle"] = $"Việc có hạn từ {Model.From.ToString("dd/MM/yyyy", vi)} đến {Model.To.ToString("dd/MM/yyyy", vi)}, theo người chịu trách nhiệm chính. “Quá hạn” tính tại hôm nay.";
+    var rows = Model.Rows ?? [];
+    var prev = Model.From.AddMonths(-1);
+}
+@if (Model.Error is not null) {<div class="ta-alert ta-alert--danger" role="alert">@UiIcon.Render("alert-circle")<div class="ta-alert__body">@Model.Error</div></div>}
+<section class="card ta-table-card" aria-label="Báo cáo tiến độ từng nhân viên">
+    <form class="ta-table-toolbar d-flex flex-wrap gap-2 align-items-end" method="get" asp-action="Report">
+        <div><label class="form-label" for="rFrom">Từ ngày</label><div class="ta-input-icon">@UiIcon.Render("calendar")<input class="form-control" type="date" id="rFrom" name="from" value="@Model.From.ToString("yyyy-MM-dd")" /></div></div>
+        <div><label class="form-label" for="rTo">Đến ngày</label><div class="ta-input-icon">@UiIcon.Render("calendar")<input class="form-control" type="date" id="rTo" name="to" value="@Model.To.ToString("yyyy-MM-dd")" /></div></div>
+        <div><label class="form-label" for="rDept">Phòng ban</label>
+            <select class="form-select" id="rDept" name="department"><option value="">Tất cả</option>@foreach (var d in Model.Departments) {<option value="@d.Id" selected="@(d.Id == Model.Department)">@d.Name</option>}</select></div>
+        <button class="btn" type="submit">@UiIcon.Render("search")<span>Xem</span></button>
+        <a class="btn" asp-action="Report" asp-route-from="@prev.ToString("yyyy-MM-dd")" asp-route-to="@prev.AddMonths(1).AddDays(-1).ToString("yyyy-MM-dd")" asp-route-department="@Model.Department">Tháng trước</a>
+    </form>
+    @if (rows.Count == 0 && Model.Error is null)
+    {
+        <div class="ta-empty"><span class="ta-empty__icon">@UiIcon.Render("chart-bar")</span><p class="ta-empty__text">Không có nhân viên hoặc công việc trong khoảng này.</p></div>
+    }
+    else if (rows.Count > 0)
+    {
+        <div class="ta-table-wrap">
+            <table class="table ta-table">
+                <thead><tr><th>Nhân viên</th><th>Phòng ban</th><th class="text-end">Tổng việc</th><th class="text-end">Chưa xong</th><th class="text-end">Hoàn thành</th><th class="text-end">Đúng hạn</th><th class="text-end">Quá hạn</th><th class="text-end">Cùng làm</th><th>Tiến độ việc đang làm</th></tr></thead>
+                <tbody>
+                @foreach (var r in rows)
+                {
+                    <tr>
+                        <td><a asp-action="Tasks" asp-route-scope="all" asp-route-owner="@r.EmployeeId"><strong>@r.Name</strong></a><div class="text-secondary small">@r.Code</div></td>
+                        <td>@(r.Department ?? "—")</td>
+                        <td class="text-end">@r.Total</td>
+                        <td class="text-end">@r.Open</td>
+                        <td class="text-end">@r.Done</td>
+                        <td class="text-end">@(r.Done == 0 ? "—" : r.OnTimeRate + "%")</td>
+                        <td class="text-end">@if (r.Overdue > 0) {<a class="ta-badge ta-badge--danger" asp-action="Tasks" asp-route-scope="all" asp-route-owner="@r.EmployeeId" asp-route-status="overdue">@r.Overdue</a>} else {<span>0</span>}</td>
+                        <td class="text-end">@r.Member</td>
+                        <td>@if (r.Open > 0) {<div class="ta-progress ta-progress--sm" aria-hidden="true"><span style="width:@(r.AvgOpenProgress)%"></span></div><span class="small text-secondary">@r.AvgOpenProgress%</span>} else {<span class="text-secondary">—</span>}</td>
+                    </tr>
+                }
+                </tbody>
+                <tfoot><tr><th colspan="2">Tổng</th><th class="text-end">@rows.Sum(r => r.Total)</th><th class="text-end">@rows.Sum(r => r.Open)</th><th class="text-end">@rows.Sum(r => r.Done)</th><th class="text-end">@(rows.Sum(r => r.Done) == 0 ? "—" : rows.Sum(r => r.DoneOnTime) * 100 / rows.Sum(r => r.Done) + "%")</th><th class="text-end">@rows.Sum(r => r.Overdue)</th><th></th><th></th></tr></tfoot>
+            </table>
+        </div>
+    }
+</section>

@@ -2,7 +2,7 @@
     ViewData["Title"] = "Không có quyền truy cập";
     ViewData["HideHeader"] = true;
     var signedIn = User.Identity?.IsAuthenticated == true;
-    // The first page this account may open (dashboard first), so the button never leads to another 403.
+    // The first page this account may open ("Việc của tôi", then the dashboard), so the button never leads to another 403.
     var landing = signedIn ? AdminNavigation.FirstAllowed(User) : null;
 }
 <section class="card mx-auto" style="max-width:560px">
@@ -11,6 +11,6 @@
         <div class="ta-error-code">403</div>
         <h1 class="ta-empty__title">Bạn không có quyền truy cập chức năng này.</h1>
         <p class="ta-empty__text">Vai trò của bạn chưa được cấp chức năng này. Vui lòng liên hệ quản trị hệ thống nếu bạn cần thêm quyền.</p>
-        <div class="mt-2">@if (landing is { Controller: "Home" }) {<a asp-controller="Home" asp-action="Index" class="btn btn-primary">@UiIcon.Render("arrow-left")<span>Về tổng quan</span></a>} else if (landing is not null) {<a asp-controller="@landing.Controller" asp-action="@landing.Action" class="btn btn-primary">@UiIcon.Render("arrow-left")<span>Về trang làm việc</span></a>} else if (signedIn) {<a asp-controller="Account" asp-action="Profile" class="btn btn-primary">@UiIcon.Render("user-circle")<span>Về hồ sơ cá nhân</span></a>} else {<a asp-controller="Account" asp-action="Login" class="btn btn-primary">@UiIcon.Render("login-2")<span>Đăng nhập</span></a>}</div>
+        <div class="mt-2">@if (landing is { Controller: "Work", Action: "Index" }) {<a asp-controller="Work" asp-action="Index" class="btn btn-primary">@UiIcon.Render("arrow-left")<span>Về việc của tôi</span></a>} else if (landing is { Controller: "Home" }) {<a asp-controller="Home" asp-action="Index" class="btn btn-primary">@UiIcon.Render("arrow-left")<span>Về tổng quan</span></a>} else if (landing is not null) {<a asp-controller="@landing.Controller" asp-action="@landing.Action" class="btn btn-primary">@UiIcon.Render("arrow-left")<span>Về trang làm việc</span></a>} else if (signedIn) {<a asp-controller="Account" asp-action="Profile" class="btn btn-primary">@UiIcon.Render("user-circle")<span>Về hồ sơ cá nhân</span></a>} else {<a asp-controller="Account" asp-action="Login" class="btn btn-primary">@UiIcon.Render("login-2")<span>Đăng nhập</span></a>}</div>
     </div>
 </section>

@@ -1,0 +1,93 @@
+@model WorkEditVm
+@{
+    var creating = Model.Id is null;
+    var a = Model.Actor;
+    ViewData["Title"] = creating ? (a.CanAssign ? "Tạo / giao việc" : "Tạo việc cho tôi") : "Sửa công việc";
+    ViewData["PageIcon"] = creating ? "plus" : "pencil";
+    ViewData["ParentTitle"] = "Việc của tôi";
+    ViewData["ParentController"] = "Work";
+    ViewData["Subtitle"] = a.CanAssign ? "Chọn một người chịu trách nhiệm chính và (nếu cần) những người cùng làm. Chỉ những người này, người giao việc và cấp giám sát thấy công việc."
+        : "Việc tự tạo chỉ bạn và cấp giám sát thấy.";
+    var i = Model.Input;
+    var L = Model.Lookups;
+}
+<form method="post" asp-action="@(creating ? "Create" : "Edit")" asp-route-id="@Model.Id" class="card" data-ta-work-form>
+    <div class="card-body">
+        <div asp-validation-summary="ModelOnly" class="ta-alert ta-alert--danger" role="alert"></div>
+        @if (!creating) {<input type="hidden" name="stamp" value="@Model.Stamp" />}
+        <div class="ta-form-grid">
+            <div class="ta-span-2">
+                <label class="form-label" for="wTitle">Tên công việc <span class="text-danger">*</span></label>
+                <div class="ta-input-icon">@UiIcon.Render("pencil")<input class="form-control" id="wTitle" name="Input.Title" value="@i.Title" maxlength="@WorkTaskPolicy.TitleMax" required data-ta-voice /></div>
+            </div>
+            <div class="ta-span-2">
+                <label class="form-label" for="wDesc">Mô tả / ghi chú</label>
+                <div class="ta-input-icon ta-input-icon--top">@UiIcon.Render("file-text")<textarea class="form-control" id="wDesc" name="Input.Description" rows="4" maxlength="@WorkTaskPolicy.DescriptionMax" data-ta-voice>@i.Description</textarea></div>
+            </div>
+            @if (a.CanAssign)
+            {
+                <div>
+                    <label class="form-label" for="wOwner">Người chịu trách nhiệm chính <span class="text-danger">*</span></label>
+                    <select class="form-select" id="wOwner" name="Input.OwnerEmployeeId" required>
+                        <option value="">— Chọn nhân viên —</option>
+                        @foreach (var e in L.Employees) {<option value="@e.Id" selected="@(e.Id == i.OwnerEmployeeId)">@e.Name (@e.Code)@(e.HasAccount ? "" : " — chưa có tài khoản")</option>}
+                    </select>
+                </div>
+                <div>
+                    <span class="form-label d-block">Người cùng làm</span>
+                    <div class="ta-member-pick" role="group" aria-label="Người cùng làm">
+                        @foreach (var e in L.Employees)
+                        {
+                            <label class="form-check"><input class="form-check-input" type="checkbox" name="Input.MemberIds" value="@e.Id" checked="@i.MemberIds.Contains(e.Id)" /><span class="form-check-label">@e.Name <span class="text-secondary">(@e.Code)</span></span></label>
+                        }
+                    </div>
+                    <div class="form-hint">Người phụ trách chính được bỏ qua nếu cũng được tích ở đây.</div>
+                </div>
+            }
+            else
+            {
+                <input type="hidden" name="Input.OwnerEmployeeId" value="@a.EmployeeId" />
+                <div class="ta-span-2 form-hint">Người phụ trách: <strong>@(a.EmployeeName ?? "—")</strong> (bạn chưa có quyền giao việc cho người khác).</div>
+            }
+            <div>
+                <label class="form-label" for="wCustomer">Khách hàng</label>
+                <select class="form-select" id="wCustomer" name="Input.CustomerId">
+                    <option value="">— Việc nội bộ —</option>
+                    @foreach (var c in L.Customers) {<option value="@c.Id" selected="@(c.Id == i.CustomerId)">@c.Name</option>}
+                </select>
+            </div>
+            <div>
+                <label class="form-label" for="wContract">Hợp đồng</label>
+                <select class="form-select" id="wContract" name="Input.ContractId">
+                    <option value="">— Không gắn hợp đồng —</option>
+                    @foreach (var k in L.Contracts)
+                    {
+                        <option value="@k.Id" data-customer="@k.CustomerId" selected="@(k.Id == i.ContractId)">@k.ContractNo — @k.Title (@(L.Customers.FirstOrDefault(c => c.Id == k.CustomerId)?.Name))</option>
+                    }
+                </select>
+            </div>
+            <div>
+                <label class="form-label" for="wPriority">Mức ưu tiên</label>
+                <select class="form-select" id="wPriority" name="Input.Priority">
+                    @foreach (var p in WorkTaskPolicy.Priorities) {<option value="@p" selected="@(p == i.Priority)">@WorkTaskPolicy.PriorityLabel(p)</option>}
+                </select>
+            </div>
+            <div class="ta-form-grid">
+                <div><label class="form-label" for="wStart">Ngày bắt đầu</label><div class="ta-input-icon">@UiIcon.Render("calendar")<input class="form-control" type="date" id="wStart" name="Input.StartDate" value="@i.StartDate?.ToString("yyyy-MM-dd")" /></div></div>
+                <div><label class="form-label" for="wDue">Hạn hoàn thành</label><div class="ta-input-icon">@UiIcon.Render("calendar")<input class="form-control" type="date" id="wDue" name="Input.DueDate" value="@i.DueDate?.ToString("yyyy-MM-dd")" /></div></div>
+            </div>
+            @if (creating)
+            {
+                <div class="ta-span-2">
+                    <label class="form-label" for="wChecklist">Checklist cần làm</label>
+                    <div class="ta-input-icon ta-input-icon--top">@UiIcon.Render("checks")<textarea class="form-control" id="wChecklist" name="Input.ChecklistText" rows="4" placeholder="Mỗi dòng một mục, ví dụ:&#10;Thu thập hóa đơn đầu vào&#10;Lập tờ khai&#10;Nộp tờ khai" data-ta-voice>@i.ChecklistText</textarea></div>
+                    <div class="form-hint">Mỗi dòng là một mục. Người làm có thể thêm mục sau; công việc chỉ chuyển sang “Hoàn thành” khi mọi mục đã được tích.</div>
+                </div>
+            }
+        </div>
+    </div>
+    <div class="card-footer d-flex gap-2 justify-content-end">
+        <a class="btn" asp-action="@(creating ? "Index" : "Details")" asp-route-id="@Model.Id">Hủy</a>
+        <button class="btn btn-primary" type="submit" data-ta-loading data-ta-loading-text="Đang lưu...">@UiIcon.Render("device-floppy")<span>@(creating ? "Tạo công việc" : "Lưu")</span></button>
+    </div>
+</form>

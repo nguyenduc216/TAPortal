@@ -93,7 +93,9 @@ public sealed class SafeAdminPermissionTests
     [Fact]
     public void LandingPageFollowsSidebarOrder()
     {
-        Assert.Equal("Home", AdminSecurity.AdminNavigation.FirstAllowed(Principal("SYS_ADMIN"))!.Controller);
+        // "Việc của tôi" first for every employee (operator 2026-11-07), then the dashboard.
+        Assert.Equal("Work", AdminSecurity.AdminNavigation.FirstAllowed(Principal("SYS_ADMIN"))!.Controller);
+        Assert.Equal("Work", AdminSecurity.AdminNavigation.FirstAllowed(Principal("STAFF", "DASHBOARD.VIEW", "TASKS.VIEW"))!.Controller);
         Assert.Equal("Home", AdminSecurity.AdminNavigation.FirstAllowed(Principal("STAFF", "AUTH.USERS.VIEW", "DASHBOARD.VIEW"))!.Controller);
         Assert.Equal(("ServicePackages", "Purchases"), AdminSecurity.AdminNavigation.FirstAllowed(Principal("STAFF", "AUTH.USERS.VIEW", "PACKAGES.PURCHASES.VIEW")) is { } p ? (p.Controller, p.Action) : default);
         Assert.Null(AdminSecurity.AdminNavigation.FirstAllowed(Principal("STAFF", "HR.EMPLOYEES.VIEW")));

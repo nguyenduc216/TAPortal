@@ -69,6 +69,10 @@ builder.Services.AddScoped<ICustomerImportStore, SqlCustomerImportStore>();
 builder.Services.AddMemoryCache(); // the uploaded workbook between preview and confirmation (never written to disk)
 builder.Services.AddSingleton<ICustomerSecretProtector, AesGcmCustomerSecretProtector>();
 builder.Services.AddScoped<IDashboardStore, SqlDashboardStore>();
+builder.Services.AddScoped<IWorkTaskStore, SqlWorkTaskStore>();
+// Recurring tasks (Công việc → Việc lặp theo kỳ) are generated hourly; not registered without a database (tests, local).
+if (!string.IsNullOrWhiteSpace(builder.Configuration["Database:ConnectionString"]))
+    builder.Services.AddHostedService<WorkTaskScheduler>();
 builder.Services.AddScoped<ITingeeMerchantStore, SqlTingeeMerchantStore>();
 builder.Services.AddScoped<IServicePackageStore, SqlServicePackageStore>();
 builder.Services.AddScoped<ITingeeSandboxInbox, SqlTingeeSandboxInbox>();
@@ -114,6 +118,17 @@ var app = builder.Build();
 if (!app.Services.GetRequiredService<AdminAuditOptions>().RequireDurableAudit)
     app.Logger.LogWarning("DURABLE_AUDIT_NOT_ENFORCED: Security:Audit:RequireDurableAudit=false; administrative changes may commit without a dbo.AuditLogs row. Enable after database/scripts/007-verify-audit-logs.sql reports PASS.");
 app.UseForwardedHeaders();
+// The speech-to-text buttons (wwwroot/js/ta-work.js) need the microphone on this origin only. Registered before
+// UseTaSecurityHeaders: OnStarting callbacks run in reverse order, so this one runs last and its value wins.
+app.Use((context, next) =>
+{
+    context.Response.OnStarting(() =>
+    {
+        context.Response.Headers["Permissions-Policy"] = AdminHeaders.PermissionsPolicy;
+        return Task.CompletedTask;
+    });
+    return next(context);
+});
 app.UseTaSecurityHeaders();
 if (!app.Environment.IsDevelopment())
 {

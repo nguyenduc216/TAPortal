@@ -1,0 +1,87 @@
+@model WorkCardVm
+@{
+    var c = Model.Card;
+    var t = c.Task;
+    var vi = System.Globalization.CultureInfo.GetCultureInfo("vi-VN");
+    var overdue = WorkTaskPolicy.IsOverdue(t.Status, t.DueDate, Model.Today);
+    var dueSoon = WorkTaskPolicy.IsDueSoon(t.Status, t.DueDate, Model.Today);
+    string Local(DateTime utc) => WorkClock.Local(utc).ToString("HH:mm dd/MM", vi);
+    var closed = t.Status == WorkTaskPolicy.Cancelled;
+}
+<article class="card ta-task@(overdue ? " ta-task--overdue" : dueSoon ? " ta-task--soon" : "")" id="task-@t.Id" data-ta-task="@t.Id">
+    <header class="ta-task__head">
+        <div class="ta-task__title-row">
+            <a class="ta-task__title" asp-action="Details" asp-route-id="@t.Id">@t.Title</a>
+            <span class="ta-badge ta-badge--@WorkTaskPolicy.StatusTone(t.Status)" data-ta-task-status="@t.Status">@WorkTaskPolicy.StatusLabel(t.Status)</span>
+        </div>
+        <div class="ta-task__meta">
+            <span class="text-secondary">@t.TaskNo</span>
+            @if (t.Priority is "HIGH" or "URGENT") {<span class="ta-badge ta-badge--@WorkTaskPolicy.PriorityTone(t.Priority)">@WorkTaskPolicy.PriorityLabel(t.Priority)</span>}
+            @if (t.DueDate is DateOnly due)
+            {
+                <span class="ta-task__due@(overdue ? " is-overdue" : dueSoon ? " is-soon" : "")">@UiIcon.Render("calendar")Hạn @due.ToString("dd/MM/yyyy", vi)@(overdue ? " · quá hạn" : "")</span>
+            }
+            @if (t.CustomerName is not null) {<span>@UiIcon.Render("building")@t.CustomerName</span>}
+            <span>@UiIcon.Render(c.IsOwner ? "user" : "users")@(c.IsOwner ? "Bạn phụ trách chính" : "Phụ trách: " + t.OwnerName)@(t.MemberCount > 0 ? $" · +{t.MemberCount} người cùng làm" : "")</span>
+        </div>
+        <div class="ta-progress" role="progressbar" aria-label="Tiến độ" aria-valuenow="@t.Progress" aria-valuemin="0" aria-valuemax="100"><span style="width:@(t.Progress)%"></span></div>
+        <div class="ta-task__progress-text text-secondary small">@t.Progress% · checklist @t.ChecklistDone/@t.ChecklistTotal · tương tác @Local(t.LastActivityAt)</div>
+    </header>
+
+    @if (Model.Error is not null) {<div class="ta-alert ta-alert--warning ta-task__error" role="alert">@UiIcon.Render("alert-triangle")<div class="ta-alert__body">@Model.Error</div></div>}
+
+    <form class="ta-task__status" method="post" asp-action="Status" asp-route-id="@t.Id" data-ta-card-form>
+        <input type="hidden" name="returnUrl" value="@Model.ReturnUrl" />
+        <label class="form-label mb-0" for="st-@t.Id">Trạng thái</label>
+        <select class="form-select form-select-sm w-auto" id="st-@t.Id" name="status" data-ta-autosubmit>
+            @foreach (var s in WorkTaskPolicy.Statuses.Where(s => s != WorkTaskPolicy.Cancelled || c.CanEdit || closed))
+            {
+                <option value="@s" selected="@(s == t.Status)">@WorkTaskPolicy.StatusLabel(s)</option>
+            }
+        </select>
+        <noscript><button class="btn btn-sm" type="submit">Lưu</button></noscript>
+    </form>
+
+    <section class="ta-task__checklist" aria-label="Checklist">
+        <ul class="ta-checklist">
+            @foreach (var i in c.Checklist)
+            {
+                <li class="@(i.IsDone ? "is-done" : null)">
+                    <form method="post" asp-action="ChecklistSet" asp-route-id="@t.Id" data-ta-card-form>
+                        <input type="hidden" name="item" value="@i.Id" />
+                        <input type="hidden" name="done" value="@(i.IsDone ? "false" : "true")" />
+                        <input type="hidden" name="returnUrl" value="@Model.ReturnUrl" />
+                        <button type="submit" class="ta-check" role="checkbox" aria-checked="@(i.IsDone ? "true" : "false")" aria-label="@(i.IsDone ? "Bỏ hoàn thành" : "Đánh dấu hoàn thành"): @i.Title" disabled="@closed">@if (i.IsDone) {@UiIcon.Render("check")}</button>
+                    </form>
+                    <span class="ta-checklist__text">@i.Title</span>
+                    @if (i.IsDone && i.DoneAt is DateTime doneAt) {<time class="ta-checklist__time" datetime="@doneAt.ToString("o")" title="@(i.DoneByName is null ? null : "Hoàn thành bởi " + i.DoneByName)">@UiIcon.Render("clock")@Local(doneAt)</time>}
+                </li>
+            }
+        </ul>
+        @if (!closed)
+        {
+            <form class="ta-task__inline" method="post" asp-action="ChecklistAdd" asp-route-id="@t.Id" data-ta-card-form>
+                <input type="hidden" name="returnUrl" value="@Model.ReturnUrl" />
+                <div class="ta-input-icon">@UiIcon.Render("checks")<input class="form-control form-control-sm" name="title" maxlength="@WorkTaskPolicy.ChecklistMax" required placeholder="Thêm mục checklist..." aria-label="Thêm mục checklist" data-ta-voice /></div>
+                <button class="btn btn-sm" type="submit" aria-label="Thêm mục checklist">@UiIcon.Render("plus")</button>
+            </form>
+        }
+    </section>
+
+    <section class="ta-task__comments" aria-label="Trao đổi">
+        @if (c.Recent.Count > 0)
+        {
+            <ul class="ta-comments">
+                @foreach (var a in c.Recent)
+                {
+                    <li><span class="ta-comments__who">@(a.ActorName ?? "Hệ thống")</span> <time class="text-secondary small" datetime="@a.CreatedAt.ToString("o")">@Local(a.CreatedAt)</time><div class="ta-comments__body">@a.Body</div></li>
+                }
+            </ul>
+        }
+        <form class="ta-task__inline ta-task__inline--comment" method="post" asp-action="Comment" asp-route-id="@t.Id" data-ta-card-form>
+            <input type="hidden" name="returnUrl" value="@Model.ReturnUrl" />
+            <div class="ta-input-icon ta-input-icon--top">@UiIcon.Render("file-text")<textarea class="form-control form-control-sm" name="body" rows="2" maxlength="@WorkTaskPolicy.CommentMax" required placeholder="Ghi chú / trao đổi..." aria-label="Ghi chú hoặc trao đổi" data-ta-voice></textarea></div>
+            <button class="btn btn-sm btn-primary" type="submit">@UiIcon.Render("send")<span>Gửi</span></button>
+        </form>
+    </section>
+</article>

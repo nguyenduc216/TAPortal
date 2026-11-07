@@ -1,0 +1,43 @@
+@model WorkDashboardVm
+@{
+    ViewData["Title"] = "Việc của tôi";
+    ViewData["Heading"] = "Việc của tôi";
+    ViewData["PageIcon"] = "checks";
+    var a = Model.Actor;
+    if (a?.EmployeeName is string name) ViewData["Subtitle"] = $"{name} — các việc chưa hoàn thành mà bạn phụ trách hoặc cùng làm.";
+    var open = Model.Cards;
+    var overdue = open.Count(c => WorkTaskPolicy.IsOverdue(c.Task.Status, c.Task.DueDate, Model.Today));
+    var soon = open.Count(c => WorkTaskPolicy.IsDueSoon(c.Task.Status, c.Task.DueDate, Model.Today));
+    var doing = open.Count(c => c.Task.Status == WorkTaskPolicy.InProgress);
+    var returnUrl = Url.Action("Index", new { sort = Model.Sort == WorkTaskPolicy.SortActivity ? Model.Sort : null })!;
+}
+@section PageActions {
+    <a class="btn" asp-action="Tasks">@UiIcon.Render("list-tree")<span>Danh sách công việc</span></a>
+    @if (a?.CanCreateAny == true) {<a class="btn btn-ta-gold" asp-action="Create" data-ta-work-create>@UiIcon.Render("plus")<span>@(a.CanAssign ? "Tạo / giao việc" : "Tạo việc cho tôi")</span></a>}
+}
+@if (Model.Error is not null) {<div class="ta-alert ta-alert--danger" role="alert">@UiIcon.Render("alert-circle")<div class="ta-alert__body">@Model.Error</div></div>}
+else if (a?.EmployeeId is null)
+{
+    <div class="ta-alert ta-alert--info" role="status">@UiIcon.Render("info-circle")<div class="ta-alert__body"><span class="ta-alert__title">Tài khoản chưa liên kết hồ sơ nhân viên</span>Việc được giao theo nhân viên. Nhờ quản trị liên kết tài khoản này với hồ sơ nhân viên (Nhân sự → Nhân viên → Tài khoản đăng nhập).</div></div>
+}
+<section class="ta-kpi-grid ta-work-kpis" aria-label="Tóm tắt">
+    <div class="card ta-stat-card"><div class="ta-stat-head"><span class="ta-stat-icon">@UiIcon.Render("checks")</span><div><div class="ta-stat-label">Chưa hoàn thành</div><div class="ta-stat-value">@open.Count</div></div></div></div>
+    <div class="card ta-stat-card"><div class="ta-stat-head"><span class="ta-stat-icon ta-stat-icon--navy">@UiIcon.Render("refresh")</span><div><div class="ta-stat-label">Đang làm</div><div class="ta-stat-value">@doing</div></div></div></div>
+    <div class="card ta-stat-card"><div class="ta-stat-head"><span class="ta-stat-icon ta-stat-icon--gold">@UiIcon.Render("clock")</span><div><div class="ta-stat-label">Sắp đến hạn (3 ngày)</div><div class="ta-stat-value">@soon</div></div></div></div>
+    <div class="card ta-stat-card"><div class="ta-stat-head"><span class="ta-stat-icon ta-stat-icon--danger">@UiIcon.Render("alert-triangle")</span><div><div class="ta-stat-label">Quá hạn</div><div class="ta-stat-value">@overdue</div></div></div></div>
+</section>
+<div class="ta-work-toolbar">
+    <span class="text-secondary">Sắp xếp:</span>
+    <a class="btn btn-sm@(Model.Sort == WorkTaskPolicy.SortDue ? " btn-soft-primary" : "")" asp-action="Index" aria-current="@(Model.Sort == WorkTaskPolicy.SortDue ? "true" : null)">@UiIcon.Render("calendar")<span>Hạn gần nhất</span></a>
+    <a class="btn btn-sm@(Model.Sort == WorkTaskPolicy.SortActivity ? " btn-soft-primary" : "")" asp-action="Index" asp-route-sort="@WorkTaskPolicy.SortActivity" aria-current="@(Model.Sort == WorkTaskPolicy.SortActivity ? "true" : null)">@UiIcon.Render("history")<span>Tương tác gần nhất</span></a>
+</div>
+@if (open.Count == 0 && Model.Error is null)
+{
+    <div class="card"><div class="ta-empty"><span class="ta-empty__icon">@UiIcon.Render("circle-check")</span><p class="ta-empty__title">Không có việc nào đang chờ</p><p class="ta-empty__text">Các việc bạn phụ trách hoặc cùng làm sẽ hiện ở đây.</p></div></div>
+}
+<div class="ta-task-grid" data-ta-work-board>
+    @foreach (var c in open)
+    {
+        <partial name="_TaskCard" model="new WorkCardVm(c, Model.Today, null, returnUrl)" />
+    }
+</div>

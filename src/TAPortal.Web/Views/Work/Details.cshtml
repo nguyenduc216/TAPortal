@@ -1,0 +1,110 @@
+@model WorkDetailsVm
+@{
+    var d = Model.Detail;
+    var t = d.Task;
+    ViewData["Title"] = t.TaskNo;
+    ViewData["Heading"] = t.Title;
+    ViewData["PageIcon"] = "checks";
+    ViewData["ParentTitle"] = "Việc của tôi";
+    ViewData["ParentController"] = "Work";
+    var vi = System.Globalization.CultureInfo.GetCultureInfo("vi-VN");
+    string Local(DateTime utc) => WorkClock.Local(utc).ToString("HH:mm dd/MM/yyyy", vi);
+    var returnUrl = Url.Action("Details", new { id = t.Id })!;
+    var overdue = WorkTaskPolicy.IsOverdue(t.Status, t.DueDate, Model.Today);
+    var closed = t.Status == WorkTaskPolicy.Cancelled;
+    ViewData["Subtitle"] = $"{t.TaskNo} · tạo bởi {d.CreatedByName ?? "hệ thống"} lúc {Local(t.CreatedAt)}" + (d.TemplateTitle is null ? "" : $" · việc lặp “{d.TemplateTitle}”");
+    string Event(WorkActivity a) => a.Kind switch
+    {
+        "CREATED" => a.Body ?? "Tạo công việc",
+        "STATUS" => $"Trạng thái: {WorkTaskPolicy.StatusLabel(a.StatusFrom)} → {WorkTaskPolicy.StatusLabel(a.StatusTo)}",
+        _ => a.Body ?? a.Kind
+    };
+}
+@section PageActions {
+    @if (d.CanEdit)
+    {
+        <a class="btn" asp-action="Edit" asp-route-id="@t.Id">@UiIcon.Render("pencil")<span>Sửa / giao lại</span></a>
+        <form method="post" asp-action="Delete" asp-route-id="@t.Id" class="d-inline" onsubmit="return confirm('Xóa công việc này?');"><button class="btn btn-outline-danger" type="submit">@UiIcon.Render("trash")<span>Xóa</span></button></form>
+    }
+}
+<div class="ta-ws-grid">
+    <section class="card" aria-labelledby="infoTitle">
+        <div class="card-header"><h2 class="card-title" id="infoTitle">@UiIcon.Render("info-circle")Thông tin</h2></div>
+        <div class="card-body">
+            <dl class="ta-dl">
+                <dt>Trạng thái</dt>
+                <dd>
+                    <form class="ta-task__status" method="post" asp-action="Status" asp-route-id="@t.Id">
+                        <input type="hidden" name="returnUrl" value="@returnUrl" />
+                        <select class="form-select form-select-sm w-auto" name="status" aria-label="Trạng thái" data-ta-autosubmit>
+                            @foreach (var s in WorkTaskPolicy.Statuses.Where(s => s != WorkTaskPolicy.Cancelled || d.CanEdit || closed)) {<option value="@s" selected="@(s == t.Status)">@WorkTaskPolicy.StatusLabel(s)</option>}
+                        </select>
+                        <noscript><button class="btn btn-sm" type="submit">Lưu</button></noscript>
+                    </form>
+                </dd>
+                <dt>Ưu tiên</dt><dd><span class="ta-badge ta-badge--@WorkTaskPolicy.PriorityTone(t.Priority)">@WorkTaskPolicy.PriorityLabel(t.Priority)</span></dd>
+                <dt>Phụ trách chính</dt><dd>@t.OwnerName</dd>
+                <dt>Người cùng làm</dt><dd>@(d.Members.Count == 0 ? "—" : string.Join(", ", d.Members.Select(m => m.Name)))</dd>
+                <dt>Khách hàng</dt><dd>@(t.CustomerName ?? "—")</dd>
+                <dt>Hợp đồng</dt><dd>@(d.ContractLabel ?? "—")</dd>
+                <dt>Bắt đầu</dt><dd>@(t.StartDate?.ToString("dd/MM/yyyy", vi) ?? "—")</dd>
+                <dt>Hạn hoàn thành</dt><dd>@(t.DueDate?.ToString("dd/MM/yyyy", vi) ?? "—")@if (overdue) {<span class="ta-badge ta-badge--danger ms-1">Quá hạn</span>}</dd>
+                <dt>Tiến độ</dt><dd><div class="ta-progress" aria-hidden="true"><span style="width:@(t.Progress)%"></span></div>@t.Progress%@if (t.CompletedAt is DateTime done) {<span class="text-secondary"> · hoàn thành @Local(done)</span>}</dd>
+            </dl>
+            @if (d.Description is not null) {<h3 class="h4 mt-3">Mô tả</h3><div class="ta-prewrap">@d.Description</div>}
+        </div>
+    </section>
+    <section class="card" aria-labelledby="checkTitle">
+        <div class="card-header"><h2 class="card-title" id="checkTitle">@UiIcon.Render("checks")Checklist (@t.ChecklistDone/@t.ChecklistTotal)</h2></div>
+        <div class="card-body">
+            @if (d.Checklist.Count == 0) {<p class="text-secondary">Chưa có mục nào. Công việc cần có checklist và hoàn thành hết mới chuyển được sang “Hoàn thành”.</p>}
+            <ul class="ta-checklist">
+                @foreach (var i in d.Checklist)
+                {
+                    <li class="@(i.IsDone ? "is-done" : null)">
+                        <form method="post" asp-action="ChecklistSet" asp-route-id="@t.Id">
+                            <input type="hidden" name="item" value="@i.Id" /><input type="hidden" name="done" value="@(i.IsDone ? "false" : "true")" /><input type="hidden" name="returnUrl" value="@returnUrl" />
+                            <button type="submit" class="ta-check" role="checkbox" aria-checked="@(i.IsDone ? "true" : "false")" aria-label="@(i.IsDone ? "Bỏ hoàn thành" : "Đánh dấu hoàn thành"): @i.Title" disabled="@closed">@if (i.IsDone) {@UiIcon.Render("check")}</button>
+                        </form>
+                        <span class="ta-checklist__text">@i.Title</span>
+                        @if (i.IsDone && i.DoneAt is DateTime doneAt) {<time class="ta-checklist__time" datetime="@doneAt.ToString("o")">@UiIcon.Render("clock")@Local(doneAt)@(i.DoneByName is null ? "" : " · " + i.DoneByName)</time>}
+                        @if (!closed)
+                        {
+                            <form method="post" asp-action="ChecklistRemove" asp-route-id="@t.Id" class="ms-auto">
+                                <input type="hidden" name="item" value="@i.Id" /><input type="hidden" name="returnUrl" value="@returnUrl" />
+                                <button type="submit" class="ta-icon-btn ta-icon-btn--sm" aria-label="Xóa mục: @i.Title" title="Xóa mục">@UiIcon.Render("x")</button>
+                            </form>
+                        }
+                    </li>
+                }
+            </ul>
+            @if (!closed)
+            {
+                <form class="ta-task__inline" method="post" asp-action="ChecklistAdd" asp-route-id="@t.Id">
+                    <input type="hidden" name="returnUrl" value="@returnUrl" />
+                    <div class="ta-input-icon">@UiIcon.Render("checks")<input class="form-control" name="title" maxlength="@WorkTaskPolicy.ChecklistMax" required placeholder="Thêm mục checklist..." aria-label="Thêm mục checklist" data-ta-voice /></div>
+                    <button class="btn" type="submit">@UiIcon.Render("plus")<span>Thêm</span></button>
+                </form>
+            }
+        </div>
+    </section>
+    <section class="card ta-ws-span-all" aria-labelledby="threadTitle">
+        <div class="card-header"><h2 class="card-title" id="threadTitle">@UiIcon.Render("history")Trao đổi và lịch sử</h2></div>
+        <div class="card-body">
+            <ul class="ta-timeline">
+                @foreach (var a in d.Activities)
+                {
+                    <li class="@(a.Kind == "COMMENT" ? "is-comment" : "is-event")">
+                        <div class="ta-timeline__head"><strong>@(a.ActorName ?? "Hệ thống")</strong> <time class="text-secondary small" datetime="@a.CreatedAt.ToString("o")">@Local(a.CreatedAt)</time></div>
+                        @if (a.Kind == "COMMENT") {<div class="ta-comments__body">@a.Body</div>} else {<div class="text-secondary small">@Event(a)</div>}
+                    </li>
+                }
+            </ul>
+            <form class="ta-task__inline ta-task__inline--comment" method="post" asp-action="Comment" asp-route-id="@t.Id">
+                <input type="hidden" name="returnUrl" value="@returnUrl" />
+                <div class="ta-input-icon ta-input-icon--top">@UiIcon.Render("file-text")<textarea class="form-control" name="body" rows="3" maxlength="@WorkTaskPolicy.CommentMax" required placeholder="Ghi chú / trao đổi về công việc..." aria-label="Ghi chú hoặc trao đổi" data-ta-voice></textarea></div>
+                <button class="btn btn-primary" type="submit">@UiIcon.Render("send")<span>Gửi</span></button>
+            </form>
+        </div>
+    </section>
+</div>

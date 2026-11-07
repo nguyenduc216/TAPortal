@@ -1,0 +1,47 @@
+@model WorkTemplatesVm
+@{
+    ViewData["Title"] = "Việc lặp theo kỳ";
+    ViewData["PageIcon"] = "refresh";
+    ViewData["Subtitle"] = "Mỗi mẫu tự sinh một công việc cho mỗi kỳ (tháng / quý / năm), trước hạn số ngày đã đặt. Hệ thống kiểm tra mỗi giờ.";
+    var vi = System.Globalization.CultureInfo.GetCultureInfo("vi-VN");
+    string Due(WorkTemplateRow t) => t.Frequency switch
+    {
+        "MONTHLY" => t.DueMonthOffset == 0 ? $"ngày {t.DueDay} trong tháng" : $"ngày {t.DueDay}, {t.DueMonthOffset} tháng sau kỳ",
+        _ => t.DueMonthOffset == 0 ? $"ngày {t.DueDay} tháng cuối kỳ" : $"ngày {t.DueDay}, {t.DueMonthOffset} tháng sau kỳ"
+    };
+}
+@section PageActions {
+    <form method="post" asp-action="Generate" class="d-inline"><button class="btn" type="submit" data-ta-loading data-ta-loading-text="Đang tạo...">@UiIcon.Render("refresh")<span>Tạo việc kỳ này ngay</span></button></form>
+    <a class="btn btn-ta-gold" asp-action="TemplateCreate">@UiIcon.Render("plus")<span>Thêm việc lặp</span></a>
+}
+@if (Model.Error is not null) {<div class="ta-alert ta-alert--danger" role="alert">@UiIcon.Render("alert-circle")<div class="ta-alert__body">@Model.Error</div></div>}
+<section class="card ta-table-card" aria-label="Việc lặp theo kỳ">
+    @if (Model.Templates is { Count: 0 })
+    {
+        <div class="ta-empty"><span class="ta-empty__icon">@UiIcon.Render("refresh")</span><p class="ta-empty__title">Chưa có việc lặp</p><p class="ta-empty__text">Ví dụ: “Báo cáo thuế GTGT” hàng tháng, hạn ngày 20 tháng sau, giao cho kế toán phụ trách khách hàng.</p></div>
+    }
+    else if (Model.Templates is not null)
+    {
+        <div class="ta-table-wrap">
+            <table class="table ta-table">
+                <thead><tr><th>Việc lặp</th><th>Khách hàng</th><th>Phụ trách</th><th>Chu kỳ / hạn</th><th>Đã tạo</th><th>Trạng thái</th><th></th></tr></thead>
+                <tbody>
+                @foreach (var t in Model.Templates)
+                {
+                    <tr>
+                        <td><a asp-action="TemplateEdit" asp-route-id="@t.Id"><strong>@t.Title</strong></a><div class="text-secondary small">Từ @t.StartDate.ToString("dd/MM/yyyy", vi)@(t.EndDate is DateOnly e ? " đến " + e.ToString("dd/MM/yyyy", vi) : "")</div></td>
+                        <td>@(t.CustomerName ?? "—")</td>
+                        <td>@t.OwnerName</td>
+                        <td>@WorkTaskPolicy.FrequencyLabel(t.Frequency)<div class="text-secondary small">Hạn @Due(t) · tạo trước @t.LeadDays ngày</div></td>
+                        <td>@t.TaskCount việc</td>
+                        <td>@if (t.IsActive) {<span class="ta-badge ta-badge--success">Đang chạy</span>} else {<span class="ta-badge ta-badge--neutral">Tạm dừng</span>}</td>
+                        <td class="text-end">
+                            <form method="post" asp-action="TemplateDelete" asp-route-id="@t.Id" class="d-inline" onsubmit="return confirm('Xóa việc lặp này? Các công việc đã tạo vẫn giữ nguyên.');"><button class="ta-icon-btn" type="submit" aria-label="Xóa việc lặp @t.Title" title="Xóa">@UiIcon.Render("trash")</button></form>
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    }
+</section>

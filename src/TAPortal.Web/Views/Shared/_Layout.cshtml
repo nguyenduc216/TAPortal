@@ -32,6 +32,9 @@
     var canDepartments = Can(AdminPermissions.DepartmentsView);
     var canTeams = Can(AdminPermissions.TeamsView);
     var canJobTitles = Can(AdminPermissions.JobTitlesView);
+    var canWork = Can(AdminPermissions.TasksView);
+    var canTaskTemplates = Can(AdminPermissions.TaskTemplatesManage);
+    var canTaskReport = Can(AdminPermissions.TaskReportView);
     var displayName = User.FindFirst("display_name")?.Value ?? User.Identity?.Name;
     // Role names (never codes); "Người dùng TAPortal" only when no role name is known.
     var roleNames = User.FindAll("role_name").Select(c => c.Value).Where(v => !string.IsNullOrWhiteSpace(v)).Distinct().ToList();
@@ -63,7 +66,7 @@
     <a class="ta-skip-link" href="#taMain">Bỏ qua đến nội dung chính</a>
     <aside class="ta-sidebar" id="taSidebar" aria-label="Điều hướng chính">
         <div class="ta-sidebar__brand">
-            <a class="ta-brand" asp-controller="@(canDashboard ? "Home" : "Account")" asp-action="@(canDashboard ? "Index" : "Profile")" title="T.A Portal">
+            <a class="ta-brand" asp-controller="@(canWork ? "Work" : canDashboard ? "Home" : "Account")" asp-action="@(canWork || canDashboard ? "Index" : "Profile")" title="T.A Portal">
                 <img src="~/images/ta-logo.png" class="ta-brand__logo" alt="" width="36" height="36" />
                 <span class="ta-brand__text">T.A Portal</span>
             </a>
@@ -75,6 +78,18 @@
                 <div class="ta-nav__group">
                     <ul class="ta-nav__list">
                         <li><a class="ta-nav__link" asp-controller="Home" asp-action="Index" title="Tổng quan" aria-current="@(IsCurrent("Home", "Index") ? "page" : null)"><span class="ta-nav__icon">@UiIcon.Render("layout-dashboard")</span><span class="ta-nav__label">Tổng quan</span></a></li>
+                    </ul>
+                </div>
+            }
+            @if (canWork || canTaskTemplates || canTaskReport)
+            {
+                <div class="ta-nav__group">
+                    <p class="ta-nav__section">Công việc</p>
+                    <ul class="ta-nav__list">
+                        @if (canWork) {<li><a class="ta-nav__link" asp-controller="Work" asp-action="Index" title="Việc của tôi" aria-current="@(IsCurrent("Work", "Index") ? "page" : null)"><span class="ta-nav__icon">@UiIcon.Render("checks")</span><span class="ta-nav__label">Việc của tôi</span></a></li>
+                        <li><a class="ta-nav__link" asp-controller="Work" asp-action="Tasks" title="Danh sách công việc" aria-current="@(IsCurrent("Work", "Tasks") || IsCurrent("Work", "Details") || IsCurrent("Work", "Create") || IsCurrent("Work", "Edit") ? "page" : null)"><span class="ta-nav__icon">@UiIcon.Render("list-tree")</span><span class="ta-nav__label">Danh sách công việc</span></a></li>}
+                        @if (canTaskTemplates) {<li><a class="ta-nav__link" asp-controller="Work" asp-action="Templates" title="Việc lặp theo kỳ" aria-current="@(IsCurrent("Work", "Templates") || IsCurrent("Work", "TemplateCreate") || IsCurrent("Work", "TemplateEdit") ? "page" : null)"><span class="ta-nav__icon">@UiIcon.Render("refresh")</span><span class="ta-nav__label">Việc lặp theo kỳ</span></a></li>}
+                        @if (canTaskReport) {<li><a class="ta-nav__link" asp-controller="Work" asp-action="Report" title="Báo cáo tiến độ" aria-current="@(IsCurrent("Work", "Report") ? "page" : null)"><span class="ta-nav__icon">@UiIcon.Render("chart-bar")</span><span class="ta-nav__label">Báo cáo tiến độ</span></a></li>}
                     </ul>
                 </div>
             }
@@ -199,6 +214,7 @@ else
 <script src="~/js/ta-portal.js" asp-append-version="true"></script>
 @* Loaded on every page: the shell swaps <main> without running page scripts; it initialises on ta:load and is idle elsewhere. *@
 <script src="~/js/ta-tingee-sandbox.js" asp-append-version="true"></script>
+<script src="~/js/ta-work.js" asp-append-version="true"></script>
 @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

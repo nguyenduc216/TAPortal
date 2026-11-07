@@ -1,0 +1,58 @@
+@model WorkTemplateEditVm
+@{
+    var creating = Model.Id is null;
+    ViewData["Title"] = creating ? "Thêm việc lặp" : "Sửa việc lặp";
+    ViewData["PageIcon"] = "refresh";
+    ViewData["ParentTitle"] = "Việc lặp theo kỳ";
+    ViewData["ParentController"] = "Work";
+    ViewData["ParentAction"] = "Templates";
+    ViewData["Subtitle"] = "Hạn mỗi kỳ = ngày X của (tháng cuối kỳ + N tháng). Ví dụ thuế GTGT tháng 10 hạn 20/11: hàng tháng, ngày 20, sau 1 tháng.";
+    var i = Model.Input;
+    var L = Model.Lookups;
+}
+<form method="post" asp-action="@(creating ? "TemplateCreate" : "TemplateEdit")" asp-route-id="@Model.Id" class="card">
+    <div class="card-body">
+        <div asp-validation-summary="ModelOnly" class="ta-alert ta-alert--danger" role="alert"></div>
+        @if (!creating) {<input type="hidden" name="stamp" value="@Model.Stamp" />}
+        <div class="ta-form-grid">
+            <div class="ta-span-2"><label class="form-label" for="tTitle">Tên việc <span class="text-danger">*</span></label><div class="ta-input-icon">@UiIcon.Render("pencil")<input class="form-control" id="tTitle" name="Input.Title" value="@i.Title" maxlength="200" required data-ta-voice /></div><div class="form-hint">Mỗi công việc được tạo có tên “tên việc — kỳ T10/2026”.</div></div>
+            <div class="ta-span-2"><label class="form-label" for="tDesc">Mô tả</label><div class="ta-input-icon ta-input-icon--top">@UiIcon.Render("file-text")<textarea class="form-control" id="tDesc" name="Input.Description" rows="3" maxlength="@WorkTaskPolicy.DescriptionMax" data-ta-voice>@i.Description</textarea></div></div>
+            <div class="ta-span-2"><label class="form-label" for="tCheck">Checklist mỗi kỳ</label><div class="ta-input-icon ta-input-icon--top">@UiIcon.Render("checks")<textarea class="form-control" id="tCheck" name="Input.ChecklistText" rows="4" maxlength="4000" placeholder="Mỗi dòng một mục" data-ta-voice>@i.ChecklistText</textarea></div></div>
+            <div>
+                <label class="form-label" for="tOwner">Người chịu trách nhiệm chính <span class="text-danger">*</span></label>
+                <select class="form-select" id="tOwner" name="Input.OwnerEmployeeId" required>
+                    <option value="">— Chọn nhân viên —</option>
+                    @foreach (var e in L.Employees) {<option value="@e.Id" selected="@(e.Id == i.OwnerEmployeeId)">@e.Name (@e.Code)</option>}
+                </select>
+            </div>
+            <div>
+                <label class="form-label" for="tPriority">Mức ưu tiên</label>
+                <select class="form-select" id="tPriority" name="Input.Priority">@foreach (var p in WorkTaskPolicy.Priorities) {<option value="@p" selected="@(p == i.Priority)">@WorkTaskPolicy.PriorityLabel(p)</option>}</select>
+            </div>
+            <div>
+                <label class="form-label" for="tCustomer">Khách hàng</label>
+                <select class="form-select" id="tCustomer" name="Input.CustomerId"><option value="">— Việc nội bộ —</option>@foreach (var c in L.Customers) {<option value="@c.Id" selected="@(c.Id == i.CustomerId)">@c.Name</option>}</select>
+            </div>
+            <div>
+                <label class="form-label" for="tContract">Hợp đồng</label>
+                <select class="form-select" id="tContract" name="Input.ContractId"><option value="">— Không gắn hợp đồng —</option>@foreach (var k in L.Contracts) {<option value="@k.Id" selected="@(k.Id == i.ContractId)">@k.ContractNo — @k.Title</option>}</select>
+            </div>
+            <div>
+                <label class="form-label" for="tFreq">Chu kỳ <span class="text-danger">*</span></label>
+                <select class="form-select" id="tFreq" name="Input.Frequency">@foreach (var f in new[] { "MONTHLY", "QUARTERLY", "YEARLY" }) {<option value="@f" selected="@(f == i.Frequency)">@WorkTaskPolicy.FrequencyLabel(f)</option>}</select>
+            </div>
+            <div class="ta-form-grid ta-form-grid--3">
+                <div><label class="form-label" for="tDay">Hạn: ngày</label><div class="ta-input-icon">@UiIcon.Render("calendar")<input class="form-control" type="number" min="1" max="31" id="tDay" name="Input.DueDay" value="@i.DueDay" required /></div></div>
+                <div><label class="form-label" for="tOffset">sau kỳ (tháng)</label><div class="ta-input-icon">@UiIcon.Render("hash")<input class="form-control" type="number" min="0" max="12" id="tOffset" name="Input.DueMonthOffset" value="@i.DueMonthOffset" required /></div></div>
+                <div><label class="form-label" for="tLead">tạo trước (ngày)</label><div class="ta-input-icon">@UiIcon.Render("clock")<input class="form-control" type="number" min="0" max="120" id="tLead" name="Input.LeadDays" value="@i.LeadDays" required /></div></div>
+            </div>
+            <div><label class="form-label" for="tStart">Áp dụng từ <span class="text-danger">*</span></label><div class="ta-input-icon">@UiIcon.Render("calendar")<input class="form-control" type="date" id="tStart" name="Input.StartDate" value="@i.StartDate?.ToString("yyyy-MM-dd")" required /></div></div>
+            <div><label class="form-label" for="tEnd">Đến (bỏ trống = không giới hạn)</label><div class="ta-input-icon">@UiIcon.Render("calendar")<input class="form-control" type="date" id="tEnd" name="Input.EndDate" value="@i.EndDate?.ToString("yyyy-MM-dd")" /></div></div>
+            <div class="ta-span-2"><label class="form-check"><input class="form-check-input" type="checkbox" name="Input.IsActive" value="true" checked="@i.IsActive" /><input type="hidden" name="Input.IsActive" value="false" /><span class="form-check-label">Đang chạy (bỏ tích để tạm dừng)</span></label></div>
+        </div>
+    </div>
+    <div class="card-footer d-flex gap-2 justify-content-end">
+        <a class="btn" asp-action="Templates">Hủy</a>
+        <button class="btn btn-primary" type="submit" data-ta-loading data-ta-loading-text="Đang lưu...">@UiIcon.Render("device-floppy")<span>Lưu</span></button>
+    </div>
+</form>

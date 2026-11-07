@@ -69,3 +69,64 @@
 /* Customers → Nhập từ Excel: warnings per sheet on the review page. */
 .ta-import-warnings { margin: 0; padding-left: 1.1rem; font-size: .8125rem; color: var(--tblr-warning-text, #8a5300); }
 .ta-import-warnings li + li { margin-top: .15rem; }
+
+/* Công việc → "Việc của tôi": task cards with quick updates (status, checklist, comments). */
+.ta-stat-icon--danger { background: var(--ta-danger-soft); color: var(--ta-danger-text); }
+.ta-work-kpis { margin-bottom: var(--ta-sp-4); }
+.ta-work-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--ta-sp-2); margin-bottom: var(--ta-sp-3); }
+.ta-task-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 380px), 1fr)); gap: var(--ta-sp-4); align-items: start; }
+.ta-task { display: flex; flex-direction: column; gap: var(--ta-sp-3); padding: var(--ta-sp-4); border-left: 4px solid var(--ta-border-strong); transition: opacity .15s; }
+.ta-task.is-saving { opacity: .6; }
+.ta-task--soon { border-left-color: var(--ta-gold); }
+.ta-task--overdue { border-left-color: var(--ta-danger); }
+.ta-task__head { display: flex; flex-direction: column; gap: 6px; }
+.ta-task__title-row { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--ta-sp-2); }
+.ta-task__title { font-weight: 650; font-size: 1rem; line-height: 1.35; color: var(--ta-text); overflow-wrap: anywhere; }
+.ta-task__meta { display: flex; flex-wrap: wrap; gap: 4px var(--ta-sp-3); font-size: var(--ta-fs-small); color: var(--ta-text-2); }
+.ta-task__meta > span { display: inline-flex; align-items: center; gap: 4px; }
+.ta-task__meta .ta-icon { width: 14px; height: 14px; }
+.ta-task__due.is-soon { color: var(--ta-warning-text); font-weight: 600; }
+.ta-task__due.is-overdue { color: var(--ta-danger-text); font-weight: 650; }
+.ta-task__error { margin: 0; }
+.ta-task__status { display: flex; align-items: center; gap: var(--ta-sp-2); }
+.ta-task__inline { display: flex; gap: var(--ta-sp-2); align-items: flex-start; margin-top: var(--ta-sp-2); }
+.ta-task__inline > .form-control, .ta-task__inline > .ta-voice, .ta-task__inline > .ta-input-icon { flex: 1 1 auto; min-width: 0; }
+.ta-progress { height: 6px; border-radius: 99px; background: var(--ta-surface-2); border: 1px solid var(--ta-border); overflow: hidden; }
+.ta-progress > span { display: block; height: 100%; background: var(--ta-success); border-radius: inherit; }
+.ta-progress--sm { width: 96px; display: inline-block; vertical-align: middle; margin-right: 6px; }
+.ta-checklist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.ta-checklist > li { display: flex; align-items: center; gap: var(--ta-sp-2); min-height: 32px; }
+.ta-checklist > li > form { display: contents; }
+.ta-checklist > li.is-done .ta-checklist__text { color: var(--ta-text-2); text-decoration: line-through; }
+.ta-checklist__text { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
+.ta-checklist__time { display: inline-flex; align-items: center; gap: 3px; font-size: var(--ta-fs-small); color: var(--ta-success-text); white-space: nowrap; }
+.ta-checklist__time .ta-icon { width: 13px; height: 13px; }
+.ta-check { flex: 0 0 22px; width: 22px; height: 22px; display: grid; place-items: center; padding: 0; border: 2px solid var(--ta-border-strong); border-radius: 6px; background: var(--ta-surface); color: #fff; cursor: pointer; }
+.ta-check:hover { border-color: var(--ta-success); }
+.ta-check[aria-checked="true"] { background: var(--ta-success); border-color: var(--ta-success); }
+.ta-check .ta-icon { width: 14px; height: 14px; stroke-width: 3; }
+.ta-check:disabled { cursor: not-allowed; opacity: .6; }
+.ta-icon-btn--sm { width: 30px; height: 30px; flex-basis: 30px; }
+.ta-comments { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.ta-comments > li { padding: 6px 10px; border-radius: var(--ta-radius-sm); background: var(--ta-surface-2); }
+.ta-comments__who { font-weight: 600; font-size: var(--ta-fs-small); }
+.ta-comments__body, .ta-prewrap { white-space: pre-wrap; overflow-wrap: anywhere; }
+.ta-timeline { list-style: none; margin: 0 0 var(--ta-sp-3); padding: 0; display: flex; flex-direction: column; gap: var(--ta-sp-2); }
+.ta-timeline > li { padding: 8px 12px; border-left: 3px solid var(--ta-border); }
+.ta-timeline > li.is-comment { border-left-color: var(--ta-blue); background: var(--ta-surface-2); border-radius: 0 var(--ta-radius-sm) var(--ta-radius-sm) 0; }
+.ta-member-pick { max-height: 200px; overflow-y: auto; padding: 6px 10px; border: 1px solid var(--ta-border); border-radius: var(--ta-radius-btn); }
+.ta-member-pick .form-check { margin: 4px 0; }
+.ta-row--overdue > td:first-child { box-shadow: inset 3px 0 0 var(--ta-danger); }
+.ta-row--soon > td:first-child { box-shadow: inset 3px 0 0 var(--ta-gold); }
+
+/* Speech-to-text button (wwwroot/js/ta-work.js) inside text fields. */
+.ta-voice { position: relative; display: block; min-width: 0; }
+.ta-voice > .form-control, .ta-input-icon.has-voice > .form-control { padding-right: 2.6rem; }
+.ta-voice__btn { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); width: 30px; height: 30px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 50%; background: transparent; color: var(--ta-text-2); cursor: pointer; }
+.ta-voice--area > .ta-voice__btn { top: 4px; transform: none; }
+.ta-voice__btn:hover { background: var(--ta-blue-soft); color: var(--ta-blue-strong); }
+.ta-voice__btn .ta-icon { width: 18px; height: 18px; }
+.ta-voice__btn.is-listening { background: var(--ta-danger); color: #fff; animation: ta-voice-pulse 1.2s ease-in-out infinite; }
+.ta-voice__btn.is-denied { color: var(--ta-danger-text); }
+@keyframes ta-voice-pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(220, 53, 69, .45); } 50% { box-shadow: 0 0 0 6px rgba(220, 53, 69, 0); } }
+@media (prefers-reduced-motion: reduce) { .ta-voice__btn.is-listening { animation: none; } }
