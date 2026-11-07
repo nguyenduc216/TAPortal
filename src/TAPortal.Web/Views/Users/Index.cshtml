@@ -15,6 +15,8 @@
     var draft = ViewData["CreateUser"] as UserCreateVm;
     var draftErrors = ViewData["CreateUserErrors"] as List<string>;
     var roleMap = ViewData["RoleMap"] as Dictionary<Guid, List<string>> ?? [];
+    var employeeMap = ViewData["EmployeeMap"] as IReadOnlyDictionary<Guid, LinkedEmployee> ?? new Dictionary<Guid, LinkedEmployee>();
+    var canEmployees = AdminPermissions.Has(User, AdminPermissions.EmployeesView);
     var actorId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
     var vi = System.Globalization.CultureInfo.GetCultureInfo("vi-VN");
     var isSystemAdmin = AdminPermissions.IsSystemAdmin(User);
@@ -40,7 +42,7 @@
     {
         <div class="ta-table-wrap">
             <table class="ta-table ta-table-stack" id="usersTable" data-ta-pager="10">
-                <thead><tr><th scope="col">Người dùng</th><th scope="col">Email</th><th scope="col">Điện thoại</th><th scope="col">Vai trò</th><th scope="col">Trạng thái</th><th scope="col" class="ta-col-actions">Thao tác</th></tr></thead>
+                <thead><tr><th scope="col">Người dùng</th><th scope="col">Email</th><th scope="col">Điện thoại</th><th scope="col">Vai trò</th><th scope="col">Nhân viên</th><th scope="col">Trạng thái</th><th scope="col" class="ta-col-actions">Thao tác</th></tr></thead>
                 <tbody>
                 @foreach (var x in Model)
                 {
@@ -58,6 +60,7 @@
                         <td class="ta-nowrap" data-label="Email">@x.Email</td>
                         <td class="ta-nowrap" data-label="Điện thoại">@x.Phone</td>
                         <td data-label="Vai trò">@if (userRoles.Count == 0) {<span class="text-secondary">—</span>} else {<span class="d-inline-flex flex-wrap gap-1 justify-content-end">@foreach (var rn in userRoles) {<span class="ta-badge ta-badge--info ta-badge--plain">@rn</span>}</span>}</td>
+                        <td data-label="Nhân viên" data-ta-user-employee>@if (employeeMap.TryGetValue(x.Id, out var emp)) {if (canEmployees) {<a class="text-reset" asp-controller="Employees" asp-action="Details" asp-route-id="@emp.EmployeeId">@emp.FullName</a>} else {<span>@emp.FullName</span>}<div class="ta-cell-sub">@emp.Code</div>} else {<span class="text-secondary">—</span>}</td>
                         <td data-label="Trạng thái"><span class="ta-badge @badge">@AccountStatusPolicy.Describe(x.IsActive, x.Status, false)</span></td>
                         <td class="ta-col-actions">
                             <div class="ta-actions">

@@ -1,0 +1,116 @@
+@model EmployeeEditVm
+@{
+    var isNew = Model.IsCreate;
+    var L = Model.Lookups;
+    var i = Model.Input;
+    var p = i.Private ?? new EmployeePrivateInput();
+    ViewData["ParentTitle"] = "Nhân viên";
+    ViewData["ParentController"] = "Employees";
+    ViewData["Title"] = isNew ? "Thêm nhân viên" : "Sửa nhân viên";
+    ViewData["Heading"] = isNew ? "Thêm nhân viên" : "Sửa nhân viên: " + Model.Employee!.Code;
+    ViewData["Subtitle"] = isNew ? "Tạo hồ sơ nhân viên và phân công ban đầu." : "Cập nhật thông tin cá nhân và liên hệ. Trạng thái, phân công và tài khoản đổi ở trang hồ sơ.";
+    ViewData["PageIcon"] = isNew ? "user-plus" : "pencil";
+}
+<form class="card" asp-action="@(isNew ? "Create" : "Edit")" asp-route-id="@(isNew ? null : Model.Employee!.Id)" method="post" novalidate data-ta-employee-form>
+    <input type="hidden" asp-for="Input.Stamp" />
+    <div class="card-header"><h2 class="card-title">@UiIcon.Render("id")Thông tin nhân viên</h2></div>
+    <div class="card-body">
+        <div asp-validation-summary="ModelOnly" class="ta-alert ta-alert--danger" role="alert"></div>
+        <div class="ta-form-grid ta-form-grid--3">
+            <div>
+                <label asp-for="Input.Code" class="form-label @(isNew ? "required" : "")">Mã nhân viên</label>
+                @if (isNew) {<div class="ta-input-icon">@UiIcon.Render("hash")<input asp-for="Input.Code" class="form-control text-uppercase" maxlength="50" autocomplete="off" required /></div>}
+                else {<div class="ta-input-icon">@UiIcon.Render("hash")<input class="form-control" value="@i.Code" readonly disabled /></div>}
+                <span asp-validation-for="Input.Code" class="invalid-feedback d-block"></span>
+                @if (isNew && Model.SuggestedCode is not null) {<div class="form-hint">Mã gợi ý theo dãy số tự động: <span class="ta-code">@Model.SuggestedCode</span>.</div>}
+                @if (!isNew) {<div class="form-hint">Mã nhân viên không thể thay đổi.</div>}
+            </div>
+            <div class="ta-ws-span-2">
+                <label asp-for="Input.FullName" class="form-label required">Họ và tên</label>
+                <div class="ta-input-icon">@UiIcon.Render("user")<input asp-for="Input.FullName" class="form-control" maxlength="250" required /></div>
+                <span asp-validation-for="Input.FullName" class="invalid-feedback d-block"></span>
+            </div>
+            <div>
+                <label asp-for="Input.Gender" class="form-label">Giới tính</label>
+                <select asp-for="Input.Gender" class="form-select"><option value="">-- Chọn --</option>@foreach (var g in EmployeePolicy.Genders) {<option value="@g.Code" selected="@(i.Gender == g.Code)">@g.Name</option>}</select>
+                <span asp-validation-for="Input.Gender" class="invalid-feedback d-block"></span>
+            </div>
+            <div>
+                <label asp-for="Input.DateOfBirth" class="form-label">Ngày sinh</label>
+                <div class="ta-input-icon">@UiIcon.Render("calendar")<input asp-for="Input.DateOfBirth" class="form-control" type="date" /></div>
+            </div>
+            <div>
+                <label asp-for="Input.StartDate" class="form-label">Ngày vào làm</label>
+                <div class="ta-input-icon">@UiIcon.Render("calendar")<input asp-for="Input.StartDate" class="form-control" type="date" /></div>
+                @if (isNew) {<div class="form-hint">Cũng là ngày hiệu lực của phân công và trạng thái ban đầu (mặc định hôm nay).</div>}
+            </div>
+            <div>
+                <label asp-for="Input.MobilePhone" class="form-label">Điện thoại di động</label>
+                <div class="ta-input-icon">@UiIcon.Render("phone")<input asp-for="Input.MobilePhone" class="form-control" maxlength="50" inputmode="tel" /></div>
+                <span asp-validation-for="Input.MobilePhone" class="invalid-feedback d-block"></span>
+            </div>
+            <div>
+                <label asp-for="Input.CompanyPhone" class="form-label">Điện thoại công ty</label>
+                <div class="ta-input-icon">@UiIcon.Render("phone")<input asp-for="Input.CompanyPhone" class="form-control" maxlength="50" inputmode="tel" /></div>
+                <span asp-validation-for="Input.CompanyPhone" class="invalid-feedback d-block"></span>
+            </div>
+            <div>
+                <label asp-for="Input.EmploymentTypeId" class="form-label">Loại hình</label>
+                <select asp-for="Input.EmploymentTypeId" class="form-select"><option value="">-- Chọn --</option>@foreach (var t in L.EmploymentTypes.Where(t => t.IsActive || t.Id == i.EmploymentTypeId)) {<option value="@t.Id" selected="@(t.Id == i.EmploymentTypeId)">@t.Name</option>}</select>
+            </div>
+            <div>
+                <label asp-for="Input.CompanyEmail" class="form-label">Email công ty</label>
+                <div class="ta-input-icon">@UiIcon.Render("mail")<input asp-for="Input.CompanyEmail" class="form-control" type="email" maxlength="256" /></div>
+                <span asp-validation-for="Input.CompanyEmail" class="invalid-feedback d-block"></span>
+            </div>
+            <div>
+                <label asp-for="Input.PersonalEmail" class="form-label">Email cá nhân</label>
+                <div class="ta-input-icon">@UiIcon.Render("mail")<input asp-for="Input.PersonalEmail" class="form-control" type="email" maxlength="256" /></div>
+                <span asp-validation-for="Input.PersonalEmail" class="invalid-feedback d-block"></span>
+            </div>
+            @if (isNew)
+            {
+                <div>
+                    <label asp-for="Input.StatusId" class="form-label required">Trạng thái</label>
+                    <select asp-for="Input.StatusId" class="form-select" required><option value="">-- Chọn --</option>@foreach (var s in L.Statuses.Where(s => s.IsActive)) {<option value="@s.Id" selected="@(s.Id == i.StatusId)">@s.Name</option>}</select>
+                    <span asp-validation-for="Input.StatusId" class="invalid-feedback d-block"></span>
+                </div>
+            }
+            <div class="ta-ws-span-2">
+                <label asp-for="Input.Note" class="form-label">Ghi chú</label>
+                <div class="ta-input-icon ta-input-icon--top">@UiIcon.Render("file-text")<textarea asp-for="Input.Note" class="form-control" rows="2" maxlength="4000"></textarea></div>
+                <span asp-validation-for="Input.Note" class="invalid-feedback d-block"></span>
+            </div>
+        </div>
+    </div>
+    @if (isNew)
+    {
+        <div class="card-header border-top"><h2 class="card-title">@UiIcon.Render("building")Phân công ban đầu</h2></div>
+        <div class="card-body">
+            <partial name="_AssignmentFields" model="@(new EmployeeAssignmentFieldsVm("Input.", L, i.BranchId, i.DepartmentId, i.TeamId, i.JobTitleId, null))" />
+        </div>
+    }
+    @if (Model.EditPrivate)
+    {
+        <div class="card-header border-top" data-ta-private><h2 class="card-title">@UiIcon.Render("lock")Thông tin riêng tư</h2><span class="ta-badge ta-badge--warning ta-badge--plain ms-auto">Chỉ người có quyền xem/sửa thông tin riêng tư</span></div>
+        <div class="card-body">
+            <div class="ta-form-grid ta-form-grid--3">
+                <div><label class="form-label" for="pIdn">Số CCCD/CMND</label><div class="ta-input-icon">@UiIcon.Render("id")<input id="pIdn" class="form-control" name="Input.Private.IdentityNumber" value="@p.IdentityNumber" maxlength="50" autocomplete="off" /></div></div>
+                <div><label class="form-label" for="pIdd">Ngày cấp</label><div class="ta-input-icon">@UiIcon.Render("calendar")<input id="pIdd" class="form-control" type="date" name="Input.Private.IdentityIssueDate" value="@p.IdentityIssueDate?.ToString("yyyy-MM-dd")" /></div></div>
+                <div><label class="form-label" for="pIdp">Nơi cấp</label><div class="ta-input-icon">@UiIcon.Render("map-pin")<input id="pIdp" class="form-control" name="Input.Private.IdentityIssuePlace" value="@p.IdentityIssuePlace" maxlength="250" /></div></div>
+                <div><label class="form-label" for="pTax">MST cá nhân</label><div class="ta-input-icon">@UiIcon.Render("receipt-tax")<input id="pTax" class="form-control" name="Input.Private.PersonalTaxCode" value="@p.PersonalTaxCode" maxlength="50" autocomplete="off" /></div></div>
+                <div><label class="form-label" for="pSin">Số BHXH</label><div class="ta-input-icon">@UiIcon.Render("shield-check")<input id="pSin" class="form-control" name="Input.Private.SocialInsuranceNumber" value="@p.SocialInsuranceNumber" maxlength="50" autocomplete="off" /></div></div>
+                <div></div>
+                <div class="ta-ws-span-2"><label class="form-label" for="pPadr">Địa chỉ thường trú</label><div class="ta-input-icon ta-input-icon--top">@UiIcon.Render("map-pin")<textarea id="pPadr" class="form-control" name="Input.Private.PermanentAddress" rows="2" maxlength="1000">@p.PermanentAddress</textarea></div></div>
+                <div class="ta-ws-span-2"><label class="form-label" for="pCadr">Địa chỉ hiện tại</label><div class="ta-input-icon ta-input-icon--top">@UiIcon.Render("map-pin")<textarea id="pCadr" class="form-control" name="Input.Private.CurrentAddress" rows="2" maxlength="1000">@p.CurrentAddress</textarea></div></div>
+            </div>
+            <span asp-validation-for="Input.Private" class="invalid-feedback d-block"></span>
+            <div class="form-hint mt-2">Nhật ký audit chỉ ghi tên các trường riêng tư đã thay đổi, không ghi giá trị.</div>
+        </div>
+    }
+    <div class="card-footer ta-form-actions">
+        @if (isNew) {<a asp-action="Index" class="btn">@UiIcon.Render("arrow-left")<span>Quay lại</span></a>}
+        else {<a asp-action="Details" asp-route-id="@Model.Employee!.Id" class="btn">@UiIcon.Render("x")<span>Hủy</span></a>}
+        <button type="submit" class="btn btn-primary ms-auto" data-ta-loading data-ta-loading-text="Đang lưu...">@UiIcon.Render("device-floppy")<span>@(isNew ? "Tạo nhân viên" : "Lưu thay đổi")</span></button>
+    </div>
+</form>

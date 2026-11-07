@@ -1,0 +1,63 @@
+@model HrCatalogIndexVm
+@{
+    var info = Model.Info;
+    ViewData["Title"] = info.Title;
+    ViewData["Subtitle"] = info.Kind switch
+    {
+        HrCatalogKind.Department => "Phòng ban theo từng chi nhánh.",
+        HrCatalogKind.Team => "Nhóm theo chi nhánh, có thể thuộc một phòng ban.",
+        _ => "Danh mục chức danh dùng khi phân công nhân viên."
+    };
+    ViewData["PageIcon"] = info.Icon;
+    var canCreate = AdminPermissions.Has(User, info.CreatePermission);
+    var canUpdate = AdminPermissions.Has(User, info.UpdatePermission);
+    var tableId = info.Controller + "Table";
+}
+@section PageActions {
+    @if (canCreate) {<a class="btn btn-ta-gold" asp-controller="@info.Controller" asp-action="Create" data-ta-catalog-create>@UiIcon.Render("plus")<span>Thêm @info.Singular</span></a>}
+}
+@if (Model.Error is not null) {<div class="ta-alert ta-alert--danger" role="alert">@UiIcon.Render("alert-circle")<div class="ta-alert__body">@Model.Error</div></div>}
+<section class="card ta-table-card" aria-label="Danh sách @info.Singular">
+    <div class="ta-table-toolbar">
+        <div class="ta-search">@UiIcon.Render("search")<input class="form-control" type="search" aria-label="Tìm @info.Singular" placeholder="Tìm theo mã, tên..." oninput="taFilterRows(this.value,'@tableId')" /></div>
+    </div>
+    @if (Model.Items is null)
+    {
+        <div class="ta-empty"><span class="ta-empty__icon">@UiIcon.Render("database-off")</span><p class="ta-empty__title">Không tải được dữ liệu</p></div>
+    }
+    else if (Model.Items.Count == 0)
+    {
+        <div class="ta-empty"><span class="ta-empty__icon">@UiIcon.Render(info.Icon)</span><p class="ta-empty__title">Chưa có @info.Singular</p></div>
+    }
+    else
+    {
+        <div class="ta-table-wrap">
+            <table class="ta-table ta-table-stack" id="@tableId" data-ta-pager="20">
+                <thead><tr>
+                    <th scope="col">Mã</th><th scope="col">Tên</th>
+                    @if (info.Kind != HrCatalogKind.JobTitle) {<th scope="col">Chi nhánh</th>}
+                    @if (info.Kind == HrCatalogKind.Team) {<th scope="col">Phòng ban</th>}
+                    @if (info.Kind == HrCatalogKind.JobTitle) {<th scope="col">Cấp bậc</th>}
+                    <th scope="col">Nhân viên</th><th scope="col">Trạng thái</th><th scope="col" class="ta-col-actions">Thao tác</th>
+                </tr></thead>
+                <tbody>
+                @foreach (var x in Model.Items)
+                {
+                    <tr data-ta-row data-ta-catalog="@x.Code">
+                        <td data-label="Mã"><span class="ta-code">@x.Code</span></td>
+                        <td class="ta-cell-strong">@x.Name@if (x.IsManagement) {<span class="ta-badge ta-badge--info ta-badge--plain ms-1">Quản lý</span>}@if (x.Description is not null) {<div class="ta-cell-sub">@x.Description</div>}</td>
+                        @if (info.Kind != HrCatalogKind.JobTitle) {<td data-label="Chi nhánh">@x.BranchName</td>}
+                        @if (info.Kind == HrCatalogKind.Team) {<td data-label="Phòng ban">@(x.DepartmentName ?? "—")</td>}
+                        @if (info.Kind == HrCatalogKind.JobTitle) {<td data-label="Cấp bậc">@(x.Level?.ToString() ?? "—")</td>}
+                        <td data-label="Nhân viên">@x.ActiveEmployees@if (x.ActiveTeams > 0) {<div class="ta-cell-sub">@x.ActiveTeams nhóm</div>}</td>
+                        <td data-label="Trạng thái"><span class="ta-badge @(x.IsActive ? "ta-badge--success" : "ta-badge--neutral")">@(x.IsActive ? "Hoạt động" : "Ngừng")</span></td>
+                        <td class="ta-col-actions"><div class="ta-actions"><a class="btn btn-sm @(canUpdate ? "btn-soft-primary" : "")" asp-controller="@info.Controller" asp-action="Edit" asp-route-id="@x.Id" aria-label="@(canUpdate ? "Sửa" : "Xem") @x.Code">@UiIcon.Render(canUpdate ? "pencil" : "eye")<span>@(canUpdate ? "Sửa" : "Xem")</span></a></div></td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+        <div class="ta-empty d-none" data-ta-no-results><span class="ta-empty__icon">@UiIcon.Render("search-off")</span><p class="ta-empty__title">Không tìm thấy kết quả phù hợp</p></div>
+        <div class="ta-table-footer" data-ta-pager-for="@tableId" data-ta-unit="@info.Singular"></div>
+    }
+</section>

@@ -1,0 +1,219 @@
+@model EmployeeDetailsVm
+@{
+    var e = Model.Employee;
+    var L = Model.Lookups;
+    var a = e.Assignment;
+    var vi = System.Globalization.CultureInfo.GetCultureInfo("vi-VN");
+    string Day(DateTime? d) => d?.ToString("dd/MM/yyyy", vi) ?? "—";
+    ViewData["ParentTitle"] = "Nhân viên";
+    ViewData["ParentController"] = "Employees";
+    ViewData["Title"] = e.Code;
+    ViewData["Heading"] = e.FullName;
+    ViewData["Subtitle"] = $"Mã nhân viên {e.Code}" + (L.BranchName(a?.BranchId) is { } branch ? $" · {branch}" : "");
+    ViewData["PageIcon"] = "id";
+    var isSystemAdmin = AdminPermissions.IsSystemAdmin(User);
+    var canUpdate = AdminPermissions.Has(User, AdminPermissions.EmployeesUpdate);
+    var canDelete = AdminPermissions.Has(User, AdminPermissions.EmployeesDelete);
+    var canStatus = AdminPermissions.Has(User, AdminPermissions.EmployeesChangeStatus);
+    var canAssign = AdminPermissions.Has(User, AdminPermissions.EmployeesChangeAssignment);
+    var canLink = Model.Accounts is not null;
+    var canCreateAccount = canLink && AdminPermissions.Has(User, AdminPermissions.UsersCreate);
+    var canEditUser = AdminPermissions.Has(User, AdminPermissions.UsersUpdate);
+    var grantable = (Model.Accounts?.Roles ?? []).Where(r => r.IsActive && (isSystemAdmin || r.Code != RoleChangePolicy.SystemAdminCode)).ToList();
+    var draftRoles = Model.AccountDraft.RoleIds ?? [];
+}
+@section PageActions {
+    @if (canUpdate) {<a class="btn btn-primary" asp-action="Edit" asp-route-id="@e.Id">@UiIcon.Render("pencil")<span>Sửa thông tin</span></a>}
+}
+@if (Model.Errors.Count > 0) {<div class="ta-alert ta-alert--danger" role="alert">@UiIcon.Render("alert-circle")<div class="ta-alert__body">@foreach (var err in Model.Errors) {<div>@err</div>}</div></div>}
+<div class="row g-4">
+<div class="col-xl-8 d-flex flex-column gap-4">
+    <section class="card" aria-labelledby="empInfoTitle">
+        <div class="card-header"><h2 class="card-title" id="empInfoTitle">@UiIcon.Render("user")Thông tin chung</h2><span class="ta-badge @EmployeePolicy.StatusBadge(e.StatusCode) ms-auto">@(e.StatusName ?? "Chưa đặt trạng thái")</span></div>
+        <div class="card-body">
+            <dl class="ta-dl">
+                <dt>Mã nhân viên</dt><dd><span class="ta-code">@e.Code</span></dd>
+                <dt>Họ và tên</dt><dd>@e.FullName</dd>
+                <dt>Giới tính</dt><dd>@EmployeePolicy.GenderName(e.Gender)</dd>
+                <dt>Ngày sinh</dt><dd>@Day(e.DateOfBirth)</dd>
+                <dt>Loại hình</dt><dd>@(L.EmploymentTypes.FirstOrDefault(t => t.Id == e.EmploymentTypeId)?.Name ?? "—")</dd>
+                <dt>Ngày vào làm</dt><dd>@Day(e.StartDate)</dd>
+                @if (e.EndDate is not null) {<dt>Ngày nghỉ việc</dt><dd>@Day(e.EndDate)</dd>}
+                <dt>Điện thoại di động</dt><dd>@(e.MobilePhone ?? "—")</dd>
+                <dt>Điện thoại công ty</dt><dd>@(e.CompanyPhone ?? "—")</dd>
+                <dt>Email công ty</dt><dd>@(e.CompanyEmail ?? "—")</dd>
+                <dt>Email cá nhân</dt><dd>@(e.PersonalEmail ?? "—")</dd>
+                @if (!string.IsNullOrWhiteSpace(e.Note)) {<dt>Ghi chú</dt><dd>@e.Note</dd>}
+            </dl>
+        </div>
+    </section>
+
+    @if (e.Private is { } p)
+    {
+        <section class="card" aria-labelledby="empPrivateTitle" data-ta-private>
+            <div class="card-header"><h2 class="card-title" id="empPrivateTitle">@UiIcon.Render("lock")Thông tin riêng tư</h2></div>
+            <div class="card-body">
+                <dl class="ta-dl">
+                    <dt>Số CCCD/CMND</dt><dd>@(p.IdentityNumber ?? "—")</dd>
+                    <dt>Ngày cấp / nơi cấp</dt><dd>@Day(p.IdentityIssueDate) · @(p.IdentityIssuePlace ?? "—")</dd>
+                    <dt>MST cá nhân</dt><dd>@(p.PersonalTaxCode ?? "—")</dd>
+                    <dt>Số BHXH</dt><dd>@(p.SocialInsuranceNumber ?? "—")</dd>
+                    <dt>Địa chỉ thường trú</dt><dd>@(p.PermanentAddress ?? "—")</dd>
+                    <dt>Địa chỉ hiện tại</dt><dd>@(p.CurrentAddress ?? "—")</dd>
+                </dl>
+            </div>
+        </section>
+    }
+
+    <section class="card" aria-labelledby="empAssignTitle">
+        <div class="card-header"><h2 class="card-title" id="empAssignTitle">@UiIcon.Render("building")Phân công</h2></div>
+        <div class="card-body">
+            @if (a is null) {<p class="text-secondary mb-0">Chưa có phân công hiện tại.</p>}
+            else
+            {
+                <dl class="ta-dl">
+                    <dt>Chi nhánh</dt><dd>@(L.BranchName(a.BranchId) ?? "—")</dd>
+                    <dt>Phòng ban</dt><dd>@(L.DepartmentName(a.DepartmentId) ?? "—")</dd>
+                    <dt>Nhóm</dt><dd>@(L.TeamName(a.TeamId) ?? "—")</dd>
+                    <dt>Chức danh</dt><dd>@(L.JobTitleName(a.JobTitleId) ?? "—")</dd>
+                    <dt>Hiệu lực từ</dt><dd>@Day(a.ValidFrom)</dd>
+                </dl>
+            }
+            @if (canAssign)
+            {
+                <form class="mt-4" asp-action="ChangeAssignment" asp-route-id="@e.Id" method="post" data-ta-assignment-form>
+                    <input type="hidden" name="Stamp" value="@e.Stamp" />
+                    <h3 class="h4">Chuyển / điều chỉnh phân công</h3>
+                    <partial name="_AssignmentFields" model="@(new EmployeeAssignmentFieldsVm("", L, a?.BranchId, a?.DepartmentId, a?.TeamId, a?.JobTitleId, a))" />
+                    <div class="ta-form-grid mt-3">
+                        <div><label class="form-label required" for="asgFrom">Ngày hiệu lực</label><div class="ta-input-icon">@UiIcon.Render("calendar")<input id="asgFrom" class="form-control" type="date" name="ValidFrom" value="@DateTime.Today.ToString("yyyy-MM-dd")" required /></div></div>
+                        <div><label class="form-label" for="asgNote">Ghi chú</label><div class="ta-input-icon">@UiIcon.Render("file-text")<input id="asgNote" class="form-control" name="Note" maxlength="1000" /></div></div>
+                    </div>
+                    <div class="form-hint mt-2">Phân công cũ được đóng vào ngày trước ngày hiệu lực và giữ trong lịch sử; chọn đúng ngày bắt đầu của phân công hiện tại để sửa nhầm.</div>
+                    <div class="ta-form-actions mt-3"><button type="submit" class="btn btn-primary ms-auto" data-ta-loading data-ta-loading-text="Đang lưu...">@UiIcon.Render("arrows-exchange")<span>Lưu phân công</span></button></div>
+                </form>
+            }
+        </div>
+        @if (e.AssignmentHistory.Count > 0)
+        {
+            <div class="ta-table-wrap">
+                <table class="ta-table ta-table-stack">
+                    <thead><tr><th scope="col">Từ ngày</th><th scope="col">Đến ngày</th><th scope="col">Chi nhánh</th><th scope="col">Phòng ban</th><th scope="col">Nhóm</th><th scope="col">Chức danh</th></tr></thead>
+                    <tbody>
+                    @foreach (var h in e.AssignmentHistory)
+                    {
+                        <tr><td data-label="Từ ngày">@Day(h.ValidFrom)@if (h.IsCurrent) {<span class="ta-badge ta-badge--success ta-badge--plain ms-1">Hiện tại</span>}</td><td data-label="Đến ngày">@Day(h.ValidTo)</td><td data-label="Chi nhánh">@h.BranchName</td><td data-label="Phòng ban">@h.DepartmentName</td><td data-label="Nhóm">@h.TeamName</td><td data-label="Chức danh">@h.JobTitleName</td></tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </section>
+
+    <section class="card" aria-labelledby="empHistoryTitle">
+        <div class="card-header"><h2 class="card-title" id="empHistoryTitle">@UiIcon.Render("history")Lịch sử trạng thái</h2></div>
+        @if (e.StatusHistory.Count == 0) {<div class="card-body text-secondary">Chưa có lịch sử trạng thái.</div>}
+        else
+        {
+            <div class="ta-table-wrap">
+                <table class="ta-table ta-table-stack">
+                    <thead><tr><th scope="col">Hiệu lực</th><th scope="col">Từ</th><th scope="col">Sang</th><th scope="col">Lý do</th><th scope="col">Người đổi</th></tr></thead>
+                    <tbody>
+                    @foreach (var h in e.StatusHistory)
+                    {
+                        <tr><td data-label="Hiệu lực">@Day(h.EffectiveDate)</td><td data-label="Từ">@(h.OldStatusName ?? "—")</td><td data-label="Sang">@h.NewStatusName</td><td data-label="Lý do">@h.Reason@if (h.Note is not null) {<div class="ta-cell-sub">@h.Note</div>}</td><td data-label="Người đổi">@(h.ChangedBy ?? "—")<div class="ta-cell-sub">@h.ChangedAt.ToString("dd/MM/yyyy HH:mm", vi) UTC</div></td></tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </section>
+</div>
+
+<div class="col-xl-4 d-flex flex-column gap-4">
+    @if (canStatus)
+    {
+        <section class="card" aria-labelledby="empStatusTitle">
+            <div class="card-header"><h2 class="card-title" id="empStatusTitle">@UiIcon.Render("switch-horizontal")Đổi trạng thái</h2></div>
+            <form class="card-body" asp-action="ChangeStatus" asp-route-id="@e.Id" method="post" data-ta-status-form>
+                <input type="hidden" name="Stamp" value="@e.Stamp" />
+                <div class="mb-3"><label class="form-label required" for="stNew">Trạng thái mới</label><select id="stNew" class="form-select" name="StatusId" required><option value="">-- Chọn --</option>@foreach (var s in L.Statuses.Where(s => s.IsActive && s.Id != e.StatusId)) {<option value="@s.Id">@s.Name</option>}</select></div>
+                <div class="mb-3"><label class="form-label required" for="stDate">Ngày hiệu lực</label><div class="ta-input-icon">@UiIcon.Render("calendar")<input id="stDate" class="form-control" type="date" name="EffectiveDate" value="@DateTime.Today.ToString("yyyy-MM-dd")" required /></div></div>
+                <div class="mb-3"><label class="form-label" for="stReason">Lý do</label><div class="ta-input-icon">@UiIcon.Render("info-circle")<input id="stReason" class="form-control" name="Reason" maxlength="500" /></div></div>
+                <div class="mb-3"><label class="form-label" for="stNote">Ghi chú</label><div class="ta-input-icon ta-input-icon--top">@UiIcon.Render("file-text")<textarea id="stNote" class="form-control" name="Note" rows="2" maxlength="1000"></textarea></div></div>
+                <div class="form-hint mb-3">Mỗi lần đổi được ghi vào lịch sử trạng thái. "Đã nghỉ việc" / "Chấm dứt" đặt ngày nghỉ việc và đánh dấu hồ sơ không còn làm việc.</div>
+                <button type="submit" class="btn btn-primary w-100" data-ta-loading data-ta-loading-text="Đang lưu...">@UiIcon.Render("device-floppy")<span>Đổi trạng thái</span></button>
+            </form>
+        </section>
+    }
+
+    <section class="card" aria-labelledby="empAccountTitle" data-ta-account>
+        <div class="card-header"><h2 class="card-title" id="empAccountTitle">@UiIcon.Render("key")Tài khoản đăng nhập</h2></div>
+        <div class="card-body">
+            @if (e.Account is { } acc)
+            {
+                <dl class="ta-dl">
+                    <dt>Tên đăng nhập</dt><dd><span class="ta-code" data-ta-linked-username>@acc.Username</span></dd>
+                    <dt>Tên hiển thị</dt><dd>@acc.DisplayName</dd>
+                    <dt>Email</dt><dd>@(acc.Email ?? "—")</dd>
+                    <dt>Vai trò</dt><dd>@(acc.RoleNames.Count == 0 ? "—" : string.Join(", ", acc.RoleNames))</dd>
+                    <dt>Đăng nhập</dt><dd><span class="ta-badge @(acc.LoginEligible ? "ta-badge--success" : "ta-badge--danger")">@(acc.LoginEligible ? "Được phép" : "Bị khóa / đã xóa")</span></dd>
+                </dl>
+                @if (canEditUser) {<a class="btn w-100 mb-2" asp-controller="Users" asp-action="Edit" asp-route-id="@acc.Id">@UiIcon.Render("user-cog")<span>Mở tài khoản ở màn hình Người dùng</span></a>}
+                @if (canLink)
+                {
+                    <form asp-action="UnlinkAccount" asp-route-id="@e.Id" method="post" data-ta-confirm="Gỡ liên kết tài khoản @acc.Username khỏi nhân viên này? Tài khoản không bị khóa hay xóa.">
+                        <input type="hidden" name="stamp" value="@e.Stamp" />
+                        <button type="submit" class="btn btn-outline-danger w-100">@UiIcon.Render("link")<span>Gỡ liên kết</span></button>
+                    </form>
+                }
+            }
+            else
+            {
+                <p class="text-secondary">Nhân viên chưa có tài khoản đăng nhập TAPortal.</p>
+                @if (canCreateAccount)
+                {
+                    <form asp-action="CreateAccount" asp-route-id="@e.Id" method="post" autocomplete="off" data-ta-account-create>
+                        <input type="hidden" name="Stamp" value="@e.Stamp" />
+                        <h3 class="h4">Tạo tài khoản mới</h3>
+                        <div class="mb-3"><label class="form-label required" for="accUser">Tên đăng nhập</label><div class="ta-input-icon">@UiIcon.Render("user")<input id="accUser" class="form-control" name="Username" value="@Model.AccountDraft.Username" maxlength="100" required /></div></div>
+                        <div class="mb-3"><label class="form-label" for="accEmail">Email</label><div class="ta-input-icon">@UiIcon.Render("mail")<input id="accEmail" class="form-control" type="email" name="Email" value="@Model.AccountDraft.Email" maxlength="256" /></div><div class="form-hint">Mặc định là email công ty. Tên hiển thị = họ tên nhân viên.</div></div>
+                        <div class="mb-3"><label class="form-label required" for="accPassword">Mật khẩu ban đầu</label><div class="ta-input-icon">@UiIcon.Render("lock")<input id="accPassword" class="form-control" type="password" name="Password" autocomplete="new-password" required oninput="taCheckPassword(this.value,'accRules')" /><button class="ta-password-toggle" type="button" onclick="taTogglePassword('accPassword',this)" aria-label="Hiện mật khẩu" aria-pressed="false">@UiIcon.Render("eye", "ta-icon-show")@UiIcon.Render("eye-off", "ta-icon-hide")</button></div>
+                            <ul id="accRules" class="password-rules"><li data-rule="len">Ít nhất 8 ký tự</li><li data-rule="letter">Có chữ cái</li><li data-rule="digit">Có chữ số</li><li data-rule="special">Có ký tự đặc biệt</li></ul></div>
+                        <fieldset class="mb-3"><legend class="form-label">Vai trò</legend>
+                            @foreach (var r in grantable)
+                            {
+                                <label class="form-check"><input class="form-check-input" type="checkbox" name="RoleIds" value="@r.Id" checked="@draftRoles.Contains(r.Id)" /><span class="form-check-label">@r.Name@(r.Code == RoleChangePolicy.SystemAdminCode ? " (toàn quyền hệ thống)" : "")</span></label>
+                            }
+                            @if (grantable.Count == 0) {<div class="text-secondary">Chưa có vai trò đang hoạt động.</div>}
+                        </fieldset>
+                        <button type="submit" class="btn btn-primary w-100" data-ta-loading data-ta-loading-text="Đang tạo...">@UiIcon.Render("user-plus")<span>Tạo và liên kết tài khoản</span></button>
+                    </form>
+                }
+                @if (canLink)
+                {
+                    <form class="mt-4" asp-action="LinkAccount" asp-route-id="@e.Id" method="post" data-ta-account-link>
+                        <input type="hidden" name="stamp" value="@e.Stamp" />
+                        <h3 class="h4">Liên kết tài khoản có sẵn</h3>
+                        <div class="mb-3"><label class="form-label" for="accExisting">Tài khoản</label><select id="accExisting" class="form-select" name="userId"><option value="">-- Chọn tài khoản chưa liên kết --</option>@foreach (var u in Model.Accounts!.Candidates) {<option value="@u.Id">@u.DisplayName (@u.Username)@(u.LoginEligible ? "" : " — bị khóa")</option>}</select>
+                            <div class="form-hint">Chỉ hiện tài khoản chưa liên kết với nhân viên khác (không gồm tài khoản chỉ dùng Customer Portal).</div></div>
+                        <button type="submit" class="btn w-100">@UiIcon.Render("link")<span>Liên kết</span></button>
+                    </form>
+                }
+            }
+        </div>
+    </section>
+
+    @if (canDelete)
+    {
+        <section class="card" aria-labelledby="empDeleteTitle">
+            <div class="card-header"><h2 class="card-title" id="empDeleteTitle">@UiIcon.Render("trash")Xóa hồ sơ</h2></div>
+            <form class="card-body" asp-action="Delete" asp-route-id="@e.Id" method="post" data-ta-confirm="Xóa (mềm) hồ sơ nhân viên @e.Code? Lịch sử được giữ nguyên.">
+                <input type="hidden" name="stamp" value="@e.Stamp" />
+                @if (e.Account is not null) {<p class="form-hint">Gỡ liên kết tài khoản đăng nhập trước khi xóa hồ sơ.</p>}
+                <button type="submit" class="btn btn-outline-danger w-100" disabled="@(e.Account is not null)">@UiIcon.Render("trash")<span>Xóa (mềm) nhân viên</span></button>
+            </form>
+        </section>
+    }
+</div>
+</div>

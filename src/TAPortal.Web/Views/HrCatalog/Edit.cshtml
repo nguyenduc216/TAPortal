@@ -1,0 +1,123 @@
+@model HrCatalogEditVm
+@{
+    var info = Model.Info;
+    var i = Model.Input;
+    var isNew = Model.IsCreate;
+    var ro = Model.ReadOnly;
+    ViewData["ParentTitle"] = info.Title;
+    ViewData["ParentController"] = info.Controller;
+    ViewData["Title"] = isNew ? "Thêm " + info.Singular : Model.Item!.Code;
+    ViewData["Heading"] = isNew ? "Thêm " + info.Singular : (ro ? "" : "Sửa ") + info.Singular + ": " + Model.Item!.Name;
+    ViewData["PageIcon"] = isNew ? "plus" : (ro ? "eye" : "pencil");
+    var canDelete = !isNew && AdminPermissions.Has(User, info.DeletePermission);
+    var branchName = Model.Branches.FirstOrDefault(b => b.Id == i.BranchId)?.Name;
+}
+<div class="row g-4">
+<div class="col-xl-8">
+<form class="card" asp-controller="@info.Controller" asp-action="@(isNew ? "Create" : "Edit")" asp-route-id="@(isNew ? null : Model.Item!.Id)" method="post" novalidate data-ta-catalog-form>
+    <input type="hidden" asp-for="Input.Stamp" />
+    <div class="card-header"><h2 class="card-title">@UiIcon.Render(info.Icon)Thông tin @info.Singular</h2></div>
+    <div class="card-body">
+        <div asp-validation-summary="ModelOnly" class="ta-alert ta-alert--danger" role="alert"></div>
+        <fieldset disabled="@ro">
+        <div class="ta-form-grid">
+            @if (info.Kind != HrCatalogKind.JobTitle)
+            {
+                <div>
+                    <label class="form-label @(isNew ? "required" : "")" for="catBranch">Chi nhánh</label>
+                    @if (isNew)
+                    {
+                        <select id="catBranch" class="form-select" name="Input.BranchId" required><option value="">-- Chọn chi nhánh --</option>@foreach (var b in Model.Branches.Where(b => b.IsActive)) {<option value="@b.Id" selected="@(b.Id == i.BranchId)">@b.Name</option>}</select>
+                        <span asp-validation-for="Input.BranchId" class="invalid-feedback d-block"></span>
+                    }
+                    else {<div class="ta-input-icon">@UiIcon.Render("building")<input id="catBranch" class="form-control" value="@branchName" readonly disabled /></div><div class="form-hint">Chi nhánh không thể thay đổi sau khi tạo.</div>}
+                </div>
+            }
+            <div>
+                <label asp-for="Input.Code" class="form-label @(isNew ? "required" : "")">Mã</label>
+                @if (isNew) {<div class="ta-input-icon">@UiIcon.Render("hash")<input asp-for="Input.Code" class="form-control text-uppercase" maxlength="@info.CodeLength" autocomplete="off" required /></div>}
+                else {<div class="ta-input-icon">@UiIcon.Render("hash")<input class="form-control" value="@i.Code" readonly disabled /></div><div class="form-hint">Mã không thể thay đổi.</div>}
+                <span asp-validation-for="Input.Code" class="invalid-feedback d-block"></span>
+            </div>
+            <div class="@(info.Kind == HrCatalogKind.JobTitle ? "" : "ta-span-2")">
+                <label asp-for="Input.Name" class="form-label required">Tên</label>
+                <div class="ta-input-icon">@UiIcon.Render("pencil")<input asp-for="Input.Name" class="form-control" maxlength="200" required /></div>
+                <span asp-validation-for="Input.Name" class="invalid-feedback d-block"></span>
+            </div>
+            @if (info.Kind == HrCatalogKind.Team)
+            {
+                <div class="ta-span-2">
+                    <label class="form-label" for="catDept">Phòng ban</label>
+                    <select id="catDept" class="form-select" name="Input.DepartmentId">
+                        <option value="">-- Không thuộc phòng ban --</option>
+                        @foreach (var g in Model.Departments.Where(d => d.IsActive || d.Id == i.DepartmentId).Where(d => isNew || d.BranchId == i.BranchId).GroupBy(d => d.BranchId))
+                        {
+                            <optgroup label="@(Model.Branches.FirstOrDefault(b => b.Id == g.Key)?.Name ?? "—")">@foreach (var d in g) {<option value="@d.Id" selected="@(d.Id == i.DepartmentId)">@d.Name</option>}</optgroup>
+                        }
+                    </select>
+                    <div class="form-hint">Phòng ban phải thuộc cùng chi nhánh với nhóm.</div>
+                </div>
+            }
+            @if (info.Kind == HrCatalogKind.JobTitle)
+            {
+                <div>
+                    <label asp-for="Input.Level" class="form-label">Cấp bậc</label>
+                    <div class="ta-input-icon">@UiIcon.Render("chart-bar")<input asp-for="Input.Level" class="form-control" type="number" min="0" max="1000" /></div>
+                    <span asp-validation-for="Input.Level" class="invalid-feedback d-block"></span>
+                </div>
+                <div>
+                    <span class="form-label d-block">Vị trí quản lý</span>
+                    <div class="ta-switch-row"><label class="form-check form-switch"><input asp-for="Input.IsManagement" class="form-check-input" type="checkbox" /><span class="form-check-label">Là chức danh quản lý</span></label></div>
+                </div>
+            }
+            @if (info.Kind != HrCatalogKind.Team)
+            {
+                <div class="ta-span-2">
+                    <label asp-for="Input.Description" class="form-label">Mô tả</label>
+                    <div class="ta-input-icon ta-input-icon--top">@UiIcon.Render("file-text")<textarea asp-for="Input.Description" class="form-control" rows="2" maxlength="1000"></textarea></div>
+                    <span asp-validation-for="Input.Description" class="invalid-feedback d-block"></span>
+                </div>
+            }
+            <div>
+                <label asp-for="Input.SortOrder" class="form-label">Thứ tự hiển thị</label>
+                <div class="ta-input-icon">@UiIcon.Render("hash")<input asp-for="Input.SortOrder" class="form-control" type="number" min="0" max="100000" /></div>
+                <span asp-validation-for="Input.SortOrder" class="invalid-feedback d-block"></span>
+            </div>
+            <div>
+                <span class="form-label d-block">Trạng thái</span>
+                <div class="ta-switch-row"><label class="form-check form-switch"><input asp-for="Input.IsActive" class="form-check-input" type="checkbox" /><span class="form-check-label">Đang hoạt động</span></label></div>
+                <div class="form-hint">Ngừng hoạt động: không chọn được cho phân công mới; nhân viên đang được phân công giữ nguyên.</div>
+            </div>
+        </div>
+        </fieldset>
+    </div>
+    <div class="card-footer ta-form-actions">
+        <a asp-controller="@info.Controller" asp-action="Index" class="btn">@UiIcon.Render("arrow-left")<span>Quay lại</span></a>
+        @if (!ro) {<button type="submit" class="btn btn-primary ms-auto" data-ta-loading data-ta-loading-text="Đang lưu...">@UiIcon.Render("device-floppy")<span>@(isNew ? "Tạo" : "Lưu thay đổi")</span></button>}
+    </div>
+</form>
+</div>
+@if (!isNew)
+{
+    var item = Model.Item!;
+    <div class="col-xl-4">
+        <section class="card" aria-labelledby="catUsageTitle">
+            <div class="card-header"><h2 class="card-title" id="catUsageTitle">@UiIcon.Render("users")Đang sử dụng</h2></div>
+            <div class="card-body">
+                <dl class="ta-dl">
+                    <dt>Nhân viên đang làm việc</dt><dd>@item.ActiveEmployees</dd>
+                    @if (info.Kind == HrCatalogKind.Department) {<dt>Nhóm đang hoạt động</dt><dd>@item.ActiveTeams</dd>}
+                </dl>
+                @if (canDelete)
+                {
+                    <form asp-controller="@info.Controller" asp-action="Delete" asp-route-id="@item.Id" method="post" data-ta-confirm="Xóa (mềm) @info.Singular @item.Code?">
+                        <input type="hidden" name="stamp" value="@item.Stamp" />
+                        @if (item.ActiveEmployees > 0 || item.ActiveTeams > 0) {<p class="form-hint">Không thể xóa khi còn nhân viên đang làm việc@(info.Kind == HrCatalogKind.Department ? " hoặc nhóm đang hoạt động" : "") được phân công.</p>}
+                        <button type="submit" class="btn btn-outline-danger w-100" disabled="@(item.ActiveEmployees > 0 || item.ActiveTeams > 0)">@UiIcon.Render("trash")<span>Xóa (mềm) @info.Singular</span></button>
+                    </form>
+                }
+            </div>
+        </section>
+    </div>
+}
+</div>
