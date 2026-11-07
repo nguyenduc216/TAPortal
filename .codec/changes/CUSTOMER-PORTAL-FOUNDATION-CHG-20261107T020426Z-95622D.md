@@ -4,7 +4,7 @@
 - Change ID: `CUSTOMER-PORTAL-FOUNDATION-CHG-20261107T020426Z-95622D`
 - Created UTC: 2026-11-07T02:04:26.054158+00:00
 - Tiêu đề: Customer Portal: staff accounts and per-function permissions (Xem / Quản lý)
-- Trạng thái: IMPLEMENTED
+- Trạng thái: DEPLOYED
 
 ## Yêu cầu và phạm vi
 Operator (2026-11-07): Customer Portal cần quản lý tài khoản + phân quyền: doanh nghiệp tự thêm tài khoản nhân viên và tích quyền theo từng chức năng, hai mức Xem / Quản lý (operator chọn), có mẫu nhanh.
@@ -23,7 +23,7 @@ Sửa:
 ## Migration SQL (KHÔNG tự chạy)
 - Database: TAPortalSys
 - `029-customer-member-permissions.sql`: thêm `Permissions varchar(500) NULL` vào dbo.CustomerPortalMemberships, CK_CPM_Role nhận thêm 'MEMBER'; không đổi dòng nào. Verify 047, rollback 048 (từ chối khi đã có MEMBER hoặc Permissions).
-- Execution: xem report
+- Execution: EXECUTED 2026-11-07T02:07:33Z
 
 ## Test và kết quả
 - Release build 0 lỗi; Safe tests 553/553 sau khi gộp (22 test mới phần Customer Portal).
@@ -33,9 +33,9 @@ Sửa:
 
 ## Git
 - Branch: feature/customer-portal-mvp01 (gộp từ nhánh worktree của agent)
-- Commit SHA: xem report
+- Commit SHA: c16e082 (gộp 3d90722 + 4066956)
 - PR:
-- Merge: xem report
+- Merge: fast-forward main
 - Merge SHA:
 
 ## Rủi ro, quyết định và việc còn lại

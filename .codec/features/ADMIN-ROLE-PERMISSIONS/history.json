@@ -3,10 +3,10 @@
     "change_id": "ADMIN-ROLE-PERMISSIONS-CHG-20261107T020425Z-9C2068",
     "created_at": "2026-11-07T02:04:25.260457+00:00",
     "title": "Admin portal: role management with per-function permissions, permission-based access instead of SYS_ADMIN only",
-    "status": "IMPLEMENTED",
-    "commit_sha": null,
-    "migration_status": "NOT_EXECUTED",
-    "publish_status": "NOT_PUBLISHED",
-    "merge_status": "PENDING_APPROVAL"
+    "status": "DEPLOYED",
+    "commit_sha": "c16e082",
+    "migration_status": "EXECUTED",
+    "publish_status": "DEPLOYED",
+    "merge_status": "MERGED"
   }
 ]

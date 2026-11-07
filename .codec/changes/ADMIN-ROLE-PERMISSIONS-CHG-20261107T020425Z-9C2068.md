@@ -4,7 +4,7 @@
 - Change ID: `ADMIN-ROLE-PERMISSIONS-CHG-20261107T020425Z-9C2068`
 - Created UTC: 2026-11-07T02:04:25.260457+00:00
 - Tiêu đề: Admin portal: role management with per-function permissions, permission-based access instead of SYS_ADMIN only
-- Trạng thái: IMPLEMENTED
+- Trạng thái: DEPLOYED
 
 ## Yêu cầu và phạm vi
 Operator (2026-11-07): trang quản lý T.A Portal chưa có quản lý tài khoản + phân quyền thật — cần phân được quyền cho tài khoản thực hiện những chức năng nào trên hệ thống.
@@ -27,7 +27,7 @@ Sửa:
 ## Migration SQL (KHÔNG tự chạy)
 - Database: TAPortalSys
 - `028-admin-permission-catalogue.sql`: chỉ INSERT mã quyền còn thiếu vào dbo.Permissions và quyền còn thiếu của SYS_ADMIN vào dbo.RolePermissions; mọi dòng thêm có CreatedBy = marker A0000028-…-000000000028 để rollback 046 chỉ xóa đúng các dòng đó (từ chối nếu vai trò khác/quyền trực tiếp/menu còn dùng). Tên quyền ASCII (sqlcmd không đọc UTF-8), giao diện dùng nhãn tiếng Việt trong code. Verify 045.
-- Execution: xem report
+- Execution: EXECUTED 2026-11-07T02:07:12Z
 
 ## Test và kết quả
 - Release build 0 lỗi; Safe tests 553/553 sau khi gộp hai phần (44 test mới phần Admin).
@@ -37,9 +37,9 @@ Sửa:
 
 ## Git
 - Branch: feature/customer-portal-mvp01 (gộp từ nhánh worktree của agent)
-- Commit SHA: xem report
+- Commit SHA: c16e082 (gộp 3d90722 + 4066956)
 - PR:
-- Merge: xem report
+- Merge: fast-forward main
 - Merge SHA:
 
 ## Rủi ro, quyết định và việc còn lại
