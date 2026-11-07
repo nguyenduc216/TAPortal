@@ -4,7 +4,7 @@
 - Change ID: `CUSTOMER-PORTAL-FOUNDATION-CHG-20261107T022032Z-9A2C1B`
 - Created UTC: 2026-11-07T02:20:32.414792+00:00
 - Tiêu đề: Revert Customer Portal staff accounts and per-function permissions (operator: TA Portal only)
-- Trạng thái: IMPLEMENTED
+- Trạng thái: DEPLOYED
 
 ## Yêu cầu và phạm vi
 Operator (2026-11-07): việc quản lý tài khoản và phân quyền chỉ làm trên T.A Portal (nội bộ T.A). Customer Portal chưa làm phân quyền: khách hàng dùng một tài khoản cho mọi chức năng như trước.
@@ -30,9 +30,9 @@ Giữ lại: file migration 029 và script 047/048 (029 đã EXECUTED trên TAPo
 
 ## Git
 - Branch: feature/customer-portal-mvp01
-- Commit SHA: xem report
+- Commit SHA: 03432e8
 - PR:
-- Merge: xem report
+- Merge: fast-forward main
 - Merge SHA:
 
 ## Rủi ro, quyết định và việc còn lại

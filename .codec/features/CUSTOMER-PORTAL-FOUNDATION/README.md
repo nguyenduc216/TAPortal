@@ -51,4 +51,4 @@ CHECKPOINT_4A: PASS (existing artifact integrity, isolated localhost startup and
 | `CUSTOMER-PORTAL-FOUNDATION-CHG-20261106T235029Z-86E87C` | 2026-11-06 | E-invoice: create a draft (status DRAFT) when MISA cannot sign, instead of failing | 4c6618d | EXECUTED | DEPLOYED | MERGED |
 | `CUSTOMER-PORTAL-FOUNDATION-CHG-20261107T004158Z-0D7E07` | 2026-11-07 | E-invoice settings: MISA HSM warning and issue mode (HSM signed / draft for manual signing / none) | a917153 | EXECUTED | DEPLOYED | MERGED |
 | `CUSTOMER-PORTAL-FOUNDATION-CHG-20261107T020426Z-95622D` | 2026-11-07 | Customer Portal: staff accounts and per-function permissions (Xem / Quản lý) | c16e082 | EXECUTED | DEPLOYED | MERGED |
-| `CUSTOMER-PORTAL-FOUNDATION-CHG-20261107T022032Z-9A2C1B` | 2026-11-07 | Revert Customer Portal staff accounts and per-function permissions (operator: TA Portal only) | — | NOT_APPLICABLE | NOT_PUBLISHED | PENDING_APPROVAL |
+| `CUSTOMER-PORTAL-FOUNDATION-CHG-20261107T022032Z-9A2C1B` | 2026-11-07 | Revert Customer Portal staff accounts and per-function permissions (operator: TA Portal only) | 03432e8 | NOT_APPLICABLE | DEPLOYED | MERGED |
