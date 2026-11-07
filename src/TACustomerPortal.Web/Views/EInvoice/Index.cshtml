@@ -9,7 +9,7 @@
     var canEdit = Model.CanManage && Model.Linked && Model.ServiceReady;
 }
 @if (!Model.Linked) { <partial name="_PaymentsNotLinked" /> }
-else if (!Model.ServiceReady) { <aside class="cp-note" style="margin-bottom:14px" data-cp-not-ready>@UiIcon.Render("info-circle")<div><strong>Dịch vụ hóa đơn điện tử đang được T.A cấu hình.</strong> Vui lòng liên hệ T.A nếu cần gấp.</div></aside> }
+else if (!Model.ServiceReady) { <aside class="cp-note" style="margin-bottom:14px" data-cp-not-ready>@UiIcon.Render("info-circle")<div><strong>Dịch vụ hóa đơn điện tử đang được cấu hình.</strong> Vui lòng liên hệ bộ phận hỗ trợ Hóa đơn tự động nếu cần gấp.</div></aside> }
 <div asp-validation-summary="ModelOnly" class="cp-alert" role="alert"></div>
 <div class="cp-grid cp-grid--2">
     <div>
@@ -39,7 +39,7 @@ else if (!Model.ServiceReady) { <aside class="cp-note" style="margin-bottom:14px
                     <div class="cp-field"><label asp-for="Account.TaxCode" class="cp-label is-required">Mã số thuế người bán</label><div class="cp-input-wrap">@UiIcon.Render("receipt-tax")<input asp-for="Account.TaxCode" class="cp-input" inputmode="numeric" maxlength="14" autocomplete="off" required disabled="@(!canEdit)" /></div><span asp-validation-for="Account.TaxCode" class="cp-error"></span></div>
                     <div class="cp-field"><label asp-for="Account.Username" class="cp-label is-required">Tên đăng nhập MISA meInvoice</label><div class="cp-input-wrap">@UiIcon.Render("user")<input asp-for="Account.Username" class="cp-input" maxlength="150" autocomplete="off" required disabled="@(!canEdit)" /></div><span asp-validation-for="Account.Username" class="cp-error"></span></div>
                     <div class="cp-field"><label asp-for="Account.Password" class="cp-label is-required">Mật khẩu MISA meInvoice</label><div class="cp-input-wrap">@UiIcon.Render("lock")<input asp-for="Account.Password" type="password" class="cp-input" maxlength="200" autocomplete="new-password" required disabled="@(!canEdit)" value="" /></div><span asp-validation-for="Account.Password" class="cp-error"></span>
-                        <div class="cp-hint">Mật khẩu chỉ dùng để xác thực với MISA lúc kết nối; T.A không lưu mật khẩu.</div></div>
+                        <div class="cp-hint">Mật khẩu chỉ dùng để xác thực với MISA lúc kết nối; Hóa đơn tự động không lưu mật khẩu.</div></div>
                 </div>
                 @if (canEdit) {<div class="cp-card__foot"><button class="cp-btn cp-btn--primary" type="submit" style="margin-left:auto">@UiIcon.Render("lock-open")<span>@(s.IsConnected ? "Kết nối lại" : "Kết nối MISA meInvoice")</span></button></div>}
             </form>

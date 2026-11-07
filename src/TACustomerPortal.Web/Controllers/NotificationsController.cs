@@ -28,7 +28,7 @@ public sealed class NotificationsController(ICurrentCustomerContext customer, No
         if (!CanManage(m)) return Forbid();
         var errors = await settings.SaveRecipientsAsync(m.CustomerId, email, zaloPhone, telegramChatId, events ?? [], Actor, HttpContext.RequestAborted);
         if (errors.Count > 0) { Response.StatusCode = StatusCodes.Status400BadRequest; return View(nameof(Index), await Model(m, errors, "RECIPIENTS")); }
-        Flash("Đã lưu nơi nhận thông báo từ T.A.");
+        Flash("Đã lưu nơi nhận thông báo từ Hóa đơn tự động.");
         return RedirectToAction(nameof(Index));
     }
 

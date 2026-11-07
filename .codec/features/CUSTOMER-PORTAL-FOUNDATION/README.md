@@ -53,3 +53,4 @@ CHECKPOINT_4A: PASS (existing artifact integrity, isolated localhost startup and
 | `CUSTOMER-PORTAL-FOUNDATION-CHG-20261107T020426Z-95622D` | 2026-11-07 | Customer Portal: staff accounts and per-function permissions (Xem / Quản lý) | c16e082 | EXECUTED | DEPLOYED | MERGED |
 | `CUSTOMER-PORTAL-FOUNDATION-CHG-20261107T022032Z-9A2C1B` | 2026-11-07 | Revert Customer Portal staff accounts and per-function permissions (operator: TA Portal only) | 03432e8 | NOT_APPLICABLE | DEPLOYED | MERGED |
 | `CUSTOMER-PORTAL-FOUNDATION-CHG-20261107T041035Z-5D1386` | 2026-11-07 | Drop the unused Customer Portal member permissions (migration 030) | 9d2764d | EXECUTED | DEPLOYED | MERGED |
+| `CUSTOMER-PORTAL-FOUNDATION-CHG-20261107T070538Z-03398E` | 2026-11-07 | Xung ho Hoa don tu dong tren Customer Portal, dong San pham cua T.A cuoi sidebar | — | NOT_APPLICABLE | NOT_PUBLISHED | PENDING_APPROVAL |

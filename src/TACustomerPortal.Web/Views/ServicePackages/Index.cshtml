@@ -40,10 +40,10 @@
     </section>
 </div>
 
-<div class="cp-section"><h2>Chọn gói</h2><p>@(Model.CanManage ? "Sau khi bạn đặt mua, T.A xác nhận thanh toán và số lượng được cộng ngay vào doanh nghiệp." : "Chỉ chủ sở hữu hoặc quản trị doanh nghiệp được mua gói.")</p></div>
+<div class="cp-section"><h2>Chọn gói</h2><p>@(Model.CanManage ? "Sau khi bạn đặt mua, Hóa đơn tự động xác nhận thanh toán và số lượng được cộng ngay vào doanh nghiệp." : "Chỉ chủ sở hữu hoặc quản trị doanh nghiệp được mua gói.")</p></div>
 @if (Model.Packages.Count == 0)
 {
-    <section class="cp-card"><div class="cp-empty" data-sp-no-packages>@UiIcon.Render("package")<p>Hiện chưa có gói dịch vụ đang mở bán. Vui lòng liên hệ T.A.</p></div></section>
+    <section class="cp-card"><div class="cp-empty" data-sp-no-packages>@UiIcon.Render("package")<p>Hiện chưa có gói dịch vụ đang mở bán. Vui lòng liên hệ bộ phận hỗ trợ Hóa đơn tự động.</p></div></section>
 }
 else
 {

@@ -3,7 +3,7 @@
     ViewData["Title"] = "Hồ sơ doanh nghiệp";
     ViewData["Eyebrow"] = "Doanh nghiệp";
     ViewData["Heading"] = Model.Name;
-    ViewData["Subtitle"] = "Thông tin doanh nghiệp đang truy cập. Cần thay đổi? Liên hệ quản trị viên T.A.";
+    ViewData["Subtitle"] = "Thông tin doanh nghiệp đang truy cập. Cần thay đổi? Liên hệ bộ phận hỗ trợ Hóa đơn tự động.";
 }
 <div class="cp-grid cp-grid--2">
     <section class="cp-card" aria-labelledby="companyInfo">
@@ -22,7 +22,7 @@
         <div class="cp-card__head"><span class="cp-blob cp-blob--gold">@UiIcon.Render("shield-check")</span><h2 id="yourRole">Quyền của bạn</h2></div>
         <div class="cp-card__body">
             <span class="cp-badge cp-badge--green" style="font-size:14px;padding:6px 14px">@PortalRoleText.Label(Model.Role)</span>
-            <p class="cp-hint" style="margin-top:12px">Quyền chỉ áp dụng cho doanh nghiệp này trong Customer Portal.</p>
+            <p class="cp-hint" style="margin-top:12px">Quyền chỉ áp dụng cho doanh nghiệp này trong Hóa đơn tự động.</p>
         </div>
         <div class="cp-card__foot"><a class="cp-btn cp-btn--ghost cp-btn--block" asp-controller="Account" asp-action="SelectCustomer">@UiIcon.Render("switch-horizontal")<span>Đổi doanh nghiệp</span></a></div>
     </section>
@@ -31,7 +31,7 @@
         <div class="cp-card__body">
             @if (ViewData["LogoUnavailable"] is true)
             {
-                <p class="cp-muted">Chức năng logo đang được T.A cập nhật, vui lòng quay lại sau.</p>
+                <p class="cp-muted">Chức năng logo đang được cập nhật, vui lòng quay lại sau.</p>
             }
             else
             {

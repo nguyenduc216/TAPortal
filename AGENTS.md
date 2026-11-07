@@ -87,10 +87,15 @@ Operator (2026-11-05): "Tôi cho phép bạn chạy deployed, migration, push v�
 - Production database reads (operator, 2026-11-05: "tôi cấp quyền cho bạn đọc database"): allowed without asking, read-only, only via `deploy/windows/Invoke-TAReadQuery.ps1` (refuses write/DDL/EXEC keywords and runs inside a transaction that is always rolled back, with a 5-second lock timeout). Use it to check and verify (counts, statuses, reconciliation). Never write data this way (writes go through migrations or the applications), never print or store secrets, and never copy query results containing customer data into Git, `.codec` or reports — summarise with counts instead.
 
 ## CUSTOMER PORTAL PARTNER NEUTRALITY (2026-11-04, operator rule)
-- Nothing a customer sees in `TACustomerPortal.Web` (views, page titles/subtitles, flash and validation messages, errors, emails, downloads) names T.A's integration partners: Tingee, its operator HENO, or their domains. Use neutral wording ("dịch vụ thanh toán", "liên kết ngân hàng") and say T.A provides the service.
+- Nothing a customer sees in `TACustomerPortal.Web` (views, page titles/subtitles, flash and validation messages, errors, emails, downloads) names T.A's integration partners: Tingee, its operator HENO, or their domains. Use neutral wording ("dịch vụ thanh toán", "liên kết ngân hàng") and say Hóa đơn tự động provides the service.
 - Text that comes from a partner (API error messages, notes from the shared bank catalog) is shown only through `PartnerText.Scrub` (`src/TACustomerPortal.Web/Services/PartnerText.cs`); `Flash()` already scrubs. Add any new partner to `PartnerText.Names` and its pattern.
 - Code identifiers, namespaces, SQL table names, server logs and the Admin portal (`TAPortal.Web`) are not affected.
 - Enforced by `SafeCustomerPartnerNeutralityTests` (views and string literals) and `SafeCustomerPaymentsTests.PaymentPagesNeverNamePartners` (rendered pages); a new customer page with partner data must be added to that test.
+
+## CUSTOMER PORTAL BRAND (2026-11-07, operator rule)
+- The Customer Portal is the product "Hóa đơn tự động": every text a customer sees (brand, titles, messages, emails, page metadata) speaks as "Hóa đơn tự động" and never names T.A or "Customer Portal". Support wording: "bộ phận hỗ trợ Hóa đơn tự động".
+- The only exception is one small line at the bottom of the sidebar: "Sản phẩm của Tư vấn giải pháp T.A", linking to https://tuvangiaiphapta.vn (`.cp-maker` in `Views/Shared/_Layout.cshtml`). Customer data (e.g. a company whose own name contains "T.A") is not affected.
+- Enforced by `SafeCustomerBrandTests`.
 
 ## CUSTOMER PORTAL HOVER RULE (2026-11-04, operator rule)
 - Every clickable white box in `TACustomerPortal.Web` (card links `a.cp-card`, picker tiles such as `.cp-bank-pick a`, company and filter tiles, package cards `.cp-plan`) turns light orange on hover: `background: var(--cp-hover-bg)` and `border-color: var(--cp-hover-line)` (tokens in `wwwroot/css/customer.css`). New clickable boxes use the same tokens. Enforced by `SafeCustomerPartnerNeutralityTests.ClickableWhiteBoxesTurnLightOrangeOnHover`.

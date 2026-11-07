@@ -7,7 +7,7 @@
     var canLink = Model.CanManage && Model.Linked && Model.ApiConfigured;
 }
 @if (!Model.Linked) { <partial name="_PaymentsNotLinked" /> }
-else if (!Model.ApiConfigured) { <aside class="cp-note" style="margin-bottom:14px" data-cp-not-ready>@UiIcon.Render("info-circle")<div><strong>Dịch vụ liên kết ngân hàng đang được T.A cấu hình.</strong> Bạn sẽ liên kết được tài khoản ngay khi T.A hoàn tất; vui lòng liên hệ T.A nếu cần gấp.</div></aside> }
+else if (!Model.ApiConfigured) { <aside class="cp-note" style="margin-bottom:14px" data-cp-not-ready>@UiIcon.Render("info-circle")<div><strong>Dịch vụ liên kết ngân hàng đang được cấu hình.</strong> Bạn sẽ liên kết được tài khoản ngay khi cấu hình hoàn tất; vui lòng liên hệ bộ phận hỗ trợ Hóa đơn tự động nếu cần gấp.</div></aside> }
 <section class="cp-card">
     <div class="cp-toolbar">
         <strong>@Model.Accounts.Count tài khoản</strong>

@@ -2,20 +2,20 @@
 @{ ViewData["Title"] = "Đăng nhập"; }
 <div class="cp-auth">
     <section class="cp-auth__panel" aria-hidden="true">
-        <span class="cp-brand"><span class="cp-brand__mark">T<span>A</span></span><span class="cp-brand__text">T.A Portal<small>Khách hàng</small></span></span>
+        <span class="cp-brand"><img src="~/images/logo.svg" class="cp-brand__logo" alt="" width="34" height="34" /><span class="cp-brand__text">Hóa đơn tự động<small>Thu tiền &amp; xuất hóa đơn</small></span></span>
         <div class="cp-auth__headline">
             <h1>Doanh nghiệp của bạn, <em>trong một nơi.</em></h1>
-            <p>Theo dõi hồ sơ doanh nghiệp và làm việc cùng T.A một cách an toàn, rõ ràng.</p>
+            <p>Thu tiền bằng QR, tự động xuất hóa đơn điện tử và báo cho khách hàng — an toàn, rõ ràng.</p>
         </div>
         <ul class="cp-auth__points">
             <li><span>@UiIcon.Render("building")</span>Hồ sơ doanh nghiệp luôn cập nhật</li>
             <li><span>@UiIcon.Render("shield-check")</span>Quyền truy cập theo từng doanh nghiệp</li>
-            <li><span>@UiIcon.Render("users-group")</span>Đồng hành cùng đội ngũ T.A</li>
+            <li><span>@UiIcon.Render("users-group")</span>Đội ngũ hỗ trợ đồng hành</li>
         </ul>
     </section>
     <div class="cp-auth__form">
         <div class="cp-auth__card">
-            <div class="cp-eyebrow">Customer Portal</div>
+            <div class="cp-eyebrow">Hóa đơn tự động</div>
             <h2>Chào mừng trở lại</h2>
             <p>Đăng nhập để truy cập doanh nghiệp của bạn.</p>
             <form method="post" asp-action="Login">

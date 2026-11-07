@@ -3,7 +3,7 @@
 @{
     ViewData["Title"] = "Cài đặt thông báo";
     ViewData["Eyebrow"] = "Thanh toán";
-    ViewData["Subtitle"] = "Nơi T.A gửi thông báo cho doanh nghiệp, và các kênh doanh nghiệp dùng để báo cho khách hàng của mình khi nhận tiền.";
+    ViewData["Subtitle"] = "Nơi Hóa đơn tự động gửi thông báo cho doanh nghiệp, và các kênh doanh nghiệp dùng để báo cho khách hàng của mình khi nhận tiền.";
     var r = Model.Recipients;
 }
 @if (Model.Errors.Count > 0)
@@ -11,9 +11,9 @@
     <div class="cp-error" role="alert" style="margin-bottom:14px" data-cp-notify-errors>@foreach (var e in Model.Errors) {<div>@e</div>}</div>
 }
 <form class="cp-card" method="post" asp-action="Recipients" style="margin-bottom:14px" data-cp-recipients>
-    <div class="cp-card__head"><span class="cp-blob">@UiIcon.Render("bell")</span><h2>Nhận thông báo từ T.A</h2></div>
+    <div class="cp-card__head"><span class="cp-blob">@UiIcon.Render("bell")</span><h2>Nhận thông báo từ Hóa đơn tự động</h2></div>
     <div class="cp-card__body">
-        <p class="cp-muted">T.A gửi thông báo đơn hàng nhận tiền và giao dịch cần xử lý của doanh nghiệp tới các địa chỉ dưới đây. Để trống nếu không muốn nhận qua kênh đó.</p>
+        <p class="cp-muted">Hóa đơn tự động gửi thông báo đơn hàng nhận tiền và giao dịch cần xử lý của doanh nghiệp tới các địa chỉ dưới đây. Để trống nếu không muốn nhận qua kênh đó.</p>
         <div class="cp-form-grid">
             <div class="cp-field"><label class="cp-label" for="rEmail">Email</label><div class="cp-input-wrap">@UiIcon.Render("mail")<input class="cp-input" id="rEmail" type="email" name="email" value="@r.Email" maxlength="256" placeholder="ketoan@congty.vn" /></div></div>
             <div class="cp-field"><label class="cp-label" for="rZalo">Số điện thoại Zalo</label><div class="cp-input-wrap">@UiIcon.Render("phone")<input class="cp-input" id="rZalo" name="zaloPhone" value="@r.ZaloPhone" maxlength="20" placeholder="0912345678" /></div></div>

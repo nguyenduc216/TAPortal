@@ -24,7 +24,7 @@ public sealed class ServicePackagesController(ICurrentCustomerContext customer, 
         if (!CanManage(m)) return Forbid();
         var (outcome, purchase) = await store.RequestAsync(m.CustomerId, packageId, ServicePurchaseVia.Customer, Actor);
         if (outcome == ServicePurchaseOutcome.Done && purchase is not null)
-            Flash($"Đã tạo yêu cầu mua {purchase.PackageName} (mã {purchase.PurchaseNo}, {ServicePackageRules.Money(purchase.Amount)}). Số lượng sẽ được cộng ngay khi T.A xác nhận đã nhận thanh toán.");
+            Flash($"Đã tạo yêu cầu mua {purchase.PackageName} (mã {purchase.PurchaseNo}, {ServicePackageRules.Money(purchase.Amount)}). Số lượng sẽ được cộng ngay khi Hóa đơn tự động xác nhận đã nhận thanh toán.");
         else
             Flash(outcome == ServicePurchaseOutcome.AuditUnavailable ? "Chưa tạo được yêu cầu mua gói, vui lòng thử lại sau." : "Gói này không còn mở bán. Vui lòng chọn gói khác.", error: true);
         return RedirectToAction(nameof(Index));

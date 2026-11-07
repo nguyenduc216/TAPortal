@@ -21,7 +21,7 @@ public sealed class EmailOptions
     public string? Username { get; set; }
     public string? Password { get; set; }
     public string? FromAddress { get; set; }
-    public string FromName { get; set; } = "T.A Customer Portal";
+    public string FromName { get; set; } = "Hóa đơn tự động";
     public string? PublicBaseUrl { get; set; }
 
     public bool IsConfigured =>

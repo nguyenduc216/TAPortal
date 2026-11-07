@@ -331,7 +331,7 @@ public sealed class SafeCustomerPaymentsTests
         Assert.Contains("chưa được kích hoạt", WebUtility.HtmlDecode(await c.GetStringAsync("/banks")));
         var r = await Post(c, "/banks/add", await Token(c, "/banks"), new() { ["Bin"] = "970422", ["AccountType"] = "personal-account" });
         Assert.Equal(HttpStatusCode.BadRequest, r.StatusCode);
-        Assert.Contains("chưa được T.A kích hoạt dịch vụ thanh toán", WebUtility.HtmlDecode(await r.Content.ReadAsStringAsync()));
+        Assert.Contains("chưa được kích hoạt dịch vụ thanh toán", WebUtility.HtmlDecode(await r.Content.ReadAsStringAsync()));
         Assert.Empty(tingee.CreateVaRequests);
     }
 
@@ -343,7 +343,7 @@ public sealed class SafeCustomerPaymentsTests
         tingee.IsConfigured = false;
         var html = WebUtility.HtmlDecode(await Client(f).GetStringAsync("/banks"));
         Assert.Contains("data-cp-not-ready", html);
-        Assert.Contains("đang được T.A cấu hình", html);
+        Assert.Contains("đang được cấu hình", html);
         Assert.DoesNotContain("href=\"/banks/add\"", html, StringComparison.OrdinalIgnoreCase);
         tingee.IsConfigured = true;
         html = WebUtility.HtmlDecode(await Client(f).GetStringAsync("/banks"));
@@ -904,7 +904,7 @@ public sealed class SafeCustomerPaymentsTests
         using var owner = Factory("OWNER", out _, out _);
         var c = Client(owner);
         var page = WebUtility.HtmlDecode(await c.GetStringAsync("/notifications"));
-        Assert.Contains("Nhận thông báo từ T.A", page);
+        Assert.Contains("Nhận thông báo từ Hóa đơn tự động", page);
         Assert.Contains("data-cp-channel=\"SMTP\"", page);
         Assert.Contains("data-cp-channel=\"TELEGRAM_GROUP\"", page);
         Assert.Contains("data-cp-channel=\"ZALO_OA\"", page);

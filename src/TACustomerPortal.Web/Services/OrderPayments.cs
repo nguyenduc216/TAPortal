@@ -66,7 +66,7 @@ public sealed class OrderPayments(IPaymentStore store, ITingeeApi tingee, TimePr
         {
             logger.LogWarning(ex, "QR not issued for order {OrderNo}.", order.OrderNo);
             var error = ex is TingeeApiException t ? PartnerText.Scrub($"Không tạo được QR (mã {t.Code}): {t.TingeeMessage}")
-                : ex is TingeeNotConfiguredException ? "Dịch vụ thanh toán chưa sẵn sàng. Vui lòng liên hệ T.A." : "Không kết nối được dịch vụ thanh toán.";
+                : ex is TingeeNotConfiguredException ? "Dịch vụ thanh toán chưa sẵn sàng. Vui lòng liên hệ bộ phận hỗ trợ Hóa đơn tự động." : "Không kết nối được dịch vụ thanh toán.";
             var failed = order with { LastError = error };
             await store.UpdateOrderAsync(customerId, failed, actor);
             return new(failed, error);

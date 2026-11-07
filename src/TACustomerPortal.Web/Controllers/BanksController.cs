@@ -50,14 +50,14 @@ public sealed partial class BanksController(ICurrentCustomerContext customer, IP
         }
 
         if (bank is null || type is null) return Fail("Vui lòng chọn ngân hàng và loại tài khoản.");
-        if (merchant is not long merchantId) return Fail("Doanh nghiệp chưa được T.A kích hoạt dịch vụ thanh toán.");
-        if (!tingee.IsConfigured) return Fail("Dịch vụ liên kết ngân hàng chưa sẵn sàng. Vui lòng liên hệ T.A.");
+        if (merchant is not long merchantId) return Fail("Doanh nghiệp chưa được kích hoạt dịch vụ thanh toán.");
+        if (!tingee.IsConfigured) return Fail("Dịch vụ liên kết ngân hàng chưa sẵn sàng. Vui lòng liên hệ bộ phận hỗ trợ Hóa đơn tự động.");
         var rule = bank.Rule(type);
         Normalize(input);
         Validate(rule, input);
         var webhookUrl = tingeeOptions.Value.EffectiveVaStatusWebhookUrl;
         if (rule.AsyncResult && string.IsNullOrWhiteSpace(webhookUrl))
-            ModelState.AddModelError(string.Empty, $"Chưa liên kết được {bank.Name} lúc này vì T.A chưa hoàn tất cấu hình. Vui lòng liên hệ T.A.");
+            ModelState.AddModelError(string.Empty, $"Chưa liên kết được {bank.Name} lúc này vì hệ thống chưa hoàn tất cấu hình. Vui lòng liên hệ bộ phận hỗ trợ Hóa đơn tự động.");
         if (!ModelState.IsValid) return Fail();
 
         var notifyRoot = !rule.VaSupported || (rule.SupportsRootNotify && input.NotifyRootAccount);
@@ -126,8 +126,8 @@ public sealed partial class BanksController(ICurrentCustomerContext customer, IP
         IActionResult Fail(string message) => Json(new { ok = false, error = PartnerText.Scrub(message) });
         var bank = TingeeBankCatalog.Find(bin);
         if (bank is null) return Fail("Vui lòng chọn ngân hàng.");
-        if (await store.MerchantIdAsync(m.CustomerId) is not long merchantId) return Fail("Doanh nghiệp chưa được T.A kích hoạt dịch vụ thanh toán.");
-        if (!tingee.IsConfigured) return Fail("Dịch vụ liên kết ngân hàng chưa sẵn sàng. Vui lòng liên hệ T.A.");
+        if (await store.MerchantIdAsync(m.CustomerId) is not long merchantId) return Fail("Doanh nghiệp chưa được kích hoạt dịch vụ thanh toán.");
+        if (!tingee.IsConfigured) return Fail("Dịch vụ liên kết ngân hàng chưa sẵn sàng. Vui lòng liên hệ bộ phận hỗ trợ Hóa đơn tự động.");
         string url;
         try
         {
@@ -139,7 +139,7 @@ public sealed partial class BanksController(ICurrentCustomerContext customer, IP
         }
         catch (TingeeApiException ex) { return Fail($"Chưa mở được màn hình liên kết (mã {ex.Code}): {ex.TingeeMessage}{(ex.LogCode is null ? "" : $" — Mã log: {ex.LogCode}")}"); }
         catch (HttpRequestException ex) { logger.LogWarning(ex, "Tingee unreachable (create-bank-link-session) for customer {CustomerId}.", m.CustomerId); return Fail("Không kết nối được dịch vụ thanh toán. Vui lòng thử lại sau."); }
-        if (!TingeeOptions.IsBankLinkSdkUrl(url)) return Fail("Dịch vụ liên kết trả về địa chỉ không hợp lệ. Vui lòng liên hệ T.A.");
+        if (!TingeeOptions.IsBankLinkSdkUrl(url)) return Fail("Dịch vụ liên kết trả về địa chỉ không hợp lệ. Vui lòng liên hệ bộ phận hỗ trợ Hóa đơn tự động.");
         logger.LogInformation("BANK_LINK_SESSION customer={CustomerId} bank={Bank}", m.CustomerId, bank.Code);
         return Json(new { ok = true, url, script = tingeeOptions.Value.BankLinkSdkScript });
     }

@@ -28,8 +28,8 @@ public sealed class EInvoiceController(ICurrentCustomerContext customer, IPaymen
         input.Username = input.Username?.Trim();
         var keep = new EInvoiceAccountInput { TaxCode = input.TaxCode, Username = input.Username };
         if (await payments.MerchantIdAsync(m.CustomerId) is not long merchantId)
-            return await Page(m, settings, account: keep, connect: true, error: "Doanh nghiệp chưa được T.A kích hoạt dịch vụ thanh toán.");
-        if (!invoices.IsConfigured) return await Page(m, settings, account: keep, connect: true, error: "Dịch vụ hóa đơn chưa sẵn sàng. Vui lòng liên hệ T.A.");
+            return await Page(m, settings, account: keep, connect: true, error: "Doanh nghiệp chưa được kích hoạt dịch vụ thanh toán.");
+        if (!invoices.IsConfigured) return await Page(m, settings, account: keep, connect: true, error: "Dịch vụ hóa đơn chưa sẵn sàng. Vui lòng liên hệ bộ phận hỗ trợ Hóa đơn tự động.");
         if (!ModelState.IsValid) return await Page(m, settings, account: keep, connect: true, status: StatusCodes.Status400BadRequest);
         long accountId;
         try

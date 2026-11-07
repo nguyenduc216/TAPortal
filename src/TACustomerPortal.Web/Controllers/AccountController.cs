@@ -53,7 +53,7 @@ public sealed class AccountController(ICustomerStore store, PasswordService pass
             var reference = RequestReference;
             logger.LogError(ex, "CUSTOMER_LOGIN_DATA_UNAVAILABLE reference {Reference} sql error {SqlNumber}", reference, (ex as SqlException)?.Number);
             Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
-            ModelState.AddModelError("", $"Hệ thống tạm thời chưa kiểm tra được đăng nhập vì không truy cập được dữ liệu. Vui lòng thử lại sau hoặc báo quản trị viên T.A (mã sự cố: {reference}).");
+            ModelState.AddModelError("", $"Hệ thống tạm thời chưa kiểm tra được đăng nhập vì không truy cập được dữ liệu. Vui lòng thử lại sau hoặc báo bộ phận hỗ trợ Hóa đơn tự động (mã sự cố: {reference}).");
             return View(vm);
         }
 
@@ -114,13 +114,13 @@ public sealed class AccountController(ICustomerStore store, PasswordService pass
             var reference = RequestReference;
             logger.LogError(ex, "CUSTOMER_SIGNUP_DATA_UNAVAILABLE reference {Reference} sql error {SqlNumber}", reference, (ex as SqlException)?.Number);
             Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
-            ModelState.AddModelError("", $"Hệ thống tạm thời chưa đăng ký được. Vui lòng thử lại sau hoặc liên hệ T.A (mã sự cố: {reference}).");
+            ModelState.AddModelError("", $"Hệ thống tạm thời chưa đăng ký được. Vui lòng thử lại sau hoặc liên hệ bộ phận hỗ trợ Hóa đơn tự động (mã sự cố: {reference}).");
             return View(vm);
         }
         switch (result.Outcome)
         {
             case SignupOutcome.TaxCodeTaken:
-                ModelState.AddModelError(nameof(vm.TaxCode), "Mã số thuế này đã có tài khoản. Hãy đăng nhập, hoặc liên hệ T.A để được thêm vào doanh nghiệp.");
+                ModelState.AddModelError(nameof(vm.TaxCode), "Mã số thuế này đã có tài khoản. Hãy đăng nhập, hoặc liên hệ bộ phận hỗ trợ Hóa đơn tự động để được thêm vào doanh nghiệp.");
                 break;
             case SignupOutcome.EmailTaken:
                 ModelState.AddModelError(nameof(vm.Email), "Email này đã được dùng cho một tài khoản khác. Hãy đăng nhập hoặc dùng email khác.");
@@ -279,22 +279,22 @@ public sealed class AccountController(ICustomerStore store, PasswordService pass
         var text = $"""
             Xin chào {account.DisplayName},
 
-            Có yêu cầu đặt lại mật khẩu Customer Portal cho tài khoản {account.Username}.
+            Có yêu cầu đặt lại mật khẩu Hóa đơn tự động cho tài khoản {account.Username}.
             Mở liên kết sau để đặt mật khẩu mới (hiệu lực {minutes} phút, chỉ dùng một lần):
             {link}
 
             Nếu bạn không yêu cầu, hãy bỏ qua email này; mật khẩu hiện tại vẫn giữ nguyên.
-            T.A
+            Hóa đơn tự động
             """;
         var html = $"""
             <p>Xin chào {name},</p>
-            <p>Có yêu cầu đặt lại mật khẩu Customer Portal cho tài khoản <strong>{user}</strong>.</p>
+            <p>Có yêu cầu đặt lại mật khẩu Hóa đơn tự động cho tài khoản <strong>{user}</strong>.</p>
             <p><a href="{href}" style="display:inline-block;padding:10px 18px;background:#1d4ed8;color:#ffffff;border-radius:6px;text-decoration:none">Đặt mật khẩu mới</a></p>
             <p>Liên kết có hiệu lực {minutes} phút và chỉ dùng được một lần. Nếu nút không mở được, chép địa chỉ sau vào trình duyệt:<br><span style="word-break:break-all">{href}</span></p>
             <p>Nếu bạn không yêu cầu, hãy bỏ qua email này; mật khẩu hiện tại vẫn giữ nguyên.</p>
-            <p>T.A</p>
+            <p>Hóa đơn tự động</p>
             """;
-        return new(account.Email, "Đặt lại mật khẩu T.A Customer Portal", text, html);
+        return new(account.Email, "Đặt lại mật khẩu Hóa đơn tự động", text, html);
     }
 
     [AllowAnonymous, HttpGet("access-denied")]
