@@ -13,10 +13,10 @@
     "change_id": "ADMIN-ROLE-PERMISSIONS-CHG-20261107T030206Z-6AC11F",
     "created_at": "2026-11-07T03:02:06.802350+00:00",
     "title": "TA Portal HR: employees, login accounts per employee, departments, teams, job titles",
-    "status": "IMPLEMENTED",
-    "commit_sha": null,
+    "status": "DEPLOYED",
+    "commit_sha": "f5bcc82",
     "migration_status": "NOT_APPLICABLE",
-    "publish_status": "NOT_PUBLISHED",
-    "merge_status": "PENDING_APPROVAL"
+    "publish_status": "DEPLOYED",
+    "merge_status": "MERGED"
   }
 ]

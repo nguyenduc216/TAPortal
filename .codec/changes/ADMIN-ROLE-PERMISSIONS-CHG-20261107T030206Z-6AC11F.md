@@ -4,7 +4,7 @@
 - Change ID: `ADMIN-ROLE-PERMISSIONS-CHG-20261107T030206Z-6AC11F`
 - Created UTC: 2026-11-07T03:02:06.802350+00:00
 - Tiêu đề: TA Portal HR: employees, login accounts per employee, departments, teams, job titles
-- Trạng thái: IMPLEMENTED
+- Trạng thái: DEPLOYED
 
 ## Yêu cầu và phạm vi
 Operator (2026-11-07): T.A Portal là portal nội bộ; cần quản lý nhân viên, tài khoản đăng nhập của nhân viên và phân quyền tài khoản (phân quyền đã có ở change 9C2068). Customer Portal không làm phân quyền.
@@ -34,9 +34,9 @@ Sửa (TAPortal.Web, dùng các bảng nhân sự đã có sẵn trong TAPortalS
 
 ## Git
 - Branch: feature/customer-portal-mvp01 (gộp nhánh agent c4db71c bằng merge 1305ac1)
-- Commit SHA: xem report
+- Commit SHA: f5bcc82 (nguồn c4db71c qua merge 1305ac1)
 - PR:
-- Merge: xem report
+- Merge: fast-forward main
 - Merge SHA:
 
 ## Rủi ro, quyết định và việc còn lại
