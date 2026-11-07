@@ -478,10 +478,10 @@
     "change_id": "CUSTOMER-PORTAL-FOUNDATION-CHG-20261107T071821Z-4EA212",
     "created_at": "2026-11-07T07:18:21.733229+00:00",
     "title": "Ten nguoi gui email he thong: Hoa don tu dong",
-    "status": "IMPLEMENTED",
-    "commit_sha": null,
-    "migration_status": "NOT_EXECUTED",
-    "publish_status": "NOT_PUBLISHED",
-    "merge_status": "PENDING_APPROVAL"
+    "status": "DEPLOYED",
+    "commit_sha": "0a60596",
+    "migration_status": "EXECUTED",
+    "publish_status": "NOT_APPLICABLE",
+    "merge_status": "MERGED"
   }
 ]

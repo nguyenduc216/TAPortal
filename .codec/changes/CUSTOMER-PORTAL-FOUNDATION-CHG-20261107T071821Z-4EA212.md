@@ -4,7 +4,7 @@
 - Change ID: `CUSTOMER-PORTAL-FOUNDATION-CHG-20261107T071821Z-4EA212`
 - Created UTC: 2026-11-07T07:18:21.733229+00:00
 - Tiêu đề: Ten nguoi gui email he thong: Hoa don tu dong
-- Trạng thái: IMPLEMENTED
+- Trạng thái: DEPLOYED
 
 ## Yêu cầu và phạm vi
 Operator (2026-11-07): "bạn làm luôn phần này cho tôi đi" — tên người gửi email phía Hóa đơn tự động.
@@ -17,7 +17,7 @@ Kiểm tra (chỉ đọc): appsettings.json và web.config của site TA.Invoice
 ## Migration SQL (KHÔNG tự chạy)
 - Database: TAPortalSys
 - `033-system-email-sender-name.sql` (verify 055, rollback 056): sửa một giá trị trong một dòng có sẵn (operator đồng ý trong chat).
-- Execution: xem report
+- Execution: EXECUTED 2026-11-07T07:21:34Z
 
 ## Test và kết quả
 - Gates của Invoke-TAMigrations.
@@ -27,9 +27,9 @@ Kiểm tra (chỉ đọc): appsettings.json và web.config của site TA.Invoice
 
 ## Git
 - Branch: feature/customer-portal-mvp01
-- Commit SHA: xem report
+- Commit SHA: 0a60596
 - PR:
-- Merge: xem report
+- Merge: fast-forward main
 - Merge SHA:
 
 ## Rủi ro, quyết định và việc còn lại
