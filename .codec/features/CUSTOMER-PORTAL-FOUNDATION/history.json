@@ -468,10 +468,10 @@
     "change_id": "CUSTOMER-PORTAL-FOUNDATION-CHG-20261107T070538Z-03398E",
     "created_at": "2026-11-07T07:05:38.262144+00:00",
     "title": "Xung ho Hoa don tu dong tren Customer Portal, dong San pham cua T.A cuoi sidebar",
-    "status": "IMPLEMENTED",
-    "commit_sha": null,
+    "status": "DEPLOYED",
+    "commit_sha": "1bdb338",
     "migration_status": "NOT_APPLICABLE",
-    "publish_status": "NOT_PUBLISHED",
-    "merge_status": "PENDING_APPROVAL"
+    "publish_status": "DEPLOYED",
+    "merge_status": "MERGED"
   }
 ]

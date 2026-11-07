@@ -4,7 +4,7 @@
 - Change ID: `CUSTOMER-PORTAL-FOUNDATION-CHG-20261107T070538Z-03398E`
 - Created UTC: 2026-11-07T07:05:38.262144+00:00
 - Tiêu đề: Xung ho Hoa don tu dong tren Customer Portal, dong San pham cua T.A cuoi sidebar
-- Trạng thái: IMPLEMENTED
+- Trạng thái: DEPLOYED
 
 ## Yêu cầu và phạm vi
 Operator (2026-11-07): "Bỏ hết các nội dung liên quan tới T.A trên trang hoá đơn tự động, toàn bộ xưng hô đều là theo hoá đơn tự động. chỉ thêm 1 hàng nhỏ xíu ở phía dưới cùng của thanh sidebar "Sản phẩm của Tư vấn giải pháp T.A" và link tới trang tuvangiaiphapta.vn".
@@ -28,9 +28,9 @@ Sửa: thương hiệu sidebar / trang đăng nhập / tiêu đề trang thành 
 
 ## Git
 - Branch: feature/customer-portal-mvp01
-- Commit SHA: xem report
+- Commit SHA: 1bdb338
 - PR:
-- Merge: xem report
+- Merge: fast-forward main
 - Merge SHA:
 
 ## Rủi ro, quyết định và việc còn lại
