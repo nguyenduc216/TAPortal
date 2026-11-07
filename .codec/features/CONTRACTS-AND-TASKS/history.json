@@ -13,10 +13,10 @@
     "change_id": "CONTRACTS-AND-TASKS-CHG-20261107T064001Z-F2473F",
     "created_at": "2026-11-07T06:40:01.018885+00:00",
     "title": "Vai tro mau Nhan vien va Quan ly cho cong viec va hop dong",
-    "status": "IMPLEMENTED",
-    "commit_sha": null,
-    "migration_status": "NOT_EXECUTED",
-    "publish_status": "NOT_PUBLISHED",
-    "merge_status": "PENDING_APPROVAL"
+    "status": "DEPLOYED",
+    "commit_sha": "d5e532b",
+    "migration_status": "EXECUTED",
+    "publish_status": "NOT_APPLICABLE",
+    "merge_status": "MERGED"
   }
 ]
