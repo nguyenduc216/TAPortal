@@ -1,3 +1,4 @@
+@using TAPortal.Integrations.Tingee
 @model EInvoiceVm
 @{
     ViewData["Title"] = "Hóa đơn điện tử";
@@ -47,7 +48,9 @@ else if (!Model.ServiceReady) { <aside class="cp-note" style="margin-bottom:14px
 
         <form class="cp-card" method="post" asp-action="Save" data-cp-einvoice-settings>
             <div class="cp-card__head"><span class="cp-blob cp-blob--gold">@UiIcon.Render("file-text")</span><h2>2. Mẫu hóa đơn và xuất tự động</h2>
-                @if (s.AutoIssueEnabled && s.IsReady) {<span class="cp-badge cp-badge--green" style="margin-left:auto" data-cp-auto-on>Đang tự động xuất</span>} else {<span class="cp-badge cp-badge--soft" style="margin-left:auto">Chưa tự động</span>}</div>
+                @if (s.AutoIssueEnabled && s.IsReady && s.Mode == InvoiceIssueModes.Draft) {<span class="cp-badge cp-badge--blue" style="margin-left:auto" data-cp-auto-on>Tự động xuất nháp</span>}
+                else if (s.AutoIssueEnabled && s.IsReady) {<span class="cp-badge cp-badge--green" style="margin-left:auto" data-cp-auto-on>Đang tự động xuất</span>}
+                else {<span class="cp-badge cp-badge--soft" style="margin-left:auto">Chưa tự động</span>}</div>
             <div class="cp-card__body">
                 @if (Model.Templates is { Count: > 0 } list)
                 {
@@ -65,9 +68,17 @@ else if (!Model.ServiceReady) { <aside class="cp-note" style="margin-bottom:14px
                         <div class="cp-hint">MISA dùng mã mẫu riêng (chuỗi dài), không phải số "1": bấm "Lấy mẫu hóa đơn từ MISA", chọn mẫu rồi lưu.</div></div>
                     <div class="cp-field"><label asp-for="Template.Series" class="cp-label">Ký hiệu</label><div class="cp-input-wrap">@UiIcon.Render("hash")<input asp-for="Template.Series" class="cp-input" maxlength="20" placeholder="VD: C26TAA" disabled="@(!canEdit || !s.IsConnected)" /></div><span asp-validation-for="Template.Series" class="cp-error"></span></div>
                 </div>
-                <div class="cp-field">
-                    <label class="cp-check"><input type="checkbox" name="Template.AutoIssueEnabled" value="true" checked="@t.AutoIssueEnabled" disabled="@(!canEdit || !s.IsConnected)" /><span><strong>Tự động xuất hóa đơn khi đơn hàng QR được thanh toán đủ</strong><span class="cp-muted" style="display:block">Áp dụng cho đơn có đánh dấu "tự động xuất hóa đơn" và được thanh toán đủ từ lúc bật. Đơn đã thanh toán trước đó: xuất từ trang chi tiết đơn.</span></span></label>
-                    <input type="hidden" name="Template.AutoIssueEnabled" value="false" />
+                <div class="cp-note cp-note--warn" data-cp-hsm-warning>@UiIcon.Render("alert-triangle")<div>
+                    <strong>Ký số tự động cần chữ ký số HSM của MISA</strong>
+                    <p>MISA meInvoice chỉ ký và phát hành hóa đơn tự động khi doanh nghiệp đã đăng ký mua chữ ký số HSM (ký số từ xa) của MISA và khai báo trên MISA. Chữ ký số USB token hoặc ký phiên không dùng được cho xuất tự động. Chưa có HSM: chọn xuất hóa đơn nháp và duyệt thủ công trên MISA.</p>
+                </div></div>
+                @{ var mode = t.IssueMode ?? s.Mode; var off = !canEdit || !s.IsConnected; }
+                <div class="cp-field" role="radiogroup" aria-label="Cách xuất hóa đơn tự động" data-cp-issue-mode>
+                    <div class="cp-label">Xuất hóa đơn khi đơn hàng QR được thanh toán đủ</div>
+                    <label class="cp-check cp-check--option"><input type="radio" name="Template.IssueMode" value="@InvoiceIssueModes.Signed" checked="@(mode == InvoiceIssueModes.Signed)" disabled="@off" /><span><strong>Đã mua HSM — ký số và phát hành tự động</strong><span class="cp-muted" style="display:block">Hóa đơn được ký bằng HSM và gửi cơ quan thuế ngay khi thanh toán đủ. Chọn mục này là doanh nghiệp xác nhận đã đăng ký mua chữ ký số HSM của MISA.@if (s.HsmConfirmedAt is DateTime hsmAt) {<text> Đã xác nhận lúc @hsmAt.AddHours(7).ToString("HH:mm dd/MM/yyyy").</text>}</span></span></label>
+                    <label class="cp-check cp-check--option"><input type="radio" name="Template.IssueMode" value="@InvoiceIssueModes.Draft" checked="@(mode == InvoiceIssueModes.Draft)" disabled="@off" /><span><strong>Chưa mua HSM — xuất hóa đơn nháp, duyệt thủ công</strong><span class="cp-muted" style="display:block">Hệ thống tạo hóa đơn nháp trên MISA meInvoice khi thanh toán đủ; kế toán duyệt, ký số và phát hành trên MISA.</span></span></label>
+                    <label class="cp-check cp-check--option"><input type="radio" name="Template.IssueMode" value="@InvoiceIssueModes.None" checked="@(mode == InvoiceIssueModes.None)" disabled="@off" /><span><strong>Không xuất hóa đơn tự động</strong><span class="cp-muted" style="display:block">Xuất hóa đơn từ trang chi tiết đơn hàng khi cần.</span></span></label>
+                    <div class="cp-hint">Áp dụng cho đơn có đánh dấu "tự động xuất hóa đơn" và được thanh toán đủ từ lúc bật. Đơn đã thanh toán trước đó: xuất từ trang chi tiết đơn.</div>
                 </div>
                 <div class="cp-field">
                     <label class="cp-check"><input type="checkbox" name="Template.SendEmail" value="true" checked="@t.SendEmail" disabled="@(!canEdit || !s.IsConnected)" /><span><strong>Gửi hóa đơn qua email cho người mua</strong><span class="cp-muted" style="display:block">Khi khách hàng của đơn có email.</span></span></label>
@@ -86,7 +97,7 @@ else if (!Model.ServiceReady) { <aside class="cp-note" style="margin-bottom:14px
     </div>
     <aside class="cp-note" style="align-self:start">@UiIcon.Render("info-circle")<div>
         <strong>Cách hoạt động</strong>
-        <p>Khi đơn hàng thanh toán qua QR nhận đủ tiền, hệ thống xuất hóa đơn trên tài khoản MISA meInvoice của doanh nghiệp: hóa đơn được ký và gửi cơ quan thuế, mỗi đơn chỉ một hóa đơn.</p>
+        <p>Khi đơn hàng thanh toán qua QR nhận đủ tiền, hệ thống xuất hóa đơn trên tài khoản MISA meInvoice của doanh nghiệp, mỗi đơn chỉ một hóa đơn: có HSM thì hóa đơn được ký và gửi cơ quan thuế ngay; chưa có HSM thì tạo hóa đơn nháp để duyệt và ký trên MISA.</p>
         <p>Người mua là doanh nghiệp hoặc tổ chức: hóa đơn ghi tên đơn vị và mã số thuế. Khách lẻ: ghi tên khách; đơn không chọn khách ghi "Người mua không lấy hóa đơn".</p>
         <p>Kết quả xem ở trang chi tiết đơn hàng: số hóa đơn, tải PDF, hoặc xuất lại khi có lỗi.</p>
     </div></aside>

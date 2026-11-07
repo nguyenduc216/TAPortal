@@ -11,7 +11,8 @@ namespace TAPortal.Integrations.Tingee;
 /// <summary>dbo.CustomerInvoiceSettings (migration 022). The provider password goes to the partner only and is never stored.</summary>
 public sealed record CustomerInvoiceSettings(
     Guid CustomerId, string Provider, long? ProviderAccountId, string? ProviderTaxCode, string? ProviderUsername, string? InvoicePattern, string? InvoiceSeries,
-    bool AutoIssueEnabled, bool SendEmail, DateTime? AutoIssueFrom = null, DateTime? ConnectedAt = null)
+    bool AutoIssueEnabled, bool SendEmail, DateTime? AutoIssueFrom = null, DateTime? ConnectedAt = null,
+    string? IssueMode = null, DateTime? HsmConfirmedAt = null, Guid? HsmConfirmedBy = null)
 {
     public static CustomerInvoiceSettings Empty(Guid customerId) => new(customerId, TingeeInvoiceProviders.Misa, null, null, null, null, null, false, true);
 
@@ -19,6 +20,19 @@ public sealed record CustomerInvoiceSettings(
     public bool HasTemplate => !string.IsNullOrWhiteSpace(InvoicePattern) && !string.IsNullOrWhiteSpace(InvoiceSeries);
     /// <summary>Connected with a template: invoices can be issued (by hand, or automatically when <see cref="AutoIssueEnabled"/>).</summary>
     public bool IsReady => IsConnected && HasTemplate;
+    /// <summary>How paid orders are invoiced (migration 027); settings saved before it follow <see cref="AutoIssueEnabled"/>.</summary>
+    public string Mode => IssueMode ?? (AutoIssueEnabled ? InvoiceIssueModes.Signed : InvoiceIssueModes.None);
+}
+
+/// <summary>
+/// dbo.CustomerInvoiceSettings.IssueMode (operator 2026-11-07). MISA issues signed invoices through the API only with its HSM
+/// signature: SIGNED = the company bought it (choosing it is recorded as HsmConfirmedAt/By), DRAFT = no HSM yet, drafts
+/// are created for the accountant to approve and sign on MISA, NONE = no automatic invoice.
+/// </summary>
+public static class InvoiceIssueModes
+{
+    public const string Signed = "SIGNED", Draft = "DRAFT", None = "NONE";
+    public static bool IsValid(string? mode) => mode is Signed or Draft or None;
 }
 
 /// <summary>dbo.CustomerOrders.InvoiceStatus. DRAFT (migration 026): the invoice could not be signed, so a draft with the
@@ -84,7 +98,10 @@ public static class OrderInvoiceRules
     /// </summary>
     public static bool IsSigningFailure(TingeeApiException ex) => ex.TingeeMessage.Contains("SignService", StringComparison.OrdinalIgnoreCase);
 
-    /// <summary>Stored on a DRAFT order and shown to the company.</summary>
+    /// <summary>Stored on a DRAFT order created on purpose (no HSM: drafts are approved and signed by hand).</summary>
+    public const string ManualDraftNote = "Đã tạo hóa đơn nháp trên MISA meInvoice, chờ duyệt và ký số thủ công (chưa gửi cơ quan thuế). Duyệt, ký và phát hành bản nháp trên MISA.";
+
+    /// <summary>Stored on a DRAFT order whose signing failed, and shown to the company.</summary>
     public const string DraftNote = "Chưa ký số được nên đã tạo hóa đơn nháp trên MISA meInvoice (chưa gửi cơ quan thuế). Ký và phát hành bản nháp trên MISA, hoặc cài chữ ký số dùng được cho phát hành tự động rồi bấm Xuất lại hóa đơn.";
 
     /// <summary>Wait before the next automatic attempt: 1, 2, 4, 8 … minutes, at most an hour.</summary>
@@ -173,6 +190,18 @@ public sealed class OrderInvoicer(IOrderInvoiceStore store, ITingeeInvoiceApi in
         }
 
         var request = OrderInvoiceRules.Build(job, settings, DateOnly.FromDateTime(now.ToOffset(TingeeSignature.VietnamOffset).DateTime));
+        if (settings.Mode == InvoiceIssueModes.Draft)
+        {
+            // No HSM: only a draft, for the accountant to approve and sign on MISA.
+            try { await invoices.CreateDraftAsync(request, ct); }
+            catch (TingeeApiException draft) when (draft.Code == "2034") { }   // the draft exists already (an earlier attempt)
+            catch (Exception ex) when (ex is TingeeApiException or HttpRequestException or TaskCanceledException or TingeeNotConfiguredException && !ct.IsCancellationRequested)
+            {
+                return await NotIssued(customerId, orderId, job, manual, ex, now.UtcDateTime, ct);
+            }
+            return await Draft(customerId, orderId, job, manual, ct, OrderInvoiceRules.ManualDraftNote,
+                "Đã tạo hóa đơn nháp trên MISA meInvoice, chờ duyệt và ký số thủ công.");
+        }
         OrderInvoiceIssued result;
         try
         {
@@ -226,11 +255,12 @@ public sealed class OrderInvoicer(IOrderInvoiceStore store, ITingeeInvoiceApi in
         return new(OrderInvoiceStatus.Issued, result.InvoiceNumber is string n ? $"Đã xuất hóa đơn số {n}." : "Đã xuất hóa đơn.", result.InvoiceNumber);
     }
 
-    private async Task<OrderInvoiceOutcome> Draft(Guid customerId, Guid orderId, OrderInvoiceJob job, bool manual, CancellationToken ct)
+    private async Task<OrderInvoiceOutcome> Draft(Guid customerId, Guid orderId, OrderInvoiceJob job, bool manual, CancellationToken ct,
+        string note = OrderInvoiceRules.DraftNote, string message = "Đã tạo hóa đơn nháp vì chưa ký số được hóa đơn. Ký và phát hành bản nháp trên MISA meInvoice.")
     {
-        await store.DraftAsync(customerId, orderId, OrderInvoiceRules.DraftNote, ct);
+        await store.DraftAsync(customerId, orderId, note, ct);
         logger.LogInformation("ORDER_INVOICE_DRAFT order={OrderNo} code={Code} manual={Manual}", job.OrderNo, job.InvoiceCode, manual);
-        return new(OrderInvoiceStatus.Draft, "Đã tạo hóa đơn nháp vì chưa ký số được hóa đơn. Ký và phát hành bản nháp trên MISA meInvoice.");
+        return new(OrderInvoiceStatus.Draft, message);
     }
 
     private async Task<OrderInvoiceOutcome> NotIssued(Guid customerId, Guid orderId, OrderInvoiceJob job, bool manual, Exception ex, DateTime utcNow, CancellationToken ct)

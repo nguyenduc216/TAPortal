@@ -49,3 +49,4 @@ CHECKPOINT_4A: PASS (existing artifact integrity, isolated localhost startup and
 | `CUSTOMER-PORTAL-FOUNDATION-CHG-20261106T074510Z-F0495F` | 2026-11-06 | Danh sach don hang: cot trang thai hoa don dien tu | 1329373 | NOT_APPLICABLE | DEPLOYED | MERGED |
 | `CUSTOMER-PORTAL-FOUNDATION-CHG-20261106T145102Z-9F4A81` | 2026-11-06 | Customer Portal logo: clean vector redraw, favicon and link-preview image | 0037f2a | NOT_APPLICABLE | DEPLOYED | MERGED |
 | `CUSTOMER-PORTAL-FOUNDATION-CHG-20261106T235029Z-86E87C` | 2026-11-06 | E-invoice: create a draft (status DRAFT) when MISA cannot sign, instead of failing | 4c6618d | EXECUTED | DEPLOYED | MERGED |
+| `CUSTOMER-PORTAL-FOUNDATION-CHG-20261107T004158Z-0D7E07` | 2026-11-07 | E-invoice settings: MISA HSM warning and issue mode (HSM signed / draft for manual signing / none) | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |

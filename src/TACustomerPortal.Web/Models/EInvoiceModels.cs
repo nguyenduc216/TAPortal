@@ -34,6 +34,8 @@ public sealed class EInvoiceTemplateInput
 
     public bool AutoIssueEnabled { get; set; }
     public bool SendEmail { get; set; } = true;
+    /// <summary><see cref="InvoiceIssueModes"/>; when not posted, follows <see cref="AutoIssueEnabled"/> (SIGNED / NONE).</summary>
+    public string? IssueMode { get; set; }
 }
 
 public sealed record EInvoiceVm(CustomerMembership Customer, bool CanManage, bool Linked, bool ServiceReady, CustomerInvoiceSettings Settings,

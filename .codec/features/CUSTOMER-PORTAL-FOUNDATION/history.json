@@ -423,5 +423,15 @@
     "migration_status": "EXECUTED",
     "publish_status": "DEPLOYED",
     "merge_status": "MERGED"
+  },
+  {
+    "change_id": "CUSTOMER-PORTAL-FOUNDATION-CHG-20261107T004158Z-0D7E07",
+    "created_at": "2026-11-07T00:41:58.166699+00:00",
+    "title": "E-invoice settings: MISA HSM warning and issue mode (HSM signed / draft for manual signing / none)",
+    "status": "IMPLEMENTED",
+    "commit_sha": null,
+    "migration_status": "NOT_EXECUTED",
+    "publish_status": "NOT_PUBLISHED",
+    "merge_status": "PENDING_APPROVAL"
   }
 ]

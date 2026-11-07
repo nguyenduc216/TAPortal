@@ -193,7 +193,67 @@ public sealed class SafeCustomerEInvoiceTests
         Assert.False(OrderInvoiceRules.IsSigningFailure(new TingeeApiException("400", "Misa API error")));
     }
 
+    // Operator 2026-11-07: without MISA's HSM the company chooses drafts, approved and signed by hand on MISA.
+    [Fact]
+    public async Task InDraftModePaidOrdersGetADraftAndNothingIsSigned()
+    {
+        var (store, api, invoicer, customer, order) = Setup(buyerEmail: "ketoan@namphat.vn");
+        store.Settings[customer] = store.Settings[customer] with { IssueMode = InvoiceIssueModes.Draft };
+        Assert.Equal(0, await invoicer.RunOnceAsync());     // no invoice issued
+        Assert.Empty(api.Issued);
+        Assert.Single(api.Drafts);
+        var o = store.Order(order);
+        Assert.Equal((OrderInvoiceStatus.Draft, OrderInvoiceRules.ManualDraftNote), (o.InvoiceStatus, o.InvoiceError));
+        Assert.Equal(o.InvoiceCode, api.Drafts[0].InvoiceCode);
+        Assert.Empty(api.Emails);
+        Assert.Equal(0, await invoicer.RunOnceAsync());
+        Assert.Single(api.Drafts);
+        // NONE: nothing automatic; settings saved before the mode existed follow AutoIssueEnabled.
+        Assert.Equal(InvoiceIssueModes.Signed, (store.Settings[customer] with { IssueMode = null }).Mode);
+        Assert.Equal(InvoiceIssueModes.None, (store.Settings[customer] with { IssueMode = null, AutoIssueEnabled = false }).Mode);
+    }
+
     // ---- Customer Portal -------------------------------------------------------------------------------
+    [Fact]
+    public async Task TheSettingsPageWarnsAboutHsmAndOffersThreeWaysToIssue()
+    {
+        var invoices = new MemoryInvoiceStore();
+        using var f = Factory("OWNER", out var payments, out _, invoiceStore: invoices, invoiceApi: new FakeInvoiceApi());
+        payments.Merchants[A] = 9001;
+        invoices.Settings[A] = Ready(A) with { AutoIssueEnabled = false, AutoIssueFrom = null };
+        var c = Client(f);
+        var page = WebUtility.HtmlDecode(await c.GetStringAsync("/einvoice"));
+        Assert.Contains("Ký số tự động cần chữ ký số HSM của MISA", page);
+        Assert.Contains("Đã mua HSM — ký số và phát hành tự động", page);
+        Assert.Contains("Chưa mua HSM — xuất hóa đơn nháp, duyệt thủ công", page);
+        Assert.Contains("Không xuất hóa đơn tự động", page);
+        Assert.Contains("value=\"NONE\" checked", page);
+
+        // No HSM yet: drafts. Nothing is recorded as confirmed.
+        var token = await Token(c, "/einvoice");
+        var r = await Post(c, "/einvoice/save", token, new() { ["Template.Pattern"] = "1", ["Template.Series"] = "C26TAA", ["Template.IssueMode"] = "DRAFT" });
+        Assert.Equal(HttpStatusCode.Redirect, r.StatusCode);
+        var s = invoices.Settings[A];
+        Assert.Equal((InvoiceIssueModes.Draft, true, null), (s.Mode, s.AutoIssueEnabled, s.HsmConfirmedAt));
+        Assert.NotNull(s.AutoIssueFrom);
+        Assert.Contains("Tự động xuất nháp", WebUtility.HtmlDecode(await c.GetStringAsync("/einvoice")));
+
+        // HSM bought: the choice is recorded with who and when, and kept when the mode changes later.
+        r = await Post(c, "/einvoice/save", token, new() { ["Template.Pattern"] = "1", ["Template.Series"] = "C26TAA", ["Template.IssueMode"] = "SIGNED" });
+        Assert.Equal(HttpStatusCode.Redirect, r.StatusCode);
+        s = invoices.Settings[A];
+        Assert.Equal(InvoiceIssueModes.Signed, s.Mode);
+        Assert.NotNull(s.HsmConfirmedAt);
+        Assert.NotNull(s.HsmConfirmedBy);
+        Assert.Contains("Đã xác nhận lúc", WebUtility.HtmlDecode(await c.GetStringAsync("/einvoice")));
+        var confirmed = s.HsmConfirmedAt;
+        r = await Post(c, "/einvoice/save", token, new() { ["Template.Pattern"] = "1", ["Template.Series"] = "C26TAA", ["Template.IssueMode"] = "NONE" });
+        s = invoices.Settings[A];
+        Assert.Equal((InvoiceIssueModes.None, false, confirmed), (s.Mode, s.AutoIssueEnabled, s.HsmConfirmedAt));
+        r = await Post(c, "/einvoice/save", token, new() { ["Template.Pattern"] = "1", ["Template.Series"] = "C26TAA", ["Template.IssueMode"] = "AUTO" });
+        Assert.Equal(HttpStatusCode.BadRequest, r.StatusCode);
+    }
+
     [Fact]
     public async Task ADraftOrderShowsItsStatusWithoutAnError()
     {

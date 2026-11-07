@@ -126,6 +126,9 @@ public sealed class EInvoiceController(ICurrentCustomerContext customer, IPaymen
         input.Pattern = string.IsNullOrWhiteSpace(input.Pattern) ? null : input.Pattern.Trim();
         input.Series = string.IsNullOrWhiteSpace(input.Series) ? null : input.Series.Trim().ToUpperInvariant();
         if ((input.Pattern is null) != (input.Series is null)) ModelState.AddModelError(string.Empty, "Nhập đủ cả mẫu số và ký hiệu hóa đơn.");
+        input.IssueMode ??= input.AutoIssueEnabled ? InvoiceIssueModes.Signed : InvoiceIssueModes.None;
+        if (!InvoiceIssueModes.IsValid(input.IssueMode)) ModelState.AddModelError(string.Empty, "Chọn cách xuất hóa đơn tự động.");
+        input.AutoIssueEnabled = input.IssueMode is InvoiceIssueModes.Signed or InvoiceIssueModes.Draft;
         if (input.AutoIssueEnabled && !settings.IsConnected) ModelState.AddModelError(string.Empty, "Kết nối tài khoản MISA meInvoice trước khi bật xuất hóa đơn tự động.");
         if (input.AutoIssueEnabled && input.Pattern is null) ModelState.AddModelError(string.Empty, "Chọn mẫu hóa đơn trước khi bật xuất hóa đơn tự động.");
         if (!ModelState.IsValid) return await Page(m, settings, template: input, status: StatusCodes.Status400BadRequest);
@@ -134,12 +137,20 @@ public sealed class EInvoiceController(ICurrentCustomerContext customer, IPaymen
         {
             InvoicePattern = input.Pattern, InvoiceSeries = input.Series, AutoIssueEnabled = input.AutoIssueEnabled, SendEmail = input.SendEmail,
             // Orders paid before automatic invoices were turned on are never invoiced automatically (issue them from the order).
-            AutoIssueFrom = input.AutoIssueEnabled ? (settings.AutoIssueEnabled ? settings.AutoIssueFrom ?? now : now) : null
+            AutoIssueFrom = input.AutoIssueEnabled ? (settings.AutoIssueEnabled ? settings.AutoIssueFrom ?? now : now) : null,
+            IssueMode = input.IssueMode,
+            // Choosing "đã mua HSM" is the company's confirmation that it bought MISA's HSM signature: kept with who and when.
+            HsmConfirmedAt = input.IssueMode == InvoiceIssueModes.Signed ? settings.HsmConfirmedAt ?? now : settings.HsmConfirmedAt,
+            HsmConfirmedBy = input.IssueMode == InvoiceIssueModes.Signed ? settings.HsmConfirmedBy ?? Actor : settings.HsmConfirmedBy
         }, Actor);
-        logger.LogInformation("EINVOICE_SETTINGS_SAVED customer={Customer} auto={Auto} email={Email}", m.CustomerId, input.AutoIssueEnabled, input.SendEmail);
-        Flash(input.AutoIssueEnabled
-            ? "Đã lưu. Từ bây giờ, đơn hàng có \"tự động xuất hóa đơn\" được xuất hóa đơn ngay khi thanh toán đủ."
-            : "Đã lưu cài đặt hóa đơn điện tử. Xuất hóa đơn tự động đang tắt.");
+        logger.LogInformation("EINVOICE_SETTINGS_SAVED customer={Customer} mode={Mode} email={Email} hsmConfirmed={Hsm}", m.CustomerId, input.IssueMode, input.SendEmail,
+            input.IssueMode == InvoiceIssueModes.Signed && settings.HsmConfirmedAt is null);
+        Flash(input.IssueMode switch
+        {
+            InvoiceIssueModes.Signed => "Đã lưu. Đơn hàng có \"tự động xuất hóa đơn\" được xuất và ký số bằng HSM ngay khi thanh toán đủ.",
+            InvoiceIssueModes.Draft => "Đã lưu. Đơn hàng có \"tự động xuất hóa đơn\" được tạo hóa đơn nháp trên MISA khi thanh toán đủ, chờ duyệt và ký số thủ công.",
+            _ => "Đã lưu cài đặt hóa đơn điện tử. Không xuất hóa đơn tự động."
+        });
         return RedirectToAction(nameof(Index));
     }
 
@@ -180,7 +191,7 @@ public sealed class EInvoiceController(ICurrentCustomerContext customer, IPaymen
         if (status is int code) Response.StatusCode = code;
         else if (error is not null) Response.StatusCode = StatusCodes.Status400BadRequest;
         account ??= new EInvoiceAccountInput { TaxCode = settings.ProviderTaxCode ?? m.TaxCode, Username = settings.ProviderUsername };
-        template ??= new EInvoiceTemplateInput { Pattern = settings.InvoicePattern, Series = settings.InvoiceSeries, AutoIssueEnabled = settings.AutoIssueEnabled, SendEmail = settings.SendEmail };
+        template ??= new EInvoiceTemplateInput { Pattern = settings.InvoicePattern, Series = settings.InvoiceSeries, AutoIssueEnabled = settings.AutoIssueEnabled, SendEmail = settings.SendEmail, IssueMode = settings.Mode };
         var linked = await payments.MerchantIdAsync(m.CustomerId) is not null;
         return View("Index", new EInvoiceVm(m, CanManage(m), linked, invoices.IsConfigured, settings, account, template, templates, connect || !settings.IsConnected));
     }

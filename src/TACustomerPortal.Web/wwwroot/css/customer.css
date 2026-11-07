@@ -230,6 +230,12 @@ a.cp-card:hover { background: var(--cp-hover-bg); border-color: var(--cp-hover-l
 .cp-profile p { color: var(--cp-ink-3); font-size: 12.5px; }
 .cp-note { display: flex; gap: 10px; padding: 12px 14px; border-radius: var(--cp-radius-sm); background: var(--cp-blue-50); border: 1px solid var(--cp-blue-100); color: var(--cp-ink-2); font-size: 12.5px; }
 .cp-note .ta-icon { margin-top: 1px; color: var(--cp-blue-600); }
+.cp-note--warn { margin-bottom: 14px; background: #FFF7E0; border-color: #F4D58A; }
+.cp-note--warn .ta-icon { color: #B7791F; }
+.cp-note p { margin: 4px 0 0; }
+.cp-check--option { padding: 10px 12px; border: 1px solid var(--cp-line, #E3E8EF); border-radius: var(--cp-radius-sm); margin-bottom: 8px; }
+.cp-check--option:hover { background: var(--cp-hover-bg); border-color: var(--cp-hover-line); }
+.cp-check--option:has(input:checked) { border-color: var(--cp-blue-600); background: var(--cp-blue-50); }
 
 /* Forms */
 .cp-field { margin-bottom: 14px; }

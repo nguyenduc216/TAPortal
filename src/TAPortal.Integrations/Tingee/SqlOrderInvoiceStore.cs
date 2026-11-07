@@ -30,12 +30,14 @@ public sealed class SqlOrderInvoiceStore(IConfiguration configuration) : IOrderI
     {
         await using var cn = await Open(ct);
         await using var cmd = Command(cn, null, """
-SELECT Provider,ProviderAccountId,ProviderTaxCode,ProviderUsername,InvoicePattern,InvoiceSeries,AutoIssueEnabled,SendEmail,AutoIssueFrom,ConnectedAt
+SELECT Provider,ProviderAccountId,ProviderTaxCode,ProviderUsername,InvoicePattern,InvoiceSeries,AutoIssueEnabled,SendEmail,AutoIssueFrom,ConnectedAt,
+ IssueMode,HsmConfirmedAt,HsmConfirmedBy
 FROM dbo.CustomerInvoiceSettings WHERE CustomerId=@c
 """, ("@c", customerId));
         await using var r = await cmd.ExecuteReaderAsync(ct);
         return await r.ReadAsync(ct)
-            ? new(customerId, r.GetString(0), r.IsDBNull(1) ? null : r.GetInt64(1), S(r, 2), S(r, 3), S(r, 4), S(r, 5), r.GetBoolean(6), r.GetBoolean(7), D(r, 8), D(r, 9))
+            ? new(customerId, r.GetString(0), r.IsDBNull(1) ? null : r.GetInt64(1), S(r, 2), S(r, 3), S(r, 4), S(r, 5), r.GetBoolean(6), r.GetBoolean(7), D(r, 8), D(r, 9),
+                S(r, 10), D(r, 11), r.IsDBNull(12) ? null : r.GetGuid(12))
             : CustomerInvoiceSettings.Empty(customerId);
     }
 
@@ -44,11 +46,14 @@ FROM dbo.CustomerInvoiceSettings WHERE CustomerId=@c
         await using var cn = await Open(ct);
         await using var cmd = Command(cn, null, """
 UPDATE dbo.CustomerInvoiceSettings SET Provider=@p,ProviderAccountId=@acc,ProviderTaxCode=@tax,ProviderUsername=@user,InvoicePattern=@pattern,InvoiceSeries=@series,
- AutoIssueEnabled=@auto,SendEmail=@email,AutoIssueFrom=@from,ConnectedAt=@connected,UpdatedAt=SYSUTCDATETIME(),UpdatedBy=@actor WHERE CustomerId=@c;
-IF @@ROWCOUNT=0 INSERT dbo.CustomerInvoiceSettings(CustomerId,Provider,ProviderAccountId,ProviderTaxCode,ProviderUsername,InvoicePattern,InvoiceSeries,AutoIssueEnabled,SendEmail,AutoIssueFrom,ConnectedAt,UpdatedBy)
- VALUES(@c,@p,@acc,@tax,@user,@pattern,@series,@auto,@email,@from,@connected,@actor);
+ AutoIssueEnabled=@auto,SendEmail=@email,AutoIssueFrom=@from,ConnectedAt=@connected,IssueMode=@mode,HsmConfirmedAt=@hsmAt,HsmConfirmedBy=@hsmBy,
+ UpdatedAt=SYSUTCDATETIME(),UpdatedBy=@actor WHERE CustomerId=@c;
+IF @@ROWCOUNT=0 INSERT dbo.CustomerInvoiceSettings(CustomerId,Provider,ProviderAccountId,ProviderTaxCode,ProviderUsername,InvoicePattern,InvoiceSeries,AutoIssueEnabled,SendEmail,AutoIssueFrom,ConnectedAt,
+ IssueMode,HsmConfirmedAt,HsmConfirmedBy,UpdatedBy)
+ VALUES(@c,@p,@acc,@tax,@user,@pattern,@series,@auto,@email,@from,@connected,@mode,@hsmAt,@hsmBy,@actor);
 """, ("@c", s.CustomerId), ("@p", s.Provider), ("@acc", s.ProviderAccountId), ("@tax", s.ProviderTaxCode), ("@user", s.ProviderUsername), ("@pattern", s.InvoicePattern),
-            ("@series", s.InvoiceSeries), ("@auto", s.AutoIssueEnabled), ("@email", s.SendEmail), ("@from", s.AutoIssueFrom), ("@connected", s.ConnectedAt), ("@actor", actor));
+            ("@series", s.InvoiceSeries), ("@auto", s.AutoIssueEnabled), ("@email", s.SendEmail), ("@from", s.AutoIssueFrom), ("@connected", s.ConnectedAt),
+            ("@mode", s.IssueMode), ("@hsmAt", s.HsmConfirmedAt), ("@hsmBy", s.HsmConfirmedBy), ("@actor", actor));
         await cmd.ExecuteNonQueryAsync(ct);
     }
 
