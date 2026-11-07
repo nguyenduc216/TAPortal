@@ -4,7 +4,7 @@
 - Change ID: `CONTRACTS-AND-TASKS-CHG-20261107T062339Z-50D5E9`
 - Created UTC: 2026-11-07T06:23:39.023750+00:00
 - Tiêu đề: Hop dong theo khach hang, giao viec, viec cua toi, viec lap, bao cao tien do
-- Trạng thái: IMPLEMENTED
+- Trạng thái: DEPLOYED
 
 ## Yêu cầu và phạm vi
 Operator (2026-11-07), TA Portal (nội bộ): quản lý hợp đồng theo khách hàng (có file đính kèm); giao việc và kiểm soát công việc nhân viên; việc lặp tự sinh theo kỳ; báo cáo tiến độ từng người. Bổ sung của operator: một việc có nhiều người làm và một người chịu trách nhiệm chính; checklist bắt buộc, mỗi mục ghi thời điểm hoàn thành; luồng ghi chú/trao đổi; chỉ người làm, người giao và cấp giám sát thấy và tương tác (người khác không thấy việc); quyền tự tạo việc cho mình tách với quyền giao việc; dashboard "Việc của tôi" khi đăng nhập (việc chưa hoàn thành, sắp theo hạn gần nhất hoặc tương tác gần nhất, cập nhật nhanh trạng thái / checklist / trao đổi ngay trên thẻ); nút micro nhập bằng giọng nói cạnh các ô nhập văn bản.
@@ -30,9 +30,9 @@ Quyết định: không có bước duyệt (NEW → IN_PROGRESS → DONE, mở 
 
 ## Git
 - Branch: feature/customer-portal-mvp01
-- Commit SHA: xem report
+- Commit SHA: f665151
 - PR:
-- Merge: xem report
+- Merge: fast-forward main
 - Merge SHA:
 
 ## Rủi ro, quyết định và việc còn lại
