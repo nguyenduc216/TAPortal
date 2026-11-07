@@ -20,7 +20,7 @@ Quyết định: không có bước duyệt (NEW → IN_PROGRESS → DONE, mở 
 ## Migration SQL (KHÔNG tự chạy)
 - Database: TAPortalSys
 - `031-contracts-and-work-tasks.sql` (verify 051, rollback 052): 7 bảng mới (CustomerContracts, CustomerContractFiles, WorkTaskTemplates, WorkTasks, WorkTaskMembers, WorkTaskChecklistItems, WorkTaskActivities), dãy số TASK_CODE (CV + 6 số), 10 quyền CONTRACTS.* / TASKS.* cấp cho SYS_ADMIN (marker A0000031-…). Rollback từ chối khi đã có dữ liệu.
-- Execution: xem report
+- Execution: EXECUTED 2026-11-07T06:32:13Z (pre-check NOT_APPLIED; dry-run migration → verify PASS → rollback → verify NOT_APPLIED → ROLLBACK, @@TRANCOUNT=0; backup full 399 phút; gates 592/592; real run VERIFY_STATUS=PASS)
 
 ## Test và kết quả
 - Release build 0 lỗi; Safe tests 592/592 (thêm SafeAdminWorkTests, SafeAdminContractTests 20 test).

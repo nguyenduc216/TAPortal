@@ -5,7 +5,7 @@
     "title": "Hop dong theo khach hang, giao viec, viec cua toi, viec lap, bao cao tien do",
     "status": "IMPLEMENTED",
     "commit_sha": null,
-    "migration_status": "NOT_EXECUTED",
+    "migration_status": "EXECUTED",
     "publish_status": "NOT_PUBLISHED",
     "merge_status": "PENDING_APPROVAL"
   }
