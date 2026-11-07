@@ -1,0 +1,102 @@
+@model ContractEditVm
+@{
+    var isNew = Model.IsCreate;
+    var L = Model.Lookups;
+    var i = Model.Input;
+    ViewData["ParentTitle"] = "Hợp đồng";
+    ViewData["ParentController"] = "Contracts";
+    ViewData["Title"] = isNew ? "Thêm hợp đồng" : "Sửa hợp đồng";
+    ViewData["Heading"] = isNew ? "Thêm hợp đồng" : "Sửa hợp đồng: " + Model.Contract!.ContractNo;
+    ViewData["Subtitle"] = isNew ? "Tạo hợp đồng dịch vụ cho khách hàng; đính kèm file ở trang chi tiết sau khi lưu." : "Cập nhật thông tin hợp đồng. File đính kèm quản lý ở trang chi tiết.";
+    ViewData["PageIcon"] = isNew ? "plus" : "pencil";
+    // The current customer / owner stay selectable on edit even when no longer in the lookups (deleted customer, inactive employee).
+    var customers = L.Customers.ToList();
+    if (Model.Contract is { } cur && customers.All(x => x.Id != cur.CustomerId)) customers.Insert(0, new ContractCustomerOption(cur.CustomerId, cur.CustomerCode, cur.CustomerName));
+    var employees = L.Employees.ToList();
+    if (Model.Contract is { OwnerEmployeeId: Guid ownerId } cur2 && employees.All(x => x.Id != ownerId)) employees.Insert(0, new ContractEmployeeOption(ownerId, null, cur2.OwnerName ?? "—"));
+}
+<form class="card" asp-action="@(isNew ? "Create" : "Edit")" asp-route-id="@(isNew ? null : Model.Contract!.Id)" method="post" novalidate data-ta-contract-form>
+    <input type="hidden" asp-for="Input.Stamp" />
+    <div class="card-header"><h2 class="card-title">@UiIcon.Render("file-text")Thông tin hợp đồng</h2></div>
+    <div class="card-body">
+        <div asp-validation-summary="ModelOnly" class="ta-alert ta-alert--danger" role="alert"></div>
+        <div class="ta-form-grid ta-form-grid--3">
+            <div class="ta-ws-span-2">
+                <label asp-for="Input.CustomerId" class="form-label required">Khách hàng</label>
+                <select asp-for="Input.CustomerId" class="form-select" required>
+                    <option value="">-- Chọn khách hàng --</option>
+                    @foreach (var c in customers) {<option value="@c.Id" selected="@(c.Id == i.CustomerId)">@c.Name@(c.Code is null ? "" : " (" + c.Code + ")")</option>}
+                </select>
+                <span asp-validation-for="Input.CustomerId" class="invalid-feedback d-block"></span>
+            </div>
+            <div>
+                <label asp-for="Input.ContractNo" class="form-label required">Số hợp đồng</label>
+                <div class="ta-input-icon">@UiIcon.Render("hash")<input asp-for="Input.ContractNo" class="form-control" maxlength="50" autocomplete="off" required /></div>
+                <span asp-validation-for="Input.ContractNo" class="invalid-feedback d-block"></span>
+            </div>
+            <div class="ta-ws-span-2">
+                <label asp-for="Input.Title" class="form-label required">Tên hợp đồng</label>
+                <div class="ta-input-icon">@UiIcon.Render("file-text")<input asp-for="Input.Title" class="form-control" maxlength="250" required data-ta-voice /></div>
+                <span asp-validation-for="Input.Title" class="invalid-feedback d-block"></span>
+            </div>
+            <div>
+                <label asp-for="Input.Status" class="form-label required">Trạng thái</label>
+                <select asp-for="Input.Status" class="form-select" required>@foreach (var s in ContractPolicy.Statuses) {<option value="@s.Code" selected="@(s.Code == i.Status)">@s.Label</option>}</select>
+                <span asp-validation-for="Input.Status" class="invalid-feedback d-block"></span>
+            </div>
+            <div class="ta-ws-span-2">
+                <label asp-for="Input.ServiceDescription" class="form-label">Dịch vụ / phạm vi công việc</label>
+                <div class="ta-input-icon ta-input-icon--top">@UiIcon.Render("list-tree")<textarea asp-for="Input.ServiceDescription" class="form-control" rows="2" maxlength="1000" data-ta-voice></textarea></div>
+                <span asp-validation-for="Input.ServiceDescription" class="invalid-feedback d-block"></span>
+            </div>
+            <div>
+                <label asp-for="Input.OwnerEmployeeId" class="form-label">Người phụ trách</label>
+                <select asp-for="Input.OwnerEmployeeId" class="form-select">
+                    <option value="">-- Chưa giao --</option>
+                    @foreach (var e in employees) {<option value="@e.Id" selected="@(e.Id == i.OwnerEmployeeId)">@e.FullName@(e.Code is null ? "" : " (" + e.Code + ")")</option>}
+                </select>
+                <span asp-validation-for="Input.OwnerEmployeeId" class="invalid-feedback d-block"></span>
+            </div>
+            <div>
+                <label asp-for="Input.SignedDate" class="form-label">Ngày ký</label>
+                <div class="ta-input-icon">@UiIcon.Render("calendar")<input asp-for="Input.SignedDate" class="form-control" type="date" /></div>
+                <span asp-validation-for="Input.SignedDate" class="invalid-feedback d-block"></span>
+            </div>
+            <div>
+                <label asp-for="Input.StartDate" class="form-label">Ngày bắt đầu</label>
+                <div class="ta-input-icon">@UiIcon.Render("calendar")<input asp-for="Input.StartDate" class="form-control" type="date" /></div>
+                <span asp-validation-for="Input.StartDate" class="invalid-feedback d-block"></span>
+            </div>
+            <div>
+                <label asp-for="Input.EndDate" class="form-label">Ngày kết thúc</label>
+                <div class="ta-input-icon">@UiIcon.Render("calendar")<input asp-for="Input.EndDate" class="form-control" type="date" /></div>
+                <span asp-validation-for="Input.EndDate" class="invalid-feedback d-block"></span>
+                <div class="form-hint">Hợp đồng đang hiệu lực được đánh dấu "Sắp hết hạn" trong @ContractPolicy.ExpiringDays ngày cuối.</div>
+            </div>
+            <div>
+                <label asp-for="Input.ContractValue" class="form-label">Giá trị hợp đồng (đồng)</label>
+                <div class="ta-input-icon">@UiIcon.Render("cash")<input class="form-control" type="number" min="0" step="1" inputmode="numeric" id="Input_ContractValue" name="Input.ContractValue" value="@(i.ContractValue?.ToString("0", System.Globalization.CultureInfo.InvariantCulture))" /></div>
+                <span asp-validation-for="Input.ContractValue" class="invalid-feedback d-block"></span>
+            </div>
+            <div>
+                <label asp-for="Input.BillingCycle" class="form-label">Chu kỳ thanh toán</label>
+                <select asp-for="Input.BillingCycle" class="form-select">
+                    <option value="">-- Không đặt --</option>
+                    @foreach (var b in ContractPolicy.BillingCycles) {<option value="@b.Code" selected="@(b.Code == i.BillingCycle)">@b.Label</option>}
+                </select>
+                <span asp-validation-for="Input.BillingCycle" class="invalid-feedback d-block"></span>
+            </div>
+            <div></div>
+            <div class="ta-ws-span-2">
+                <label asp-for="Input.Note" class="form-label">Ghi chú</label>
+                <div class="ta-input-icon ta-input-icon--top">@UiIcon.Render("file-text")<textarea asp-for="Input.Note" class="form-control" rows="3" maxlength="2000" data-ta-voice></textarea></div>
+                <span asp-validation-for="Input.Note" class="invalid-feedback d-block"></span>
+            </div>
+        </div>
+    </div>
+    <div class="card-footer ta-form-actions">
+        @if (isNew) {<a asp-action="Index" class="btn">@UiIcon.Render("arrow-left")<span>Quay lại</span></a>}
+        else {<a asp-action="Details" asp-route-id="@Model.Contract!.Id" class="btn">@UiIcon.Render("x")<span>Hủy</span></a>}
+        <button type="submit" class="btn btn-primary ms-auto" data-ta-loading data-ta-loading-text="Đang lưu...">@UiIcon.Render("device-floppy")<span>@(isNew ? "Tạo hợp đồng" : "Lưu thay đổi")</span></button>
+    </div>
+</form>

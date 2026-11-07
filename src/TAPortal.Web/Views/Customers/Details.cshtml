@@ -1,4 +1,5 @@
 @model CustomerOverviewVm
+@inject IContractStore Contracts
 @{
     var ws = (CustomerWorkspaceHeader)ViewData["Workspace"]!;
     ViewData["Title"] = ws.Code;
@@ -53,4 +54,37 @@
         </div>
         <div class="card-footer"><a asp-action="PortalAccounts" asp-route-id="@c.Id">Quản lý quyền truy cập →</a></div>
     </section>
+    @if (AdminPermissions.Has(User, AdminPermissions.ContractsView))
+    {
+        // Hợp đồng (migration 031): read here so the customer controller keeps its dependencies; unreadable => a short notice.
+        IReadOnlyList<ContractListItem>? contracts = null;
+        try { contracts = await Contracts.ListAsync(new ContractFilter { CustomerId = c.Id }, DateTime.Today); } catch (Exception) { contracts = null; }
+        <section class="card" aria-labelledby="contractsTitle" data-ta-customer-contracts>
+            <div class="card-header"><h2 class="card-title" id="contractsTitle">@UiIcon.Render("file-text")Hợp đồng</h2>@if (contracts is not null) {<span class="ta-badge ta-badge--neutral ta-badge--plain ms-auto">@contracts.Count</span>}</div>
+            <div class="card-body">
+                @if (contracts is null)
+                {
+                    <p class="text-secondary mb-0">Không đọc được danh sách hợp đồng (chi tiết đã ghi vào nhật ký ứng dụng).</p>
+                }
+                else if (contracts.Count == 0)
+                {
+                    <p class="text-secondary mb-0">Chưa có hợp đồng nào cho khách hàng này.</p>
+                }
+                else
+                {
+                    <ul class="list-unstyled mb-0 d-flex flex-column gap-2">
+                        @foreach (var k in contracts.Take(5))
+                        {
+                            <li><a asp-controller="Contracts" asp-action="Details" asp-route-id="@k.Id"><span class="ta-code">@k.ContractNo</span> @k.Title</a>
+                                <span class="ta-badge @ContractPolicy.StatusBadge(k.Status) ta-badge--plain ms-1">@ContractPolicy.StatusLabel(k.Status)</span>@if (k.IsExpiringSoon(DateTime.Today)) {<span class="ta-badge ta-badge--warning ta-badge--plain ms-1">Sắp hết hạn</span>}</li>
+                        }
+                    </ul>
+                }
+            </div>
+            <div class="card-footer d-flex flex-wrap gap-2 align-items-center">
+                <a asp-controller="Contracts" asp-action="Index" asp-route-customerId="@c.Id">Xem tất cả hợp đồng →</a>
+                @if (AdminPermissions.Has(User, AdminPermissions.ContractsCreate)) {<a class="btn btn-sm btn-soft-primary ms-auto" asp-controller="Contracts" asp-action="Create" asp-route-customerId="@c.Id" data-ta-customer-contract-create>@UiIcon.Render("plus")<span>Thêm hợp đồng</span></a>}
+            </div>
+        </section>
+    }
 </div>

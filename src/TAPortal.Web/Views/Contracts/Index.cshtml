@@ -1,0 +1,74 @@
+@model ContractsIndexVm
+@{
+    ViewData["Title"] = "Hợp đồng";
+    ViewData["Heading"] = "Hợp đồng khách hàng";
+    ViewData["Subtitle"] = "Hợp đồng dịch vụ theo từng khách hàng, người phụ trách và file đính kèm.";
+    ViewData["PageIcon"] = "file-text";
+    var f = Model.Filter;
+    var vi = System.Globalization.CultureInfo.GetCultureInfo("vi-VN");
+    string Day(DateTime? d) => d?.ToString("dd/MM/yyyy", vi) ?? "—";
+    var canUpdate = AdminPermissions.Has(User, AdminPermissions.ContractsUpdate);
+}
+@section PageActions {
+    @if (AdminPermissions.Has(User, AdminPermissions.ContractsCreate)) {<a class="btn btn-ta-gold" asp-action="Create" asp-route-customerId="@f.CustomerId" data-ta-contract-create>@UiIcon.Render("plus")<span>Thêm hợp đồng</span></a>}
+}
+@if (Model.Error is not null) {<div class="ta-alert ta-alert--danger" role="alert">@UiIcon.Render("alert-circle")<div class="ta-alert__body">@Model.Error</div></div>}
+<section class="card ta-table-card" aria-label="Danh sách hợp đồng">
+    <form class="ta-table-toolbar d-flex flex-wrap gap-2 align-items-center" method="get" asp-action="Index">
+        <div class="ta-search">@UiIcon.Render("search")<input class="form-control" type="search" name="q" value="@f.Q" maxlength="100" aria-label="Tìm hợp đồng" placeholder="Số hợp đồng, tên hợp đồng..." /></div>
+        <select class="form-select w-auto" name="customerId" aria-label="Khách hàng">
+            <option value="">Tất cả khách hàng</option>
+            @foreach (var c in Model.Lookups.Customers) {<option value="@c.Id" selected="@(c.Id == f.CustomerId)">@c.Name@(c.Code is null ? "" : " (" + c.Code + ")")</option>}
+        </select>
+        <select class="form-select w-auto" name="status" aria-label="Trạng thái">
+            <option value="">Tất cả trạng thái</option>
+            @foreach (var s in ContractPolicy.Statuses) {<option value="@s.Code" selected="@(s.Code == f.StatusOrNull)">@s.Label</option>}
+        </select>
+        <select class="form-select w-auto" name="ownerId" aria-label="Người phụ trách">
+            <option value="">Tất cả người phụ trách</option>
+            @foreach (var e in Model.Lookups.Employees) {<option value="@e.Id" selected="@(e.Id == f.OwnerId)">@e.FullName</option>}
+        </select>
+        <label class="form-check d-inline-flex align-items-center gap-2 mb-0">
+            <input class="form-check-input" type="checkbox" name="expiring" value="true" checked="@f.Expiring" />
+            <span class="form-check-label">Sắp hết hạn (@ContractPolicy.ExpiringDays ngày)</span>
+        </label>
+        <button class="btn" type="submit">@UiIcon.Render("search")<span>Lọc</span></button>
+    </form>
+    @if (Model.Items is null)
+    {
+        <div class="ta-empty"><span class="ta-empty__icon">@UiIcon.Render("database-off")</span><p class="ta-empty__title">Không tải được dữ liệu</p></div>
+    }
+    else if (Model.Items.Count == 0)
+    {
+        <div class="ta-empty"><span class="ta-empty__icon">@UiIcon.Render("file-text")</span><p class="ta-empty__title">Không có hợp đồng phù hợp</p><p class="ta-empty__text">Đổi điều kiện lọc hoặc bấm "Thêm hợp đồng".</p></div>
+    }
+    else
+    {
+        <div class="ta-table-wrap">
+            <table class="ta-table ta-table-stack" id="contractsTable" data-ta-pager="20">
+                <thead><tr><th scope="col">Số hợp đồng</th><th scope="col">Tên hợp đồng</th><th scope="col">Khách hàng</th><th scope="col">Hiệu lực</th><th scope="col" class="text-end">Giá trị (đ)</th><th scope="col">Người phụ trách</th><th scope="col">Trạng thái</th><th scope="col" class="ta-col-actions">Thao tác</th></tr></thead>
+                <tbody>
+                @foreach (var x in Model.Items)
+                {
+                    <tr data-ta-row data-ta-contract="@x.ContractNo">
+                        <td data-label="Số hợp đồng"><span class="ta-code">@x.ContractNo</span></td>
+                        <td class="ta-cell-strong"><a class="text-reset" asp-action="Details" asp-route-id="@x.Id">@x.Title</a>@if (x.FileCount > 0) {<div class="ta-cell-sub">@x.FileCount file đính kèm</div>}</td>
+                        <td data-label="Khách hàng">@x.CustomerName@if (x.CustomerCode is not null) {<div class="ta-cell-sub">@x.CustomerCode</div>}</td>
+                        <td class="ta-nowrap" data-label="Hiệu lực">@Day(x.StartDate) – @Day(x.EndDate)@if (x.IsExpiringSoon(Model.Today)) {<div><span class="ta-badge ta-badge--warning ta-badge--plain" data-ta-expiring>Sắp hết hạn</span></div>}</td>
+                        <td class="ta-nowrap text-end" data-label="Giá trị (đ)">@(x.ContractValue?.ToString("N0", vi) ?? "—")</td>
+                        <td data-label="Người phụ trách">@(x.OwnerName ?? "—")</td>
+                        <td data-label="Trạng thái"><span class="ta-badge @ContractPolicy.StatusBadge(x.Status)">@ContractPolicy.StatusLabel(x.Status)</span></td>
+                        <td class="ta-col-actions">
+                            <div class="ta-actions">
+                                <a class="btn btn-sm btn-soft-primary" asp-action="Details" asp-route-id="@x.Id" aria-label="Mở hợp đồng @x.ContractNo">@UiIcon.Render("eye")<span>Xem</span></a>
+                                @if (canUpdate) {<a class="btn btn-sm" asp-action="Edit" asp-route-id="@x.Id" aria-label="Sửa hợp đồng @x.ContractNo">@UiIcon.Render("pencil")<span>Sửa</span></a>}
+                            </div>
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+        <div class="ta-table-footer" data-ta-pager-for="contractsTable" data-ta-unit="hợp đồng"></div>
+    }
+</section>

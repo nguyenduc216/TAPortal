@@ -63,6 +63,7 @@ builder.Services.AddScoped<IUserAccountStore, SqlUserAccountStore>();
 builder.Services.AddScoped<IRoleAdminStore, SqlRoleAdminStore>();
 builder.Services.AddScoped<IEmployeeStore, SqlEmployeeStore>();
 builder.Services.AddScoped<IHrCatalogStore, SqlHrCatalogStore>();
+builder.Services.AddScoped<IContractStore, SqlContractStore>();
 builder.Services.AddScoped<ICustomerAdminStore, SqlCustomerAdminStore>();
 builder.Services.AddScoped<ICustomerProfileStore, SqlCustomerProfileStore>();
 builder.Services.AddScoped<ICustomerImportStore, SqlCustomerImportStore>();
