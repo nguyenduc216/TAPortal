@@ -3,11 +3,11 @@
 Feature ID: `CONTRACTS-AND-TASKS`
 Change ID: `CONTRACTS-AND-TASKS-CHG-20261108T095603Z-009557`
 
-1. Mục tiêu và kết quả thực tế:
-2. Danh sách file cập nhật (relative + nếu cần absolute):
-3. Database `TAPortalSys`: migration path + thứ tự + trạng thái NOT_EXECUTED/OPERATOR_CONFIRMED:
-4. Build/test: lệnh, pass/fail/not run:
-5. Publish: project, destination đã duyệt, artifact SHA256, status:
-6. Git: branch, commit SHA, PR, merge SHA hoặc PENDING_APPROVAL:
-7. Rủi ro/rollback/việc operator cần làm:
-8. Bằng chứng kiểm tra (URL/log, không có secrets):
+1. Mục tiêu và kết quả thực tế: Chọn người phụ trách / người cùng làm bằng thẻ avatar + tên, tick chọn.
+2. Danh sách file cập nhật: xem `.codec/changes/CONTRACTS-AND-TASKS-CHG-20261108T095603Z-009557.md`.
+3. Database: không có migration.
+4. Build/test: Release build 0 lỗi; Safe tests 595/595.
+5. Publish: portal DEPLOYED 2026-11-08 16:59: source commit 2f4ae6a, artifact 2caac9e10a4e944b38a58913f6195042513b2eb4e00b35c1eed980bbf7c87496, gói 25485DF0E6F4BB475566ACA03FAADA098AEF7D32C77A5F25760A76E3B7E6A8D0, backup C:\TADeploy\backups\portal-20261108-165941, health 200.
+6. Git: branch `feature/customer-portal-mvp01`, source commit 2f4ae6a; main fast-forward.
+7. Rủi ro/việc còn lại: operator mở Tạo / giao việc để xác nhận giao diện.
+8. Bằng chứng: test Safe; log deploy.

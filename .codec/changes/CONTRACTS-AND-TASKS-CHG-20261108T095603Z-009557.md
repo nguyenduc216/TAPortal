@@ -4,7 +4,7 @@
 - Change ID: `CONTRACTS-AND-TASKS-CHG-20261108T095603Z-009557`
 - Created UTC: 2026-11-08T09:56:03.054501+00:00
 - Tiêu đề: Bo chon nhan vien co avatar, tick chon (giao viec)
-- Trạng thái: IMPLEMENTED
+- Trạng thái: DEPLOYED
 
 ## Yêu cầu và phạm vi
 Operator (2026-11-08), kèm ảnh form Tạo / giao việc: "Phần này làm theo dạng hiển thị avatar và tên nhân viên, tick chọn cho trực quan".
@@ -30,9 +30,9 @@ Operator (2026-11-08), kèm ảnh form Tạo / giao việc: "Phần này làm th
 
 ## Git
 - Branch: feature/customer-portal-mvp01
-- Commit SHA: xem report
+- Commit SHA: 2f4ae6a
 - PR:
-- Merge: xem report
+- Merge: fast-forward main
 - Merge SHA:
 
 ## Rủi ro, quyết định và việc còn lại
