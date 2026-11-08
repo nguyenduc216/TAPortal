@@ -1,0 +1,27 @@
+@model PeoplePickerVm
+@{
+    var id = "pp" + Model.Name.Replace(".", "");
+}
+<div class="ta-people" data-ta-people="@(Model.Role ?? "")">
+    @if (Model.People.Count > 8)
+    {
+        <div class="ta-input-icon ta-people__search">@UiIcon.Render("search")<input class="form-control" type="search" placeholder="Tìm theo tên hoặc mã nhân viên" aria-label="Tìm nhân viên — @Model.Label" data-ta-people-filter data-ta-voice="off" /></div>
+    }
+    <div class="ta-people__grid" role="@(Model.Multiple ? "group" : "radiogroup")" aria-label="@Model.Label">
+        @foreach (var e in Model.People)
+        {
+            var on = Model.Selected.Contains(e.Id);
+            <label class="ta-person" data-ta-person="@e.Id" data-ta-search="@(e.Name.ToLowerInvariant()) @(e.Code.ToLowerInvariant())">
+                <input class="ta-person__input" type="@(Model.Multiple ? "checkbox" : "radio")" name="@Model.Name" value="@e.Id" checked="@on" required="@(Model.Required && !Model.Multiple)" id="@id-@e.Id" />
+                <span class="ta-avatar ta-avatar--sm ta-avatar--t@(PeoplePickerVm.Tone(e.Id))" aria-hidden="true">@PeoplePickerVm.Initials(e.Name)</span>
+                <span class="ta-person__text">
+                    <span class="ta-person__name">@e.Name</span>
+                    <span class="ta-person__meta">@e.Code@(e.HasAccount ? "" : " · chưa có tài khoản")</span>
+                </span>
+                <span class="ta-person__check" aria-hidden="true">@UiIcon.Render("check")</span>
+            </label>
+        }
+    </div>
+    @if (Model.People.Count == 0) {<div class="form-hint">Chưa có nhân viên đang làm việc.</div>}
+    <div class="form-hint ta-people__empty" hidden>Không tìm thấy nhân viên phù hợp.</div>
+</div>

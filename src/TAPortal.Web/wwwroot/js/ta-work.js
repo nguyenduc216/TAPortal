@@ -55,6 +55,42 @@
         if (field instanceof HTMLSelectElement && field.hasAttribute('data-ta-autosubmit')) field.form?.requestSubmit();
     });
 
+    // ---- Employee picker (Views/Work/_PeoplePicker) -------------------------------------------------------------------
+    // Search box filters the tiles; the chosen owner is shown (and not tickable) among the co-workers.
+    document.addEventListener('input', (event) => {
+        const field = event.target;
+        if (!(field instanceof HTMLInputElement) || !field.hasAttribute('data-ta-people-filter')) return;
+        const picker = field.closest('[data-ta-people]');
+        const q = field.value.trim().toLowerCase();
+        let shown = 0;
+        picker.querySelectorAll('[data-ta-person]').forEach((tile) => {
+            const hit = q === '' || tile.dataset.taSearch.includes(q);
+            tile.hidden = !hit;
+            if (hit) shown++;
+        });
+        const empty = picker.querySelector('.ta-people__empty');
+        if (empty) empty.hidden = shown > 0;
+    });
+
+    const syncOwner = (form) => {
+        const owner = form?.querySelector('[data-ta-people="owner"] .ta-person__input:checked')?.value;
+        form?.querySelectorAll('[data-ta-people="members"] [data-ta-person]').forEach((tile) => {
+            const box = tile.querySelector('.ta-person__input');
+            const isOwner = tile.dataset.taPerson === owner;
+            tile.classList.toggle('is-owner', isOwner);
+            if (isOwner) box.checked = false;
+            box.disabled = isOwner;
+        });
+    };
+    document.addEventListener('change', (event) => {
+        const field = event.target;
+        if (field instanceof HTMLInputElement && field.closest('[data-ta-people="owner"]')) syncOwner(field.form);
+    });
+    const scanPeople = (root) => root?.querySelectorAll?.('[data-ta-people="owner"]').forEach((p) => syncOwner(p.closest('form')));
+    document.addEventListener('ta:load', () => scanPeople(document));
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => scanPeople(document));
+    else scanPeople(document);
+
     // Enter in a one-line comment box sends; Shift+Enter keeps a new line.
     document.addEventListener('keydown', (event) => {
         const field = event.target;

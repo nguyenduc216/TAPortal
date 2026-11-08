@@ -18,12 +18,9 @@
             <div class="ta-span-2"><label class="form-label" for="tTitle">Tên việc <span class="text-danger">*</span></label><div class="ta-input-icon">@UiIcon.Render("pencil")<input class="form-control" id="tTitle" name="Input.Title" value="@i.Title" maxlength="200" required data-ta-voice /></div><div class="form-hint">Mỗi công việc được tạo có tên “tên việc — kỳ T10/2026”.</div></div>
             <div class="ta-span-2"><label class="form-label" for="tDesc">Mô tả</label><div class="ta-input-icon ta-input-icon--top">@UiIcon.Render("file-text")<textarea class="form-control" id="tDesc" name="Input.Description" rows="3" maxlength="@WorkTaskPolicy.DescriptionMax" data-ta-voice>@i.Description</textarea></div></div>
             <div class="ta-span-2"><label class="form-label" for="tCheck">Checklist mỗi kỳ</label><div class="ta-input-icon ta-input-icon--top">@UiIcon.Render("checks")<textarea class="form-control" id="tCheck" name="Input.ChecklistText" rows="4" maxlength="4000" placeholder="Mỗi dòng một mục" data-ta-voice>@i.ChecklistText</textarea></div></div>
-            <div>
-                <label class="form-label" for="tOwner">Người chịu trách nhiệm chính <span class="text-danger">*</span></label>
-                <select class="form-select" id="tOwner" name="Input.OwnerEmployeeId" required>
-                    <option value="">— Chọn nhân viên —</option>
-                    @foreach (var e in L.Employees) {<option value="@e.Id" selected="@(e.Id == i.OwnerEmployeeId)">@e.Name (@e.Code)</option>}
-                </select>
+            <div class="ta-span-2">
+                <span class="form-label d-block">Người chịu trách nhiệm chính <span class="text-danger">*</span></span>
+                <partial name="_PeoplePicker" model="@(new PeoplePickerVm("Input.OwnerEmployeeId", false, L.Employees, i.OwnerEmployeeId is Guid o ? [o] : [], "Người chịu trách nhiệm chính", Required: true))" />
             </div>
             <div>
                 <label class="form-label" for="tPriority">Mức ưu tiên</label>

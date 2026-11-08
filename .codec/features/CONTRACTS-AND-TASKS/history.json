@@ -28,5 +28,15 @@
     "migration_status": "NOT_APPLICABLE",
     "publish_status": "DEPLOYED",
     "merge_status": "MERGED"
+  },
+  {
+    "change_id": "CONTRACTS-AND-TASKS-CHG-20261108T095603Z-009557",
+    "created_at": "2026-11-08T09:56:03.054501+00:00",
+    "title": "Bo chon nhan vien co avatar, tick chon (giao viec)",
+    "status": "IMPLEMENTED",
+    "commit_sha": null,
+    "migration_status": "NOT_APPLICABLE",
+    "publish_status": "NOT_PUBLISHED",
+    "merge_status": "PENDING_APPROVAL"
   }
 ]

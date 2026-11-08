@@ -114,8 +114,26 @@
 .ta-timeline { list-style: none; margin: 0 0 var(--ta-sp-3); padding: 0; display: flex; flex-direction: column; gap: var(--ta-sp-2); }
 .ta-timeline > li { padding: 8px 12px; border-left: 3px solid var(--ta-border); }
 .ta-timeline > li.is-comment { border-left-color: var(--ta-blue); background: var(--ta-surface-2); border-radius: 0 var(--ta-radius-sm) var(--ta-radius-sm) 0; }
-.ta-member-pick { max-height: 200px; overflow-y: auto; padding: 6px 10px; border: 1px solid var(--ta-border); border-radius: var(--ta-radius-btn); }
-.ta-member-pick .form-check { margin: 4px 0; }
+/* Employee picker (Views/Work/_PeoplePicker): avatar + name tiles, tick to choose. */
+.ta-people__search { max-width: 360px; margin-bottom: 8px; }
+.ta-people__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; max-height: 296px; overflow-y: auto; padding: 2px; }
+.ta-person { position: relative; display: flex; align-items: center; gap: 10px; min-width: 0; padding: 8px 36px 8px 10px; border: 1px solid var(--ta-border); border-radius: var(--ta-radius-btn); background: var(--ta-surface, #fff); cursor: pointer; transition: border-color .15s, background-color .15s, box-shadow .15s; }
+.ta-person:hover { border-color: var(--ta-blue-strong); }
+.ta-person__input { position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none; }
+.ta-person__text { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; }
+.ta-person__name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ta-person__meta { color: var(--ta-text-2); font-size: var(--ta-fs-small); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ta-person__check { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); width: 20px; height: 20px; display: grid; place-items: center; border: 1.5px solid var(--ta-border); border-radius: 50%; color: transparent; background: #fff; }
+.ta-person__check svg { width: 14px; height: 14px; }
+.ta-person:has(.ta-person__input:checked) { border-color: var(--ta-blue-strong); background: color-mix(in srgb, var(--ta-blue-strong) 7%, #fff); box-shadow: 0 0 0 1px var(--ta-blue-strong); }
+.ta-person:has(.ta-person__input:checked) .ta-person__check { border-color: var(--ta-blue-strong); background: var(--ta-blue-strong); color: #fff; }
+.ta-person:has(.ta-person__input:focus-visible) { outline: 2px solid var(--ta-blue-strong); outline-offset: 2px; }
+.ta-person[hidden] { display: none; }
+.ta-person.is-owner { opacity: .55; cursor: default; }
+.ta-person.is-owner .ta-person__meta::after { content: " · phụ trách chính"; }
+.ta-avatar--sm { width: 34px; height: 34px; flex: 0 0 34px; font-size: .8125rem; }
+.ta-avatar--t0 { background: #1d4ed8; } .ta-avatar--t1 { background: #0f766e; } .ta-avatar--t2 { background: #b45309; }
+.ta-avatar--t3 { background: #7c3aed; } .ta-avatar--t4 { background: #be123c; } .ta-avatar--t5 { background: #0369a1; }
 .ta-row--overdue > td:first-child { box-shadow: inset 3px 0 0 var(--ta-danger); }
 .ta-row--soon > td:first-child { box-shadow: inset 3px 0 0 var(--ta-gold); }
 

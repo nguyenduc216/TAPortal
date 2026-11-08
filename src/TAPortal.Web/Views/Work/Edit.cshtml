@@ -26,22 +26,14 @@
             </div>
             @if (a.CanAssign)
             {
-                <div>
-                    <label class="form-label" for="wOwner">Người chịu trách nhiệm chính <span class="text-danger">*</span></label>
-                    <select class="form-select" id="wOwner" name="Input.OwnerEmployeeId" required>
-                        <option value="">— Chọn nhân viên —</option>
-                        @foreach (var e in L.Employees) {<option value="@e.Id" selected="@(e.Id == i.OwnerEmployeeId)">@e.Name (@e.Code)@(e.HasAccount ? "" : " — chưa có tài khoản")</option>}
-                    </select>
+                <div class="ta-span-2">
+                    <span class="form-label d-block">Người chịu trách nhiệm chính <span class="text-danger">*</span></span>
+                    <partial name="_PeoplePicker" model="@(new PeoplePickerVm("Input.OwnerEmployeeId", false, L.Employees, i.OwnerEmployeeId is Guid o ? [o] : [], "Người chịu trách nhiệm chính", Required: true, Role: "owner"))" />
                 </div>
-                <div>
+                <div class="ta-span-2">
                     <span class="form-label d-block">Người cùng làm</span>
-                    <div class="ta-member-pick" role="group" aria-label="Người cùng làm">
-                        @foreach (var e in L.Employees)
-                        {
-                            <label class="form-check"><input class="form-check-input" type="checkbox" name="Input.MemberIds" value="@e.Id" checked="@i.MemberIds.Contains(e.Id)" /><span class="form-check-label">@e.Name <span class="text-secondary">(@e.Code)</span></span></label>
-                        }
-                    </div>
-                    <div class="form-hint">Người phụ trách chính được bỏ qua nếu cũng được tích ở đây.</div>
+                    <partial name="_PeoplePicker" model="@(new PeoplePickerVm("Input.MemberIds", true, L.Employees, i.MemberIds, "Người cùng làm", Role: "members"))" />
+                    <div class="form-hint">Tích chọn bao nhiêu người cũng được. Người chịu trách nhiệm chính không cần tích ở đây.</div>
                 </div>
             }
             else

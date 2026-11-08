@@ -246,9 +246,28 @@ public sealed class SafeAdminWorkTests
             Assert.Contains("chưa có quyền giao việc", page);
         }
         using (var f = Factory("STAFF", store, "TASKS.VIEW", "TASKS.ASSIGN"))
-            Assert.Contains("name=\"Input.MemberIds\"", await Client(f).GetStringAsync("/work/create"));
+        {
+            var page = WebUtility.HtmlDecode(await Client(f).GetStringAsync("/work/create"));
+            Assert.Contains("name=\"Input.MemberIds\"", page);
+            // Visual picker: owner is a radio tile, co-workers are checkbox tiles, each with an avatar.
+            Assert.Matches("type=\"radio\" name=\"Input.OwnerEmployeeId\"", page);
+            Assert.Matches("type=\"checkbox\" name=\"Input.MemberIds\"", page);
+            Assert.Contains("class=\"ta-avatar ta-avatar--sm", page);
+            Assert.DoesNotContain("<select class=\"form-select\" id=\"wOwner\"", page);
+        }
         using (var f = Factory("STAFF", store, "TASKS.REPORT.VIEW"))
             Assert.Equal(HttpStatusCode.OK, (await Client(f).GetAsync("/work/report")).StatusCode);
+    }
+
+    [Fact]
+    public void PeoplePickerInitialsAndToneAreStable()
+    {
+        Assert.Equal("VA", admin::TAPortal.Web.Models.PeoplePickerVm.Initials("Nguyễn Văn An"));
+        Assert.Equal("A", admin::TAPortal.Web.Models.PeoplePickerVm.Initials("An"));
+        Assert.Equal("?", admin::TAPortal.Web.Models.PeoplePickerVm.Initials("  "));
+        var id = Guid.NewGuid();
+        Assert.Equal(admin::TAPortal.Web.Models.PeoplePickerVm.Tone(id), admin::TAPortal.Web.Models.PeoplePickerVm.Tone(id));
+        Assert.InRange(admin::TAPortal.Web.Models.PeoplePickerVm.Tone(id), 0, 5);
     }
 
     // ---- Helpers ------------------------------------------------------------------------------------------------------------
