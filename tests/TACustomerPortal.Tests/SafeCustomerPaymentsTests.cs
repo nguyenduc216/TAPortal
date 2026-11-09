@@ -27,7 +27,7 @@ public sealed class SafeCustomerPaymentsTests
     private const string TestScheme = "SafePayments";
     internal static readonly Guid UserId = Guid.Parse("70000000-0000-0000-0000-000000000001");
     internal static readonly Guid A = Guid.Parse("a0000000-0000-0000-0000-00000000000a");
-    private static readonly Guid B = Guid.Parse("b0000000-0000-0000-0000-00000000000b");
+    internal static readonly Guid B = Guid.Parse("b0000000-0000-0000-0000-00000000000b");
 
     // ---- pure rules ------------------------------------------------------------------------------------
     [Fact]
@@ -733,9 +733,9 @@ public sealed class SafeCustomerPaymentsTests
         ["BankAccountId"] = bank.ToString(), ["QrExpireMinutes"] = "1440", ["Lines[0].ItemName"] = "Hàng", ["Lines[0].Quantity"] = "1", ["Lines[0].UnitPrice"] = price, ["Lines[0].TaxRate"] = "0"
     };
 
-    private static Contact Contact(Guid id, string code, string name) => new(id, code, name, null, null, null, null, null, null, true);
+    internal static Contact Contact(Guid id, string code, string name) => new(id, code, name, null, null, null, null, null, null, true);
 
-    private static BankAccount Bank(string bin, string status, string type = TingeeAccountTypes.Personal)
+    internal static BankAccount Bank(string bin, string status, string type = TingeeAccountTypes.Personal)
     {
         var bank = TingeeBankCatalog.Find(bin)!;
         return new(Guid.NewGuid(), bin, bank.Code, bank.Name, type, "0123456789", "NGUYEN VAN A", null, false, null, status, null, null, null, null, false, DateTime.UtcNow);
@@ -774,6 +774,8 @@ public sealed class SafeCustomerPaymentsTests
                 services.AddSingleton<ICustomerStore>(new Members(role));
                 services.RemoveAll<IPaymentStore>();
                 services.AddSingleton<IPaymentStore>(s);
+                services.RemoveAll<IProductStore>();
+                services.AddSingleton<IProductStore>(new SafeCustomerProductsTests.MemoryProductStore(s));
                 var pages = new MemoryOrderPageStore(s);
                 services.AddSingleton(pages);
                 services.RemoveAll<TAPortal.Integrations.Branding.ILogoStore>();

@@ -7,20 +7,33 @@
     var i = Model.Input;
     var lineErrors = ViewData.ModelState.TryGetValue("Lines", out var le) ? le.Errors.Select(e => e.ErrorMessage).ToList() : [];
     var ready = Model.Linked && Model.ApiConfigured && Model.Banks.Count > 0;
+    var catalog = (Model.Products ?? []).ToDictionary(p => p.Id);
+    var buyerPrices = Model.BuyerPrices ?? new Dictionary<Guid, decimal>();
+    var inv = System.Globalization.CultureInfo.InvariantCulture;
+    // Product data for the picker (JSON data block: not executed, CSP-safe; System.Text.Json escapes < > & by default). Price: catalogue price including VAT.
+    var productJson = System.Text.Json.JsonSerializer.Serialize((Model.Products ?? []).Where(p => p.IsActive).Select(p => new
+    {
+        id = p.Id, name = p.Name, unit = p.UnitName, price = p.Price, tax = p.TaxRateCode,
+        image = p.ImageAt is DateTime at ? Url.Action("Image", "Products", new { id = p.Id }) + "?v=" + LogoImage.Version(at) : null
+    }));
+    var pricesJson = System.Text.Json.JsonSerializer.Serialize(buyerPrices.ToDictionary(p => p.Key.ToString(), p => p.Value));
 }
 @if (!Model.Linked) { <partial name="_PaymentsNotLinked" /> }
 else if (Model.Banks.Count == 0)
 {
     <aside class="cp-note" style="margin-bottom:14px">@UiIcon.Render("info-circle")<div>Chưa có tài khoản ngân hàng nào đang hoạt động. <a class="cp-link" asp-controller="Banks" asp-action="Index">Liên kết tài khoản ngân hàng</a> trước khi tạo đơn.</div></aside>
 }
-<form method="post" asp-action="Create" data-cp-order-form>
+<form method="post" asp-action="Create" data-cp-order-form data-cp-prices-url="@Url.Action("BuyerPrices")">
     <div asp-validation-summary="ModelOnly" class="cp-alert" role="alert"></div>
+    <input type="hidden" name="PricesIncludeTax" value="true" />
+    <script type="application/json" data-cp-products>@Html.Raw(productJson)</script>
+    <script type="application/json" data-cp-buyer-prices>@Html.Raw(pricesJson)</script>
     <section class="cp-card" style="margin-bottom:14px">
         <div class="cp-card__head"><span class="cp-blob">@UiIcon.Render("file-invoice")</span><h2>Thông tin đơn</h2></div>
         <div class="cp-card__body cp-form-grid">
             <div class="cp-field">
                 <label class="cp-label" for="ContactId">Khách hàng</label>
-                <select class="cp-input cp-input--plain" id="ContactId" name="ContactId">
+                <select class="cp-input cp-input--plain" id="ContactId" name="ContactId" data-cp-contact>
                     <option value="">Khách lẻ (không lưu thông tin)</option>
                     @foreach (var c in Model.Contacts) {<option value="@c.Id" selected="@(c.Id == i.ContactId)">@c.Code — @c.Name</option>}
                 </select>
@@ -49,13 +62,20 @@ else if (Model.Banks.Count == 0)
         @foreach (var e in lineErrors) {<div class="cp-error" style="padding:8px 18px 0">@e</div>}
         <div class="cp-table-wrap">
             <table class="cp-table cp-lines" id="orderLines">
-                <thead><tr><th>Tên hàng hóa/dịch vụ</th><th>ĐVT</th><th class="cp-num">Số lượng</th><th class="cp-num">Đơn giá (₫)</th><th>Thuế suất</th><th class="cp-num">Thành tiền</th><th></th></tr></thead>
+                <thead><tr><th>Tên hàng hóa/dịch vụ</th><th>ĐVT</th><th class="cp-num">Số lượng</th><th class="cp-num">Đơn giá gồm VAT (₫)</th><th>Thuế suất</th><th class="cp-num">Thành tiền</th><th></th></tr></thead>
                 <tbody>
                 @for (var n = 0; n < i.Lines.Count; n++)
                 {
                     var l = i.Lines[n];
-                    <tr data-cp-line>
-                        <td><div class="cp-input-wrap">@UiIcon.Render("file-text")<input class="cp-input" name="Lines[@n].ItemName" value="@l.ItemName" maxlength="500" aria-label="Tên hàng hóa" /></div></td>
+                    var product = l.ProductId is Guid pid && catalog.TryGetValue(pid, out var found) ? found : null;
+                    decimal? usual = product is null ? null : buyerPrices.TryGetValue(product.Id, out var own) ? own : product.Price;
+                    <tr data-cp-line data-cp-usual="@usual?.ToString("0", inv)" data-cp-catalog="@product?.Price.ToString("0", inv)">
+                        <td><div class="cp-line-item">
+                            <span class="cp-product-thumb cp-product-thumb--sm" data-cp-line-thumb hidden="@(product is null)">@if (product?.ImageAt is DateTime at) {<img src="@Url.Action("Image", "Products", new { id = product.Id })?v=@LogoImage.Version(at)" alt="" />} else {@UiIcon.Render("package")}</span>
+                            <div class="cp-input-wrap">@UiIcon.Render("file-text")<input class="cp-input" name="Lines[@n].ItemName" value="@l.ItemName" maxlength="500" aria-label="Tên hàng hóa" /></div>
+                            <input type="hidden" name="Lines[@n].ProductId" value="@l.ProductId" data-cp-product-id />
+                            <input type="hidden" name="Lines[@n].RememberPrice" value="false" data-cp-remember />
+                        </div></td>
                         <td style="width:110px"><div class="cp-input-wrap">@UiIcon.Render("list-tree")<input class="cp-input" name="Lines[@n].UnitName" value="@l.UnitName" maxlength="50" aria-label="Đơn vị tính" /></div></td>
                         <td style="width:120px"><div class="cp-input-wrap">@UiIcon.Render("hash")<input class="cp-input cp-num" name="Lines[@n].Quantity" value="@l.Quantity?.ToString(System.Globalization.CultureInfo.InvariantCulture)" type="number" min="0.001" step="0.001" aria-label="Số lượng" data-cp-qty /></div></td>
                         <td style="width:160px"><div class="cp-input-wrap">@UiIcon.Render("report-money")<input class="cp-input cp-num" name="Lines[@n].UnitPrice" value="@l.UnitPrice?.ToString(System.Globalization.CultureInfo.InvariantCulture)" type="number" min="0" step="1" aria-label="Đơn giá" data-cp-price /></div></td>
@@ -67,11 +87,31 @@ else if (Model.Banks.Count == 0)
                 </tbody>
             </table>
         </div>
-        <div class="cp-card__body" style="padding-top:10px"><button type="button" class="cp-btn cp-btn--ghost cp-btn--sm" data-cp-add-line>@UiIcon.Render("plus")<span>Thêm dòng</span></button></div>
+        <div class="cp-card__body cp-line-actions" style="padding-top:10px">
+            @if (catalog.Values.Any(p => p.IsActive)) {<button type="button" class="cp-btn cp-btn--primary cp-btn--sm" data-cp-open-products>@UiIcon.Render("package")<span>Chọn sản phẩm</span></button>}
+            <button type="button" class="cp-btn cp-btn--ghost cp-btn--sm" data-cp-add-line>@UiIcon.Render("plus")<span>Thêm dòng nhập tay</span></button>
+            @if (catalog.Count == 0) {<span class="cp-muted">Thêm sản phẩm tại <a class="cp-link" asp-controller="Products" asp-action="Index">Sản phẩm</a> để chọn nhanh lần sau.</span>}
+        </div>
         <div class="cp-total"><span>Tổng thanh toán (gồm thuế)</span><span data-cp-order-total>—</span></div>
         <div class="cp-card__foot">
             <a class="cp-btn cp-btn--ghost" asp-action="Index">@UiIcon.Render("arrow-left")<span>Quay lại</span></a>
             <button class="cp-btn cp-btn--primary" type="submit" style="margin-left:auto" disabled="@(!ready)">@UiIcon.Render("qrcode")<span>Lưu và tạo QR</span></button>
         </div>
     </section>
+    <dialog class="cp-dialog cp-dialog--wide" data-cp-products-dialog aria-labelledby="productsTitle">
+        <div class="cp-dialog__head"><strong id="productsTitle">Chọn sản phẩm</strong><button type="button" class="cp-dialog__close" data-cp-dialog-close aria-label="Đóng">×</button></div>
+        <div class="cp-search">@UiIcon.Render("search")<input class="cp-input" type="search" aria-label="Tìm sản phẩm" placeholder="Tìm sản phẩm..." data-cp-products-filter /></div>
+        <div class="cp-product-grid" data-cp-products-grid></div>
+        <p class="cp-muted" style="margin:8px 0 0">Bấm vào sản phẩm để thêm vào đơn; bấm lại để tăng số lượng.</p>
+        <div class="cp-dialog__foot"><button type="button" class="cp-btn cp-btn--primary" data-cp-dialog-close>@UiIcon.Render("check")<span>Xong</span></button></div>
+    </dialog>
+    <dialog class="cp-dialog" data-cp-remember-dialog aria-labelledby="rememberTitle">
+        <div class="cp-dialog__head"><strong id="rememberTitle">Lưu giá cho khách hàng này?</strong></div>
+        <p class="cp-muted" style="margin:0 0 10px">Các sản phẩm dưới đây có đơn giá khác giá đang dùng. Chọn những giá muốn lưu cho <strong data-cp-remember-buyer></strong>; lần sau tạo đơn cho khách này sẽ tự lấy giá đã lưu. Không chọn thì vẫn dùng giá mặc định.</p>
+        <div data-cp-remember-list></div>
+        <div class="cp-dialog__foot">
+            <button type="button" class="cp-btn cp-btn--ghost" data-cp-dialog-close>Quay lại sửa</button>
+            <button type="button" class="cp-btn cp-btn--primary" data-cp-remember-confirm style="margin-left:auto">@UiIcon.Render("qrcode")<span>Lưu đơn</span></button>
+        </div>
+    </dialog>
 </form>

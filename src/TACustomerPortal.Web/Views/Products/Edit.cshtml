@@ -1,0 +1,71 @@
+@model ProductEditVm
+@{
+    var i = Model.Input;
+    var isNew = i.Id == Guid.Empty;
+    ViewData["Title"] = isNew ? "Thêm sản phẩm" : "Sửa sản phẩm";
+    ViewData["Eyebrow"] = "Sản phẩm";
+    ViewData["Subtitle"] = "Đơn giá là giá tham khảo đã gồm VAT. Khi tạo đơn có thể sửa giá cho từng khách và lưu lại cho các lần sau.";
+}
+<form class="cp-card" method="post" asp-action="@(isNew ? "Create" : "Edit")" asp-route-id="@(isNew ? null : i.Id)" enctype="multipart/form-data" data-ta-hard>
+    <div class="cp-card__body">
+        <div asp-validation-summary="ModelOnly" class="cp-alert" role="alert"></div>
+        <div class="cp-form-grid">
+            <div class="cp-field cp-span"><label class="cp-label" for="Name">Tên sản phẩm</label><div class="cp-input-wrap">@UiIcon.Render("package")<input class="cp-input" id="Name" name="Name" value="@i.Name" maxlength="500" required /></div><span class="cp-error">@Html.ValidationMessage("Name")</span></div>
+            <div class="cp-field"><label class="cp-label" for="UnitName">Đơn vị tính</label><div class="cp-input-wrap">@UiIcon.Render("list-tree")<input class="cp-input" id="UnitName" name="UnitName" value="@i.UnitName" maxlength="50" placeholder="Cái, Hộp, Tháng..." /></div><span class="cp-error">@Html.ValidationMessage("UnitName")</span></div>
+            <div class="cp-field"><label class="cp-label" for="Price">Đơn giá (gồm VAT, ₫)</label><div class="cp-input-wrap">@UiIcon.Render("report-money")<input class="cp-input cp-num" id="Price" name="Price" value="@i.Price?.ToString("0", System.Globalization.CultureInfo.InvariantCulture)" type="number" min="0" step="1" required /></div><span class="cp-error">@Html.ValidationMessage("Price")</span></div>
+            <div class="cp-field"><label class="cp-label" for="TaxRate">Thuế suất</label><select class="cp-input cp-input--plain" id="TaxRate" name="TaxRate">@foreach (var (code, label) in OrderMath.TaxRates) {<option value="@code" selected="@(code == i.TaxRate)">@label</option>}</select><span class="cp-error">@Html.ValidationMessage("TaxRate")</span></div>
+            <div class="cp-field"><span class="cp-label">Trạng thái</span><label class="cp-check"><input type="checkbox" name="IsActive" value="true" checked="@i.IsActive" /><span>Đang bán (hiện khi chọn sản phẩm cho đơn hàng)</span></label><input type="hidden" name="IsActive" value="false" /></div>
+
+            <div class="cp-form-section">Hình ảnh</div>
+            <div class="cp-field cp-span" data-cp-logo-picker>
+                <div class="cp-logo-picker">
+                    <span class="cp-logo-frame cp-logo-frame--square">
+                        <img src="@(Model.ImageVersion is null ? null : Url.Action("Image", new { id = i.Id }) + "?v=" + Model.ImageVersion)" alt="Ảnh @i.Name" hidden="@(Model.ImageVersion is null)" data-cp-logo-preview />
+                        <span data-cp-logo-empty hidden="@(Model.ImageVersion is not null)">@UiIcon.Render("photo")</span>
+                    </span>
+                    <div class="cp-logo-picker__body">
+                        <input type="file" name="image" accept="@LogoUpload.Accept" aria-label="Chọn ảnh sản phẩm" data-cp-logo-input />
+                        <div class="cp-hint">Hiện khi chọn sản phẩm cho đơn hàng. PNG, JPG hoặc WEBP, tối đa 1 MB.</div>
+                        @if (Model.ImageVersion is not null) {<label class="cp-check"><input type="checkbox" name="removeImage" value="true" /> <span>Xóa ảnh hiện tại</span></label>}
+                        <span class="cp-error">@Html.ValidationMessage("Image")</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="cp-card__foot">
+        <a class="cp-btn cp-btn--ghost" asp-action="Index">@UiIcon.Render("arrow-left")<span>Quay lại</span></a>
+        <button class="cp-btn cp-btn--primary" type="submit" style="margin-left:auto">@UiIcon.Render("device-floppy")<span>Lưu sản phẩm</span></button>
+    </div>
+</form>
+@if (!isNew)
+{
+    <section class="cp-card" style="margin-top:14px" data-cp-buyer-prices>
+        <div class="cp-card__head"><span class="cp-blob cp-blob--gold">@UiIcon.Render("users")</span><h2>Giá riêng theo khách hàng</h2></div>
+        @if (Model.Prices.Count == 0)
+        {
+            <div class="cp-card__body cp-muted">Chưa có khách nào có giá riêng. Khi tạo đơn, nếu sửa đơn giá của sản phẩm này, hệ thống sẽ hỏi có lưu giá cho khách đó không.</div>
+        }
+        else
+        {
+            <div class="cp-table-wrap">
+                <table class="cp-table">
+                    <thead><tr><th>Khách hàng</th><th class="cp-num">Giá riêng (gồm VAT)</th><th class="cp-num">So với giá danh mục</th><th>Cập nhật</th><th class="cp-actions"></th></tr></thead>
+                    <tbody>
+                    @foreach (var bp in Model.Prices)
+                    {
+                        var diff = bp.Price - (i.Price ?? 0);
+                        <tr>
+                            <td><span class="cp-code">@bp.BuyerCode</span> @bp.BuyerName</td>
+                            <td class="cp-num">@PaymentText.Money(bp.Price)</td>
+                            <td class="cp-num">@(diff > 0 ? "+" : diff < 0 ? "−" : "")@PaymentText.Money(Math.Abs(diff))</td>
+                            <td>@bp.UpdatedAt.AddHours(7).ToString("dd/MM/yyyy")</td>
+                            <td class="cp-actions"><form method="post" asp-action="RemovePrice" asp-route-id="@i.Id"><input type="hidden" name="buyerId" value="@bp.BuyerId" /><button class="cp-btn cp-btn--sm cp-btn--ghost" type="submit">@UiIcon.Render("trash")<span>Bỏ giá riêng</span></button></form></td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </section>
+}

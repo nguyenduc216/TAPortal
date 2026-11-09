@@ -483,5 +483,15 @@
     "migration_status": "EXECUTED",
     "publish_status": "NOT_APPLICABLE",
     "merge_status": "MERGED"
+  },
+  {
+    "change_id": "CUSTOMER-PORTAL-FOUNDATION-CHG-20261109T162008Z-1FF4B8",
+    "created_at": "2026-11-09T16:20:08.055781+00:00",
+    "title": "San pham khach hang va gia rieng theo khach",
+    "status": "IMPLEMENTED",
+    "commit_sha": null,
+    "migration_status": "NOT_EXECUTED",
+    "publish_status": "NOT_PUBLISHED",
+    "merge_status": "PENDING_APPROVAL"
   }
 ]

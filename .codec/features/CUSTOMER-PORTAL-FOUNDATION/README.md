@@ -55,3 +55,4 @@ CHECKPOINT_4A: PASS (existing artifact integrity, isolated localhost startup and
 | `CUSTOMER-PORTAL-FOUNDATION-CHG-20261107T041035Z-5D1386` | 2026-11-07 | Drop the unused Customer Portal member permissions (migration 030) | 9d2764d | EXECUTED | DEPLOYED | MERGED |
 | `CUSTOMER-PORTAL-FOUNDATION-CHG-20261107T070538Z-03398E` | 2026-11-07 | Xung ho Hoa don tu dong tren Customer Portal, dong San pham cua T.A cuoi sidebar | 1bdb338 | NOT_APPLICABLE | DEPLOYED | MERGED |
 | `CUSTOMER-PORTAL-FOUNDATION-CHG-20261107T071821Z-4EA212` | 2026-11-07 | Ten nguoi gui email he thong: Hoa don tu dong | 0a60596 | EXECUTED | NOT_APPLICABLE | MERGED |
+| `CUSTOMER-PORTAL-FOUNDATION-CHG-20261109T162008Z-1FF4B8` | 2026-11-09 | San pham khach hang va gia rieng theo khach | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |

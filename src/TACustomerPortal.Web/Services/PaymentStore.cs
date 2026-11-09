@@ -59,7 +59,9 @@ public static class BuyerTypes
     public static readonly IReadOnlyList<string> Groups = ["Nhà hàng", "Quán cà phê", "Khách sạn", "Bán lẻ", "Bán buôn", "Spa / làm đẹp", "Giáo dục", "Y tế", "Văn phòng"];
 }
 
-public sealed record OrderLine(int LineNumber, string ItemName, string? UnitName, decimal Quantity, decimal UnitPrice, string TaxRateCode, decimal AmountBeforeTax, decimal TaxAmount)
+/// <summary>ProductId: the catalogue product the line was taken from (migration 034); null for a typed line. Only written on create.</summary>
+public sealed record OrderLine(int LineNumber, string ItemName, string? UnitName, decimal Quantity, decimal UnitPrice, string TaxRateCode, decimal AmountBeforeTax, decimal TaxAmount,
+    Guid? ProductId = null)
 {
     public decimal Total => AmountBeforeTax + TaxAmount;
 }
@@ -322,8 +324,11 @@ OUTPUT inserted.Id VALUES(@c,@no,@contact,@bank,@desc,@amount,'DRAFT',@expire,@i
         var id = (Guid)(await insert.ExecuteScalarAsync())!;
         foreach (var l in order.Lines)
         {
-            await using var line = Command(cn, tx, "INSERT dbo.CustomerOrderLines(OrderId,LineNumber,ItemName,UnitName,Quantity,UnitPrice,TaxRateCode,AmountBeforeTax,TaxAmount) VALUES(@o,@n,@item,@unit,@qty,@price,@tax,@before,@taxAmount)",
-                ("@o", id), ("@n", l.LineNumber), ("@item", l.ItemName), ("@unit", l.UnitName), ("@qty", l.Quantity), ("@price", l.UnitPrice), ("@tax", l.TaxRateCode), ("@before", l.AmountBeforeTax), ("@taxAmount", l.TaxAmount));
+            // A product id is kept only when the product belongs to this company.
+            await using var line = Command(cn, tx, l.ProductId is null
+                ? "INSERT dbo.CustomerOrderLines(OrderId,LineNumber,ItemName,UnitName,Quantity,UnitPrice,TaxRateCode,AmountBeforeTax,TaxAmount) VALUES(@o,@n,@item,@unit,@qty,@price,@tax,@before,@taxAmount)"
+                : "INSERT dbo.CustomerOrderLines(OrderId,LineNumber,ItemName,UnitName,Quantity,UnitPrice,TaxRateCode,AmountBeforeTax,TaxAmount,ProductId) VALUES(@o,@n,@item,@unit,@qty,@price,@tax,@before,@taxAmount,(SELECT Id FROM dbo.CustomerProducts WHERE Id=@product AND CustomerId=@c))",
+                ("@c", customerId), ("@product", l.ProductId), ("@o", id), ("@n", l.LineNumber), ("@item", l.ItemName), ("@unit", l.UnitName), ("@qty", l.Quantity), ("@price", l.UnitPrice), ("@tax", l.TaxRateCode), ("@before", l.AmountBeforeTax), ("@taxAmount", l.TaxAmount));
             await line.ExecuteNonQueryAsync();
         }
         await tx.CommitAsync();

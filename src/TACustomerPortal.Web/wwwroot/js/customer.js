@@ -21,16 +21,29 @@ window.addEventListener("pageshow", () => {
 // Order form: add/remove item rows (names re-indexed for model binding) and a live total preview. The server recomputes
 // every amount; this is display only. Delegated so it keeps working after soft navigation swaps the page.
 const money = value => new Intl.NumberFormat("vi-VN").format(Math.round(value)) + " ₫";
+// An empty line: no product, quantity 1, first tax rate.
+const clearLine = row => {
+    row.querySelectorAll("input").forEach(input => {
+        input.value = input.hasAttribute("data-cp-qty") ? "1" : input.hasAttribute("data-cp-remember") ? "false" : "";
+    });
+    row.querySelectorAll("select").forEach(select => { select.selectedIndex = 0; });
+    delete row.dataset.cpUsual;
+    delete row.dataset.cpCatalog;
+    row.querySelector("[data-cp-line-thumb]")?.setAttribute("hidden", "");
+};
 const reindexLines = table => table.querySelectorAll("tbody tr[data-cp-line]").forEach((row, index) =>
     row.querySelectorAll("[name^='Lines[']").forEach(input => { input.name = input.name.replace(/^Lines\[\d+\]/, `Lines[${index}]`); }));
+// Prices are typed including VAT (PricesIncludeTax), like the product catalogue.
+const includesTax = form => form.querySelector("input[name=PricesIncludeTax]")?.value === "true";
 const updateTotals = form => {
     let total = 0;
     form.querySelectorAll("tr[data-cp-line]").forEach(row => {
         const qty = parseFloat(row.querySelector("[data-cp-qty]")?.value) || 0;
-        const price = parseFloat(row.querySelector("[data-cp-price]")?.value) || 0;
+        const typed = parseFloat(row.querySelector("[data-cp-price]")?.value) || 0;
         const rate = Math.max(0, parseInt(row.querySelector("[data-cp-tax]")?.value, 10) || 0);
-        const before = Math.round(qty * price);
-        const line = before + Math.round(before * rate / 100);
+        // Including VAT the customer pays exactly qty × price (OrderMath.LineWithTax); before tax, tax is added per line.
+        const before = Math.round(qty * typed);
+        const line = includesTax(form) ? before : before + Math.round(before * rate / 100);
         total += line;
         const cell = row.querySelector("[data-cp-line-total]");
         if (cell) cell.textContent = line > 0 ? money(line) : "—";
@@ -48,14 +61,13 @@ document.addEventListener("click", event => {
     if (add) {
         if (rows.length >= 50) return;
         const clone = rows[rows.length - 1].cloneNode(true);
-        clone.querySelectorAll("input").forEach(input => { input.value = input.hasAttribute("data-cp-qty") ? "1" : ""; });
-        clone.querySelectorAll("select").forEach(select => { select.selectedIndex = 0; });
+        clearLine(clone);
         table.querySelector("tbody").appendChild(clone);
-        clone.querySelector("input")?.focus();
+        clone.querySelector("input:not([type=hidden])")?.focus();
     } else if (rows.length > 1) {
         remove.closest("tr").remove();
     } else {
-        rows[0].querySelectorAll("input").forEach(input => { input.value = input.hasAttribute("data-cp-qty") ? "1" : ""; });
+        clearLine(rows[0]);
     }
     reindexLines(table);
     updateTotals(form);
@@ -64,6 +76,177 @@ document.addEventListener("input", event => {
     const form = event.target.closest?.("form[data-cp-order-form]");
     if (form) updateTotals(form);
 });
+// Order form, product catalogue: "Chọn sản phẩm" opens a grid of the active products (image, name, price); a click adds
+// the product as a line, or one more of it. The price offered is the one kept for the selected customer, else the
+// catalogue price (both include VAT). On save, product lines whose price differs from that usual price ask whether to keep
+// the new price for this customer (RememberPrice); the server stores the ones ticked.
+const readJson = (form, selector, fallback) => { try { return JSON.parse(form.querySelector(selector)?.textContent || ""); } catch { return fallback; } };
+const productsOf = form => form._cpProducts ??= readJson(form, "script[data-cp-products]", []);
+const buyerPricesOf = form => form._cpBuyerPrices ??= readJson(form, "script[data-cp-buyer-prices]", {});
+const usualPrice = (form, product) => buyerPricesOf(form)[product.id] ?? product.price;
+const lineProduct = row => row.querySelector("[data-cp-product-id]")?.value || "";
+const renderProducts = (form, filter = "") => {
+    const grid = form.querySelector("[data-cp-products-grid]");
+    if (!grid) return;
+    const words = filter.trim().toLowerCase();
+    const picked = new Set([...form.querySelectorAll("tr[data-cp-line]")].map(lineProduct));
+    const cards = productsOf(form).filter(p => !words || p.name.toLowerCase().includes(words)).map(p => {
+        const card = document.createElement("button");
+        card.type = "button";
+        card.className = "cp-product-card" + (picked.has(p.id) ? " is-picked" : "");
+        card.dataset.cpPick = p.id;
+        const pic = document.createElement("span");
+        pic.className = "cp-product-card__img";
+        if (p.image) { const img = document.createElement("img"); img.src = p.image; img.alt = ""; img.loading = "lazy"; pic.append(img); }
+        else pic.textContent = p.name.slice(0, 1).toUpperCase();
+        const name = document.createElement("strong");
+        name.textContent = p.name;
+        const price = document.createElement("span");
+        price.className = "cp-product-card__price";
+        const usual = usualPrice(form, p);
+        price.textContent = money(usual) + (p.unit ? " / " + p.unit : "");
+        card.append(pic, name, price);
+        if (usual !== p.price) { const tag = document.createElement("span"); tag.className = "cp-badge cp-badge--gold"; tag.textContent = "Giá riêng"; card.append(tag); }
+        return card;
+    });
+    if (cards.length) grid.replaceChildren(...cards); else grid.textContent = "Không có sản phẩm phù hợp.";
+};
+const fillLine = (form, row, p) => {
+    const set = (selector, value) => { const el = row.querySelector(selector); if (el) el.value = value; };
+    const usual = usualPrice(form, p);
+    set("[name$='.ItemName']", p.name);
+    set("[name$='.UnitName']", p.unit || "");
+    set("[data-cp-qty]", "1");
+    set("[data-cp-price]", String(usual));
+    set("[data-cp-tax]", p.tax);
+    set("[data-cp-product-id]", p.id);
+    set("[data-cp-remember]", "false");
+    row.dataset.cpUsual = String(usual);
+    row.dataset.cpCatalog = String(p.price);
+    const thumb = row.querySelector("[data-cp-line-thumb]");
+    if (thumb) {
+        thumb.removeAttribute("hidden");
+        if (p.image) { const img = document.createElement("img"); img.src = p.image; img.alt = ""; thumb.replaceChildren(img); }
+    }
+};
+const pickProduct = (form, id) => {
+    const p = productsOf(form).find(x => x.id === id);
+    const table = form.querySelector("#orderLines");
+    if (!p || !table) return;
+    const rows = [...table.querySelectorAll("tbody tr[data-cp-line]")];
+    const same = rows.find(r => lineProduct(r) === id);
+    if (same) {
+        const qty = same.querySelector("[data-cp-qty]");
+        qty.value = String((parseFloat(qty.value) || 0) + 1);
+    } else {
+        let row = rows.find(r => !r.querySelector("[name$='.ItemName']")?.value && !r.querySelector("[data-cp-price]")?.value);
+        if (!row) {
+            if (rows.length >= 50) return;
+            row = rows[rows.length - 1].cloneNode(true);
+            clearLine(row);
+            table.querySelector("tbody").appendChild(row);
+            reindexLines(table);
+        }
+        fillLine(form, row, p);
+    }
+    delete form.dataset.cpPricesAsked;
+    updateTotals(form);
+    renderProducts(form, form.querySelector("[data-cp-products-filter]")?.value || "");
+};
+document.addEventListener("click", event => {
+    const form = event.target.closest?.("form[data-cp-order-form]");
+    if (!form) return;
+    if (event.target.closest("[data-cp-open-products]")) {
+        const dialog = form.querySelector("[data-cp-products-dialog]");
+        renderProducts(form);
+        dialog?.showModal();
+    } else if (event.target.closest("[data-cp-pick]")) {
+        pickProduct(form, event.target.closest("[data-cp-pick]").dataset.cpPick);
+    } else if (event.target.closest("[data-cp-dialog-close]")) {
+        event.target.closest("dialog")?.close();
+    } else if (event.target.closest("[data-cp-remember-confirm]")) {
+        const dialog = event.target.closest("dialog");
+        const rows = form.querySelectorAll("tr[data-cp-line]");
+        dialog.querySelectorAll("input[data-cp-remember-row]").forEach(box => {
+            const hidden = rows[Number(box.dataset.cpRememberRow)]?.querySelector("[data-cp-remember]");
+            if (hidden) hidden.value = box.checked ? "true" : "false";
+        });
+        dialog.close();
+        form.dataset.cpPricesAsked = "true";
+        form.requestSubmit(form.querySelector("button[type=submit]"));
+    }
+});
+document.addEventListener("input", event => {
+    const form = event.target.closest?.("form[data-cp-order-form]");
+    if (!form) return;
+    if (event.target.matches("[data-cp-products-filter]")) renderProducts(form, event.target.value);
+    // A changed price asks again on the next save.
+    if (event.target.matches("[data-cp-price]")) delete form.dataset.cpPricesAsked;
+});
+// Another customer: their kept prices replace the prices of product lines still at the previous usual price.
+document.addEventListener("change", async event => {
+    const form = event.target.closest?.("form[data-cp-order-form]");
+    if (!form || !event.target.matches("[data-cp-contact]")) return;
+    let prices = {};
+    if (event.target.value) {
+        try {
+            const url = new URL(form.dataset.cpPricesUrl, location.href);
+            url.searchParams.set("contactId", event.target.value);
+            const response = await fetch(url, { headers: { Accept: "application/json" }, credentials: "same-origin" });
+            if (response.ok) prices = await response.json();
+        } catch { /* keep the catalogue prices */ }
+    }
+    form._cpBuyerPrices = prices;
+    form.querySelectorAll("tr[data-cp-line]").forEach(row => {
+        const p = productsOf(form).find(x => x.id === lineProduct(row));
+        if (!p) return;
+        const price = row.querySelector("[data-cp-price]");
+        const next = usualPrice(form, p);
+        if (Number(price.value) === Number(row.dataset.cpUsual)) price.value = String(next);
+        row.dataset.cpUsual = String(next);
+    });
+    delete form.dataset.cpPricesAsked;
+    updateTotals(form);
+});
+// Save: product lines of a named customer whose price differs from the usual one → ask which prices to keep. Capture
+// phase, before ta-shell.js sends the form in the background.
+document.addEventListener("submit", event => {
+    const form = event.target;
+    if (!(form instanceof HTMLFormElement) || !form.matches("[data-cp-order-form]") || form.dataset.cpPricesAsked === "true") return;
+    const contact = form.querySelector("[data-cp-contact]");
+    const rows = [...form.querySelectorAll("tr[data-cp-line]")];
+    rows.forEach(r => { const h = r.querySelector("[data-cp-remember]"); if (h) h.value = "false"; });
+    if (!contact?.value) return;
+    const changed = rows.map((row, index) => ({ row, index })).filter(({ row }) => {
+        const price = row.querySelector("[data-cp-price]")?.value;
+        return lineProduct(row) && price !== "" && row.dataset.cpUsual !== undefined && Number(price) !== Number(row.dataset.cpUsual);
+    });
+    const dialog = form.querySelector("[data-cp-remember-dialog]");
+    if (!changed.length || !dialog) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    dialog.querySelector("[data-cp-remember-buyer]").textContent = contact.selectedOptions[0]?.textContent || "";
+    dialog.querySelector("[data-cp-remember-list]").replaceChildren(...changed.map(({ row, index }) => {
+        const label = document.createElement("label");
+        label.className = "cp-check cp-remember-row";
+        const box = document.createElement("input");
+        box.type = "checkbox";
+        box.checked = true;
+        box.dataset.cpRememberRow = String(index);
+        const text = document.createElement("span");
+        const name = document.createElement("strong");
+        name.textContent = row.querySelector("[name$='.ItemName']")?.value || "";
+        const detail = document.createElement("span");
+        detail.className = "cp-muted";
+        detail.style.display = "block";
+        const usual = Number(row.dataset.cpUsual), catalog = Number(row.dataset.cpCatalog);
+        detail.textContent = `${money(usual)} → ${money(Number(row.querySelector("[data-cp-price]").value))}` + (catalog !== usual ? ` (giá danh mục ${money(catalog)})` : "");
+        text.append(name, detail);
+        label.append(box, text);
+        return label;
+    }));
+    dialog.showModal();
+}, true);
 // Order details: while the QR is open, poll the order status and reload when a payment arrives.
 let pollTimer = null;
 const startPolling = () => {

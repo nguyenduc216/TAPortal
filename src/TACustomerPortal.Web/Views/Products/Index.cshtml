@@ -1,0 +1,44 @@
+@model ProductsVm
+@{
+    ViewData["Title"] = "Sản phẩm";
+    ViewData["Eyebrow"] = "Thanh toán";
+    ViewData["Subtitle"] = "Danh mục sản phẩm, dịch vụ để chọn nhanh khi tạo đơn hàng. Đơn giá là giá tham khảo đã gồm VAT; giá riêng của từng khách được lưu khi tạo đơn.";
+}
+<section class="cp-card">
+    <div class="cp-toolbar">
+        <div class="cp-search">@UiIcon.Render("search")<input class="cp-input" type="search" aria-label="Tìm sản phẩm" placeholder="Tìm theo tên, đơn vị tính..." oninput="taFilterRows(this.value,'productsTable')" /></div>
+        @if (Model.CanManage) {<div class="cp-toolbar__end"><a class="cp-btn cp-btn--primary" asp-action="Create">@UiIcon.Render("plus")<span>Thêm sản phẩm</span></a></div>}
+    </div>
+    @if (Model.Products.Count == 0)
+    {
+        <div class="cp-empty" data-cp-empty>@UiIcon.Render("package")<p>Chưa có sản phẩm nào.</p></div>
+    }
+    else
+    {
+        <div class="cp-table-wrap">
+            <table class="cp-table" id="productsTable" data-ta-pager="10">
+                <thead><tr><th>Sản phẩm</th><th>ĐVT</th><th class="cp-num">Đơn giá (gồm VAT)</th><th>Thuế suất</th><th>Giá riêng</th><th>Trạng thái</th><th class="cp-actions">Thao tác</th></tr></thead>
+                <tbody>
+                @foreach (var p in Model.Products)
+                {
+                    <tr data-ta-row>
+                        <td><div class="cp-party">@if (p.ImageAt is DateTime at) {<img class="cp-product-thumb" src="@Url.Action("Image", new { id = p.Id })?v=@LogoImage.Version(at)" alt="" loading="lazy" />} else {<span class="cp-product-thumb cp-product-thumb--empty" aria-hidden="true">@UiIcon.Render("photo")</span>}<strong>@p.Name</strong></div></td>
+                        <td>@(p.UnitName ?? "—")</td>
+                        <td class="cp-num">@PaymentText.Money(p.Price)</td>
+                        <td>@OrderMath.TaxRates.FirstOrDefault(t => t.Code == p.TaxRateCode).Label</td>
+                        <td>@(p.CustomPrices > 0 ? $"{p.CustomPrices} khách" : "—")</td>
+                        <td><span class="cp-badge @(p.IsActive ? "cp-badge--green" : "cp-badge--soft")">@(p.IsActive ? "Đang bán" : "Ngừng bán")</span></td>
+                        <td class="cp-actions">
+                            @if (Model.CanManage)
+                            {
+                                <a class="cp-btn cp-btn--sm cp-btn--ghost" asp-action="Edit" asp-route-id="@p.Id">@UiIcon.Render("pencil")<span>Sửa</span></a>
+                                <form method="post" asp-action="SetActive" asp-route-id="@p.Id"><input type="hidden" name="active" value="@(p.IsActive ? "false" : "true")" /><button class="cp-btn cp-btn--sm @(p.IsActive ? "cp-btn--danger" : "cp-btn--ghost")" type="submit">@(p.IsActive ? "Ngừng bán" : "Mở bán")</button></form>
+                            }
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    }
+</section>

@@ -123,7 +123,9 @@ public static class OrderSummary
         }).ToList();
 }
 
-public sealed record OrderCreateVm(CustomerMembership Customer, bool Linked, bool ApiConfigured, IReadOnlyList<Contact> Contacts, IReadOnlyList<BankAccount> Banks, OrderInput Input);
+/// <summary>Products: the active catalogue offered by "Chọn sản phẩm"; BuyerPrices: prices of the selected customer, by product.</summary>
+public sealed record OrderCreateVm(CustomerMembership Customer, bool Linked, bool ApiConfigured, IReadOnlyList<Contact> Contacts, IReadOnlyList<BankAccount> Banks, OrderInput Input,
+    IReadOnlyList<Product>? Products = null, IReadOnlyDictionary<Guid, decimal>? BuyerPrices = null);
 
 public sealed class OrderInput
 {
@@ -143,6 +145,12 @@ public sealed class OrderInput
 
     public bool AutoIssueInvoice { get; set; } = true;
 
+    /// <summary>
+    /// The order form sends unit prices including VAT (like the product catalogue); they are converted to the price before
+    /// tax used on the invoice. Without the field (older clients) prices are before tax.
+    /// </summary>
+    public bool PricesIncludeTax { get; set; }
+
     public List<OrderLineInput> Lines { get; set; } = [new()];
 }
 
@@ -153,6 +161,10 @@ public sealed class OrderLineInput
     public decimal? Quantity { get; set; } = 1;
     public decimal? UnitPrice { get; set; }
     public string TaxRate { get; set; } = "0";
+    /// <summary>The catalogue product the line was taken from.</summary>
+    public Guid? ProductId { get; set; }
+    /// <summary>Set when the user agreed to keep this line's price for the order's customer.</summary>
+    public bool RememberPrice { get; set; }
 }
 
 /// <summary>

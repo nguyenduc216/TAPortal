@@ -22,6 +22,7 @@ builder.Services.AddSingleton<ITaxCodeLookup, VietQrTaxCodeLookup>();
 builder.Services.AddScoped<ICurrentCustomerContext, CurrentCustomerContext>();
 builder.Services.AddScoped<CustomerCookieEvents>();
 builder.Services.AddScoped<IPaymentStore, SqlPaymentStore>();
+builder.Services.AddScoped<IProductStore, SqlProductStore>();
 builder.Services.AddScoped<OrderPayments>();
 builder.Services.AddScoped<IOrderPageStore, SqlOrderPageStore>();
 TAPortal.Integrations.Branding.LogoServiceCollectionExtensions.AddLogos(builder.Services);

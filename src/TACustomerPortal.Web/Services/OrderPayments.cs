@@ -9,6 +9,28 @@ public static class OrderMath
 
     public static bool IsTaxRate(string? code) => TaxRates.Any(t => t.Code == code);
 
+    /// <summary>Tax percent of a rate code (0 for 0%, KCT and KKKNT).</summary>
+    public static int Percent(string? taxRate) => int.TryParse(taxRate, out var p) && p > 0 ? p : 0;
+
+    /// <summary>
+    /// Unit price before tax of a price that includes VAT, in whole dong (catalogue prices include VAT; invoices take the
+    /// price before tax): 100 000 at 8% → 92 593.
+    /// </summary>
+    public static decimal PriceBeforeTax(decimal priceWithTax, string? taxRate) =>
+        Math.Round(priceWithTax * 100m / (100 + Percent(taxRate)), 0, MidpointRounding.AwayFromZero);
+
+    /// <summary>
+    /// A line priced including VAT: the customer pays exactly quantity × price (2 × 35 000 = 70 000, not 69 999 from a
+    /// rounded price before tax); the tax is the part of that total above the amount before tax. The unit price stored
+    /// (and sent to the invoice) is the rounded price before tax.
+    /// </summary>
+    public static OrderLine LineWithTax(int number, string item, string? unit, decimal quantity, decimal priceWithTax, string taxRate)
+    {
+        var total = Math.Round(quantity * priceWithTax, 0, MidpointRounding.AwayFromZero);
+        var before = PriceBeforeTax(total, taxRate);
+        return new(number, item.Trim(), string.IsNullOrWhiteSpace(unit) ? null : unit.Trim(), quantity, PriceBeforeTax(priceWithTax, taxRate), taxRate, before, total - before);
+    }
+
     public static OrderLine Line(int number, string item, string? unit, decimal quantity, decimal unitPrice, string taxRate)
     {
         var before = Math.Round(quantity * unitPrice, 0, MidpointRounding.AwayFromZero);

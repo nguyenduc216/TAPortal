@@ -9,7 +9,7 @@ namespace TACustomerPortal.Web.Controllers;
 
 // Orders with a payment QR. Everyone in the company sees every order (operator decision); creating, re-issuing a QR and
 // cancelling need OWNER/ADMIN. The order is saved first, then the QR is requested, so a Tingee failure never loses it.
-public sealed class OrdersController(ICurrentCustomerContext customer, IPaymentStore store, ITingeeApi tingee, OrderPayments payments, TimeProvider clock)
+public sealed class OrdersController(ICurrentCustomerContext customer, IPaymentStore store, ITingeeApi tingee, OrderPayments payments, IProductStore products, TimeProvider clock)
     : CustomerAreaController(customer)
 {
     public const int MaxLines = 50;
@@ -31,7 +31,7 @@ public sealed class OrdersController(ICurrentCustomerContext customer, IPaymentS
         if (!CanManage(m)) return Forbid();
         var settings = await store.SettingsAsync(m.CustomerId);
         var banks = (await store.BankAccountsAsync(m.CustomerId)).Where(b => b.IsActive && b.ReceiveAccount is not null).ToList();
-        var input = new OrderInput { ContactId = contactId, BankAccountId = banks.FirstOrDefault(b => b.IsDefault)?.Id ?? banks.FirstOrDefault()?.Id, QrExpireMinutes = settings.DefaultQrExpireMinutes, AutoIssueInvoice = settings.AutoIssueInvoiceDefault };
+        var input = new OrderInput { PricesIncludeTax = true, ContactId = contactId, BankAccountId = banks.FirstOrDefault(b => b.IsDefault)?.Id ?? banks.FirstOrDefault()?.Id, QrExpireMinutes = settings.DefaultQrExpireMinutes, AutoIssueInvoice = settings.AutoIssueInvoiceDefault };
         return await CreateView(m, input);
     }
 
@@ -47,7 +47,8 @@ public sealed class OrdersController(ICurrentCustomerContext customer, IPaymentS
         if (bank is null || !bank.IsActive || bank.ReceiveAccount is null) ModelState.AddModelError(nameof(input.BankAccountId), "Vui lòng chọn tài khoản nhận tiền đang hoạt động.");
         if (input.ContactId is Guid contactId && await store.ContactAsync(m.CustomerId, contactId) is not { IsActive: true })
             ModelState.AddModelError(nameof(input.ContactId), "Khách hàng không tồn tại hoặc đã ngừng sử dụng.");
-        var lines = ReadLines(input);
+        var catalog = (await products.ProductsAsync(m.CustomerId)).ToDictionary(p => p.Id);
+        var (lines, remember) = ReadLines(input, catalog);
         if (!ModelState.IsValid || merchant is not long merchantId || bank is null)
         {
             Response.StatusCode = StatusCodes.Status400BadRequest;
@@ -55,6 +56,8 @@ public sealed class OrdersController(ICurrentCustomerContext customer, IPaymentS
         }
 
         var created = await store.CreateOrderAsync(m.CustomerId, new NewOrder(input.ContactId, bank.Id, string.IsNullOrWhiteSpace(input.Description) ? null : input.Description.Trim(), input.QrExpireMinutes, input.AutoIssueInvoice, lines), Actor);
+        // Prices the user chose to keep for this customer (asked on save when a product's price differs from the usual one).
+        if (input.ContactId is Guid buyer && remember.Count > 0) await products.SaveBuyerPricesAsync(m.CustomerId, buyer, remember, Actor);
         var order = await store.OrderAsync(m.CustomerId, created.Id);
         var result = await payments.IssueQrAsync(m.CustomerId, merchantId, order!, bank, Actor);
         Flash(result.Error is null ? $"Đã tạo đơn {created.OrderNo} và mã QR thanh toán." : $"Đã lưu đơn {created.OrderNo} nhưng chưa tạo được QR: {result.Error}", error: result.Error is not null);
@@ -77,6 +80,15 @@ public sealed class OrdersController(ICurrentCustomerContext customer, IPaymentS
         var payUrl = token is null ? null : Url.Action("Index", "Pay", new { token }, Request.Scheme);
         return View(new OrderDetailsVm(m, CanManage(m), order, status, bank, contact, qr, now, banks, (await invoices.SettingsAsync(m.CustomerId)).IsReady,
             payUrl, await pages.InvoiceBuyerAsync(m.CustomerId, order.Id)));
+    }
+
+    /// <summary>Prices agreed with one customer, by product id: the order form offers them instead of the catalogue price.</summary>
+    [HttpGet]
+    public async Task<IActionResult> BuyerPrices(Guid contactId)
+    {
+        if (await Current() is not { } m) return Unauthorized();
+        if (await store.ContactAsync(m.CustomerId, contactId) is null) return NotFound();
+        return Json((await products.BuyerPricesAsync(m.CustomerId, contactId)).ToDictionary(p => p.Key.ToString(), p => p.Value));
     }
 
     /// <summary>Lightweight status for the details page to poll while the QR is open.</summary>
@@ -185,9 +197,14 @@ public sealed class OrdersController(ICurrentCustomerContext customer, IPaymentS
         return RedirectToAction(nameof(Details), new { id });
     }
 
-    private List<OrderLine> ReadLines(OrderInput input)
+    /// <summary>
+    /// The order lines, and the prices (including VAT) to keep for the order's customer by product id. Prices sent including
+    /// VAT (PricesIncludeTax) become the price before tax of the invoice. A product id of another company is refused.
+    /// </summary>
+    private (List<OrderLine> Lines, Dictionary<Guid, decimal> Remember) ReadLines(OrderInput input, IReadOnlyDictionary<Guid, Product> catalog)
     {
         var lines = new List<OrderLine>();
+        var remember = new Dictionary<Guid, decimal>();
         var rows = (input.Lines ?? []).Where(l => !string.IsNullOrWhiteSpace(l.ItemName) || l.UnitPrice is not null).ToList();
         if (rows.Count == 0) ModelState.AddModelError("Lines", "Đơn hàng cần ít nhất một dòng hàng hóa/dịch vụ.");
         if (rows.Count > MaxLines) ModelState.AddModelError("Lines", $"Tối đa {MaxLines} dòng.");
@@ -200,11 +217,19 @@ public sealed class OrdersController(ICurrentCustomerContext customer, IPaymentS
             if (l.Quantity is not > 0 || l.Quantity > 1_000_000_000) ModelState.AddModelError("Lines", $"Dòng {n}: số lượng phải lớn hơn 0.");
             if (l.UnitPrice is not >= 0 || l.UnitPrice > 100_000_000_000 || decimal.Truncate(l.UnitPrice ?? 0) != l.UnitPrice) ModelState.AddModelError("Lines", $"Dòng {n}: đơn giá là số đồng (không âm, không lẻ).");
             if (!OrderMath.IsTaxRate(l.TaxRate)) ModelState.AddModelError("Lines", $"Dòng {n}: thuế suất không hợp lệ.");
-            if (ModelState.IsValid) lines.Add(OrderMath.Line(n, l.ItemName!, l.UnitName, l.Quantity!.Value, l.UnitPrice!.Value, l.TaxRate));
+            if (l.ProductId is Guid productId && !catalog.ContainsKey(productId)) ModelState.AddModelError("Lines", $"Dòng {n}: sản phẩm không tồn tại.");
+            if (!ModelState.IsValid) continue;
+            var price = l.UnitPrice!.Value;
+            var line = input.PricesIncludeTax
+                ? OrderMath.LineWithTax(n, l.ItemName!, l.UnitName, l.Quantity!.Value, price, l.TaxRate)
+                : OrderMath.Line(n, l.ItemName!, l.UnitName, l.Quantity!.Value, price, l.TaxRate);
+            lines.Add(line with { ProductId = l.ProductId });
+            if (l.RememberPrice && l.ProductId is Guid kept)
+                remember[kept] = input.PricesIncludeTax ? price : Math.Round(price * (100 + OrderMath.Percent(l.TaxRate)) / 100m, 0, MidpointRounding.AwayFromZero);
         }
         if (ModelState.IsValid && lines.Sum(l => l.Total) <= 0) ModelState.AddModelError("Lines", "Tổng tiền đơn hàng phải lớn hơn 0.");
         if (ModelState.IsValid && lines.Sum(l => l.Total) > 999_999_999_999) ModelState.AddModelError("Lines", "Tổng tiền vượt giới hạn.");
-        return lines;
+        return (lines, remember);
     }
 
     private async Task<IActionResult> CreateView(CustomerMembership m, OrderInput input)
@@ -212,6 +237,8 @@ public sealed class OrdersController(ICurrentCustomerContext customer, IPaymentS
         var contacts = (await store.ContactsAsync(m.CustomerId)).Where(c => c.IsActive).ToList();
         var banks = (await store.BankAccountsAsync(m.CustomerId)).Where(b => b.IsActive && b.ReceiveAccount is not null).ToList();
         if (input.Lines.Count == 0) input.Lines.Add(new());
-        return View("Create", new OrderCreateVm(m, await store.MerchantIdAsync(m.CustomerId) is not null, tingee.IsConfigured, contacts, banks, input));
+        var catalog = await products.ProductsAsync(m.CustomerId);
+        var prices = input.ContactId is Guid buyer && contacts.Any(c => c.Id == buyer) ? await products.BuyerPricesAsync(m.CustomerId, buyer) : new Dictionary<Guid, decimal>();
+        return View("Create", new OrderCreateVm(m, await store.MerchantIdAsync(m.CustomerId) is not null, tingee.IsConfigured, contacts, banks, input, catalog, prices));
     }
 }

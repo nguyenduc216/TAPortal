@@ -556,3 +556,34 @@ textarea.cp-input { height: auto; min-height: 72px; padding-top: 8px; padding-bo
     .cp-pay__save { margin-top: 0; justify-self: end; }
 }
 @media (prefers-reduced-motion: reduce) { .cp-pay__wire { animation: none; } }
+
+/* Products (catalogue, order picker, "keep this price" dialog) */
+.cp-product-thumb { display: grid; place-items: center; width: 36px; height: 36px; flex: 0 0 36px; border: 1px solid var(--cp-line); border-radius: 8px; background: #fff; object-fit: cover; overflow: hidden; color: var(--cp-ink-3); }
+.cp-product-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.cp-product-thumb--empty, .cp-product-thumb--sm { background: var(--cp-surface-2); }
+.cp-product-thumb--sm { width: 30px; height: 30px; flex-basis: 30px; }
+.cp-product-thumb .ta-icon { width: 16px; height: 16px; }
+.cp-product-thumb[hidden] { display: none; }
+.cp-line-item { display: flex; align-items: center; gap: 8px; min-width: 220px; }
+.cp-line-item .cp-input-wrap { flex: 1; }
+.cp-line-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.cp-logo-frame--square { border-radius: 14px; }
+.cp-logo-frame--square img { object-fit: cover; }
+.cp-dialog { width: min(480px, calc(100vw - 24px)); max-height: min(680px, calc(100vh - 24px)); padding: 18px; border: 0; border-radius: 16px; background: var(--cp-surface); color: var(--cp-ink); box-shadow: var(--cp-shadow-lg); }
+.cp-dialog--wide { width: min(760px, calc(100vw - 24px)); }
+.cp-dialog::backdrop { background: rgba(15, 23, 42, .45); }
+.cp-dialog__head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; font-size: 16px; }
+.cp-dialog__close { width: 32px; height: 32px; border: 0; border-radius: 8px; background: transparent; color: var(--cp-ink-3); font-size: 22px; line-height: 1; cursor: pointer; }
+.cp-dialog__close:hover { background: var(--cp-hover-bg); color: var(--cp-ink); }
+.cp-dialog__foot { display: flex; gap: 8px; justify-content: flex-end; margin-top: 14px; }
+.cp-product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; margin-top: 12px; max-height: 50vh; overflow: auto; padding: 2px; }
+.cp-product-card { position: relative; display: grid; gap: 4px; align-content: start; padding: 8px; border: 1px solid var(--cp-line); border-radius: 12px; background: var(--cp-surface); color: var(--cp-ink); font: inherit; font-size: 13px; text-align: left; cursor: pointer; }
+.cp-product-card:hover { background: var(--cp-hover-bg); border-color: var(--cp-hover-line); }
+.cp-product-card:focus-visible { outline: none; box-shadow: var(--cp-ring); }
+.cp-product-card.is-picked { border-color: var(--cp-blue-500); box-shadow: inset 0 0 0 1px var(--cp-blue-500); }
+.cp-product-card__img { display: grid; place-items: center; aspect-ratio: 4 / 3; border-radius: 8px; background: var(--cp-surface-2); color: var(--cp-ink-3); font-size: 26px; font-weight: 700; overflow: hidden; }
+.cp-product-card__img img { width: 100%; height: 100%; object-fit: cover; }
+.cp-product-card__price { color: var(--cp-blue-700); font-weight: 700; }
+.cp-product-card .cp-badge { position: absolute; top: 12px; left: 12px; }
+.cp-remember-row { padding: 8px 0; border-top: 1px solid var(--cp-line); }
+@media (max-width: 560px) { .cp-product-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; } .cp-dialog { padding: 14px; } }
