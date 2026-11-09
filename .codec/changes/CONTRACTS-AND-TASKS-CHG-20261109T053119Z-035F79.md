@@ -4,7 +4,7 @@
 - Change ID: `CONTRACTS-AND-TASKS-CHG-20261109T053119Z-035F79`
 - Created UTC: 2026-11-09T05:31:19.514793+00:00
 - Tiêu đề: Tra cuu MST va goi y ma khach hang (Admin)
-- Trạng thái: IMPLEMENTED
+- Trạng thái: DEPLOYED
 
 ## Yêu cầu và phạm vi
 Operator (2026-11-09), ảnh form Thêm khách hàng:
@@ -34,9 +34,9 @@ Operator (2026-11-09), ảnh form Thêm khách hàng:
 
 ## Git
 - Branch: feature/customer-portal-mvp01
-- Commit SHA: xem report
+- Commit SHA: 4ff7d08
 - PR:
-- Merge: xem report
+- Merge: fast-forward main
 - Merge SHA:
 
 ## Rủi ro, quyết định và việc còn lại

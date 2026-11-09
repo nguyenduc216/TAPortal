@@ -3,11 +3,11 @@
 Feature ID: `CONTRACTS-AND-TASKS`
 Change ID: `CONTRACTS-AND-TASKS-CHG-20261109T053119Z-035F79`
 
-1. Mục tiêu và kết quả thực tế:
-2. Danh sách file cập nhật (relative + nếu cần absolute):
-3. Database `TAPortalSys`: migration path + thứ tự + trạng thái NOT_EXECUTED/OPERATOR_CONFIRMED:
-4. Build/test: lệnh, pass/fail/not run:
-5. Publish: project, destination đã duyệt, artifact SHA256, status:
-6. Git: branch, commit SHA, PR, merge SHA hoặc PENDING_APPROVAL:
-7. Rủi ro/rollback/việc operator cần làm:
-8. Bằng chứng kiểm tra (URL/log, không có secrets):
+1. Mục tiêu và kết quả thực tế: Tra cứu MST điền tên/địa chỉ; mã khách hàng tự gợi ý theo tên.
+2. Danh sách file cập nhật: xem `.codec/changes/CONTRACTS-AND-TASKS-CHG-20261109T053119Z-035F79.md`.
+3. Database: không có migration.
+4. Build/test: Release build 0 lỗi; Safe tests 606/606.
+5. Publish: portal DEPLOYED 2026-11-09 12:35/12:39: source commit 4ff7d08, artifact portal artifact 39a3a0ec…, invoice artifact 4e20fd9f… gói 34DB5A93… (lần 1 invoice lỗi ở bước checksum trên server, tự rollback; chạy lại OK), gói -, backup C:\TADeploy\backups\portal-20261109-123454, invoice-20261109-123901, health 200.
+6. Git: branch `feature/customer-portal-mvp01`, source commit 4ff7d08; main fast-forward.
+7. Rủi ro/việc còn lại: người đại diện/điện thoại/email/logo không có trong nguồn công khai; operator thử trên Thêm khách hàng.
+8. Bằng chứng: test Safe; log deploy.
