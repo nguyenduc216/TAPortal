@@ -32,6 +32,7 @@ public sealed class SafeUiDesignSystemTests
     // Only the behaviour script is shared; the Customer Portal has its own visual design (customer.css).
     [Theory]
     [InlineData("js/ta-shell.js")]
+    [InlineData("js/ta-update.js")]
     public void SharedDesignAssetsAreIdenticalInBothApps(string path)
     {
         var adminFile = Path.Combine(AdminWww, path);

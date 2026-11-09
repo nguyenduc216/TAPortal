@@ -50,6 +50,7 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="ta-build" content="@TAPortal.Shared.BuildInfo.Id" data-url="@Url.Content("~" + TAPortal.Shared.BuildInfo.Path)" data-logo="@Url.Content("~/images/ta-logo.png")" />
     <title>@ViewData["Title"] - T.A Portal</title>
     <link rel="icon" type="image/png" sizes="32x32" href="~/images/favicon-32x32.png" asp-append-version="true" />
     <link rel="icon" type="image/png" sizes="192x192" href="~/images/favicon-192x192.png" asp-append-version="true" />
@@ -211,6 +212,7 @@ else
 <template id="taIconSearch">@UiIcon.Render("search")</template>
 <template id="taIconCheck">@UiIcon.Render("check", "ta-select__check")</template>
 <script src="~/lib/tabler/tabler.min.js" asp-append-version="true"></script>
+<script src="~/js/ta-update.js" asp-append-version="true"></script>
 <script src="~/js/ta-shell.js" asp-append-version="true"></script>
 <script src="~/js/ta-portal.js" asp-append-version="true"></script>
 @* Loaded on every page: the shell swaps <main> without running page scripts; it initialises on ta:load and is idle elsewhere. *@

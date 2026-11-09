@@ -252,7 +252,7 @@
         return url.origin === window.location.origin && !(url.pathname === window.location.pathname && url.search === window.location.search && url.hash);
     };
     const request = (url, init) => fetch(url, { credentials: 'same-origin', headers: { 'X-TA-Soft': '1' }, ...init })
-        .then(async (response) => ({ ok: response.ok || response.status === 400, url: response.url, html: await response.text() }));
+        .then(async (response) => ({ ok: response.ok || response.status === 400, status: response.status, url: response.url, html: await response.text() }));
     const prefetch = (url) => {
         const hit = prefetched.get(url);
         if (hit && Date.now() - hit.at < 15000) return hit.promise;
@@ -283,7 +283,7 @@
         const token = ++navToken;
         const result = await (options.response || prefetch(url));
         if (token !== navToken) return;
-        if (!result || !result.ok) { window.location.assign(result?.url || url); return; }
+        if (!result || !result.ok) { if (!window.taUpdate?.unavailable(result)) window.location.assign(result?.url || url); return; }
         const finalUrl = result.url || url;
         const doc = new DOMParser().parseFromString(result.html, 'text/html');
         if (!swapIn(doc, finalUrl, { ...options, push: options.push && finalUrl !== window.location.href || options.forcePush })) window.location.assign(finalUrl);

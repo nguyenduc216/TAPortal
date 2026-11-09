@@ -101,6 +101,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.UseMustChangePasswordGate();
 app.MapControllerRoute("default", "{controller=Dashboard}/{action=Index}/{id?}");
+app.MapBuildInfo();
 app.Run();
 public partial class Program
 {
