@@ -4,7 +4,7 @@
 - Change ID: `TAPORTAL-SYSTEM-AUDIT-CHG-20261109T055155Z-2BA216`
 - Created UTC: 2026-11-09T05:51:55.105115+00:00
 - Tiêu đề: Khung ket noi lai / dang cap nhat (logo trong vong xoay) cho Admin va Hoa don tu dong
-- Trạng thái: IMPLEMENTED
+- Trạng thái: DEPLOYED
 
 ## Yêu cầu và phạm vi
 Operator (2026-11-09): trước đây khi server cập nhật/mất kết nối thì giao diện hiện khung loading (logo T.A) và cập nhật xong tự tải lại; hiện không còn, phải F5.
@@ -32,9 +32,9 @@ Nguyên nhân: khung đó thuộc bản Admin Blazor cũ (ReconnectModal + tapor
 
 ## Git
 - Branch: feature/customer-portal-mvp01
-- Commit SHA: xem report
+- Commit SHA: e1762d1
 - PR:
-- Merge: xem report
+- Merge: fast-forward main
 - Merge SHA:
 
 ## Rủi ro, quyết định và việc còn lại

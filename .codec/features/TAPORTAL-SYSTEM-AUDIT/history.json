@@ -1151,10 +1151,10 @@
     "change_id": "TAPORTAL-SYSTEM-AUDIT-CHG-20261109T055155Z-2BA216",
     "created_at": "2026-11-09T05:51:55.105115+00:00",
     "title": "Khung ket noi lai / dang cap nhat (logo trong vong xoay) cho Admin va Hoa don tu dong",
-    "status": "IMPLEMENTED",
-    "commit_sha": null,
+    "status": "DEPLOYED",
+    "commit_sha": "e1762d1",
     "migration_status": "NOT_APPLICABLE",
-    "publish_status": "NOT_PUBLISHED",
-    "merge_status": "PENDING_APPROVAL"
+    "publish_status": "DEPLOYED",
+    "merge_status": "MERGED"
   }
 ]
