@@ -4,7 +4,7 @@
 - Change ID: `CUSTOMER-PORTAL-FOUNDATION-CHG-20261109T162008Z-1FF4B8`
 - Created UTC: 2026-11-09T16:20:08.055781+00:00
 - Tiêu đề: San pham khach hang va gia rieng theo khach
-- Trạng thái: IMPLEMENTED
+- Trạng thái: DEPLOYED
 
 ## Yêu cầu và phạm vi
 Operator (2026-11-09): quản lý sản phẩm của khách hàng trên Hóa đơn tự động. Sản phẩm có tên, hình ảnh, đơn giá (đã gồm VAT), trạng thái sử dụng; tạo đơn hàng thì chọn khách rồi chọn sản phẩm. Đơn giá danh mục chỉ là giá tham khảo: khi lưu đơn có sản phẩm bị đổi giá so với giá đang dùng, hệ thống hỏi có lưu giá này cho khách không; đồng ý thì lần sau chọn sản phẩm đó cho khách này tự lấy giá đã lưu, không thì dùng giá mặc định.
@@ -24,7 +24,7 @@ Operator (2026-11-09): quản lý sản phẩm của khách hàng trên Hóa đ�
 - Script / absolute path: database/migrations/034-customer-products.sql
 - Thứ tự chạy: sau 033
 - Preflight / Verify / Rollback: database/scripts/057-verify-customer-products.sql / database/scripts/058-rollback-customer-products.sql
-- Execution: NOT_EXECUTED
+- Execution: EXECUTED 2026-11-09 16:23Z (dry-run có rollback PASS, backup COPY_ONLY đã verify)
 
 ## Test và kết quả
 - Release build 0 lỗi; Safe tests 622/622 (14 test mới SafeCustomerProductsTests); trang thử trên trình duyệt: chọn sản phẩm, tổng tiền gồm VAT đúng (2 × 35.000 = 70.000), hộp hỏi lưu giá gửi RememberPrice đúng dòng, giao diện điện thoại 2 cột không tràn ngang.
@@ -35,9 +35,9 @@ Operator (2026-11-09): quản lý sản phẩm của khách hàng trên Hóa đ�
 
 ## Git
 - Branch: feature/customer-portal-mvp01
-- Commit SHA: xem report
+- Commit SHA: 7fbdc2c
 - PR:
-- Merge: xem report
+- Merge: fast-forward main
 - Merge SHA:
 
 ## Rủi ro, quyết định và việc còn lại
