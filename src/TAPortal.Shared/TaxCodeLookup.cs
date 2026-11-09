@@ -1,13 +1,15 @@
 using System.Collections.Concurrent;
+using System.Net.Http.Json;
+using Microsoft.Extensions.Logging;
 using System.Net;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 
-namespace TACustomerPortal.Web.Services;
+namespace TAPortal.Shared;
 
-/// <summary>Registered name and address of a Vietnamese tax code (MST), used to fill sign-up and buyer forms.</summary>
-public sealed record TaxCodeInfo(string TaxCode, string Name, string? ShortName, string? Address);
+/// <summary>Registered name, address and tax status of a Vietnamese tax code (MST), used to fill customer, sign-up and buyer forms.</summary>
+public sealed record TaxCodeInfo(string TaxCode, string Name, string? ShortName, string? Address, string? TaxStatus = null, string? InternationalName = null);
 
 public enum TaxCodeLookupStatus { Found, NotFound, Invalid, Unavailable }
 
@@ -66,7 +68,7 @@ public sealed class VietQrTaxCodeLookup(IHttpClientFactory clients, TimeProvider
             }
             var body = await response.Content.ReadFromJsonAsync<Envelope>(cancellationToken: ct);
             TaxCodeLookupResult result = body?.Code == "00" && !string.IsNullOrWhiteSpace(body.Data?.Name)
-                ? new(TaxCodeLookupStatus.Found, new(code!, body.Data.Name.Trim(), Blank(body.Data.ShortName), Blank(body.Data.Address)))
+                ? new(TaxCodeLookupStatus.Found, new(code!, body.Data.Name.Trim(), Blank(body.Data.ShortName), Blank(body.Data.Address), Blank(body.Data.Status), Blank(body.Data.InternationalName)))
                 : body?.Code == "51" ? new(TaxCodeLookupStatus.NotFound) : new(TaxCodeLookupStatus.Unavailable);
             if (result.Status != TaxCodeLookupStatus.Unavailable)
                 Cache[code!] = (now.Add(result.Status == TaxCodeLookupStatus.Found ? TimeSpan.FromHours(24) : TimeSpan.FromHours(1)), result);
@@ -92,5 +94,7 @@ public sealed class VietQrTaxCodeLookup(IHttpClientFactory clients, TimeProvider
         [JsonPropertyName("name")] public string? Name { get; init; }
         [JsonPropertyName("shortName")] public string? ShortName { get; init; }
         [JsonPropertyName("address")] public string? Address { get; init; }
+        [JsonPropertyName("status")] public string? Status { get; init; }
+        [JsonPropertyName("internationalName")] public string? InternationalName { get; init; }
     }
 }

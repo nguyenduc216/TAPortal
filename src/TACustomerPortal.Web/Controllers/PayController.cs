@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using TACustomerPortal.Web.Models;
 using TACustomerPortal.Web.Services;
+using TAPortal.Shared;
 using TAPortal.Integrations.Branding;
 using TAPortal.Integrations;
 using TAPortal.Integrations.Tingee;

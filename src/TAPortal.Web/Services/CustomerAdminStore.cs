@@ -32,6 +32,8 @@ public interface ICustomerAdminStore
     Task<CustomerEditVm?> GetAsync(Guid customerId);
     Task<CustomerChangeResult> CreateAsync(CustomerEditVm vm, Guid? actorId);
     Task<CustomerChangeResult> UpdateAsync(CustomerEditVm vm, Guid? actorId);
+    /// <summary>Existing customer codes (deleted ones too) that start with <paramref name="prefix"/>, for code suggestions.</summary>
+    Task<IReadOnlyCollection<string>> CodesStartingWithAsync(string prefix) => Task.FromResult<IReadOnlyCollection<string>>([]);
 }
 
 public static class CustomerAdminSql
@@ -41,6 +43,7 @@ public static class CustomerAdminSql
     // Range-locked under SERIALIZABLE so two application requests for the same tax code serialize.
     // Inactive (not deleted) customers count: reactivation must not create an active duplicate.
     public const string TaxCodeTaken = "SELECT TOP 1 Code FROM dbo.Customers WITH (UPDLOCK, HOLDLOCK) WHERE IsDeleted=0 AND TaxCode IS NOT NULL AND REPLACE(REPLACE(REPLACE(TaxCode,' ',''),CHAR(9),''),CHAR(160),'')=@tax AND Id<>@id;";
+    public const string CodesLike = "SELECT TOP 200 Code FROM dbo.Customers WHERE Code LIKE @prefix + '%';";
     public const string Insert = "INSERT dbo.Customers(Id,Code,Name,TaxCode,Email,Phone,Address,Status,IsActive,CreatedBy) VALUES(@id,@code,@name,@tax,@email,@phone,@address,'ACTIVE',@active,@by);";
     public const string Update = "UPDATE dbo.Customers SET Name=@name,TaxCode=@tax,Email=@email,Phone=@phone,Address=@address,IsActive=@active,UpdatedAt=SYSUTCDATETIME(),UpdatedBy=@by WHERE Id=@id AND IsDeleted=0;";
 }
@@ -66,6 +69,18 @@ public sealed class SqlCustomerAdminStore(IConfiguration configuration, AdminAud
         var vm = await Read(cn, tx, customerId);
         await tx.CommitAsync();
         return vm;
+    }
+
+    public async Task<IReadOnlyCollection<string>> CodesStartingWithAsync(string prefix)
+    {
+        await using var cn = Connection();
+        await cn.OpenAsync();
+        await using var cmd = new SqlCommand(CustomerAdminSql.CodesLike, cn);
+        cmd.Parameters.Add("@prefix", SqlDbType.NVarChar, 50).Value = prefix;
+        var codes = new List<string>();
+        await using var r = await cmd.ExecuteReaderAsync();
+        while (await r.ReadAsync()) codes.Add(r.GetString(0).ToUpperInvariant());
+        return codes;
     }
 
     public Task<CustomerChangeResult> CreateAsync(CustomerEditVm vm, Guid? actorId) => Save(vm, actorId, isNew: true);

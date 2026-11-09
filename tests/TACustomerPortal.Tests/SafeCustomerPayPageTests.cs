@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.DependencyInjection;
 using TACustomerPortal.Web.Services;
+using TAPortal.Shared;
 using TAPortal.Integrations.Branding;
 using TAPortal.Integrations.Tingee;
 using static TACustomerPortal.Tests.SafeCustomerPaymentsTests;

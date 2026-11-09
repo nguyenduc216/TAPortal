@@ -27,7 +27,7 @@
         <div class="ta-form-grid ta-form-grid--3">
             <div>
                 <label asp-for="Code" class="form-label @(isNew ? "required" : "")">Mã khách hàng</label>
-                @if (isNew) {<div class="ta-input-icon">@UiIcon.Render("hash")<input asp-for="Code" class="form-control text-uppercase" maxlength="50" autocomplete="off" required /></div>} else {<div class="ta-input-icon">@UiIcon.Render("hash")<input class="form-control" value="@Model.Code" readonly disabled /></div>}
+                @if (isNew) {<div class="ta-input-icon">@UiIcon.Render("hash")<input asp-for="Code" class="form-control text-uppercase" maxlength="50" autocomplete="off" required data-ta-code-suggest="@Url.Action("SuggestCode", "Customers")" data-ta-code-from="#Name" /></div><div class="form-hint">Tự gợi ý theo tên khách hàng; có thể sửa.</div>} else {<div class="ta-input-icon">@UiIcon.Render("hash")<input class="form-control" value="@Model.Code" readonly disabled /></div>}
                 <span asp-validation-for="Code" class="invalid-feedback d-block"></span>
                 @if (!isNew) {<div class="form-hint">Mã khách hàng không thể thay đổi.</div>}
             </div>
@@ -38,7 +38,11 @@
             </div>
             <div>
                 <label asp-for="TaxCode" class="form-label">Mã số thuế</label>
-                <div class="ta-input-icon">@UiIcon.Render("receipt-tax")<input asp-for="TaxCode" class="form-control" maxlength="50" inputmode="numeric" placeholder="0101234567 hoặc 0101234567-001" /></div>
+                <div class="ta-tax-lookup">
+                    <div class="ta-input-icon">@UiIcon.Render("receipt-tax")<input asp-for="TaxCode" class="form-control" maxlength="50" inputmode="numeric" placeholder="0101234567 hoặc 0101234567-001" data-ta-tax-input /></div>
+                    <button type="button" class="btn" data-ta-tax-lookup="@Url.Action("TaxLookup", "Customers")" data-ta-fill-name="#Name" data-ta-fill-address="#Address" title="Tra cứu tên, địa chỉ theo mã số thuế">@UiIcon.Render("search")<span>Tra cứu</span></button>
+                </div>
+                <div class="form-hint ta-tax-lookup__msg" data-ta-tax-msg role="status" aria-live="polite"></div>
                 <span asp-validation-for="TaxCode" class="invalid-feedback d-block"></span>
                 <div class="form-hint">10 chữ số; đơn vị phụ thuộc/chi nhánh: 10 chữ số + "-" + 3 chữ số. Không trùng với khách hàng khác.</div>
             </div>

@@ -148,3 +148,9 @@
 .ta-voice__btn.is-denied { color: var(--ta-danger-text); }
 @keyframes ta-voice-pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(220, 53, 69, .45); } 50% { box-shadow: 0 0 0 6px rgba(220, 53, 69, 0); } }
 @media (prefers-reduced-motion: reduce) { .ta-voice__btn.is-listening { animation: none; } }
+
+/* Customer form: tax code field with its "Tra cứu" button (wwwroot/js/ta-portal.js). */
+.ta-tax-lookup { display: flex; gap: 8px; }
+.ta-tax-lookup > .ta-input-icon { flex: 1 1 auto; min-width: 0; }
+.ta-tax-lookup > .btn { flex: 0 0 auto; }
+.ta-tax-lookup__msg:empty { display: none; }

@@ -16,3 +16,4 @@
 | `CONTRACTS-AND-TASKS-CHG-20261107T064001Z-F2473F` | 2026-11-07 | Vai tro mau Nhan vien va Quan ly cho cong viec va hop dong | d5e532b | EXECUTED | NOT_APPLICABLE | MERGED |
 | `CONTRACTS-AND-TASKS-CHG-20261107T074015Z-920E5B` | 2026-11-07 | Sua loi SQL Viec cua toi va loi Tong quan khi nhat ky thieu Action | 92c17c7 | NOT_APPLICABLE | DEPLOYED | MERGED |
 | `CONTRACTS-AND-TASKS-CHG-20261108T095603Z-009557` | 2026-11-08 | Bo chon nhan vien co avatar, tick chon (giao viec) | 2f4ae6a | NOT_APPLICABLE | DEPLOYED | MERGED |
+| `CONTRACTS-AND-TASKS-CHG-20261109T053119Z-035F79` | 2026-11-09 | Tra cuu MST va goi y ma khach hang (Admin) | — | NOT_APPLICABLE | NOT_PUBLISHED | PENDING_APPROVAL |

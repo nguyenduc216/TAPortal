@@ -247,6 +247,76 @@
     });
 })();
 
+// Customer form (Admin → Khách hàng): "Tra cứu" fills name and address from the tax code (public business register), and a
+// new customer's code is suggested from the name until staff type their own code.
+(() => {
+    'use strict';
+    const lookup = async (button, overwrite) => {
+        const form = button.closest('form');
+        const input = form?.querySelector('[data-ta-tax-input]');
+        const msg = form?.querySelector('[data-ta-tax-msg]');
+        const code = (input?.value || '').replace(/\s+/g, '');
+        if (!input || !msg) return;
+        const say = (text, tone) => { msg.textContent = text; msg.classList.toggle('text-success', tone === 'ok'); msg.classList.toggle('text-danger', tone === 'error'); };
+        if (!/^\d{10}(-\d{3})?$/.test(code)) { if (overwrite) say('Chỉ tra cứu được mã số thuế doanh nghiệp 10 chữ số (hoặc 10-3).', 'error'); return; }
+        if (button.dataset.busy) return;
+        button.dataset.busy = 'true';
+        button.disabled = true;
+        say('Đang tra cứu mã số thuế…');
+        try {
+            const r = await fetch(button.dataset.taTaxLookup + '?code=' + encodeURIComponent(code), { credentials: 'same-origin', headers: { Accept: 'application/json' } });
+            if (!r.ok) throw new Error();
+            const s = await r.json();
+            if (!s.ok) { say(s.message, 'error'); return; }
+            [[button.dataset.taFillName, s.name], [button.dataset.taFillAddress, s.address]].forEach(([selector, value]) => {
+                const target = selector && value ? form.querySelector(selector) : null;
+                if (target && (overwrite || !target.value.trim())) { target.value = value; target.dispatchEvent(new Event('input', { bubbles: true })); }
+            });
+            say(s.message + (s.taxStatus ? ' Tình trạng: ' + s.taxStatus + '.' : ''), 'ok');
+        } catch {
+            say('Tạm thời chưa tra cứu được. Vui lòng nhập tay.', 'error');
+        } finally {
+            button.disabled = false;
+            delete button.dataset.busy;
+        }
+    };
+    document.addEventListener('click', (event) => {
+        const button = event.target.closest?.('[data-ta-tax-lookup]');
+        if (button) lookup(button, true);
+    });
+    document.addEventListener('keydown', (event) => {
+        if (event.key !== 'Enter' || !event.target.matches?.('[data-ta-tax-input]')) return;
+        event.preventDefault();
+        const button = event.target.form?.querySelector('[data-ta-tax-lookup]');
+        if (button) lookup(button, true);
+    });
+
+    // Code suggestion: fills the code while it is empty or still the last suggestion (never over a code staff typed).
+    let timer = 0;
+    document.addEventListener('input', (event) => {
+        const field = event.target;
+        if (!(field instanceof HTMLElement)) return;
+        const codeInput = field.form?.querySelector('[data-ta-code-suggest]');
+        if (!codeInput) return;
+        if (field === codeInput) { codeInput.dataset.taTyped = codeInput.value.trim() !== '' && codeInput.value !== codeInput.dataset.taSuggested ? 'true' : ''; return; }
+        if (!field.matches(codeInput.dataset.taCodeFrom || '#Name') || codeInput.dataset.taTyped === 'true') return;
+        clearTimeout(timer);
+        timer = setTimeout(async () => {
+            const name = field.value.trim();
+            if (!name) { if (codeInput.value === codeInput.dataset.taSuggested) codeInput.value = ''; return; }
+            try {
+                const r = await fetch(codeInput.dataset.taCodeSuggest + '?name=' + encodeURIComponent(name), { credentials: 'same-origin', headers: { Accept: 'application/json' } });
+                if (!r.ok) return;
+                const s = await r.json();
+                if (codeInput.dataset.taTyped === 'true' || !s.code) return;
+                codeInput.value = s.code;
+                codeInput.dataset.taSuggested = s.code;
+            } catch { /* suggestion only */ }
+        }, 350);
+    });
+})();
+
+
 // Customer Workspace → "Tài khoản hệ thống": reveal / copy a stored password or PIN. Each click is one POST (the server
 // writes an audit row per request); a revealed value is masked again after 30 seconds and is never cached here.
 (() => {

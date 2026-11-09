@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using TACustomerPortal.Web.Models;
 using TACustomerPortal.Web.Security;
 using TACustomerPortal.Web.Services;
+using TAPortal.Shared;
 using TAPortal.Integrations.Branding;
 
 namespace TACustomerPortal.Web.Controllers;
