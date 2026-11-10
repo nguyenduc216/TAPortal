@@ -56,3 +56,4 @@ CHECKPOINT_4A: PASS (existing artifact integrity, isolated localhost startup and
 | `CUSTOMER-PORTAL-FOUNDATION-CHG-20261107T070538Z-03398E` | 2026-11-07 | Xung ho Hoa don tu dong tren Customer Portal, dong San pham cua T.A cuoi sidebar | 1bdb338 | NOT_APPLICABLE | DEPLOYED | MERGED |
 | `CUSTOMER-PORTAL-FOUNDATION-CHG-20261107T071821Z-4EA212` | 2026-11-07 | Ten nguoi gui email he thong: Hoa don tu dong | 0a60596 | EXECUTED | NOT_APPLICABLE | MERGED |
 | `CUSTOMER-PORTAL-FOUNDATION-CHG-20261109T162008Z-1FF4B8` | 2026-11-09 | San pham khach hang va gia rieng theo khach | 7fbdc2c | EXECUTED | DEPLOYED | MERGED |
+| `CUSTOMER-PORTAL-FOUNDATION-CHG-20261110T060913Z-B1DDA6` | 2026-11-10 | Tai anh QR kem thong tin va sua link mo app ngan hang dien san | — | NOT_APPLICABLE | NOT_PUBLISHED | PENDING_APPROVAL |

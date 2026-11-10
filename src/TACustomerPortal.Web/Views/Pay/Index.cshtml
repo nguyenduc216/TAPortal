@@ -7,6 +7,7 @@
     var (label, css) = PaymentText.OrderStatus(Model.Status);
     var transfer = OrderMath.TransferContent(o.OrderNo);
     var pay = "/pay/" + Model.Token;
+    var downloadIcon = new Microsoft.AspNetCore.Html.HtmlString("<svg class=\"ta-icon\" xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" focusable=\"false\" aria-hidden=\"true\"><path d=\"M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2 -2v-2\"/><path d=\"M7 11l5 5l5 -5\"/><path d=\"M12 4l0 12\"/></svg>");
     // Link previews (Zalo, Messenger…): the portal logo (og-share.png) and "Thanh toán <tiêu đề>"; absolute URLs, as crawlers require.
     var origin = $"{Context.Request.Scheme}://{Context.Request.Host}";
     var shareText = "Thanh toán " + Model.Title;
@@ -143,6 +144,33 @@
                     </div>
                     <div class="cp-muted cp-pay__until">Hết hạn lúc @PaymentText.VietnamTime(expires)</div>
                 }
+                @* "Tải mã QR" (operator 2026-11-10): one PNG with the QR and the transfer details under it, drawn in the browser. *@
+                <button class="cp-btn cp-btn--ghost cp-pay__qr-save" type="button" data-cp-save-qr>@downloadIcon<span>Tải ảnh mã QR</span></button>
+                <script type="application/json" data-cp-qr-info>@Html.Raw(System.Text.Json.JsonSerializer.Serialize(new
+                {
+                    file = "QR-" + o.OrderNo + ".png",
+                    seller = Model.SellerName,
+                    title = Model.Title,
+                    amount = PaymentText.Money(o.Remaining),
+                    rows = new[]
+                    {
+                        new[] { "Ngân hàng nhận", Model.BankName ?? "" },
+                        new[] { "Số tài khoản", Model.Account ?? Model.Transfer?.Account ?? "" },
+                        new[] { "Nội dung chuyển khoản", Model.Transfer?.Content ?? transfer },
+                        new[] { "Mã đơn hàng", o.OrderNo },
+                        new[] { "Hết hạn lúc", o.ExpiresAt is null ? "" : PaymentText.VietnamTime(o.ExpiresAt) },
+                    }.Where(r => r[1].Length > 0)
+                }))</script>
+                <dialog class="cp-pay__apps cp-pay__qr-image" id="qrImage" aria-labelledby="qrImageTitle">
+                    <div class="cp-pay__apps-head">
+                        <strong id="qrImageTitle">Ảnh mã QR</strong>
+                        <button class="cp-pay__apps-close" type="button" aria-label="Đóng" data-cp-close-dialog>×</button>
+                    </div>
+                    <p class="cp-hint">Nhấn giữ ảnh để lưu vào máy, hoặc bấm Tải xuống.</p>
+                    <img alt="Mã QR thanh toán kèm thông tin chuyển khoản" data-cp-qr-image />
+                    <a class="cp-btn cp-btn--primary cp-btn--block" data-cp-qr-download>@downloadIcon<span>Tải xuống</span></a>
+                </dialog>
+            }
             }
             else
             {
@@ -166,11 +194,22 @@
                     <strong id="bankAppsTitle">Chọn ứng dụng ngân hàng</strong>
                     <button class="cp-pay__apps-close" type="button" aria-label="Đóng" data-cp-close-dialog>×</button>
                 </div>
-                <p class="cp-hint">Ứng dụng mở sẵn số tài khoản, số tiền và nội dung <span class="cp-code">@(t.Content ?? transfer)</span>. Kiểm tra lại rồi xác nhận chuyển khoản.</p>
+                @* Autofill apps open their transfer screen with the QR's account, amount and content; the others only open the app. *@
+                <div class="cp-pay__apps-group">Điền sẵn thông tin chuyển khoản</div>
+                <p class="cp-hint">Ứng dụng mở màn hình chuyển khoản với số tài khoản, số tiền và nội dung <span class="cp-code">@(t.Content ?? transfer)</span>. Kiểm tra lại rồi xác nhận.</p>
                 <ul class="cp-pay__app-grid">
-                    @foreach (var app in BankAppLinks.Apps)
+                    @foreach (var app in BankAppLinks.Apps.Where(a => a.Autofill))
                     {
-                        <li><a href="@BankAppLinks.Link(app, t)" rel="noopener noreferrer"><img src="@BankAppLinks.Icon(app)" alt="" width="44" height="44" loading="lazy" referrerpolicy="no-referrer" /><span>@app.Name</span></a></li>
+                        <li><a href="@BankAppLinks.Link(app, t, origin + pay)" rel="noopener noreferrer"><img src="@BankAppLinks.Icon(app)" alt="" width="44" height="44" loading="lazy" referrerpolicy="no-referrer" /><span>@app.Name</span></a></li>
+                    }
+                </ul>
+                <div class="cp-pay__apps-group">Ngân hàng khác: chỉ mở ứng dụng</div>
+                <p class="cp-hint">Ngân hàng chưa hỗ trợ điền sẵn. Tải ảnh mã QR, mở ứng dụng rồi chọn quét mã QR từ ảnh trong máy.</p>
+                <button class="cp-btn cp-btn--ghost cp-btn--block" type="button" data-cp-save-qr>@downloadIcon<span>Tải ảnh mã QR</span></button>
+                <ul class="cp-pay__app-grid">
+                    @foreach (var app in BankAppLinks.Apps.Where(a => !a.Autofill))
+                    {
+                        <li><a href="@BankAppLinks.Link(app, t, origin + pay)" rel="noopener noreferrer"><img src="@BankAppLinks.Icon(app)" alt="" width="44" height="44" loading="lazy" referrerpolicy="no-referrer" /><span>@app.Name</span></a></li>
                     }
                 </ul>
                 <p class="cp-hint">Trên máy tính: quét mã QR bằng điện thoại.</p>
@@ -187,7 +226,77 @@
         const open = e.target.closest("[data-cp-open-dialog]");
         if (open) { document.getElementById(open.dataset.cpOpenDialog)?.showModal(); return; }
         if (e.target.closest("[data-cp-close-dialog]") || e.target.matches("dialog.cp-pay__apps")) e.target.closest("dialog")?.close();
+        if (e.target.closest("[data-cp-save-qr]")) saveQr();
     });
+
+    // "Tải ảnh mã QR": the QR and the transfer details under it, drawn on a canvas as one PNG. Browsers inside chat apps
+    // (Zalo, Messenger…) ignore downloads, so the image is also shown to long-press and save.
+    async function qrPng() {
+        const info = JSON.parse(document.querySelector("[data-cp-qr-info]").textContent);
+        const svg = document.querySelector(".cp-pay__qr-box svg").cloneNode(true);
+        svg.setAttribute("width", 1000); svg.setAttribute("height", 1000);
+        const qr = new Image();
+        qr.src = URL.createObjectURL(new Blob([new XMLSerializer().serializeToString(svg)], { type: "image/svg+xml" }));
+        await qr.decode();
+        const W = 720, P = 48, font = (w, s) => `${w} ${s}px -apple-system, "Segoe UI", Roboto, Arial, sans-serif`;
+        const c = document.createElement("canvas"), g = c.getContext("2d");
+        const wrap = (text, width) => {
+            const lines = []; let line = "";
+            for (const word of String(text).split(/\s+/)) {
+                const next = line ? line + " " + word : word;
+                if (line && g.measureText(next).width > width) { lines.push(line); line = word; } else line = next;
+            }
+            return line ? [...lines, line] : lines;
+        };
+        // Lay out once to measure the height, then draw.
+        const draw = paint => {
+            let y = P;
+            const text = (t, w, s, color, x = W / 2, align = "center", width = W - 2 * P) => {
+                g.font = font(w, s);
+                for (const l of wrap(t, width)) { if (paint) { g.fillStyle = color; g.textAlign = align; g.fillText(l, x, y + s); } y += s * 1.3; }
+            };
+            text(info.seller, "700", 30, "#0f172a");
+            text(info.title, "400", 24, "#475569");
+            y += 20;
+            const q = 440;
+            if (paint) { g.drawImage(qr, (W - q) / 2, y, q, q); }
+            y += q + 24;
+            text("Số tiền cần thanh toán", "400", 22, "#64748b");
+            text(info.amount, "800", 46, "#0f172a");
+            y += 16;
+            for (const [label, value] of info.rows) {
+                if (paint) { g.strokeStyle = "#e2e8f0"; g.beginPath(); g.moveTo(P, y); g.lineTo(W - P, y); g.stroke(); }
+                y += 14;
+                const top = y;
+                text(label, "400", 22, "#64748b", P, "left", 240);
+                const after = y; y = top;
+                text(value, "700", 22, "#0f172a", W - P, "right", W - 2 * P - 260);
+                y = Math.max(y, after) + 6;
+            }
+            y += 18;
+            text("Quét mã bằng ứng dụng ngân hàng · Hóa đơn tự động", "400", 18, "#94a3b8");
+            return y + P - 20;
+        };
+        const H = draw(false), k = 2;   // drawn at twice the size: sharp on phones and in print
+        c.width = W * k; c.height = H * k;
+        g.scale(k, k);
+        g.fillStyle = "#fff"; g.fillRect(0, 0, W, H);
+        draw(true);
+        URL.revokeObjectURL(qr.src);
+        return { info, url: c.toDataURL("image/png") };
+    }
+    async function saveQr() {
+        let png;
+        try { png = await qrPng(); } catch { alert("Không tạo được ảnh mã QR. Hãy chụp màn hình mã QR."); return; }
+        const dialog = document.getElementById("qrImage");
+        dialog.querySelector("[data-cp-qr-image]").src = png.url;
+        const link = dialog.querySelector("[data-cp-qr-download]");
+        link.href = png.url; link.download = png.info.file;
+        document.getElementById("bankApps")?.close();
+        if (/Zalo|FBAN|FBAV|FB_IAB|Instagram|Line\//i.test(navigator.userAgent)) { dialog.showModal(); return; }
+        link.click();
+        dialog.showModal();
+    }
 </script>
 </body>
 </html>

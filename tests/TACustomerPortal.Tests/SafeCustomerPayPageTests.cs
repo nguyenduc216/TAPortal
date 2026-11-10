@@ -76,6 +76,10 @@ public sealed class SafeCustomerPayPageTests
         // "Chuyển khoản" (twice) opens a banking app with the QR's own transfer, like tapping a QR in Zalo.
         Assert.Equal(2, Regex.Matches(page, "data-cp-open-dialog=\"bankApps\"").Count);
         Assert.Contains("href=\"https://dl.vietqr.io/pay?app=mb&amp;ba=", await c.GetStringAsync(link));
+        Assert.Contains("&url=https%3A%2F%2Flocalhost%2Fpay%2F", page);               // back to this page after paying
+        // "Tải ảnh mã QR" (under the QR and among the banks that only open the app) with the details drawn under the QR.
+        Assert.Equal(2, Regex.Matches(page, "data-cp-save-qr>").Count);
+        Assert.Contains("\"file\":\"QR-DH261106-0001.png\"", page);
         // The buyer's tax code was recorded by the seller: shown, not editable by the payer.
         Assert.DoesNotContain("cp-pay__save", page);
         Assert.Contains("Thông tin xuất hóa đơn do người bán cung cấp.", page);
@@ -210,7 +214,11 @@ public sealed class SafeCustomerPayPageTests
     {
         var t = BankAppLinks.Read(Payload)!;
         Assert.Equal(new QrTransfer("970422", "VQRQANJPU3108", 54000m, "DH2611060001"), t);
-        Assert.Equal("https://dl.vietqr.io/pay?app=vcb&ba=VQRQANJPU3108%40970422&am=54000&tn=DH2611060001", BankAppLinks.Link(BankAppLinks.Apps[0], t));
+        // VietQR wants the bank code (mb), not the BIN, and a return url; without them the app opens without the transfer.
+        Assert.Equal("https://dl.vietqr.io/pay?app=mb&ba=VQRQANJPU3108%40mb&am=54000&tn=DH2611060001&url=https%3A%2F%2Fpay.example%2Fpay%2Fabc",
+            BankAppLinks.Link(BankAppLinks.Apps[0], t, "https://pay.example/pay/abc"));
+        Assert.Equal("999999", BankAppLinks.BankCode("999999"));
+        Assert.Equal(["mb", "bidv", "icb", "acb", "ocb"], BankAppLinks.Apps.Where(a => a.Autofill).Select(a => a.Id));
         Assert.Null(BankAppLinks.Read("00020101021238570010A000000727"));   // truncated
         Assert.Null(BankAppLinks.Read(null));
         Assert.Equal(BankAppLinks.Apps.Count, BankAppLinks.Apps.Select(a => a.Id).Distinct().Count());
