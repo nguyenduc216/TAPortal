@@ -4,7 +4,7 @@
 - Change ID: `CUSTOMER-PORTAL-FOUNDATION-CHG-20261110T070417Z-914962`
 - Created UTC: 2026-11-10T07:04:17.142219+00:00
 - Tiêu đề: Nut sao chep tren trang thanh toan va danh sach app ngan hang tu VietQR
-- Trạng thái: IMPLEMENTED
+- Trạng thái: DEPLOYED
 
 ## Yêu cầu và phạm vi
 Operator (2026-11-10): chỉ 5 app ngân hàng điền sẵn được (giới hạn của VietQR/ngân hàng). Làm cả hai: (1) nút Sao chép số tài khoản, số tiền, nội dung chuyển khoản; (2) danh sách app tự cập nhật theo VietQR.
@@ -33,9 +33,9 @@ Operator (2026-11-10): chỉ 5 app ngân hàng điền sẵn được (giới h�
 
 ## Git
 - Branch: feature/customer-portal-mvp01
-- Commit SHA: xem report
+- Commit SHA: 8972a5e
 - PR:
-- Merge: xem report
+- Merge: fast-forward main
 - Merge SHA:
 
 ## Rủi ro, quyết định và việc còn lại
