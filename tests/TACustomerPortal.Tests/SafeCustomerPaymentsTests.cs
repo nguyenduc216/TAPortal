@@ -784,6 +784,8 @@ public sealed class SafeCustomerPaymentsTests
                 services.AddSingleton<IOrderPageStore>(pages);
                 services.RemoveAll<ITaxCodeLookup>();   // never the public register from a test
                 services.AddSingleton<ITaxCodeLookup>(new SafeCustomerSignupTests.FakeLookup());
+                services.RemoveAll<IBankAppCatalog>();  // never VietQR from a test: the built-in list
+                services.AddSingleton<IBankAppCatalog>(new SafeCustomerPayPageTests.FixedBankApps());
                 services.RemoveAll<ITingeeApi>();
                 services.AddSingleton<ITingeeApi>(t);
                 services.RemoveAll<IServicePackageStore>();

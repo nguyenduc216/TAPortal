@@ -20,7 +20,7 @@ public sealed record BankApp(string Id, string Name, bool Autofill = false);
 /// code (mb, vcb…), not the BIN, and a return <c>url</c>; with both it hands an autofill app the QR itself (verified with MB:
 /// <c>mbbank://applink?targetPage=QRPay&amp;qrContent=…</c>), so the app shows the transfer locked as when scanning.
 /// </summary>
-public static class BankAppLinks
+public static partial class BankAppLinks
 {
     /// <summary>Apps VietQR supports on both Android and iOS: the autofill ones first, then by installs (lists of 2026-11-10).</summary>
     public static readonly IReadOnlyList<BankApp> Apps =

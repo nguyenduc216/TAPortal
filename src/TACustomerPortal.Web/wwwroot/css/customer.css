@@ -593,3 +593,10 @@ textarea.cp-input { height: auto; min-height: 72px; padding-top: 8px; padding-bo
 .cp-product-card .cp-badge { position: absolute; top: 12px; left: 12px; }
 .cp-remember-row { padding: 8px 0; border-top: 1px solid var(--cp-line); }
 @media (max-width: 560px) { .cp-product-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; } .cp-dialog { padding: 14px; } }
+/* Payment page: copy buttons beside the account, amount and transfer content. */
+.cp-pay__copy { display: inline-flex; align-items: center; justify-content: flex-end; gap: 6px; }
+.cp-pay__copy button { display: inline-grid; place-items: center; width: 28px; height: 28px; flex: none; border: 1px solid var(--cp-line); border-radius: 8px; background: var(--cp-surface); color: var(--cp-ink-3); cursor: pointer; }
+.cp-pay__copy button:hover { background: var(--cp-hover-bg); border-color: var(--cp-hover-line); color: var(--cp-ink); }
+.cp-pay__copy button.is-copied { background: var(--cp-green-100); border-color: var(--cp-green-500); color: var(--cp-green-700); }
+.cp-pay__copy .ta-icon { width: 15px; height: 15px; }
+.cp-pay__facts > div:has(.cp-pay__copy) { align-items: center; }

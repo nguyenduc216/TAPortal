@@ -513,5 +513,15 @@
     "migration_status": "NOT_APPLICABLE",
     "publish_status": "DEPLOYED",
     "merge_status": "MERGED"
+  },
+  {
+    "change_id": "CUSTOMER-PORTAL-FOUNDATION-CHG-20261110T070417Z-914962",
+    "created_at": "2026-11-10T07:04:17.142219+00:00",
+    "title": "Nut sao chep tren trang thanh toan va danh sach app ngan hang tu VietQR",
+    "status": "IMPLEMENTED",
+    "commit_sha": null,
+    "migration_status": "NOT_APPLICABLE",
+    "publish_status": "NOT_PUBLISHED",
+    "merge_status": "PENDING_APPROVAL"
   }
 ]

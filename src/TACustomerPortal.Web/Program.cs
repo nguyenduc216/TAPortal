@@ -19,6 +19,9 @@ builder.Services.AddScoped<ICustomerStore, CustomerStore>();
 builder.Services.AddScoped<ISignupStore, SqlSignupStore>();
 builder.Services.AddHttpClient(VietQrTaxCodeLookup.ClientName, c => { c.BaseAddress = new Uri("https://api.vietqr.io/"); c.Timeout = TimeSpan.FromSeconds(6); });
 builder.Services.AddSingleton<ITaxCodeLookup, VietQrTaxCodeLookup>();
+builder.Services.AddHttpClient(VietQrBankAppCatalog.ClientName, c => { c.BaseAddress = new Uri("https://api.vietqr.io/"); c.Timeout = TimeSpan.FromSeconds(10); });
+builder.Services.AddSingleton<IBankAppCatalog>(sp => new VietQrBankAppCatalog(sp.GetRequiredService<IHttpClientFactory>(),
+    sp.GetRequiredService<ILogger<VietQrBankAppCatalog>>(), TimeProvider.System));
 builder.Services.AddScoped<ICurrentCustomerContext, CurrentCustomerContext>();
 builder.Services.AddScoped<CustomerCookieEvents>();
 builder.Services.AddScoped<IPaymentStore, SqlPaymentStore>();

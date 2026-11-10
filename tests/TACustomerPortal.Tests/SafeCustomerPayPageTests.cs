@@ -83,6 +83,10 @@ public sealed class SafeCustomerPayPageTests
         // Operator 2026-11-10: a stray brace once printed "} else {" and the "no QR" message under an open QR.
         Assert.DoesNotMatch(@">\s*\}\s*else\s*\{", page);
         Assert.DoesNotContain("cp-pay__done", page);
+        // Copy buttons for banks that cannot fill the transfer in: account, amount (digits only), content.
+        Assert.Contains("data-cp-copy-text=\"123456789\"", page);
+        Assert.Contains("data-cp-copy-text=\"150000\"", page);
+        Assert.Contains("data-cp-copy-text=\"DH2611060001\"", page);
         // The buyer's tax code was recorded by the seller: shown, not editable by the payer.
         Assert.DoesNotContain("cp-pay__save", page);
         Assert.Contains("Thông tin xuất hóa đơn do người bán cung cấp.", page);
@@ -225,6 +229,26 @@ public sealed class SafeCustomerPayPageTests
         Assert.Null(BankAppLinks.Read("00020101021238570010A000000727"));   // truncated
         Assert.Null(BankAppLinks.Read(null));
         Assert.Equal(BankAppLinks.Apps.Count, BankAppLinks.Apps.Select(a => a.Id).Distinct().Count());
+    }
+
+    internal sealed class FixedBankApps : IBankAppCatalog { public IReadOnlyList<BankApp> Apps => BankAppLinks.Apps; }
+
+    private static string AppList(params (string id, string name, int fill)[] apps) =>
+        System.Text.Json.JsonSerializer.Serialize(new { apps = apps.Select(a => new { appId = a.id, appName = a.name, autofill = a.fill, monthlyInstall = 1 }) });
+
+    [Fact]
+    public void TheBankAppListFollowsVietQr()
+    {
+        var common = Enumerable.Range(1, 9).Select(i => ($"bank{i}", $"Bank {i}", 0)).ToArray();
+        var android = AppList([("vcb", "VCB Digibank", 1), ("mb", "MB Bank", 1), ("only-android", "X", 1), .. common, ("bad id", "Y", 0)]);
+        var ios = AppList([("vcb", "VCB Digibank", 1), ("mb", "MB Bank", 0), .. common]);
+        var apps = BankAppLinks.Merge(android, ios)!;
+        Assert.Equal(new BankApp("vcb", "Vietcombank", true), apps[0]);     // autofill on both: first, known short name kept
+        Assert.Equal(new BankApp("mb", "MB Bank", false), apps[1]);         // autofill on Android only: not promised
+        Assert.DoesNotContain(apps, a => a.Id is "only-android" or "bad id");
+        Assert.Equal(11, apps.Count);
+        Assert.Null(BankAppLinks.Merge(AppList(("vcb", "VCB", 1)), AppList(("vcb", "VCB", 1))));   // too short to be real
+        Assert.Null(BankAppLinks.Merge("<html>", ios));
     }
 
     private static Order OpenOrder(Guid? contact) =>
