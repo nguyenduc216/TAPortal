@@ -171,7 +171,6 @@
                     <a class="cp-btn cp-btn--primary cp-btn--block" data-cp-qr-download>@downloadIcon<span>Tải xuống</span></a>
                 </dialog>
             }
-            }
             else
             {
                 <div class="cp-pay__done @(Model.Status == OrderStatus.Paid ? "is-paid" : "")">@UiIcon.Render(Model.Status == OrderStatus.Paid ? "circle-check" : "qrcode")<p>@message</p></div>

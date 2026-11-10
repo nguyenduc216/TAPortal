@@ -80,6 +80,9 @@ public sealed class SafeCustomerPayPageTests
         // "Tải ảnh mã QR" (under the QR and among the banks that only open the app) with the details drawn under the QR.
         Assert.Equal(2, Regex.Matches(page, "data-cp-save-qr>").Count);
         Assert.Contains("\"file\":\"QR-DH261106-0001.png\"", page);
+        // Operator 2026-11-10: a stray brace once printed "} else {" and the "no QR" message under an open QR.
+        Assert.DoesNotMatch(@">\s*\}\s*else\s*\{", page);
+        Assert.DoesNotContain("cp-pay__done", page);
         // The buyer's tax code was recorded by the seller: shown, not editable by the payer.
         Assert.DoesNotContain("cp-pay__save", page);
         Assert.Contains("Thông tin xuất hóa đơn do người bán cung cấp.", page);
