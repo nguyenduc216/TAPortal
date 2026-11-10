@@ -4,7 +4,7 @@
 - Change ID: `CUSTOMER-PORTAL-FOUNDATION-CHG-20261110T064757Z-60CE97`
 - Created UTC: 2026-11-10T06:47:57.996909+00:00
 - Tiêu đề: Sua dau ngoac thua lam trang thanh toan hien '} else {'
-- Trạng thái: IMPLEMENTED
+- Trạng thái: DEPLOYED
 
 ## Yêu cầu và phạm vi
 Operator (2026-11-10, ảnh chụp production): trang thanh toán hiện chữ "} else {" giữa trang, kèm thông báo "Đơn hàng chưa có mã QR" và "Tổng tiền đơn hàng" ngay dưới mã QR đang mở.
@@ -28,9 +28,9 @@ Nguyên nhân: change CUSTOMER-PORTAL-FOUNDATION-CHG-20261110T060913Z-B1DDA6 đ�
 
 ## Git
 - Branch: feature/customer-portal-mvp01
-- Commit SHA: xem report
+- Commit SHA: c964ffd
 - PR:
-- Merge: xem report
+- Merge: fast-forward main
 - Merge SHA:
 
 ## Rủi ro, quyết định và việc còn lại
