@@ -498,10 +498,10 @@
     "change_id": "CUSTOMER-PORTAL-FOUNDATION-CHG-20261110T060913Z-B1DDA6",
     "created_at": "2026-11-10T06:09:13.454976+00:00",
     "title": "Tai anh QR kem thong tin va sua link mo app ngan hang dien san",
-    "status": "IMPLEMENTED",
-    "commit_sha": null,
+    "status": "DEPLOYED",
+    "commit_sha": "bd93fff",
     "migration_status": "NOT_APPLICABLE",
-    "publish_status": "NOT_PUBLISHED",
-    "merge_status": "PENDING_APPROVAL"
+    "publish_status": "DEPLOYED",
+    "merge_status": "MERGED"
   }
 ]

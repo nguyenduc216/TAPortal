@@ -4,7 +4,7 @@
 - Change ID: `CUSTOMER-PORTAL-FOUNDATION-CHG-20261110T060913Z-B1DDA6`
 - Created UTC: 2026-11-10T06:09:13.454976+00:00
 - Tiêu đề: Tai anh QR kem thong tin va sua link mo app ngan hang dien san
-- Trạng thái: IMPLEMENTED
+- Trạng thái: DEPLOYED
 
 ## Yêu cầu và phạm vi
 Operator (2026-11-10), trang thanh toán công khai (/pay/<token>):
@@ -35,9 +35,9 @@ Operator (2026-11-10), trang thanh toán công khai (/pay/<token>):
 
 ## Git
 - Branch: feature/customer-portal-mvp01
-- Commit SHA: xem report
+- Commit SHA: bd93fff
 - PR:
-- Merge: xem report
+- Merge: fast-forward main
 - Merge SHA:
 
 ## Rủi ro, quyết định và việc còn lại
