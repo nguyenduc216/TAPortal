@@ -35,7 +35,7 @@
                 <tr>
                     <td class="ta-cell-strong"><a class="text-reset" asp-action="Page" asp-route-id="@p.Def.Key">@p.Def.Name</a><div class="ta-cell-sub">@p.Title</div></td>
                     <td data-label="Đường dẫn">@if (p.Def.Path is null) {<span class="ta-cell-sub">mọi trang</span>} else {<a href="@(Model.PublicUrl + p.Def.Path)" target="_blank" rel="noopener"><code>@p.Def.Path</code></a>}</td>
-                    <td data-label="Section">@p.Sections.Count section@if (edited > 0) {<div class="ta-cell-sub">@edited đã sửa</div>}@if (hidden > 0) {<div class="ta-cell-sub">@hidden đang ẩn</div>}</td>
+                    <td data-label="Section"><span>@p.Sections.Count section</span>@if (edited > 0) {<div class="ta-cell-sub">@edited đã sửa</div>}@if (hidden > 0) {<div class="ta-cell-sub">@hidden đang ẩn</div>}</td>
                     <td data-label="Cập nhật">@(last == default ? "Nội dung mặc định" : WebsiteUi.Local(last).ToString("dd/MM/yyyy HH:mm", vi))</td>
                     <td class="ta-col-actions"><a class="btn btn-sm" asp-action="Page" asp-route-id="@p.Def.Key">@UiIcon.Render("pencil")<span>Sửa nội dung</span></a></td>
                 </tr>

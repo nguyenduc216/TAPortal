@@ -224,7 +224,11 @@ public sealed class SafeWebsiteTests
         {
             var response = await client.GetAsync(url);
             Assert.True(response.StatusCode == HttpStatusCode.OK, $"{url}: {(int)response.StatusCode}");
+            // Razor code must never leak as text (e.g. "section@if" is read as an e-mail address, not code).
+            var body = await response.Content.ReadAsStringAsync();
+            Assert.False(Regex.IsMatch(body, @"@(if|foreach|for|switch)\s*\("), $"{url}: raw Razor code in output");
         }
+        Assert.Contains("<span>8 section</span>", await client.GetStringAsync("/Website"));
         var editor = await client.GetStringAsync("/Website/Section?page=home&key=faq");
         Assert.Contains("name=\"c.items[0].q\"", editor);
         Assert.Contains("data-ta-web-template", editor);
