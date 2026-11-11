@@ -35,7 +35,7 @@
                 {
                     var (label, css) = PaymentText.OrderStatus(o.Status);
                     <tr data-ta-row>
-                        <td><a class="cp-link" asp-action="Details" asp-route-id="@o.Id">@o.OrderNo</a><div class="cp-muted">@o.Description</div></td>
+                        <td><span class="cp-order-code"><span class="cp-dot cp-dot--@css.Replace("cp-badge--", "")" title="@label" aria-hidden="true"></span><a class="cp-link" asp-action="Details" asp-route-id="@o.Id" aria-label="@o.OrderNo — @label">@o.OrderNo</a></span>@if (!string.IsNullOrWhiteSpace(o.Description)) {<button class="cp-clamp" type="button" aria-expanded="false" title="@o.Description" data-cp-clamp>@o.Description</button>}</td>
                         <td>@(o.ContactName ?? "Khách lẻ")</td>
                         <td class="cp-num">@PaymentText.Money(o.Amount)</td>
                         <td class="cp-num">@PaymentText.Money(o.PaidAmount)</td>

@@ -322,6 +322,16 @@ a.cp-card:hover { background: var(--cp-hover-bg); border-color: var(--cp-hover-l
 
 /* Payments area: toolbar, tables, forms, flash messages, QR */
 .cp-badge--red { background: var(--cp-red-50); color: var(--cp-red); }
+/* Order list: a dot in the order status colour before the code, and a one-line description that opens on tap */
+.cp-order-code { display: inline-flex; align-items: center; gap: 7px; white-space: nowrap; }
+.cp-dot { flex: 0 0 8px; width: 8px; height: 8px; border-radius: 50%; background: #98A2B3; box-shadow: 0 0 0 3px rgba(152, 162, 179, .18); }
+.cp-dot--blue { background: var(--cp-blue-600); box-shadow: 0 0 0 3px var(--cp-blue-50); }
+.cp-dot--gold { background: #D97706; box-shadow: 0 0 0 3px var(--cp-gold-100); }
+.cp-dot--green { background: #16A34A; box-shadow: 0 0 0 3px var(--cp-green-100); }
+.cp-dot--red { background: #DC2626; box-shadow: 0 0 0 3px var(--cp-red-50); }
+.cp-clamp { display: block; max-width: 200px; margin: 2px 0 0 15px; padding: 0; border: 0; background: none; color: var(--cp-ink-3); font: inherit; font-size: 12px; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
+.cp-clamp.is-open { width: 200px; white-space: normal; overflow-wrap: anywhere; }
+.cp-clamp:focus-visible { outline: 2px solid var(--cp-blue-500); outline-offset: 2px; border-radius: 4px; }
 .cp-flash { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 14px; padding: 10px 14px; border-radius: var(--cp-radius-sm); font-size: 13px; animation: cp-pop .2s var(--cp-ease) both; }
 .cp-flash--ok { background: var(--cp-green-100); color: var(--cp-green-700); border: 1px solid #BBF7D0; }
 .cp-flash--error { background: var(--cp-red-50); color: var(--cp-red); border: 1px solid #F6C9C4; }

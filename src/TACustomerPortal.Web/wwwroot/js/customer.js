@@ -430,6 +430,13 @@ document.addEventListener("click", event => {
     if (form && event.target.closest("[data-cp-tax-lookup]")) setTimeout(() => syncDirty(form), 1500);
 });
 document.addEventListener("change", event => { const form = event.target.closest?.("form[data-cp-dirty-form]"); if (form) setTimeout(() => syncDirty(form), 1500); });
+// Order list: a long description shows one line; tapping it opens or closes the rest.
+document.addEventListener("click", event => {
+    const text = event.target.closest("[data-cp-clamp]");
+    if (!text) return;
+    const open = text.classList.toggle("is-open");
+    text.setAttribute("aria-expanded", open ? "true" : "false");
+});
 // Order details: copy the payment page link.
 document.addEventListener("click", event => {
     const button = event.target.closest("[data-cp-copy]");
