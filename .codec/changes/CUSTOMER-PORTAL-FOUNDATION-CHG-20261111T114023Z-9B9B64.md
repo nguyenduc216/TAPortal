@@ -4,7 +4,7 @@
 - Change ID: `CUSTOMER-PORTAL-FOUNDATION-CHG-20261111T114023Z-9B9B64`
 - Created UTC: 2026-11-11T11:40:23Z
 - Tiêu đề: Thẻ trạng thái trượt ngang trên điện thoại
-- Trạng thái: IMPLEMENTED
+- Trạng thái: DEPLOYED
 
 ## Yêu cầu và phạm vi
 Operator (2026-11-11, ảnh chụp trang Đơn hàng trên điện thoại): các thẻ tổng hợp trạng thái dàn trải quá, trên mobile làm dạng slider.
@@ -21,7 +21,7 @@ Operator (2026-11-11, ảnh chụp trang Đơn hàng trên điện thoại): cá
 - Playwright 360 px (HTML render từ test host): trang không tràn ngang (scrollWidth 360), hàng thẻ cuộn ngang, thẻ đang lọc hiện trong khung.
 
 ## Publish
-- invoice. Xem report.
+- invoice DEPLOYED 2026-11-11 11:44Z (health 200). Xem report.
 
 ## Git
 - Branch: feature/customer-portal-mvp01
