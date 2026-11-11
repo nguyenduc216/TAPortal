@@ -602,6 +602,58 @@ public sealed class SafeCustomerPaymentsTests
     }
 
     [Fact]
+    public async Task AnOpenQrCanBeReplacedWithANewLifetimeAndTheOldQrIsClosed()
+    {
+        // Operator request 2026-11-11: a QR valid for one day can be replaced by one valid 4 days from now.
+        using var f = Factory("OWNER", out var store, out var tingee);
+        store.Merchants[A] = 9001;
+        var bank = Bank("970418", BankStatus.Active, TingeeAccountTypes.Business) with { VaAccountNumber = "TINGEE8888" };
+        store.Banks.Add((A, bank));
+        var order = Order(OrderStatus.Partial, 300_000, 100_000) with { BankAccountId = bank.Id, QrType = TingeeQrTypes.Recurring, QrAccount = "QRA", BillId = "OLD1", ExpiresAt = DateTime.UtcNow.AddHours(1) };
+        store.Orders.Add((A, order));
+        var c = Client(f);
+        var details = WebUtility.HtmlDecode(await c.GetStringAsync($"/orders/details/{order.Id}"));
+        Assert.Contains("Đổi thời hạn / tạo lại QR", details);
+        Assert.Contains("name=\"QrExpireDays\"", details);
+        var token = await Token(c, $"/orders/details/{order.Id}");
+
+        // Out of range: nothing changes.
+        await Post(c, $"/orders/issueqr/{order.Id}", token, new() { ["QrExpireDays"] = "31", ["QrExpireHours"] = "0", ["QrExpireMins"] = "0" });
+        Assert.Empty(tingee.DynamicQrRequests);
+        Assert.Equal("OLD1", store.Orders.Single().Order.BillId);
+
+        await Post(c, $"/orders/issueqr/{order.Id}", token, new() { ["QrExpireDays"] = "4", ["QrExpireHours"] = "0", ["QrExpireMins"] = "0" });
+        var qr = Assert.Single(tingee.DynamicQrRequests);
+        Assert.Equal((200_000m, 5760), (qr.Amount, qr.ExpireInMinute));
+        var saved = store.Orders.Single().Order;
+        Assert.Equal((OrderStatus.Partial, 5760, "BILL1"), (saved.Status, saved.QrExpireMinutes, saved.BillId));
+        Assert.InRange(saved.ExpiresAt!.Value, DateTime.UtcNow.AddDays(4).AddMinutes(-5), DateTime.UtcNow.AddDays(4).AddMinutes(5));
+        Assert.Equal(("QRA", "OLD1"), Assert.Single(tingee.DeletedQrs));
+
+        // A fully paid order gets no new QR.
+        store.Orders[0] = (A, saved with { Status = OrderStatus.Paid });
+        await Post(c, $"/orders/issueqr/{order.Id}", token, new() { ["QrExpireDays"] = "1" });
+        Assert.Single(tingee.DynamicQrRequests);
+    }
+
+    [Fact]
+    public async Task AFailedReplacementKeepsTheCurrentQr()
+    {
+        using var f = Factory("OWNER", out var store, out var tingee);
+        store.Merchants[A] = 9001;
+        var bank = Bank("970418", BankStatus.Active, TingeeAccountTypes.Business) with { VaAccountNumber = "TINGEE8888" };
+        store.Banks.Add((A, bank));
+        var order = Order(OrderStatus.Awaiting, 300_000, 0) with { BankAccountId = bank.Id, QrType = TingeeQrTypes.Recurring, QrAccount = "QRA", BillId = "OLD1", QrPayload = "OLDQR", ExpiresAt = DateTime.UtcNow.AddHours(1) };
+        store.Orders.Add((A, order));
+        tingee.QrError = new TingeeApiException("500", "Lỗi hệ thống");
+        var c = Client(f);
+        await Post(c, $"/orders/issueqr/{order.Id}", await Token(c, $"/orders/details/{order.Id}"), new() { ["QrExpireDays"] = "4" });
+        var saved = store.Orders.Single().Order;
+        Assert.Equal(("OLD1", "OLDQR", OrderStatus.Awaiting), (saved.BillId, saved.QrPayload, saved.Status));
+        Assert.Empty(tingee.DeletedQrs);
+    }
+
+    [Fact]
     public async Task OrdersWithMoneyReceivedCannotBeCancelled()
     {
         using var f = Factory("OWNER", out var store, out _);

@@ -115,9 +115,13 @@ public sealed class OrdersController(ICurrentCustomerContext customer, IPaymentS
         return RedirectToAction(nameof(Details), new { id });
     }
 
-    /// <summary>(Re)issues the QR of a draft or expired order; bankAccountId switches the receiving account before that.</summary>
+    /// <summary>
+    /// Issues a new QR for the amount still due: for a draft or expired order, or to replace an open order's QR with a new
+    /// lifetime (operator request 2026-11-11). The lifetime (days/hours/minutes, counted from now) defaults to the order's
+    /// current one; bankAccountId switches the receiving account. The previous QR is closed once the new one exists.
+    /// </summary>
     [HttpPost]
-    public async Task<IActionResult> IssueQr(Guid id, Guid? bankAccountId)
+    public async Task<IActionResult> IssueQr(Guid id, Guid? bankAccountId, int? qrExpireDays, int? qrExpireHours, int? qrExpireMins)
     {
         if (await Current() is not { } m) return SelectCustomer();
         if (!CanManage(m)) return Forbid();
@@ -125,9 +129,16 @@ public sealed class OrdersController(ICurrentCustomerContext customer, IPaymentS
         if (order is null) return NotFound();
         var now = clock.GetUtcNow().UtcDateTime;
         var status = OrderMath.EffectiveStatus(order, now);
-        if (status is not (OrderStatus.Draft or OrderStatus.Expired) || order.Remaining <= 0)
+        if (!OrderMath.CanReissueQr(status) || order.Remaining <= 0)
         {
-            Flash("Chỉ tạo lại QR cho đơn chưa có QR hoặc đã hết hạn và còn tiền phải thu.", error: true);
+            Flash("Chỉ tạo QR cho đơn đang mở hoặc đã hết hạn và còn tiền phải thu.", error: true);
+            return RedirectToAction(nameof(Details), new { id });
+        }
+        ModelState.Clear();
+        var minutes = QrLifetime.Apply(ModelState, nameof(OrderInput.QrExpireMinutes), order.QrExpireMinutes, qrExpireDays, qrExpireHours, qrExpireMins);
+        if (!ModelState.IsValid || qrExpireDays is < 0 or > 30 || qrExpireHours is < 0 or > 23 || qrExpireMins is < 0 or > 59)
+        {
+            Flash(QrLifetime.RangeMessage + " Số giờ từ 0 đến 23, số phút từ 0 đến 59.", error: true);
             return RedirectToAction(nameof(Details), new { id });
         }
         var chosen = bankAccountId ?? order.BankAccountId;
@@ -137,8 +148,10 @@ public sealed class OrdersController(ICurrentCustomerContext customer, IPaymentS
             Flash("Tài khoản nhận tiền không còn hoạt động. Vui lòng chọn tài khoản khác.", error: true);
             return RedirectToAction(nameof(Details), new { id });
         }
-        var result = await payments.IssueQrAsync(m.CustomerId, merchantId, order with { Status = status, BankAccountId = bank.Id }, bank, Actor);
-        Flash(result.Error ?? $"Đã tạo QR mới cho số tiền còn lại {PaymentText.Money(order.Remaining)}.", error: result.Error is not null);
+        var replacing = status is OrderStatus.Awaiting or OrderStatus.Partial;
+        var result = await payments.ReplaceQrAsync(m.CustomerId, merchantId, order with { Status = status, BankAccountId = bank.Id }, bank, minutes, Actor);
+        Flash(result.Error ?? $"Đã tạo QR mới cho số tiền còn lại {PaymentText.Money(order.Remaining)}, hiệu lực đến {PaymentText.VietnamTime(result.Order.ExpiresAt)}."
+            + (replacing ? " Mã QR cũ đã được thay; link QR cho khách hàng giữ nguyên." : ""), error: result.Error is not null);
         return RedirectToAction(nameof(Details), new { id });
     }
 

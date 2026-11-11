@@ -339,7 +339,7 @@ OUTPUT inserted.Id VALUES(@c,@no,@contact,@bank,@desc,@amount,'DRAFT',@expire,@i
     {
         await using var cn = await Open();
         await using var cmd = Command(cn, """
-UPDATE o SET BankAccountId=@bank,Status=n.Status,QrType=@qrType,QrPayload=@payload,QrAccount=@qrAccount,BillId=@bill,ExpiresAt=@expires,LastError=@error,
+UPDATE o SET BankAccountId=@bank,Status=n.Status,QrType=@qrType,QrPayload=@payload,QrAccount=@qrAccount,BillId=@bill,QrExpireMinutes=@minutes,ExpiresAt=@expires,LastError=@error,
  InvoiceStatus=CASE WHEN n.Status='PAID' AND o.AutoIssueInvoice=1 AND o.InvoiceStatus='NONE' THEN 'PENDING' ELSE o.InvoiceStatus END,
  PaidAt=CASE WHEN n.Status='PAID' AND o.PaidAt IS NULL THEN SYSUTCDATETIME() ELSE o.PaidAt END,
  CancelledAt=CASE WHEN n.Status='CANCELLED' AND o.CancelledAt IS NULL THEN SYSUTCDATETIME() ELSE o.CancelledAt END,
@@ -353,7 +353,7 @@ CROSS APPLY (SELECT CASE
   ELSE @status END AS Status) n
 WHERE o.CustomerId=@c AND o.Id=@id AND o.Status NOT IN ('EXPIRED_PAID','CANCELLED_PAID')
 """, ("@c", customerId), ("@id", o.Id), ("@bank", o.BankAccountId), ("@status", o.Status), ("@qrType", o.QrType), ("@payload", o.QrPayload), ("@qrAccount", o.QrAccount),
-            ("@bill", o.BillId), ("@expires", o.ExpiresAt), ("@error", o.LastError), ("@actor", actor));
+            ("@bill", o.BillId), ("@minutes", o.QrExpireMinutes), ("@expires", o.ExpiresAt), ("@error", o.LastError), ("@actor", actor));
         await cmd.ExecuteNonQueryAsync();
     }
 

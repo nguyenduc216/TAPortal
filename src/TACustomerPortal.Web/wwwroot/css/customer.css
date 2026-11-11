@@ -155,6 +155,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .cp-section p { color: var(--cp-ink-3); font-size: 12.5px; }
 .cp-grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
 .cp-grid--2 { grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr); }
+.cp-grid > * { min-width: 0; }
 .cp-grid > .cp-card { display: flex; flex-direction: column; }
 .cp-grid > .cp-card > .cp-card__foot { margin-top: auto; }
 
@@ -403,7 +404,7 @@ textarea.cp-input { height: auto; min-height: 72px; padding-top: 8px; padding-bo
     .cp-chip span, .cp-user__name { display: none; }
     .cp-hero { grid-template-columns: 1fr; padding: 18px; }
     .cp-hero__side { align-items: flex-start; }
-    .cp-grid--2 { grid-template-columns: 1fr; }
+    .cp-grid--2 { grid-template-columns: minmax(0, 1fr); }
     .cp-auth { grid-template-columns: 1fr; }
     .cp-auth__panel { padding: 24px 20px; gap: 16px; }
     .cp-auth__headline h1 { font-size: 22px; }
@@ -423,6 +424,7 @@ textarea.cp-input { height: auto; min-height: 72px; padding-top: 8px; padding-bo
 .cp-duration .cp-input-wrap { position: relative; }
 .cp-duration .cp-input { padding-right: 46px; }
 .cp-duration__unit { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: var(--cp-ink-3); font-size: 13px; pointer-events: none; }
+@media (max-width: 560px) { .cp-duration .cp-input-wrap > .ta-icon { display: none; } .cp-duration .cp-input { padding-left: 10px; padding-right: 40px; } .cp-duration__unit { right: 10px; } }
 /* Order details: receiving account picker next to "Tạo QR". */
 .cp-inline-form { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .cp-inline-form select { width: auto; max-width: 360px; }
@@ -476,6 +478,35 @@ textarea.cp-input { height: auto; min-height: 72px; padding-top: 8px; padding-bo
 .cp-paylink__row { display: flex; gap: 8px; flex-wrap: wrap; }
 .cp-paylink__row .cp-input-wrap { flex: 1 1 220px; min-width: 0; }
 .cp-paylink__row .cp-input { font-family: var(--cp-mono); font-size: 12px; }
+@media (max-width: 560px) {
+    .cp-paylink__row .cp-input-wrap { flex-basis: 100%; }
+    .cp-paylink__row .cp-btn { flex: 1 1 0; justify-content: center; }
+}
+
+/* Order details: change the QR lifetime / re-issue the QR (collapsed while a QR is open) */
+.cp-reissue { display: block; }
+.cp-reissue > summary { list-style: none; display: flex; align-items: center; gap: 8px; min-height: 36px; font-size: 13px; font-weight: 600; color: var(--cp-blue-700); cursor: pointer; }
+.cp-reissue > summary::-webkit-details-marker { display: none; }
+.cp-reissue > summary .ta-icon { width: 16px; height: 16px; }
+.cp-reissue > summary::after { content: ""; width: 7px; height: 7px; margin-left: auto; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(45deg); transition: transform .15s var(--cp-ease); }
+.cp-reissue[open] > summary::after { transform: rotate(-135deg); }
+.cp-reissue__form { display: grid; gap: 12px; margin-top: 8px; }
+.cp-reissue__form p { margin: 0; }
+.cp-reissue__form .cp-btn { justify-self: start; }
+@media (max-width: 560px) { .cp-reissue__form .cp-btn { justify-self: stretch; justify-content: center; } }
+
+/* Tables that become one card per row on phones (cells carry data-label) */
+@media (max-width: 640px) {
+    .cp-table--stack thead { display: none; }
+    .cp-table--stack, .cp-table--stack tbody { display: block; }
+    .cp-table--stack tr { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 14px; padding: 12px 14px; border-bottom: 1px solid var(--cp-line); }
+    .cp-table--stack td { display: flex; justify-content: space-between; gap: 8px; padding: 0; border: 0; text-align: right; white-space: normal; }
+    .cp-table--stack td::before { content: attr(data-label); color: var(--cp-ink-3); font-size: 12px; text-align: left; }
+    .cp-table--stack td[data-label="#"] { display: none; }
+    .cp-table--stack .cp-stack-title { grid-column: 1 / -1; display: block; text-align: left; font-weight: 600; overflow-wrap: anywhere; }
+    .cp-table--stack .cp-stack-title::before { content: none; }
+    .cp-table--stack .cp-stack-total { grid-column: 1 / -1; padding-top: 6px; border-top: 1px dashed var(--cp-line); font-weight: 700; }
+}
 
 /* Public payment page (/pay/{token}): two logos joined by a link, order, invoice details, QR and countdown */
 .cp-pay-body { min-height: 100vh; background: radial-gradient(600px 320px at 10% -10%, var(--cp-gold-100), transparent 70%), radial-gradient(640px 360px at 110% 0%, var(--cp-blue-50), transparent 70%), var(--cp-bg); }

@@ -42,6 +42,10 @@ public static class OrderMath
     public static string EffectiveStatus(Order o, DateTime utcNow) =>
         OrderStatus.IsOpen(o.Status) && o.Status != OrderStatus.Draft && o.ExpiresAt is { } expires && expires <= utcNow && o.PaidAmount < o.Amount ? OrderStatus.Expired : o.Status;
 
+    /// <summary>A new QR (first, re-issued after expiry, or replacing the open one with a new lifetime) can be made in these states.</summary>
+    public static bool CanReissueQr(string effectiveStatus) =>
+        effectiveStatus is OrderStatus.Draft or OrderStatus.Expired or OrderStatus.Awaiting or OrderStatus.Partial;
+
     /// <summary>
     /// Transfer content for an order's QR: the order number with letters and digits only (DH261105-0001 → DH2611050001).
     /// Banks reject other characters in the payment purpose (Tingee 400 "Purpose of transaction is wrong format").
@@ -97,6 +101,21 @@ public sealed class OrderPayments(IPaymentStore store, ITingeeApi tingee, TimePr
         updated = updated with { Status = OrderMath.StatusFor(order.Amount, order.PaidAmount), ExpiresAt = now.AddMinutes(order.QrExpireMinutes), LastError = null };
         await store.UpdateOrderAsync(customerId, updated, actor);
         return new(updated, null);
+    }
+
+    /// <summary>
+    /// Replaces the QR of an order (operator request 2026-11-11: change the QR lifetime, or re-issue a QR): a new QR for the
+    /// amount still due, valid <paramref name="minutes"/> from now, possibly on another receiving account. The new QR is
+    /// issued first; only once it exists is the previous dynamic QR closed (best effort), so a failure keeps the old QR.
+    /// Money sent to the old QR is still matched to the order by account and transfer content. The payment link stays the same.
+    /// </summary>
+    public async Task<OrderPaymentResult> ReplaceQrAsync(Guid customerId, long merchantId, Order order, BankAccount bank, int minutes, Guid actor)
+    {
+        if (order.Remaining <= 0) return new(order, "Đơn hàng đã thu đủ, không cần tạo QR mới.");
+        var previous = order;
+        var result = await IssueQrAsync(customerId, merchantId, order with { QrExpireMinutes = minutes }, bank, actor);
+        if (result.Error is null && previous.BillId is not null && previous.BillId != result.Order.BillId) await CloseQrAsync(merchantId, previous);
+        return result;
     }
 
     /// <summary>
