@@ -1,0 +1,47 @@
+@model WebsiteIndexVm
+@{
+    ViewData["Title"] = "Website TA";
+    ViewData["Heading"] = "Website TA";
+    ViewData["Subtitle"] = "Nội dung website tuvangiaiphapta.vn: các trang, section, bài viết, hình ảnh và thông tin liên hệ.";
+    ViewData["PageIcon"] = "layout-dashboard";
+    var o = Model.Overview;
+    var vi = System.Globalization.CultureInfo.GetCultureInfo("vi-VN");
+}
+@section PageActions {
+    <a class="btn" href="@Model.PublicUrl" target="_blank" rel="noopener">@UiIcon.Render("external-link")<span>Xem website</span></a>
+    @if (AdminPermissions.Has(User, AdminPermissions.WebsitePostsEdit)) {<a class="btn btn-ta-gold" asp-controller="WebsitePosts" asp-action="Create">@UiIcon.Render("plus")<span>Viết bài mới</span></a>}
+}
+@if (Model.Error is not null) {<div class="ta-alert ta-alert--danger" role="alert">@UiIcon.Render("alert-circle")<div class="ta-alert__body">@Model.Error</div></div>}
+@if (o is { TablesReady: true })
+{
+    <div class="ta-web-stats" aria-label="Tổng quan website">
+        <a class="card ta-web-stat" asp-controller="WebsitePosts" asp-action="Index" asp-route-status="published"><span class="ta-web-stat__num">@o.PostsPublished</span><span>Bài đã xuất bản</span></a>
+        <a class="card ta-web-stat" asp-controller="WebsitePosts" asp-action="Index" asp-route-status="draft"><span class="ta-web-stat__num">@o.PostsDraft</span><span>Bản nháp</span></a>
+        <a class="card ta-web-stat" asp-controller="WebsiteMedia" asp-action="Index"><span class="ta-web-stat__num">@o.Media</span><span>Ảnh trong thư viện</span></a>
+        <a class="card ta-web-stat @(o.LeadsNew > 0 ? "is-hot" : "")" asp-controller="WebsiteLeads" asp-action="Index" asp-route-status="0"><span class="ta-web-stat__num">@o.LeadsNew</span><span>Yêu cầu liên hệ mới (tổng @o.LeadsTotal)</span></a>
+    </div>
+}
+<section class="card ta-table-card" aria-label="Các trang của website">
+    <div class="card-header"><h2 class="card-title">@UiIcon.Render("list-tree")Các trang</h2></div>
+    <div class="ta-table-wrap">
+        <table class="ta-table ta-table-stack">
+            <thead><tr><th scope="col">Trang</th><th scope="col">Đường dẫn</th><th scope="col">Section</th><th scope="col">Cập nhật gần nhất</th><th scope="col" class="ta-col-actions">Thao tác</th></tr></thead>
+            <tbody>
+            @foreach (var p in Model.Pages)
+            {
+                var edited = p.Sections.Count(s => s.IsEdited);
+                var hidden = p.Sections.Count(s => !s.IsVisible);
+                var last = p.Sections.Where(s => s.UpdatedAt is not null).Select(s => s.UpdatedAt!.Value).DefaultIfEmpty().Max();
+                <tr>
+                    <td class="ta-cell-strong"><a class="text-reset" asp-action="Page" asp-route-id="@p.Def.Key">@p.Def.Name</a><div class="ta-cell-sub">@p.Title</div></td>
+                    <td data-label="Đường dẫn">@if (p.Def.Path is null) {<span class="ta-cell-sub">mọi trang</span>} else {<a href="@(Model.PublicUrl + p.Def.Path)" target="_blank" rel="noopener"><code>@p.Def.Path</code></a>}</td>
+                    <td data-label="Section">@p.Sections.Count section@if (edited > 0) {<div class="ta-cell-sub">@edited đã sửa</div>}@if (hidden > 0) {<div class="ta-cell-sub">@hidden đang ẩn</div>}</td>
+                    <td data-label="Cập nhật">@(last == default ? "Nội dung mặc định" : WebsiteUi.Local(last).ToString("dd/MM/yyyy HH:mm", vi))</td>
+                    <td class="ta-col-actions"><a class="btn btn-sm" asp-action="Page" asp-route-id="@p.Def.Key">@UiIcon.Render("pencil")<span>Sửa nội dung</span></a></td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+</section>
+<div class="ta-alert ta-alert--info mt-3" role="note">@UiIcon.Render("info-circle")<div class="ta-alert__body">Thay đổi hiện trên website trong vòng 1 phút. Các trang Giới thiệu, Dịch vụ và 2 trang dịch vụ chi tiết sẽ được thêm ở giai đoạn 2.</div></div>

@@ -1,0 +1,73 @@
+@model WebsitePageVm
+@{
+    var pg = Model.Editor.Page;
+    var row = Model.Editor.Row;
+    ViewData["ParentTitle"] = "Website TA";
+    ViewData["ParentController"] = "Website";
+    ViewData["Title"] = pg.Def.Name;
+    ViewData["Heading"] = "Trang: " + pg.Def.Name;
+    ViewData["Subtitle"] = pg.Def.Path is null ? "Phần dùng chung cho mọi trang." : "Đường dẫn " + pg.Def.Path + ". Sửa nội dung từng section, kéo thứ tự, ẩn/hiện và SEO của trang.";
+    ViewData["PageIcon"] = "file-text";
+    var canEdit = AdminPermissions.Has(User, AdminPermissions.WebsiteContentEdit);
+    var vi = System.Globalization.CultureInfo.GetCultureInfo("vi-VN");
+}
+@section PageActions {
+    @if (pg.Def.Path is not null) {<a class="btn" href="@(Model.PublicUrl + pg.Def.Path)" target="_blank" rel="noopener">@UiIcon.Render("external-link")<span>Xem trên website</span></a>}
+}
+<form class="card ta-table-card" asp-action="Layout" asp-route-id="@pg.Def.Key" method="post" data-ta-web-layout>
+    <div class="card-header"><h2 class="card-title">@UiIcon.Render("list-tree")Các section (theo thứ tự trên trang)</h2></div>
+    <ol class="ta-web-sections" data-ta-web-sortable>
+    @foreach (var s in pg.Sections)
+    {
+        <li class="ta-web-section @(s.IsVisible ? "" : "is-hidden")" data-key="@s.Def.Key">
+            <input type="hidden" name="keys" value="@s.Def.Key" />
+            @if (canEdit) {<span class="ta-web-section__move"><button type="button" class="btn btn-icon btn-sm" data-ta-move="-1" aria-label="Lên trên">↑</button><button type="button" class="btn btn-icon btn-sm" data-ta-move="1" aria-label="Xuống dưới">↓</button></span>}
+            <div class="ta-web-section__body">
+                <b>@s.Def.Name</b>
+                <small>@s.Def.SectionType.Name · @(s.IsEdited ? "đã sửa " + (s.UpdatedAt is DateTime u ? WebsiteUi.Local(u).ToString("dd/MM/yyyy HH:mm", vi) : "") : "nội dung mặc định")</small>
+            </div>
+            @if (pg.Def.Path is not null)
+            {
+                <label class="form-check form-switch mb-0" title="Hiện section này trên website">
+                    <input class="form-check-input" type="checkbox" name="visible" value="@s.Def.Key" checked="@s.IsVisible" disabled="@(!canEdit)" data-ta-web-visible />
+                    <span class="form-check-label">Hiện</span>
+                </label>
+            }
+            else {<input type="hidden" name="visible" value="@s.Def.Key" />}
+            <a class="btn btn-sm" asp-action="Section" asp-route-page="@pg.Def.Key" asp-route-key="@s.Def.Key">@UiIcon.Render("pencil")<span>@(canEdit ? "Sửa" : "Xem")</span></a>
+        </li>
+    }
+    </ol>
+    @if (canEdit && pg.Sections.Count > 1) {<div class="card-footer d-flex justify-content-end"><button class="btn btn-ta-gold" type="submit">@UiIcon.Render("device-floppy")<span>Lưu thứ tự &amp; ẩn/hiện</span></button></div>}
+</form>
+
+@if (pg.Def.Path is not null)
+{
+    <form class="card mt-3" asp-action="PageSeo" asp-route-id="@pg.Def.Key" method="post">
+        <div class="card-header"><h2 class="card-title">@UiIcon.Render("search")SEO – hiển thị trên Google</h2></div>
+        <div class="card-body">
+            <div class="ta-form-grid">
+                <div>
+                    <label class="form-label" for="seoTitle">Tiêu đề trang (thẻ title)</label>
+                    <div class="ta-input-icon">@UiIcon.Render("search")<input class="form-control" id="seoTitle" name="seoTitle" maxlength="200" value="@row?.SeoTitle" placeholder="@pg.Def.Title" disabled="@(!canEdit)" data-ta-count="60" /></div>
+                    <small class="form-hint">Để trống dùng mặc định. Nên dưới 60 ký tự.</small>
+                </div>
+                <div>
+                    <label class="form-label" for="seoDescription">Mô tả (meta description)</label>
+                    <div class="ta-input-icon ta-input-icon--top">@UiIcon.Render("search")<textarea class="form-control" id="seoDescription" name="seoDescription" rows="2" maxlength="400" placeholder="@pg.Def.Description" disabled="@(!canEdit)" data-ta-count="160">@row?.SeoDescription</textarea></div>
+                    <small class="form-hint">Nên 120 – 160 ký tự.</small>
+                </div>
+                @if (pg.Def.Key != "home")
+                {
+                    <label class="form-check"><input class="form-check-input" type="checkbox" name="published" value="true" checked="@(row?.IsPublished ?? true)" disabled="@(!canEdit)" /><span class="form-check-label">Trang đang hiển thị (bỏ chọn để tạm ẩn trang, trả về lỗi 404)</span></label>
+                }
+            </div>
+            <div class="ta-web-serp" aria-label="Xem trước kết quả Google">
+                <span class="ta-web-serp__url">@(Model.PublicUrl.Replace("https://", "") + pg.Def.Path)</span>
+                <span class="ta-web-serp__title">@pg.Title</span>
+                <span class="ta-web-serp__desc">@pg.Description</span>
+            </div>
+        </div>
+        @if (canEdit) {<div class="card-footer d-flex justify-content-end"><button class="btn btn-ta-gold" type="submit">@UiIcon.Render("device-floppy")<span>Lưu SEO</span></button></div>}
+    </form>
+}

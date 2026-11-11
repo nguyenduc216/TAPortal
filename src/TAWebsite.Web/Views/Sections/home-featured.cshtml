@@ -1,0 +1,39 @@
+@model SectionVm
+@{
+    var c = Model.C;
+    string[] symbols = ["▤", "▧", "▥", "▦", "◈", "▣", "▨", "▩"];
+    string[] icons =
+    [
+        """<svg aria-hidden="true" viewBox="0 0 64 64"><path d="M8 26 19 16l12 8 12-8 13 10-12 17-12-7-12 7Z"></path><path d="m19 30 13 12 13-12M26 35l-7 7m19-7 7 7"></path></svg>""",
+        """<svg aria-hidden="true" viewBox="0 0 64 64"><path d="M17 7h22l10 10v38H17zM39 7v12h10M24 28h18M24 36h11M24 44h10"></path><circle cx="45" cy="44" r="10"></circle><path d="M41 44h8m-4-4v8"></path></svg>""",
+        """<svg aria-hidden="true" viewBox="0 0 64 64"><rect height="32" rx="2" width="38" x="13" y="11"></rect><path d="M8 51h48l-5-8H13zM26 22h12m-12 7h12"></path></svg>""",
+        """<svg aria-hidden="true" viewBox="0 0 64 64"><path d="M32 7 51 15v15c0 13-9 22-19 27C22 52 13 43 13 30V15Z"></path><path d="m23 31 7 7 13-15"></path></svg>"""
+    ];
+    var steps = c.List("steps");
+    var featured = c.List("featured");
+}
+<section aria-label="Dịch vụ nổi bật và quy trình làm việc" class="classic-middle wrap">
+    <aside class="featured-services"><h2>@c["featuredTitle"]</h2>
+        <div class="featured-links">
+            @for (var i = 0; i < featured.Count; i++) {<a href="@SiteContext.Link(featured[i]["url"])"><span class="mini-symbol">@symbols[i % symbols.Length]</span><span>@featured[i]["label"]</span><span class="chev">›</span></a>}
+        </div>
+        @if (c.Has("allLabel")) {<a class="all-services" href="@SiteContext.Link(c["allUrl"])">@c["allLabel"] <span aria-hidden="true">→</span></a>}
+    </aside>
+    <div class="middle-right">
+        <section class="workflow" id="process"><h2>@c["stepsTitle"]</h2>
+            <div class="workflow-steps">
+                @for (var i = 0; i < steps.Count; i++)
+                {
+                    if (i > 0) {<span class="workflow-arrow">→</span>}
+                    <article><span class="step-num">@((i + 1).ToString("00"))</span><div class="step-icon">@Html.Raw(icons[i % icons.Length])</div><h3>@steps[i]["title"]</h3><p>@steps[i]["text"]</p></article>
+                }
+            </div>
+        </section>
+        @if (c.Has("bannerTitle"))
+        {
+            <section aria-label="Đối tác tin cậy" class="partner-banner">@if (c.Has("bannerImage")) {<img alt="@c["bannerImageAlt"]" loading="lazy" src="@SiteContext.Img(c["bannerImage"])" />}
+                <div class="partner-copy"><h2>@c["bannerTitle"]</h2><p>@c["bannerText"]</p>@if (c.Has("bannerLinkLabel")) {<a href="@SiteContext.Link(c["bannerLinkUrl"], "/lien-he")">@c["bannerLinkLabel"] <span aria-hidden="true">→</span></a>}</div>
+            </section>
+        }
+    </div>
+</section>

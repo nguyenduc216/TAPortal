@@ -1,0 +1,9 @@
+@model SectionVm
+@{ var c = Model.C; }
+<section class="dv-section" id="@Model.Key"><div class="wrap"><div class="dv-cta">
+    <div>@if (c.Has("eyebrow")) {<span class="eyebrow">@c["eyebrow"]</span>}<h2>@c["title"]</h2>@if (c.Has("intro")) {<p>@c["intro"]</p>}</div>
+    <div class="dv-cta-actions">
+        @if (c.Has("primaryLabel")) {<a class="btn btn-gold btn-action" href="@SiteContext.Link(c["primaryUrl"], "/lien-he")">@c["primaryLabel"]</a>}
+        @if (c.Has("secondaryLabel")) {<a class="btn btn-outline btn-action" href="@SiteContext.Link(c["secondaryUrl"])">@c["secondaryLabel"]</a>}
+    </div>
+</div></div></section>

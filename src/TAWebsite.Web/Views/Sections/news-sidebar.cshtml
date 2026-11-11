@@ -1,0 +1,23 @@
+@model SectionVm
+@* Rendered inside the news list and article pages (Site/News, Site/Post), not as a full-width section. *@
+@{ var c = Model.C; var popular = Model.Posts; }
+<aside class="nw-sidebar">
+    @if (c.List("deadlines").Count > 0)
+    {
+        <div class="nw-widget"><h3>@c["deadlinesTitle"]</h3>
+            @foreach (var d in c.List("deadlines"))
+            {
+                var parts = d["date"].Split('/');
+                <div class="nw-deadline"><span>@parts[0]@if (parts.Length > 1) {<small>TH @parts[1]</small>}</span><div><b>@d["title"]</b><em>@d["note"]</em></div></div>
+            }
+        </div>
+    }
+    @if (popular.Count > 0)
+    {
+        <div class="nw-widget"><h3>Đọc nhiều</h3><ol class="nw-popular">@foreach (var p in popular) {<li><a href="@SiteHtml.PostUrl(p)">@p.Title</a></li>}</ol></div>
+    }
+    @if (c.Has("ctaTitle"))
+    {
+        <div class="nw-widget" style="background:var(--gold-soft);border-color:#f0d77d"><h3>@c["ctaTitle"]</h3><p style="font-size:13px;color:var(--muted)">@c["ctaText"]</p><a class="btn btn-navy" href="/lien-he" style="width:100%">@c["ctaLabel"]</a></div>
+    }
+</aside>

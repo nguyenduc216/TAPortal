@@ -1,0 +1,13 @@
+[
+  {
+    "change_id": "WEBSITE-TA-CHG-20261111T163408Z-D94863",
+    "created_at": "2026-11-11T16:34:08.966977+00:00",
+    "title": "Website TA: CMS trong Portal + du an frontend TAWebsite.Web (giai doan 1 nen tang)",
+    "status": "IMPLEMENTED_LOCAL",
+    "commit_sha": null,
+    "migration_status": "NOT_EXECUTED",
+    "publish_status": "NOT_PUBLISHED",
+    "merge_status": "PENDING_APPROVAL",
+    "branch": "feature/website-ta"
+  }
+]

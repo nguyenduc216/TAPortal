@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- WEBSITE-TA: shared by TAWebsite.Web (public site, reads content) and TAPortal.Web (Admin "Website TA" section, edits
+       content). Holds the page/section definitions with their default content, the field schemas, the read SQL and the
+       default images of the mockups (embedded, served at /site-assets/{file} by both apps). -->
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Data.SqlClient" Version="7.0.2" />
+    <!-- Pins the transitive dependency of Microsoft.Data.SqlClient above 8.0.1 (GHSA-846f-f764-76mx, High). -->
+    <PackageReference Include="System.Security.Cryptography.Pkcs" Version="8.0.2" />
+    <PackageReference Include="HtmlSanitizer" Version="9.0.892" />
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Content\site.json" LogicalName="TAWebsite.site.json" />
+    <EmbeddedResource Include="Assets\*" LogicalName="TAWebsite.assets.%(Filename)%(Extension)" />
+  </ItemGroup>
+</Project>

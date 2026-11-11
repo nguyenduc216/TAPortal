@@ -1,0 +1,16 @@
+@model SectionVm
+@{ var c = Model.C; }
+<section aria-labelledby="hero-heading" class="hero hero-classic" id="home"><div class="wrap classic-layout">
+    <div class="classic-copy">
+        <span class="classic-kicker">@c["kicker"]</span>
+        <h1 id="hero-heading">@SiteHtml.Br(c["title"])</h1>
+        @if (c.Has("ribbon")) {<p class="classic-ribbon">@c["ribbon"]</p>}
+        <div class="hero-promises">@foreach (var p in c.Lines("promises")) {<div><span class="tick">✓</span> @p</div>}</div>
+        <div class="hero-actions">
+            @if (c.Has("primaryLabel")) {<a class="btn btn-gold btn-action" href="@SiteContext.Link(c["primaryUrl"], "/lien-he")">@c["primaryLabel"]</a>}
+            @if (c.Has("secondaryLabel")) {<a class="btn btn-outline btn-action" href="@SiteContext.Link(c["secondaryUrl"])">@c["secondaryLabel"]</a>}
+        </div>
+    </div>
+    @if (c.Has("image")) {<div class="classic-portrait"><img alt="@c["imageAlt"]" fetchpriority="high" src="@SiteContext.Img(c["image"])" /></div>}
+    <div class="hero-service-list">@foreach (var t in c.Lines("tags")) {<span>✓   @t</span>}</div>
+</div></section>

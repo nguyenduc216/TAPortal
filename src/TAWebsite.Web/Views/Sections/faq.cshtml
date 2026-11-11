@@ -1,0 +1,16 @@
+@model SectionVm
+@{ var c = Model.C; var home = Model.Section.Def.Key == "faq" && Model.Site.Nav == "home"; }
+@if (home)
+{
+    <section class="section faq" id="faq"><div class="wrap faq-grid">
+        <div>@if (c.Has("eyebrow")) {<span class="eyebrow">@c["eyebrow"]</span>}<h2>@c["title"]</h2>@if (c.Has("intro")) {<p>@c["intro"]</p>}</div>
+        <div>@foreach (var i in c.List("items")) {<details><summary>@i["q"]</summary><p>@SiteHtml.Br(i["a"])</p></details>}</div>
+    </div></section>
+}
+else
+{
+    <section class="dv-section" id="faq"><div class="wrap dv-faq">
+        <div>@if (c.Has("eyebrow")) {<span class="eyebrow">@c["eyebrow"]</span>}<h2>@c["title"]</h2>@if (c.Has("intro")) {<p>@c["intro"]</p>}</div>
+        <div>@foreach (var i in c.List("items")) {<details><summary>@i["q"]</summary><p>@SiteHtml.Br(i["a"])</p></details>}</div>
+    </div></section>
+}

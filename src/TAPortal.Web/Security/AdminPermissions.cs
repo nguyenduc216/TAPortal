@@ -74,6 +74,16 @@ public static class AdminPermissions
     public const string ContractsCreate = "CONTRACTS.CREATE";
     public const string ContractsUpdate = "CONTRACTS.UPDATE";
     public const string ContractsDelete = "CONTRACTS.DELETE";
+
+    // Website TA (tuvangiaiphapta.vn content), inserted by migration 035.
+    public const string WebsiteModuleKey = "WEBSITE";
+    public const string WebsiteView = "WEBSITE.VIEW";
+    public const string WebsiteContentEdit = "WEBSITE.CONTENT.EDIT";
+    public const string WebsitePostsEdit = "WEBSITE.POSTS.EDIT";
+    public const string WebsiteMediaEdit = "WEBSITE.MEDIA.EDIT";
+    public const string WebsiteSettingsEdit = "WEBSITE.SETTINGS.EDIT";
+    public const string WebsiteLeadsView = "WEBSITE.LEADS.VIEW";
+    public const string WebsiteLeadsEdit = "WEBSITE.LEADS.EDIT";
     public const string TasksView = "TASKS.VIEW";
     public const string TasksCreate = "TASKS.CREATE";
     public const string TasksAssign = "TASKS.ASSIGN";
@@ -128,6 +138,13 @@ public static class AdminPermissions
         public const string ContractsCreate = PermissionPolicies.Prefix + AdminPermissions.ContractsCreate;
         public const string ContractsUpdate = PermissionPolicies.Prefix + AdminPermissions.ContractsUpdate;
         public const string ContractsDelete = PermissionPolicies.Prefix + AdminPermissions.ContractsDelete;
+        public const string WebsiteView = PermissionPolicies.Prefix + AdminPermissions.WebsiteView;
+        public const string WebsiteContentEdit = PermissionPolicies.Prefix + AdminPermissions.WebsiteContentEdit;
+        public const string WebsitePostsEdit = PermissionPolicies.Prefix + AdminPermissions.WebsitePostsEdit;
+        public const string WebsiteMediaEdit = PermissionPolicies.Prefix + AdminPermissions.WebsiteMediaEdit;
+        public const string WebsiteSettingsEdit = PermissionPolicies.Prefix + AdminPermissions.WebsiteSettingsEdit;
+        public const string WebsiteLeadsView = PermissionPolicies.Prefix + AdminPermissions.WebsiteLeadsView;
+        public const string WebsiteLeadsEdit = PermissionPolicies.Prefix + AdminPermissions.WebsiteLeadsEdit;
         public const string TasksView = PermissionPolicies.Prefix + AdminPermissions.TasksView;
         public const string TaskTemplatesManage = PermissionPolicies.Prefix + AdminPermissions.TaskTemplatesManage;
         public const string TaskReportView = PermissionPolicies.Prefix + AdminPermissions.TaskReportView;
@@ -205,6 +222,16 @@ public static class AdminPermissions
             new(JobTitlesUpdate, "Sửa chức danh", "UPDATE"),
             new(JobTitlesDelete, "Xóa (mềm) chức danh", "DELETE")
         ]),
+        new(WebsiteModuleKey, "Website TA",
+        [
+            new(WebsiteView, "Mở mục Website TA, xem nội dung và bài viết", "VIEW"),
+            new(WebsiteContentEdit, "Sửa nội dung các trang, section và SEO", "EDIT"),
+            new(WebsitePostsEdit, "Viết, xuất bản, xóa bài viết và chuyên mục", "EDIT"),
+            new(WebsiteMediaEdit, "Tải lên, sửa mô tả, xóa ảnh website", "EDIT"),
+            new(WebsiteSettingsEdit, "Sửa thông tin liên hệ và cài đặt chung", "EDIT"),
+            new(WebsiteLeadsView, "Xem yêu cầu liên hệ – báo giá từ website", "VIEW"),
+            new(WebsiteLeadsEdit, "Cập nhật trạng thái, ghi chú yêu cầu từ website", "EDIT")
+        ]),
         new("SYSTEM", "Hệ thống",
         [
             new(UsersView, "Xem danh sách người dùng", "VIEW"),
@@ -222,11 +249,15 @@ public static class AdminPermissions
 
     // Codes inserted by migration 028: every module except HR, whose rows come from the HR core bootstrap of TAPortalSys.
     // AUTH.ROLES.MANAGE is inserted too but is not grantable: role management is SYS_ADMIN only (operator 2026-11-07).
-    public static readonly IReadOnlyList<string> MigrationCodes = Modules.Where(m => m.Key is not (HrModuleKey or ContractsModuleKey or TasksModuleKey))
+    public static readonly IReadOnlyList<string> MigrationCodes = Modules.Where(m => m.Key is not (HrModuleKey or ContractsModuleKey or TasksModuleKey or WebsiteModuleKey))
         .SelectMany(m => m.Permissions).Select(p => p.Code).Append(RolesManage).ToList();
 
     // Codes inserted by migration 031 (Công việc, Hợp đồng).
     public static readonly IReadOnlyList<string> Migration031Codes = Modules.Where(m => m.Key is ContractsModuleKey or TasksModuleKey)
+        .SelectMany(m => m.Permissions).Select(p => p.Code).ToList();
+
+    // Codes inserted by migration 035 (Website TA).
+    public static readonly IReadOnlyList<string> Migration035Codes = Modules.Where(m => m.Key is WebsiteModuleKey)
         .SelectMany(m => m.Permissions).Select(p => p.Code).ToList();
 
     public static bool IsCatalogued(string? code) => code is not null && Codes.Contains(code);
@@ -261,6 +292,8 @@ public static class AdminNavigation
         new(AdminPermissions.IntegrationsSandbox, "TingeeSandbox", "Index"),
         new(AdminPermissions.IntegrationsLogsView, "TingeeLogs", "Index"),
         new(AdminPermissions.NotificationsManage, "NotificationSettings", "Index"),
+        new(AdminPermissions.WebsiteView, "Website", "Index"),
+        new(AdminPermissions.WebsiteLeadsView, "WebsiteLeads", "Index"),
         new(AdminPermissions.UsersView, "Users", "Index"),
         new(AdminPermissions.RolesView, "Roles", "Index"),
         new(AdminPermissions.MenusManage, "Menus", "Index")

@@ -1,0 +1,22 @@
+@model SectionVm
+@{ var c = Model.C; var items = c.List("items"); }
+<section class="section services-section" id="services"><div class="wrap">
+    <div class="section-head"><div>@if (c.Has("eyebrow")) {<span class="eyebrow">@c["eyebrow"]</span>}<h2>@c["title"]</h2></div>@if (c.Has("intro")) {<p>@c["intro"]</p>}</div>
+    <div class="services-grid">
+        @for (var i = 0; i < items.Count; i++)
+        {
+            var s = items[i];
+            <article class="service-card" id="service-@(i + 1)">
+                <div class="service-image">@if (s.Has("image")) {<img alt="@s["imageAlt"]" loading="lazy" src="@SiteContext.Img(s["image"])" />}<span class="image-index">@((i + 1).ToString("00"))</span></div>
+                <div class="service-content">
+                    @if (s.Has("eyebrow")) {<span class="eyebrow">@s["eyebrow"]</span>}
+                    <h3>@s["title"]</h3>
+                    @if (s.Has("lead")) {<p class="service-lead">@s["lead"]</p>}
+                    <p>@s["text"]</p>
+                    <ul class="service-points">@foreach (var p in s.Lines("points")) {<li>@p</li>}</ul>
+                    @if (s.Has("linkLabel")) {<a class="text-link" href="@SiteContext.Link(s["linkUrl"], "/lien-he")">@s["linkLabel"] <span aria-hidden="true">→</span></a>}
+                </div>
+            </article>
+        }
+    </div>
+</div></section>

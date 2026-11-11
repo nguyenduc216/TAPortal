@@ -1,0 +1,7 @@
+@model SectionVm
+<section aria-label="@Model.Section.Def.Name" class="benefit-section wrap" id="@Model.Key">
+    @foreach (var i in Model.C.List("items"))
+    {
+        <div class="benefit-card">@if (i.Has("image")) {<img alt="@i["imageAlt"]" loading="lazy" src="@SiteContext.Img(i["image"])" />}<div><h2>@i["title"]</h2><p>@i["text"]</p></div></div>
+    }
+</section>

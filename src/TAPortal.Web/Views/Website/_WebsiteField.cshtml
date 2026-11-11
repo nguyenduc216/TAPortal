@@ -1,0 +1,82 @@
+@model WebsiteFieldVm
+@using TAWebsite.Core.Content
+@{
+    var f = Model.Field;
+    var id = Model.Name.Replace(".", "_").Replace("[", "_").Replace("]", "_");
+    var value = Model.Content.Text(f.Key);
+}
+@switch (f.Kind)
+{
+    case FieldKind.List:
+        var items = Model.Content.List(f.Key);
+        <div class="ta-web-list" data-ta-web-list="@Model.Name" data-max="@f.MaxItems">
+            <div class="ta-web-list__head"><span class="form-label mb-0">@f.Label</span><small class="ta-cell-sub">@items.Count / tối đa @f.MaxItems mục</small></div>
+            <ol class="ta-web-list__items">
+                @for (var i = 0; i < items.Count; i++)
+                {
+                    <li class="ta-web-item" data-ta-web-item>
+                        <div class="ta-web-item__bar"><b class="ta-web-item__no">#@(i + 1)</b>
+                            <button type="button" class="btn btn-icon btn-sm" data-ta-item="up" aria-label="Lên trên">↑</button>
+                            <button type="button" class="btn btn-icon btn-sm" data-ta-item="down" aria-label="Xuống dưới">↓</button>
+                            <button type="button" class="btn btn-icon btn-sm" data-ta-item="copy" aria-label="Nhân bản">@UiIcon.Render("copy")</button>
+                            <button type="button" class="btn btn-icon btn-sm text-danger" data-ta-item="remove" aria-label="Xóa mục">@UiIcon.Render("trash")</button>
+                        </div>
+                        <div class="ta-web-item__fields">
+                            @foreach (var sub in f.Items ?? [])
+                            {
+                                <partial name="_WebsiteField" model="@(new WebsiteFieldVm(sub, items[i], $"{Model.Name}[{i}].{sub.Key}"))" />
+                            }
+                        </div>
+                    </li>
+                }
+            </ol>
+            <template data-ta-web-template>
+                <li class="ta-web-item" data-ta-web-item>
+                    <div class="ta-web-item__bar"><b class="ta-web-item__no">#</b>
+                        <button type="button" class="btn btn-icon btn-sm" data-ta-item="up" aria-label="Lên trên">↑</button>
+                        <button type="button" class="btn btn-icon btn-sm" data-ta-item="down" aria-label="Xuống dưới">↓</button>
+                        <button type="button" class="btn btn-icon btn-sm" data-ta-item="copy" aria-label="Nhân bản">@UiIcon.Render("copy")</button>
+                        <button type="button" class="btn btn-icon btn-sm text-danger" data-ta-item="remove" aria-label="Xóa mục">@UiIcon.Render("trash")</button>
+                    </div>
+                    <div class="ta-web-item__fields">
+                        @foreach (var sub in f.Items ?? [])
+                        {
+                            <partial name="_WebsiteField" model="@(new WebsiteFieldVm(sub, new SectionContent(new System.Text.Json.Nodes.JsonObject()), $"{Model.Name}[__i__].{sub.Key}"))" />
+                        }
+                    </div>
+                </li>
+            </template>
+            <button type="button" class="btn btn-sm" data-ta-item="add">@UiIcon.Render("plus")<span>Thêm mục</span></button>
+        </div>
+        break;
+    case FieldKind.Image:
+        <div class="ta-web-field ta-web-image" data-ta-web-image>
+            <span class="form-label">@f.Label</span>
+            <div class="ta-web-image__row">
+                <img class="ta-web-image__preview" src="@WebsiteUi.ImageUrl(value)" alt="" hidden="@(string.IsNullOrEmpty(value))" data-ta-image-preview />
+                <span class="ta-web-image__empty" hidden="@(!string.IsNullOrEmpty(value))" data-ta-image-empty>Chưa có ảnh</span>
+                <input type="hidden" name="@Model.Name" value="@value" data-ta-image-value />
+                <div class="d-flex flex-wrap gap-2">
+                    <button type="button" class="btn btn-sm" data-ta-image-pick>@UiIcon.Render("photo")<span>Chọn ảnh</span></button>
+                    <button type="button" class="btn btn-sm btn-ghost-danger" data-ta-image-clear>@UiIcon.Render("x")<span>Bỏ ảnh</span></button>
+                </div>
+            </div>
+            @if (f.Help is not null) {<small class="form-hint">@f.Help</small>}
+        </div>
+        break;
+    case FieldKind.TextArea:
+    case FieldKind.Lines:
+        <div class="ta-web-field">
+            <label class="form-label" for="@id">@f.Label</label>
+            <div class="ta-input-icon ta-input-icon--top">@UiIcon.Render("pencil")<textarea class="form-control" id="@id" name="@Model.Name" rows="@(f.Kind == FieldKind.Lines ? Math.Max(3, value.Split('\n').Length + 1) : 3)" maxlength="4000" data-ta-autogrow>@value</textarea></div>
+            @if (f.Help is not null) {<small class="form-hint">@f.Help</small>}
+        </div>
+        break;
+    default:
+        <div class="ta-web-field">
+            <label class="form-label" for="@id">@f.Label</label>
+            <div class="ta-input-icon">@UiIcon.Render("link")<input class="form-control" id="@id" name="@Model.Name" value="@value" maxlength="4000" type="text" @(f.Kind == FieldKind.Url ? "inputmode=url" : "") /></div>
+            @if (f.Help is not null) {<small class="form-hint">@f.Help</small>}
+        </div>
+        break;
+}

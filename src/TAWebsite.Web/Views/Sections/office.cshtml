@@ -1,0 +1,13 @@
+@model SectionVm
+@{ var c = Model.C; var s = Model.Site.Settings; }
+<section class="dv-section dv-soft" id="van-phong"><div class="wrap">
+    <div class="dv-head"><div>@if (c.Has("eyebrow")) {<span class="eyebrow">@c["eyebrow"]</span>}<h2>@c["title"]</h2></div>@if (c.Has("intro")) {<p>@c["intro"]</p>}</div>
+    <div class="ct-office">
+        <div class="ct-map ct-map-live"><iframe title="Bản đồ văn phòng T.A" loading="lazy" referrerpolicy="no-referrer-when-downgrade" src="@s.MapEmbedUrl()"></iframe>
+            <div class="ct-map-card"><b>@s["company.name"]</b><span>@s["office.address"]</span><a class="btn btn-gold" href="@s.DirectionsUrl" target="_blank" rel="noopener">➤ Chỉ đường từ vị trí của bạn</a></div></div>
+        <div class="dv-box"><h3><i>🕘</i>Giờ làm việc</h3>
+            <table class="ct-hours">@foreach (var h in c.List("hours")) {<tr><td>@h["day"]</td><td>@h["time"]</td></tr>}</table>
+            @if (c.Has("bringTitle")) {<ul class="dv-check" style="margin-top:14px"><li><b>@c["bringTitle"]</b><small>@c["bringText"]</small></li></ul>}
+        </div>
+    </div>
+</div></section>

@@ -1,0 +1,12 @@
+@model SectionVm
+@{
+    var c = Model.C;
+    var crumb = Model.Site.Nav switch { "contact" => "Liên hệ – báo giá", "news" => "Tin tức – kiến thức", _ => c["title"] };
+}
+<section aria-labelledby="dv-title" class="dv-hero compact"><div class="wrap dv-hero-grid" style="grid-template-columns:1fr"><div>
+    <nav aria-label="Breadcrumb" class="dv-crumb"><a href="/">Trang chủ</a><span aria-hidden="true">›</span><span>@crumb</span></nav>
+    @if (c.Has("eyebrow")) {<span class="dv-kicker">@c["eyebrow"]</span>}
+    <h1 id="dv-title">@SiteHtml.Heading(c["title"])</h1>
+    @if (c.Has("intro")) {<p class="dv-hero-lead">@c["intro"]</p>}
+    @if (ViewData["HeroExtra"] is Microsoft.AspNetCore.Html.IHtmlContent extra) {@extra}
+</div></div></section>

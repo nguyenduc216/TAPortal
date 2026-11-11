@@ -1,0 +1,24 @@
+/* TAWebsite.Web – additions to the mockup stylesheets for the dynamic site. */
+.skip-link{position:absolute;left:-9999px;top:8px;z-index:100;background:var(--navy);color:#fff;padding:8px 14px;border-radius:8px}
+.skip-link:focus{left:8px}
+.nw-filters a{font:700 13px 'Be Vietnam Pro',sans-serif;border:1.5px solid var(--line);background:#fff;color:var(--navy);padding:8px 16px;border-radius:30px;transition:all .2s}
+.nw-filters a:hover{border-color:#a9cde3}
+.nw-filters a[aria-current=true]{background:var(--navy);border-color:var(--navy);color:#fff}
+.v9-bottom-showcase.is-single .v9-showcase-grid{grid-template-columns:minmax(0,760px);justify-content:center}
+.v9-quote-author{display:block}
+.ct-hp{position:absolute;left:-10000px;width:1px;height:1px;overflow:hidden}
+.ct-channel a{color:inherit}
+.ct-channel a span{text-decoration:underline;text-decoration-color:#d7a40766;text-underline-offset:3px}
+.ar-layout.no-toc .ar-toc b,.ar-layout.no-toc .ar-toc ol{display:none}
+/* Callouts inserted by the article editor have no icon column. */
+.ar-body .ar-callout:not(:has(> i)){grid-template-columns:1fr}
+.ar-body .ar-callout > p + p{margin-top:6px}
+.ar-body img{max-width:100%;height:auto;border-radius:12px}
+.ar-body figure{margin:24px 0}
+.ar-body figcaption{font-size:12.5px;color:var(--muted);text-align:center;margin-top:6px}
+.ar-body table{width:100%;border-collapse:collapse;margin:20px 0;font-size:14px;display:block;overflow-x:auto}
+.ar-body th,.ar-body td{border:1px solid var(--line);padding:10px 12px;text-align:left;vertical-align:top}
+.ar-body th{background:var(--bg);color:var(--navy)}
+.ar-body blockquote{border-left:4px solid var(--gold);margin:20px 0;padding:6px 18px;color:#3c5268;background:var(--bg);border-radius:0 10px 10px 0}
+.nw-empty a.btn{margin-top:10px}
+.form-sent .ct-wizard{display:none}

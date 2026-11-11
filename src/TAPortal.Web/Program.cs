@@ -64,6 +64,7 @@ builder.Services.AddScoped<IRoleAdminStore, SqlRoleAdminStore>();
 builder.Services.AddScoped<IEmployeeStore, SqlEmployeeStore>();
 builder.Services.AddScoped<IHrCatalogStore, SqlHrCatalogStore>();
 builder.Services.AddScoped<IContractStore, SqlContractStore>();
+builder.Services.AddScoped<IWebsiteAdminStore, SqlWebsiteAdminStore>(); // Website TA (WEBSITE-TA)
 builder.Services.AddScoped<ICustomerAdminStore, SqlCustomerAdminStore>();
 builder.Services.AddScoped<ICustomerProfileStore, SqlCustomerProfileStore>();
 builder.Services.AddScoped<ICustomerImportStore, SqlCustomerImportStore>();
@@ -160,6 +161,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllerRoute(name: "default", pattern: "{controller=Home}/{action=Index}/{id?}");
 TAPortal.Shared.BuildInfo.MapBuildInfo(app);
+TAWebsite.Core.SiteAssets.MapSiteAssets(app).RequireAuthorization(); // default website images for the Website TA editor
 // Tingee calls the webhook site (TAPortal.Webhooks, Tingee__WebhookBaseUrl). The Admin site keeps the same /tingee receivers,
 // and the old /hooks/tingee path only until Tingee's endpoint points at the webhook site.
 TAPortal.Integrations.Tingee.TingeeWebhookEndpoints.MapTingeeWebhooks(app);

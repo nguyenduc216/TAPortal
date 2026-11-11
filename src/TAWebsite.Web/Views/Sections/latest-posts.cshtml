@@ -1,0 +1,32 @@
+@model SectionVm
+@{
+    var c = Model.C;
+    var posts = Model.Posts;
+    var featured = posts.Take(4).ToList();
+    var feed = posts.Skip(4).Take(6).ToList();
+}
+@* Hidden until at least one article is published in TA Portal → Website TA → Bài viết. *@
+@if (posts.Count > 0)
+{
+<section class="section knowledge" id="knowledge"><div class="wrap knowledge-v10">
+    <div class="knowledge-title-row"><div>@if (c.Has("eyebrow")) {<span class="eyebrow">@c["eyebrow"]</span>}<h2>@c["title"]</h2>@if (c.Has("intro")) {<p>@c["intro"]</p>}</div>
+        <a class="knowledge-more" href="/tin-tuc">@(c.Has("linkLabel") ? c["linkLabel"] : "Xem thêm") <span aria-hidden="true">→</span></a></div>
+    <div class="knowledge-editorial">
+        <div class="knowledge-feature-grid">
+            @foreach (var p in featured)
+            {
+                <article class="knowledge-feature"><a href="@SiteHtml.PostUrl(p)"><img alt="" loading="lazy" src="@SiteContext.Img(p.CoverMediaId)" /><div class="knowledge-feature-body"><span>@(p.CategoryName?.ToUpperInvariant() ?? "TIN TỨC")</span><h3>@p.Title</h3>@if (p.Summary is not null) {<p>@p.Summary</p>}</div></a></article>
+            }
+        </div>
+        @if (feed.Count > 0)
+        {
+            <aside aria-label="Bài viết mới" class="knowledge-feed"><h3>@c["feedTitle"]</h3>
+                @foreach (var p in feed)
+                {
+                    <a class="knowledge-feed-item" href="@SiteHtml.PostUrl(p)"><img alt="" loading="lazy" src="@SiteContext.Img(p.CoverMediaId)" /><span><b>@p.Title</b><small>@(p.CategoryName ?? "Tin tức") · @SiteHtml.Date(p.PublishedAt)</small></span></a>
+                }
+            </aside>
+        }
+    </div>
+</div></section>
+}

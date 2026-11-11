@@ -1,0 +1,115 @@
+@model WebsitePostEditVm
+@{
+    var i = Model.Input;
+    ViewData["ParentTitle"] = "Bài viết";
+    ViewData["ParentController"] = "WebsitePosts";
+    ViewData["Title"] = Model.IsCreate ? "Viết bài mới" : "Sửa bài viết";
+    ViewData["Heading"] = Model.IsCreate ? "Viết bài mới" : i.Title;
+    ViewData["Subtitle"] = Model.IsCreate ? "Bài viết lưu nháp cho đến khi chọn 'Xuất bản'." : "Đường dẫn /tin-tuc/" + Model.Current!.Slug;
+    ViewData["PageIcon"] = Model.IsCreate ? "plus" : "pencil";
+    var vi = System.Globalization.CultureInfo.GetCultureInfo("vi-VN");
+}
+@section PageActions {
+    @if (Model.Current is { Status: 1 }) {<a class="btn" href="@(Model.PublicUrl)/tin-tuc/@Model.Current.Slug" target="_blank" rel="noopener">@UiIcon.Render("external-link")<span>Xem trên website</span></a>}
+}
+<form asp-action="@(Model.IsCreate ? "Create" : "Edit")" asp-route-id="@Model.Id" method="post" novalidate data-ta-web-post>
+    <input type="hidden" asp-for="Input.Stamp" />
+    <div asp-validation-summary="ModelOnly" class="ta-alert ta-alert--danger" role="alert"></div>
+    <div class="ta-web-post-layout">
+        <div class="card">
+            <div class="card-body">
+                <label asp-for="Input.Title" class="form-label required">Tiêu đề</label>
+                <div class="ta-input-icon">@UiIcon.Render("link")<input asp-for="Input.Title" class="form-control form-control-lg" maxlength="300" required data-ta-slug-source /></div>
+                <span asp-validation-for="Input.Title" class="invalid-feedback d-block"></span>
+
+                <label asp-for="Input.Summary" class="form-label mt-3">Tóm tắt (hiện ở danh sách bài và Google)</label>
+                <div class="ta-input-icon ta-input-icon--top">@UiIcon.Render("file-text")<textarea asp-for="Input.Summary" class="form-control" rows="2" maxlength="1000" data-ta-count="200"></textarea></div>
+                <span asp-validation-for="Input.Summary" class="invalid-feedback d-block"></span>
+
+                <label class="form-label mt-3">Nội dung</label>
+                <div class="ta-web-rte" data-ta-rte>
+                    <div class="ta-web-rte__bar" role="toolbar" aria-label="Định dạng">
+                        <button type="button" data-cmd="formatBlock" data-arg="h2" title="Tiêu đề mục (hiện trong mục lục)">H2</button>
+                        <button type="button" data-cmd="formatBlock" data-arg="h3" title="Tiêu đề nhỏ">H3</button>
+                        <button type="button" data-cmd="formatBlock" data-arg="p" title="Đoạn văn">¶</button>
+                        <span></span>
+                        <button type="button" data-cmd="bold" title="In đậm"><b>B</b></button>
+                        <button type="button" data-cmd="italic" title="In nghiêng"><i>I</i></button>
+                        <button type="button" data-cmd="underline" title="Gạch chân"><u>U</u></button>
+                        <span></span>
+                        <button type="button" data-cmd="insertUnorderedList" title="Danh sách">• Danh sách</button>
+                        <button type="button" data-cmd="insertOrderedList" title="Danh sách số">1. Danh sách</button>
+                        <button type="button" data-cmd="formatBlock" data-arg="blockquote" title="Trích dẫn">❝</button>
+                        <button type="button" data-cmd="callout" title="Khối lưu ý">⚠ Lưu ý</button>
+                        <span></span>
+                        <button type="button" data-cmd="link" title="Chèn liên kết">🔗 Liên kết</button>
+                        <button type="button" data-cmd="image" title="Chèn ảnh từ thư viện">🖼 Ảnh</button>
+                        <button type="button" data-cmd="table" title="Chèn bảng 3 cột">▦ Bảng</button>
+                        <button type="button" data-cmd="removeFormat" title="Xóa định dạng">⌫</button>
+                        <button type="button" data-cmd="html" title="Sửa mã HTML" class="ms-auto">&lt;/&gt; HTML</button>
+                    </div>
+                    <div class="ta-web-rte__area ta-web-article" contenteditable="true" data-ta-rte-area aria-label="Nội dung bài viết"></div>
+                    <textarea asp-for="Input.BodyHtml" class="ta-web-rte__html form-control" rows="18" hidden data-ta-rte-html></textarea>
+                </div>
+                <span asp-validation-for="Input.BodyHtml" class="invalid-feedback d-block"></span>
+                <small class="form-hint">Dùng H2 cho các mục chính: website tự tạo mục lục. Ảnh chèn từ Thư viện ảnh. Mã HTML được lọc an toàn khi lưu.</small>
+            </div>
+        </div>
+        <aside class="ta-web-post-side">
+            <div class="card">
+                <div class="card-header"><h2 class="card-title">@UiIcon.Render("send")Xuất bản</h2></div>
+                <div class="card-body">
+                    <label class="form-check form-switch"><input class="form-check-input" type="checkbox" asp-for="Input.Publish" /><span class="form-check-label">Xuất bản trên website</span></label>
+                    <label asp-for="Input.PublishedAtLocal" class="form-label mt-2">Ngày đăng (giờ Việt Nam)</label>
+                    <div class="ta-input-icon">@UiIcon.Render("calendar")<input asp-for="Input.PublishedAtLocal" class="form-control" type="datetime-local" /></div>
+                    <small class="form-hint">Để trống = đăng ngay khi xuất bản. Chọn thời điểm tương lai để hẹn giờ.</small>
+                    <label class="form-check mt-2"><input class="form-check-input" type="checkbox" asp-for="Input.IsFeatured" /><span class="form-check-label">Bài nổi bật (ưu tiên đầu trang Tin tức)</span></label>
+                    @if (Model.Current is { } cur)
+                    {
+                        <p class="ta-cell-sub mt-2 mb-0">Tạo @WebsiteUi.Local(cur.CreatedAt).ToString("dd/MM/yyyy HH:mm", vi) · sửa @WebsiteUi.Local(cur.UpdatedAt).ToString("dd/MM/yyyy HH:mm", vi) · @cur.ViewCount.ToString("N0", vi) lượt xem</p>
+                    }
+                </div>
+                <div class="card-footer"><button class="btn btn-ta-gold w-100" type="submit">@UiIcon.Render("device-floppy")<span>Lưu bài viết</span></button></div>
+            </div>
+            <div class="card">
+                <div class="card-header"><h2 class="card-title">@UiIcon.Render("photo")Ảnh bìa</h2></div>
+                <div class="card-body ta-web-image" data-ta-web-image data-ta-image-mode="id">
+                    <img class="ta-web-image__preview w-100" src="@WebsiteUi.ImageUrl(i.CoverMediaId)" alt="" hidden="@(i.CoverMediaId is null)" data-ta-image-preview />
+                    <span class="ta-web-image__empty" hidden="@(i.CoverMediaId is not null)" data-ta-image-empty>Chưa có ảnh bìa</span>
+                    <input type="hidden" asp-for="Input.CoverMediaId" data-ta-image-value />
+                    <div class="d-flex gap-2 mt-2"><button type="button" class="btn btn-sm" data-ta-image-pick>@UiIcon.Render("photo")<span>Chọn ảnh</span></button><button type="button" class="btn btn-sm btn-ghost-danger" data-ta-image-clear>Bỏ ảnh</button></div>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-header"><h2 class="card-title">@UiIcon.Render("list-tree")Phân loại</h2></div>
+                <div class="card-body">
+                    <label asp-for="Input.CategoryId" class="form-label">Chuyên mục</label>
+                    <select asp-for="Input.CategoryId" class="form-select"><option value="">Chưa phân loại</option>@foreach (var c in Model.Categories) {<option value="@c.Id" selected="@(c.Id == i.CategoryId)">@c.Name</option>}</select>
+                    <label asp-for="Input.Tags" class="form-label mt-2">Thẻ (cách nhau dấu phẩy)</label>
+                    <div class="ta-input-icon">@UiIcon.Render("hash")<input asp-for="Input.Tags" class="form-control" maxlength="500" placeholder="thành lập doanh nghiệp, hóa đơn" /></div>
+                    <label asp-for="Input.AuthorName" class="form-label mt-2">Tác giả</label>
+                    <div class="ta-input-icon">@UiIcon.Render("user")<input asp-for="Input.AuthorName" class="form-control" maxlength="150" /></div>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-header"><h2 class="card-title">@UiIcon.Render("search")SEO</h2></div>
+                <div class="card-body">
+                    <label asp-for="Input.Slug" class="form-label">Đường dẫn</label>
+                    <div class="input-group"><span class="input-group-text">/tin-tuc/</span><div class="ta-input-icon">@UiIcon.Render("link")<input asp-for="Input.Slug" class="form-control" maxlength="200" data-ta-slug /></div></div>
+                    <span asp-validation-for="Input.Slug" class="invalid-feedback d-block"></span>
+                    <small class="form-hint">Để trống: tạo từ tiêu đề. Đổi đường dẫn của bài đã đăng sẽ làm link cũ không mở được.</small>
+                    <label asp-for="Input.SeoTitle" class="form-label mt-2">Tiêu đề SEO</label>
+                    <div class="ta-input-icon">@UiIcon.Render("search")<input asp-for="Input.SeoTitle" class="form-control" maxlength="200" placeholder="Mặc định: tiêu đề bài" data-ta-count="60" /></div>
+                    <label asp-for="Input.SeoDescription" class="form-label mt-2">Mô tả SEO</label>
+                    <div class="ta-input-icon ta-input-icon--top">@UiIcon.Render("search")<textarea asp-for="Input.SeoDescription" class="form-control" rows="2" maxlength="400" placeholder="Mặc định: tóm tắt" data-ta-count="160"></textarea></div>
+                </div>
+            </div>
+        </aside>
+    </div>
+</form>
+@if (!Model.IsCreate)
+{
+    <form class="mt-3 text-end" asp-action="Delete" asp-route-id="@Model.Id" method="post" data-ta-confirm="Xóa bài viết này khỏi website?">
+        <button class="btn btn-outline-danger btn-sm" type="submit">@UiIcon.Render("trash")<span>Xóa bài viết</span></button>
+    </form>
+}

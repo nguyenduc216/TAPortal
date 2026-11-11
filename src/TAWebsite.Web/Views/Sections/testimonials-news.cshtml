@@ -1,0 +1,37 @@
+@model SectionVm
+@{
+    var c = Model.C;
+    var quotes = c.List("quotes");
+    var news = Model.Posts.Take(3).ToList();
+}
+<section aria-label="Khách hàng và tin tức T.A" class="v9-bottom-showcase @(news.Count == 0 ? "is-single" : "")" id="news"><div class="wrap v9-showcase-grid">
+    @if (quotes.Count > 0)
+    {
+        <section aria-labelledby="v9-testimonial-heading" class="v9-testimonials" data-quotes="@System.Text.Json.JsonSerializer.Serialize(quotes.Select(q => new { text = q["text"], author = q["author"] }))">
+            <div class="v9-heading"><h2 id="v9-testimonial-heading">@c["title"]</h2></div>
+            <div aria-live="polite" class="v9-quote-card"><span aria-hidden="true" class="v9-quote-mark">“</span><div>
+                <p class="v9-quote-text">@quotes[0]["text"]</p>
+                <div class="v9-stars" aria-label="5 sao">★★★★★</div>
+                <small class="v9-quote-author">@(quotes[0].Has("author") ? "— " + quotes[0]["author"] : c["note"])</small>
+            </div></div>
+            @if (quotes.Count > 1)
+            {
+                <div class="v9-slider-controls"><button aria-label="Đánh giá trước" class="v9-slide-prev" type="button">‹</button>
+                    <div aria-label="Vị trí đánh giá" class="v9-dots">@for (var i = 0; i < quotes.Count; i++) {<span class="@(i == 0 ? "active" : "")"></span>}</div>
+                    <button aria-label="Đánh giá tiếp theo" class="v9-slide-next" type="button">›</button></div>
+            }
+        </section>
+    }
+    @if (news.Count > 0)
+    {
+        <section aria-labelledby="v9-news-heading" class="v9-news">
+            <div class="v9-heading v9-news-heading"><h2 id="v9-news-heading">@c["newsTitle"]</h2><a href="/tin-tuc">Xem tất cả →</a></div>
+            <div class="v9-news-grid">
+                @foreach (var p in news)
+                {
+                    <article><a href="@SiteHtml.PostUrl(p)"><img alt="" loading="lazy" src="@SiteContext.Img(p.CoverMediaId)" /><div><small>@(p.CategoryName?.ToUpperInvariant() ?? "TIN TỨC")</small><h3>@p.Title</h3><span>Xem chi tiết →</span></div></a></article>
+                }
+            </div>
+        </section>
+    }
+</div></section>

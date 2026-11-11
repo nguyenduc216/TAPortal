@@ -1,0 +1,12 @@
+@model PageVm
+@{
+    ViewData["Site"] = Model.Site;
+    var isHome = Model.Page.Def.Key == "home";
+    ViewData["Preselect"] = Model.Preselect;
+}
+<main id="top" class="@(isHome ? "" : "dv-main")">
+@foreach (var section in Model.Page.Sections.Where(s => s.IsVisible))
+{
+    <partial name="~/Views/Sections/@(section.Def.Type).cshtml" model="@(new SectionVm(section, Model.Site, Model.Posts))" view-data="ViewData" />
+}
+</main>

@@ -1,0 +1,54 @@
+@model PostVm
+@{
+    ViewData["Site"] = Model.Site;
+    var p = Model.Post;
+    var minutes = PostHtml.ReadMinutes(p.BodyHtml);
+}
+<div class="ar-progress" aria-hidden="true"></div>
+<main class="dv-main" id="top">
+<article>
+    <header class="ar-head"><div class="wrap"><div class="ar-head-inner">
+        <nav aria-label="Breadcrumb" class="dv-crumb"><a href="/">Trang chủ</a><span aria-hidden="true">›</span><a href="/tin-tuc">Tin tức</a>@if (p.CategoryName is not null) {<span aria-hidden="true">›</span><a href="/tin-tuc?cm=@p.CategorySlug">@p.CategoryName</a>}</nav>
+        @if (p.CategoryName is not null) {<span class="nw-tag">@p.CategoryName.ToUpperInvariant()</span>}
+        <h1>@p.Title</h1>
+        @if (p.Summary is not null) {<p class="ar-lead">@p.Summary</p>}
+        <div class="ar-byline"><img alt="" src="/site-assets/ta-logo.png" /><span>Biên soạn: <b>@(p.AuthorName ?? "Ban chuyên môn T.A")</b></span><span>Đăng: @SiteHtml.Date(p.PublishedAt)</span><span>@minutes phút đọc</span></div>
+    </div></div></header>
+    <div class="wrap">
+        @if (p.CoverMediaId is not null) {<figure class="ar-cover"><img alt="@(p.CoverAlt ?? p.Title)" src="@SiteContext.Img(p.CoverMediaId)" /></figure>}
+        <div class="ar-layout @(Model.Toc.Count == 0 ? "no-toc" : "")">
+            <nav aria-label="Mục lục bài viết" class="ar-toc">
+                @if (Model.Toc.Count > 0) {<b>MỤC LỤC</b><ol>@foreach (var (id, title) in Model.Toc) {<li><a href="#@id">@title</a></li>}</ol>}
+                <div class="ar-share"><button id="ar-copy" type="button">🔗 Sao chép link</button><button id="ar-print" type="button">🖨 In bài</button></div>
+            </nav>
+            <div class="ar-body">
+                @Html.Raw(Model.BodyHtml)
+                @if (p.TagList.Count > 0) {<div class="ar-tags">@foreach (var t in p.TagList) {<a href="/tin-tuc?q=@Uri.EscapeDataString(t)">#@t</a>}</div>}
+                <div class="ar-author"><img alt="" src="/site-assets/ta-logo.png" /><div><b>@(p.AuthorName ?? "Ban chuyên môn T.A")</b><p>Đội ngũ kế toán viên và chuyên gia thuế của T.A biên soạn, rà soát nội dung cẩm nang cho doanh nghiệp. Nội dung mang tính tham khảo; hãy liên hệ để được tư vấn theo hồ sơ thực tế.</p></div></div>
+                @if (Model.Previous is not null || Model.Next is not null)
+                {
+                    <nav aria-label="Bài trước và bài sau" class="ar-pn">
+                        @if (Model.Previous is { } prev) {<a href="@SiteHtml.PostUrl(prev)"><small>← BÀI TRƯỚC</small><b>@prev.Title</b></a>} else {<span></span>}
+                        @if (Model.Next is { } next) {<a href="@SiteHtml.PostUrl(next)"><small>BÀI TIẾP →</small><b>@next.Title</b></a>}
+                    </nav>
+                }
+            </div>
+            <aside class="ar-rail">
+                <div class="nw-widget" style="background:var(--navy);border:0"><h3 style="color:#fff;border-color:#ffffff25">@(Model.Sidebar.Has("ctaTitle") ? Model.Sidebar["ctaTitle"] : "Cần tư vấn?")</h3><p style="font-size:13px;color:#cfe2f0">@Model.Sidebar["ctaText"]</p><a class="btn btn-gold" href="/lien-he" style="width:100%">@(Model.Sidebar.Has("ctaLabel") ? Model.Sidebar["ctaLabel"] : "LIÊN HỆ TƯ VẤN")</a></div>
+            </aside>
+        </div>
+    </div>
+</article>
+@if (Model.Related.Count > 0)
+{
+    <section class="dv-section dv-soft"><div class="wrap">
+        <div class="dv-head"><div><span class="eyebrow">ĐỌC TIẾP</span><h2>Bài viết liên quan</h2></div><a class="text-link" href="/tin-tuc">Xem tất cả bài viết →</a></div>
+        <div class="nw-grid">
+            @foreach (var r in Model.Related)
+            {
+                <a class="nw-card" href="@SiteHtml.PostUrl(r)"><div class="thumb"><img alt="" loading="lazy" src="@SiteContext.Img(r.CoverMediaId)" /></div><div class="body"><span class="nw-tag soft">@(r.CategoryName?.ToUpperInvariant() ?? "TIN TỨC")</span><h3>@r.Title</h3><div class="nw-meta"><span>@SiteHtml.Date(r.PublishedAt)</span><span>@r.ReadMinutes phút đọc</span></div></div></a>
+            }
+        </div>
+    </div></section>
+}
+</main>

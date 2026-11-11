@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <!-- WEBSITE-TA: public website tuvangiaiphapta.vn (frontend). Content comes from TAPortalSys (dbo.Website*), edited in
+       TA Portal → Website TA. Planned IIS site: TA.LandingPage (go-live needs the operator, see .codec/features/WEBSITE-TA). -->
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>TAWebsite.Web</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\TAWebsite.Core\TAWebsite.Core.csproj" />
+  </ItemGroup>
+</Project>

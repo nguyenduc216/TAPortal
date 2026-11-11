@@ -1,0 +1,38 @@
+@model WebsiteSettingsVm
+@using TAWebsite.Core.Content
+@{
+    ViewData["ParentTitle"] = "Website TA";
+    ViewData["ParentController"] = "Website";
+    ViewData["Title"] = "Cài đặt chung";
+    ViewData["Heading"] = "Cài đặt chung của website";
+    ViewData["Subtitle"] = "Thông tin hiện ở header, footer, trang Liên hệ, bản đồ và SEO toàn website.";
+    ViewData["PageIcon"] = "settings";
+    var canEdit = AdminPermissions.Has(User, AdminPermissions.WebsiteSettingsEdit);
+}
+@if (Model.Error is not null) {<div class="ta-alert ta-alert--danger" role="alert">@UiIcon.Render("alert-circle")<div class="ta-alert__body">@Model.Error</div></div>}
+<form class="card" asp-action="Settings" method="post">
+    <div class="card-body">
+        <fieldset disabled="@(!canEdit)">
+        @foreach (var group in SiteSettingDefs.All.GroupBy(s => s.Group))
+        {
+            <h3 class="ta-web-group">@group.Key</h3>
+            <div class="ta-form-grid ta-form-grid--2">
+                @foreach (var s in group)
+                {
+                    var id = "s_" + s.Key.Replace('.', '_');
+                    <div>
+                        <label class="form-label" for="@id">@s.Label</label>
+                        <div class="ta-input-icon">@UiIcon.Render("pencil")<input class="form-control" id="@id" name="s.@s.Key" value="@Model.Settings[s.Key]" maxlength="1000" placeholder="@s.Default" /></div>
+                        @if (s.Help is not null) {<small class="form-hint">@s.Help</small>}
+                    </div>
+                }
+            </div>
+        }
+        </fieldset>
+        <div class="ta-web-map mt-3">
+            <iframe title="Xem trước bản đồ" loading="lazy" referrerpolicy="no-referrer-when-downgrade" src="@Model.Settings.MapEmbedUrl()"></iframe>
+            <p class="ta-cell-sub mb-0">Bản đồ theo "Vị trí trên Google Maps" đã lưu. <a href="@Model.Settings.DirectionsUrl" target="_blank" rel="noopener">Thử nút chỉ đường →</a></p>
+        </div>
+    </div>
+    @if (canEdit) {<div class="card-footer d-flex justify-content-end"><button class="btn btn-ta-gold" type="submit">@UiIcon.Render("device-floppy")<span>Lưu cài đặt</span></button></div>}
+</form>

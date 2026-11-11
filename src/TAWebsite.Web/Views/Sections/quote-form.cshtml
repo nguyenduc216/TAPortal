@@ -1,0 +1,78 @@
+@model SectionVm
+@inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
+@{
+    var c = Model.C;
+    var preselect = ViewData["Preselect"] as string;
+    var tokens = Antiforgery.GetAndStoreTokens(Context);
+}
+<section class="dv-section" id="bao-gia"><div class="wrap ct-layout">
+<form class="ct-form" id="quote-form" method="post" action="/lien-he" novalidate>
+    <input type="hidden" name="@tokens.FormFieldName" value="@tokens.RequestToken" />
+    <input type="hidden" name="source" value="@(Context.Request.Path + Context.Request.QueryString)" />
+    <div class="ct-hp" aria-hidden="true"><label>Website<input name="website" tabindex="-1" autocomplete="off" /></label></div>
+    <div class="ct-wizard">
+        <ol class="ct-steps" aria-label="Các bước yêu cầu báo giá"><li>Nhu cầu</li><li>Doanh nghiệp</li><li>Liên hệ</li></ol>
+
+        <fieldset class="ct-panel" style="border:0;margin:0">
+            <h2 tabindex="-1">@c["title"]</h2>@if (c.Has("intro")) {<p>@c["intro"]</p>}
+            <div class="ct-options">
+                @foreach (var o in c.List("services"))
+                {
+                    <label class="ct-option"><input name="service" type="checkbox" value="@o["label"]" data-code="@o["value"]" checked="@(preselect is not null && o["value"] == preselect)" /><span class="box"></span><span><b>@o["label"]</b><small>@o["note"]</small></span></label>
+                }
+            </div>
+        </fieldset>
+
+        <fieldset class="ct-panel" hidden style="border:0;margin:0">
+            <h2 tabindex="-1">Doanh nghiệp của bạn hiện nay</h2><p>Thông tin giúp T.A ước lượng khối lượng công việc trước khi trao đổi.</p>
+            <p class="ct-group-label">Loại hình / tình trạng <em style="color:#c0392b;font-style:normal">*</em></p>
+            <div class="ct-options three">
+                @foreach (var o in c.List("types"))
+                {
+                    <label class="ct-option"><input name="type" type="radio" value="@o["label"]" /><span class="box"></span><span><b>@o["label"]</b><small>@o["note"]</small></span></label>
+                }
+            </div>
+            <p class="ct-group-label">Quy mô (ước lượng)</p>
+            <div class="ct-fields">
+                <label class="ct-field">Ngành nghề chính<input id="f-industry" name="industry" maxlength="100" placeholder="VD: thương mại, xây dựng, nhà hàng…" type="text" /></label>
+                <label class="ct-field">Số hóa đơn, chứng từ mỗi tháng<select id="f-volume" name="volume"><option value="">Chọn khoảng</option>@foreach (var v in c.Lines("volumes")) {<option>@v</option>}</select></label>
+                <label class="ct-field">Số lao động<select id="f-staff" name="staff"><option value="">Chọn khoảng</option>@foreach (var v in c.Lines("staff")) {<option>@v</option>}</select></label>
+            </div>
+        </fieldset>
+
+        <fieldset class="ct-panel" hidden style="border:0;margin:0">
+            <h2 tabindex="-1">Thông tin để T.A liên hệ lại</h2><p>Thông tin chỉ dùng để tư vấn, không chia sẻ cho bên thứ ba.</p>
+            <div class="ct-fields">
+                <label class="ct-field">Họ và tên <em>*</em><input autocomplete="name" id="f-name" name="name" maxlength="150" type="text" /></label>
+                <label class="ct-field">Số điện thoại <em>*</em><input autocomplete="tel" id="f-phone" name="phone" maxlength="20" inputmode="tel" placeholder="0xxx xxx xxx" type="tel" /></label>
+                <label class="ct-field">Email<input autocomplete="email" id="f-email" name="email" maxlength="200" type="email" /></label>
+                <label class="ct-field">Tên doanh nghiệp<input autocomplete="organization" id="f-company" name="company" maxlength="250" placeholder="Nếu đã thành lập" type="text" /></label>
+                <label class="ct-field">Thời gian thuận tiện để gọi<select id="f-time" name="time">@foreach (var v in c.Lines("times")) {<option>@v</option>}</select></label>
+                <label class="ct-field full">Mô tả thêm<small>Tình trạng sổ sách, vướng mắc đang gặp, câu hỏi cụ thể…</small><textarea id="f-note" name="note" maxlength="2000"></textarea></label>
+            </div>
+            <label class="ct-consent"><input id="f-consent" name="consent" value="true" type="checkbox" /><span>@c["consent"]</span></label>
+        </fieldset>
+
+        <p aria-live="polite" class="ct-error" id="ct-error" style="padding:0 clamp(22px,2.4vw,34px)"></p>
+        <div class="ct-nav">
+            <button class="btn btn-outline" hidden id="ct-prev" type="button">← QUAY LẠI</button>
+            <span id="ct-counter">Bước 1/3</span>
+            <button class="btn btn-navy" id="ct-next" type="button">TIẾP TỤC →</button>
+            <button class="btn btn-gold" hidden id="ct-submit" type="submit">GỬI YÊU CẦU</button>
+        </div>
+    </div>
+
+    <div class="ct-done" hidden id="ct-done">
+        <div aria-hidden="true" class="ct-done-ico">✓</div>
+        <h2 tabindex="-1">Cảm ơn <span id="ct-done-name"></span>!</h2>
+        <p>@c["thanks"]</p>
+        <div class="dv-hero-actions" style="justify-content:center;margin-top:22px"><a class="btn btn-navy" href="/tin-tuc">ĐỌC CẨM NANG</a><button class="btn btn-outline" id="ct-restart" type="button">GỬI YÊU CẦU KHÁC</button></div>
+    </div>
+</form>
+
+<aside class="ct-aside">
+    <div aria-live="polite" class="ct-summary"><h3>Tóm tắt yêu cầu</h3><p>Cập nhật theo lựa chọn của bạn</p>
+        <dl><dt>DỊCH VỤ</dt><dd id="sum-service"></dd><dt>DOANH NGHIỆP</dt><dd id="sum-type"></dd><dt>QUY MÔ</dt><dd id="sum-scale"></dd><dt>THỜI GIAN LIÊN HỆ</dt><dd id="sum-time"></dd></dl></div>
+    <div class="ct-next"><h3>@c["nextTitle"]</h3><ol>@foreach (var n in c.List("nextSteps")) {<li><span><b>@n["title"]</b><small>@n["text"]</small></span></li>}</ol></div>
+</aside>
+</div></section>

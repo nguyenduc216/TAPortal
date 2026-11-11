@@ -1,0 +1,104 @@
+@model WebsitePostsVm
+@{
+    ViewData["ParentTitle"] = "Website TA";
+    ViewData["ParentController"] = "Website";
+    ViewData["Title"] = "Bài viết";
+    ViewData["Heading"] = "Bài viết – Tin tức";
+    ViewData["Subtitle"] = "Bài viết hằng ngày của mục Tin tức – kiến thức (/tin-tuc): soạn, lưu nháp, xuất bản hoặc hẹn giờ.";
+    ViewData["PageIcon"] = "file-text";
+    var canEdit = AdminPermissions.Has(User, AdminPermissions.WebsitePostsEdit);
+    var vi = System.Globalization.CultureInfo.GetCultureInfo("vi-VN");
+}
+@section PageActions {
+    <a class="btn" href="@(Model.PublicUrl)/tin-tuc" target="_blank" rel="noopener">@UiIcon.Render("external-link")<span>Xem trang Tin tức</span></a>
+    @if (canEdit) {<a class="btn btn-ta-gold" asp-action="Create">@UiIcon.Render("plus")<span>Viết bài mới</span></a>}
+}
+@if (Model.Error is not null) {<div class="ta-alert ta-alert--danger" role="alert">@UiIcon.Render("alert-circle")<div class="ta-alert__body">@Model.Error</div></div>}
+<div class="ta-web-posts-layout">
+<section class="card ta-table-card" aria-label="Danh sách bài viết">
+    <form class="ta-table-toolbar d-flex flex-wrap gap-2 align-items-center" method="get" asp-action="Index">
+        <div class="ta-search">@UiIcon.Render("search")<input class="form-control" type="search" name="q" value="@Model.Search" maxlength="100" aria-label="Tìm bài viết" placeholder="Tiêu đề, đường dẫn, thẻ..." /></div>
+        <select class="form-select w-auto" name="status" aria-label="Trạng thái">
+            <option value="">Mọi trạng thái</option>
+            <option value="published" selected="@(Model.Status == "published")">Đã xuất bản</option>
+            <option value="scheduled" selected="@(Model.Status == "scheduled")">Hẹn giờ</option>
+            <option value="draft" selected="@(Model.Status == "draft")">Bản nháp</option>
+        </select>
+        <select class="form-select w-auto" name="category" aria-label="Chuyên mục">
+            <option value="">Mọi chuyên mục</option>
+            @foreach (var c in Model.Categories) {<option value="@c.Id" selected="@(c.Id == Model.Category)">@c.Name</option>}
+        </select>
+        <button class="btn" type="submit">@UiIcon.Render("search")<span>Lọc</span></button>
+    </form>
+    @if (Model.Items.Count == 0)
+    {
+        <div class="ta-empty"><span class="ta-empty__icon">@UiIcon.Render("file-text")</span><p class="ta-empty__title">Chưa có bài viết phù hợp</p><p class="ta-empty__text">Bấm "Viết bài mới" để đăng bài đầu tiên lên mục Tin tức.</p></div>
+    }
+    else
+    {
+        <div class="ta-table-wrap">
+            <table class="ta-table ta-table-stack" data-ta-pager="20">
+                <thead><tr><th scope="col">Bài viết</th><th scope="col">Chuyên mục</th><th scope="col">Trạng thái</th><th scope="col" class="text-end">Lượt xem</th><th scope="col" class="ta-col-actions">Thao tác</th></tr></thead>
+                <tbody>
+                @foreach (var p in Model.Items)
+                {
+                    var scheduled = p.Status == 1 && p.PublishedAt > Model.NowUtc;
+                    <tr data-ta-row>
+                        <td class="ta-cell-strong">
+                            <div class="ta-web-post-cell">
+                                @if (p.CoverMediaId is not null) {<img src="@WebsiteUi.ImageUrl(p.CoverMediaId)" alt="" loading="lazy" />} else {<span class="ta-web-post-cell__ph">@UiIcon.Render("photo")</span>}
+                                <span>@if (canEdit) {<a class="text-reset" asp-action="Edit" asp-route-id="@p.Id">@p.Title</a>} else {@p.Title}@if (p.IsFeatured) {<span class="ta-badge ta-badge--warning ta-badge--plain ms-1">Nổi bật</span>}<span class="ta-cell-sub d-block">/tin-tuc/@p.Slug</span></span>
+                            </div>
+                        </td>
+                        <td data-label="Chuyên mục">@(p.CategoryName ?? "Chưa phân loại")</td>
+                        <td data-label="Trạng thái">
+                            @if (p.Status == 0) {<span class="ta-badge ta-badge--neutral">Bản nháp</span>}
+                            else if (scheduled) {<span class="ta-badge ta-badge--info">Hẹn giờ</span>}
+                            else {<span class="ta-badge ta-badge--success">Đã xuất bản</span>}
+                            <div class="ta-cell-sub">@(p.PublishedAt is DateTime d ? WebsiteUi.Local(d).ToString("dd/MM/yyyy HH:mm", vi) : "Sửa " + WebsiteUi.Local(p.UpdatedAt).ToString("dd/MM HH:mm", vi))</div>
+                        </td>
+                        <td class="text-end" data-label="Lượt xem">@p.ViewCount.ToString("N0", vi)</td>
+                        <td class="ta-col-actions">
+                            @if (p.Status == 1 && !scheduled) {<a class="btn btn-sm btn-icon" href="@(Model.PublicUrl)/tin-tuc/@p.Slug" target="_blank" rel="noopener" aria-label="Xem trên website">@UiIcon.Render("external-link")</a>}
+                            @if (canEdit) {<a class="btn btn-sm" asp-action="Edit" asp-route-id="@p.Id">@UiIcon.Render("pencil")<span>Sửa</span></a>}
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    }
+</section>
+<aside class="card" aria-label="Chuyên mục">
+    <div class="card-header"><h2 class="card-title">@UiIcon.Render("list-tree")Chuyên mục</h2></div>
+    <div class="card-body">
+        @foreach (var c in Model.Categories)
+        {
+            <details class="ta-web-cat">
+                <summary><b>@c.Name</b> <span class="ta-cell-sub">· @c.PostCount bài · /tin-tuc?cm=@c.Slug</span></summary>
+                @if (canEdit)
+                {
+                    <form asp-action="SaveCategory" asp-route-id="@c.Id" method="post" class="ta-web-cat__form">
+                        <div class="ta-input-icon">@UiIcon.Render("pencil")<input class="form-control form-control-sm" name="name" value="@c.Name" maxlength="150" aria-label="Tên chuyên mục" required /></div>
+                        <div class="ta-input-icon">@UiIcon.Render("link")<input class="form-control form-control-sm" name="slug" value="@c.Slug" maxlength="120" aria-label="Đường dẫn" /></div>
+                        <div class="ta-input-icon">@UiIcon.Render("list-tree")<input class="form-control form-control-sm" name="sortOrder" value="@c.SortOrder" type="number" aria-label="Thứ tự" /></div>
+                        <button class="btn btn-sm" type="submit">Lưu</button>
+                    </form>
+                    <form asp-action="DeleteCategory" asp-route-id="@c.Id" method="post" data-ta-confirm="Xóa chuyên mục @c.Name? Bài viết của chuyên mục chuyển sang 'Chưa phân loại'.">
+                        <button class="btn btn-sm btn-ghost-danger" type="submit">@UiIcon.Render("trash")<span>Xóa chuyên mục</span></button>
+                    </form>
+                }
+            </details>
+        }
+        @if (Model.Categories.Count == 0) {<p class="ta-cell-sub">Chưa có chuyên mục. Gợi ý: Thủ tục doanh nghiệp, Kế toán – thuế, Hóa đơn điện tử, Hộ kinh doanh, Quản trị &amp; công nghệ.</p>}
+        @if (canEdit)
+        {
+            <form asp-action="SaveCategory" method="post" class="ta-web-cat__form mt-2">
+                <div class="ta-input-icon">@UiIcon.Render("pencil")<input class="form-control form-control-sm" name="name" maxlength="150" placeholder="Tên chuyên mục mới" aria-label="Tên chuyên mục mới" required /></div>
+                <div class="ta-input-icon">@UiIcon.Render("list-tree")<input class="form-control form-control-sm" name="sortOrder" value="@((Model.Categories.Count + 1) * 10)" type="number" aria-label="Thứ tự" /></div>
+                <button class="btn btn-sm btn-ta-gold" type="submit">@UiIcon.Render("plus")<span>Thêm</span></button>
+            </form>
+        }
+    </div>
+</aside>
+</div>

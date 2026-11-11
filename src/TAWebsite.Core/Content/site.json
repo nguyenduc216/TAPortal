@@ -1,0 +1,279 @@
+{
+  "pages": [
+    {
+      "key": "global",
+      "path": null,
+      "name": "Toàn trang (chân trang)",
+      "title": "T.A – Tư vấn giải pháp",
+      "description": "",
+      "sections": [
+        {
+          "key": "footer", "type": "footer", "name": "Chân trang",
+          "content": {
+            "brand": "TƯ VẤN GIẢI PHÁP",
+            "tagline": "Tư vấn giải pháp · Kế toán · Thuế · Công nghệ",
+            "slogan": "Đồng hành cùng doanh nghiệp phát triển bền vững.",
+            "col1Title": "DỊCH VỤ",
+            "col1": [
+              { "label": "Thành lập doanh nghiệp", "url": "/lien-he?dv=thanh-lap" },
+              { "label": "Thay đổi đăng ký kinh doanh", "url": "/lien-he?dv=thay-doi" },
+              { "label": "Kế toán – thuế trọn gói", "url": "/lien-he?dv=ke-toan" },
+              { "label": "Quyết toán & rà soát sổ sách", "url": "/lien-he?dv=quyet-toan" },
+              { "label": "Tất cả dịch vụ", "url": "/#services" }
+            ],
+            "col2Title": "HỖ TRỢ",
+            "col2": [
+              { "label": "Tin tức – kiến thức", "url": "/tin-tuc" },
+              { "label": "Giới thiệu", "url": "/#about" },
+              { "label": "Quy trình làm việc", "url": "/#process" },
+              { "label": "Liên hệ – báo giá", "url": "/lien-he" }
+            ],
+            "copyright": "© {year} Công ty TNHH Tư vấn Giải pháp T.A."
+          }
+        }
+      ]
+    },
+    {
+      "key": "home",
+      "path": "/",
+      "name": "Trang chủ",
+      "title": "T.A – Tư vấn giải pháp | Kế toán, Thuế & Thành lập doanh nghiệp",
+      "description": "T.A tư vấn kế toán, kê khai thuế, thành lập doanh nghiệp, hộ kinh doanh và phần mềm quản trị tại Nha Trang, Khánh Hòa. Giải pháp tối ưu – Phát triển bền vững.",
+      "sections": [
+        {
+          "key": "hero", "type": "home-hero", "name": "Banner đầu trang",
+          "content": {
+            "kicker": "T.A · TƯ VẤN GIẢI PHÁP DOANH NGHIỆP",
+            "title": "DỊCH VỤ KẾ TOÁN\nCHUYÊN NGHIỆP CHO DOANH NGHIỆP",
+            "ribbon": "ĐỒNG HÀNH CÙNG DOANH NGHIỆP PHÁT TRIỂN BỀN VỮNG",
+            "promises": "Tiết kiệm chi phí – Tối ưu hiệu quả\nTuân thủ pháp luật – Giảm thiểu rủi ro thuế\nĐội ngũ chuyên gia giàu kinh nghiệm",
+            "primaryLabel": "☎   LIÊN HỆ TƯ VẤN", "primaryUrl": "/lien-he",
+            "secondaryLabel": "KHÁM PHÁ DỊCH VỤ", "secondaryUrl": "#services",
+            "image": "asset:hero-consultant.webp", "imageAlt": "Chuyên viên tư vấn kế toán chuyên nghiệp",
+            "tags": "Kế toán trọn gói\nKế toán thuế\nBáo cáo tài chính\nThành lập doanh nghiệp\nTư vấn tài chính"
+          }
+        },
+        {
+          "key": "benefits", "type": "image-cards", "name": "Lợi ích khi hợp tác",
+          "content": {
+            "items": [
+              { "image": "asset:benefit-savings.webp", "imageAlt": "Kế hoạch ngân sách và kiểm soát chi phí doanh nghiệp", "title": "TIẾT KIỆM CHI PHÍ", "text": "Giảm chi phí nhân sự, tối ưu ngân sách cho doanh nghiệp." },
+              { "image": "asset:benefit-compliance.webp", "imageAlt": "Chuyên viên rà soát hồ sơ thuế và chứng từ kế toán", "title": "TUÂN THỦ PHÁP LUẬT", "text": "Tuân thủ đúng quy định, hạn chế rủi ro thuế." },
+              { "image": "asset:benefit-experts.webp", "imageAlt": "Đội ngũ chuyên gia kế toán tài chính nhiều kinh nghiệm", "title": "CHUYÊN GIA GIÀU KINH NGHIỆM", "text": "Đồng hành tư vấn và xử lý nghiệp vụ chuyên sâu." }
+            ]
+          }
+        },
+        {
+          "key": "featured", "type": "home-featured", "name": "Dịch vụ nổi bật & quy trình",
+          "content": {
+            "featuredTitle": "DỊCH VỤ KẾ TOÁN NỔI BẬT",
+            "featured": [
+              { "label": "Kế toán trọn gói", "url": "#service-1" },
+              { "label": "Kế toán thuế", "url": "#service-2" },
+              { "label": "Báo cáo tài chính", "url": "#service-3" },
+              { "label": "Thành lập doanh nghiệp", "url": "#service-4" },
+              { "label": "Tư vấn tài chính", "url": "#service-6" }
+            ],
+            "allLabel": "XEM TẤT CẢ DỊCH VỤ", "allUrl": "#services",
+            "stepsTitle": "QUY TRÌNH LÀM VIỆC CHUYÊN NGHIỆP",
+            "steps": [
+              { "title": "TIẾP NHẬN THÔNG TIN", "text": "Tư vấn nhu cầu của doanh nghiệp" },
+              { "title": "KÝ KẾT HỢP ĐỒNG", "text": "Thống nhất phạm vi công việc, chi phí" },
+              { "title": "THỰC HIỆN DỊCH VỤ", "text": "Xử lý chứng từ, báo cáo theo quy định" },
+              { "title": "BÀN GIAO & HỖ TRỢ", "text": "Bàn giao báo cáo, đồng hành lâu dài" }
+            ],
+            "bannerImage": "asset:thap-tram-huong-nha-trang.webp", "bannerImageAlt": "Tháp Trầm Hương Nha Trang, Khánh Hòa",
+            "bannerTitle": "T.A – ĐỐI TÁC TIN CẬY CỦA DOANH NGHIỆP",
+            "bannerText": "Giải pháp kế toán, thuế và quản trị đồng hành cùng sự phát triển bền vững.",
+            "bannerLinkLabel": "KẾT NỐI TƯ VẤN", "bannerLinkUrl": "/lien-he"
+          }
+        },
+        {
+          "key": "about", "type": "image-text", "name": "Đội ngũ chuyên gia",
+          "content": {
+            "image": "asset:expert-team.webp", "imageAlt": "Hình ảnh minh họa đội ngũ chuyên gia tư vấn T.A",
+            "eyebrow": "VỀ T.A · TƯ VẤN GIẢI PHÁP",
+            "title": "ĐỘI NGŨ CHUYÊN GIA GIÀU KINH NGHIỆM",
+            "intro": "T.A xây dựng đội ngũ kế toán viên và chuyên gia thuế tận tâm, luôn cập nhật chính sách mới, mang đến giải pháp tối ưu nhất cho doanh nghiệp.",
+            "values": [
+              { "title": "CHUYÊN MÔN CAO", "text": "Am hiểu luật thuế và kế toán" },
+              { "title": "TẬN TÂM – TRÁCH NHIỆM", "text": "Đặt lợi ích khách hàng lên hàng đầu" },
+              { "title": "BẢO MẬT THÔNG TIN", "text": "Cam kết an toàn dữ liệu doanh nghiệp" }
+            ],
+            "linkLabel": "Liên hệ đội ngũ T.A →", "linkUrl": "/lien-he"
+          }
+        },
+        {
+          "key": "services", "type": "service-cards", "name": "Dịch vụ chuyên sâu",
+          "content": {
+            "eyebrow": "DỊCH VỤ CHUYÊN SÂU",
+            "title": "Giải pháp phù hợp với từng giai đoạn doanh nghiệp",
+            "intro": "Từ khởi sự, vận hành hằng ngày đến kiểm soát tài chính và chuyển đổi số. Mỗi dịch vụ được trình bày với phạm vi công việc rõ ràng để khách hàng dễ lựa chọn.",
+            "items": [
+              { "image": "asset:service-1.webp", "imageAlt": "Hình minh họa dịch vụ kế toán trọn gói", "eyebrow": "GIẢI PHÁP T.A", "title": "Kế toán trọn gói", "lead": "Sổ sách minh bạch, vận hành an tâm", "text": "Tổ chức chứng từ, hạch toán nghiệp vụ, theo dõi doanh thu – chi phí và lập báo cáo định kỳ. Giải pháp linh hoạt cho doanh nghiệp mới và doanh nghiệp đang hoạt động.", "points": "Hạch toán, rà soát chứng từ\nLập báo cáo tài chính\nTheo dõi nghĩa vụ kê khai", "linkLabel": "Trao đổi về dịch vụ", "linkUrl": "/lien-he?dv=ke-toan" },
+              { "image": "asset:service-2.webp", "imageAlt": "Hình minh họa dịch vụ kê khai và quyết toán thuế", "eyebrow": "GIẢI PHÁP T.A", "title": "Kê khai và quyết toán thuế", "lead": "Đúng hạn, rõ ràng, chủ động", "text": "Đồng hành trong công tác kê khai thuế định kỳ, kiểm tra dữ liệu hóa đơn và hỗ trợ chuẩn bị hồ sơ giải trình, quyết toán theo phạm vi dịch vụ.", "points": "Kê khai thuế theo kỳ\nĐối chiếu hóa đơn và số liệu\nHỗ trợ hồ sơ quyết toán", "linkLabel": "Trao đổi về dịch vụ", "linkUrl": "/lien-he?dv=quyet-toan" },
+              { "image": "asset:service-3.webp", "imageAlt": "Hình minh họa dịch vụ tư vấn tài chính – quản trị", "eyebrow": "GIẢI PHÁP T.A", "title": "Tư vấn tài chính – quản trị", "lead": "Hiểu số liệu để ra quyết định", "text": "Chuyển dữ liệu kế toán thành thông tin điều hành: phân tích dòng tiền, công nợ, chi phí và hiệu quả hoạt động, hỗ trợ chủ doanh nghiệp quản trị tốt hơn.", "points": "Phân tích chi phí, dòng tiền\nTheo dõi công nợ\nBáo cáo quản trị theo nhu cầu", "linkLabel": "Trao đổi về dịch vụ", "linkUrl": "/lien-he?dv=quan-tri" },
+              { "image": "asset:service-4.webp", "imageAlt": "Hình minh họa dịch vụ thành lập và thay đổi doanh nghiệp", "eyebrow": "GIẢI PHÁP T.A", "title": "Thành lập và thay đổi doanh nghiệp", "lead": "Khởi sự thuận lợi, thủ tục rõ ràng", "text": "Tư vấn lựa chọn loại hình, ngành nghề, hồ sơ đăng ký và thay đổi thông tin doanh nghiệp; đồng hành các bước chuẩn bị vận hành sau thành lập.", "points": "Hồ sơ đăng ký doanh nghiệp\nĐiều chỉnh thông tin đăng ký\nTư vấn thủ tục sau thành lập", "linkLabel": "Trao đổi về dịch vụ", "linkUrl": "/lien-he?dv=thanh-lap" },
+              { "image": "asset:service-5.webp", "imageAlt": "Hình minh họa dịch vụ kế toán và thuế hộ kinh doanh", "eyebrow": "GIẢI PHÁP T.A", "title": "Kế toán – thuế hộ kinh doanh", "lead": "Gọn nhẹ, đúng nghĩa vụ", "text": "Hỗ trợ hộ kinh doanh tổ chức sổ sách doanh thu, chi phí, lưu trữ chứng từ và theo dõi nghĩa vụ thuế phù hợp với mô hình hoạt động thực tế.", "points": "Sổ sách doanh thu, chi phí\nKê khai theo phương pháp phù hợp\nLưu trữ chứng từ", "linkLabel": "Trao đổi về dịch vụ", "linkUrl": "/lien-he?dv=ho-kd" },
+              { "image": "asset:service-6.webp", "imageAlt": "Hình minh họa dịch vụ phần mềm quản trị doanh nghiệp", "eyebrow": "GIẢI PHÁP T.A", "title": "Phần mềm quản trị doanh nghiệp", "lead": "Kết nối kế toán với công nghệ", "text": "Tư vấn số hóa quy trình, chuẩn hóa dữ liệu và xây dựng các công cụ hỗ trợ hóa đơn, công nợ, báo cáo, phê duyệt và quản trị hoạt động kinh doanh.", "points": "Số hóa quy trình\nBáo cáo và dashboard\nTích hợp dữ liệu vận hành", "linkLabel": "Trao đổi về dịch vụ", "linkUrl": "/lien-he?dv=phan-mem" }
+            ]
+          }
+        },
+        {
+          "key": "knowledge", "type": "latest-posts", "name": "Kiến thức doanh nghiệp (bài viết mới)",
+          "content": {
+            "eyebrow": "KIẾN THỨC DOANH NGHIỆP",
+            "title": "THỦ TỤC HỒ SƠ",
+            "intro": "Thông tin tham khảo về đăng ký kinh doanh, kế toán, thuế và quản trị hồ sơ.",
+            "linkLabel": "Xem thêm tin tức",
+            "feedTitle": "TIN TỨC & HƯỚNG DẪN"
+          }
+        },
+        {
+          "key": "faq", "type": "faq", "name": "Câu hỏi thường gặp",
+          "content": {
+            "eyebrow": "CÂU HỎI THƯỜNG GẶP",
+            "title": "Những điều khách hàng thường quan tâm",
+            "intro": "Phạm vi công việc, cách cung cấp chứng từ và thời gian triển khai sẽ được xác định khi khảo sát thực tế.",
+            "items": [
+              { "q": "Doanh nghiệp mới thành lập nên bắt đầu từ đâu?", "a": "Trước tiên cần rà soát hồ sơ đăng ký, chữ ký số, hóa đơn điện tử, tài khoản ngân hàng và các nghĩa vụ kê khai phát sinh phù hợp với hoạt động thực tế." },
+              { "q": "T.A có nhận xử lý lại sổ sách cũ không?", "a": "Phạm vi rà soát, đối chiếu và điều chỉnh số liệu sẽ được đề xuất sau khi đánh giá hồ sơ, chứng từ và tình trạng dữ liệu hiện có." },
+              { "q": "Có thể kết hợp dịch vụ kế toán và phần mềm quản trị không?", "a": "Có thể khảo sát nhu cầu tích hợp chứng từ, công nợ, hóa đơn và báo cáo quản trị để đề xuất phương án phù hợp." }
+            ]
+          }
+        },
+        {
+          "key": "showcase", "type": "testimonials-news", "name": "Khách hàng nói về T.A & tin mới",
+          "content": {
+            "title": "KHÁCH HÀNG NÓI VỀ T.A",
+            "quotes": [
+              { "text": "Dịch vụ tận tâm, hỗ trợ doanh nghiệp giải quyết công việc kế toán hiệu quả và đúng hạn.", "author": "" },
+              { "text": "Quy trình phối hợp rõ ràng, giúp doanh nghiệp dễ theo dõi chứng từ và tiến độ công việc.", "author": "" },
+              { "text": "Giải thích nghiệp vụ dễ hiểu, hỗ trợ doanh nghiệp chủ động hơn trong công tác kế toán.", "author": "" }
+            ],
+            "note": "Trích dẫn minh họa – chờ phản hồi khách hàng đã xác thực",
+            "newsTitle": "TIN TỨC – KIẾN THỨC"
+          }
+        }
+      ]
+    },
+    {
+      "key": "contact",
+      "path": "/lien-he",
+      "name": "Liên hệ – báo giá",
+      "title": "Liên hệ & yêu cầu báo giá | T.A Tư vấn giải pháp",
+      "description": "Liên hệ T.A để được tư vấn và nhận báo giá dịch vụ thành lập doanh nghiệp, kế toán – thuế theo khảo sát thực tế.",
+      "sections": [
+        {
+          "key": "hero", "type": "page-hero", "name": "Banner đầu trang",
+          "content": {
+            "eyebrow": "LIÊN HỆ T.A · KHẢO SÁT MIỄN PHÍ",
+            "title": "Nhận đề xuất & báo giá dịch vụ phù hợp",
+            "intro": "Trả lời vài câu hỏi ngắn về nhu cầu và quy mô doanh nghiệp. T.A sẽ liên hệ lại để trao đổi, khảo sát hồ sơ và gửi đề xuất bằng văn bản."
+          }
+        },
+        {
+          "key": "channels", "type": "contact-channels", "name": "Kênh liên hệ",
+          "content": {
+            "hotlineNote": "Giờ hành chính, thứ 2 – thứ 7",
+            "emailNote": "Phản hồi trong ngày làm việc",
+            "zaloNote": "Gửi ảnh chứng từ, hỏi nhanh",
+            "officeNote": "Gặp trực tiếp theo lịch hẹn"
+          }
+        },
+        {
+          "key": "form", "type": "quote-form", "name": "Form yêu cầu báo giá",
+          "content": {
+            "eyebrow": "", "title": "Bạn cần hỗ trợ về dịch vụ nào?", "intro": "Có thể chọn nhiều dịch vụ.",
+            "services": [
+              { "value": "thanh-lap", "label": "Thành lập doanh nghiệp", "note": "Công ty TNHH, cổ phần" },
+              { "value": "thay-doi", "label": "Thay đổi đăng ký kinh doanh", "note": "Tên, địa chỉ, ngành nghề, vốn…" },
+              { "value": "ke-toan", "label": "Kế toán – thuế trọn gói", "note": "Ghi sổ, kê khai, báo cáo theo kỳ" },
+              { "value": "quyet-toan", "label": "BCTC & quyết toán năm", "note": "Báo cáo tài chính, quyết toán thuế" },
+              { "value": "ra-soat", "label": "Rà soát sổ sách, giải trình thuế", "note": "Sổ sách tồn đọng, làm việc với cơ quan thuế" },
+              { "value": "ho-kd", "label": "Hộ kinh doanh", "note": "Đăng ký, sổ sách, kê khai" },
+              { "value": "quan-tri", "label": "Báo cáo quản trị, dòng tiền", "note": "Số liệu cho điều hành" },
+              { "value": "phan-mem", "label": "Hóa đơn điện tử, phần mềm", "note": "Số hóa quy trình, dashboard" }
+            ],
+            "types": [
+              { "label": "Chưa thành lập", "note": "Đang chuẩn bị khởi sự" },
+              { "label": "Mới thành lập", "note": "Dưới 12 tháng" },
+              { "label": "Đang hoạt động", "note": "Từ 1 năm trở lên" },
+              { "label": "Hộ kinh doanh", "note": "Cá nhân, hộ gia đình" },
+              { "label": "Đang dùng đơn vị khác", "note": "Muốn chuyển đổi" },
+              { "label": "Trường hợp khác", "note": "Sẽ mô tả thêm" }
+            ],
+            "volumes": "Dưới 30\n30 – 100\n100 – 300\nTrên 300\nChưa phát sinh / chưa rõ",
+            "staff": "Chưa có lao động\n1 – 10 người\n11 – 50 người\nTrên 50 người",
+            "times": "Bất kỳ lúc nào\nBuổi sáng (8h – 11h30)\nBuổi chiều (13h30 – 17h)\nHẹn lịch gặp trực tiếp",
+            "nextTitle": "Sau khi gửi yêu cầu",
+            "nextSteps": [
+              { "title": "T.A gọi lại xác nhận", "text": "Làm rõ nhu cầu, hẹn lịch khảo sát" },
+              { "title": "Khảo sát hồ sơ miễn phí", "text": "Xem chứng từ, sổ sách, tình trạng thuế" },
+              { "title": "Gửi đề xuất & báo giá", "text": "Phạm vi, thời gian, chi phí bằng văn bản" }
+            ],
+            "consent": "Tôi đồng ý để T.A sử dụng thông tin trên nhằm liên hệ tư vấn và gửi đề xuất dịch vụ.",
+            "thanks": "Yêu cầu của bạn đã được ghi nhận. Chuyên viên T.A sẽ liên hệ trong giờ làm việc để trao đổi và hẹn lịch khảo sát hồ sơ."
+          }
+        },
+        {
+          "key": "office", "type": "office", "name": "Văn phòng & bản đồ",
+          "content": {
+            "eyebrow": "VĂN PHÒNG T.A", "title": "Gặp trực tiếp chuyên viên",
+            "intro": "Vui lòng đặt lịch trước để chuyên viên phụ trách chuẩn bị hồ sơ và dành thời gian trao đổi đầy đủ.",
+            "hours": [
+              { "day": "Thứ 2 – Thứ 6", "time": "8:00 – 17:00" },
+              { "day": "Thứ 7", "time": "8:00 – 11:30" },
+              { "day": "Chủ nhật, ngày lễ", "time": "Nghỉ" }
+            ],
+            "bringTitle": "Mang theo khi đến khảo sát",
+            "bringText": "Giấy chứng nhận ĐKDN, tờ khai, BCTC gần nhất, sổ sách hiện có"
+          }
+        },
+        {
+          "key": "faq", "type": "faq", "name": "Câu hỏi thường gặp",
+          "content": {
+            "eyebrow": "TRƯỚC KHI LIÊN HỆ", "title": "Câu hỏi thường gặp", "intro": "",
+            "items": [
+              { "q": "Khảo sát và báo giá có mất phí không?", "a": "Không. T.A khảo sát hồ sơ và gửi đề xuất miễn phí; chi phí chỉ phát sinh khi hai bên ký hợp đồng dịch vụ." },
+              { "q": "Bao lâu thì nhận được báo giá?", "a": "Thông thường sau khi khảo sát đủ hồ sơ. Trường hợp sổ sách phức tạp hoặc nhiều kỳ tồn đọng có thể cần thêm thời gian đánh giá." },
+              { "q": "Tôi ở tỉnh khác, có làm việc từ xa được không?", "a": "Có thể trao đổi, nhận chứng từ điện tử và kê khai trực tuyến. Một số thủ tục cần bản gốc sẽ được hướng dẫn gửi qua bưu điện." }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "key": "news",
+      "path": "/tin-tuc",
+      "name": "Tin tức – kiến thức",
+      "title": "Tin tức & kiến thức kế toán – thuế | T.A Tư vấn giải pháp",
+      "description": "Hướng dẫn thủ tục doanh nghiệp, kế toán – thuế, hóa đơn điện tử và hộ kinh doanh do T.A biên soạn.",
+      "sections": [
+        {
+          "key": "hero", "type": "page-hero", "name": "Banner đầu trang",
+          "content": {
+            "eyebrow": "CẨM NANG DOANH NGHIỆP",
+            "title": "Tin tức & kiến thức kế toán – thuế",
+            "intro": "Hướng dẫn thủ tục, lịch nghĩa vụ và kinh nghiệm thực tế được T.A biên soạn cho chủ doanh nghiệp và hộ kinh doanh."
+          }
+        },
+        {
+          "key": "sidebar", "type": "news-sidebar", "name": "Cột phải",
+          "content": {
+            "deadlinesTitle": "Hạn nộp sắp tới",
+            "deadlines": [
+              { "date": "20/11", "title": "Tờ khai GTGT, TNCN tháng 10", "note": "Doanh nghiệp kê khai theo tháng" },
+              { "date": "20/12", "title": "Tờ khai GTGT, TNCN tháng 11", "note": "Doanh nghiệp kê khai theo tháng" },
+              { "date": "31/01", "title": "Tờ khai quý IV, tạm nộp TNDN", "note": "Doanh nghiệp kê khai theo quý" }
+            ],
+            "subscribeTitle": "", "subscribeText": "",
+            "ctaTitle": "Cần tư vấn trường hợp cụ thể?",
+            "ctaText": "Bài viết mang tính tham khảo. Liên hệ để được tư vấn theo hồ sơ thực tế.",
+            "ctaLabel": "LIÊN HỆ TƯ VẤN"
+          }
+        }
+      ]
+    }
+  ]
+}

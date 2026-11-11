@@ -1,0 +1,70 @@
+@{
+    var site = (SiteContext)ViewData["Site"]!;
+    var s = site.Settings;
+    var f = site.Footer;
+    string Cur(string key) => site.Nav == key ? "is-current" : "";
+    string? Aria(string key) => site.Nav == key ? "page" : null;
+    var origin = $"{Context.Request.Scheme}://{Context.Request.Host}";
+}
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>@site.Title</title>
+    <meta name="description" content="@site.Description" />
+    <meta name="theme-color" content="#052b50" />
+    @if (!s.AllowIndexing) {<meta name="robots" content="noindex,nofollow" />}
+    <link rel="canonical" href="@(origin + site.CanonicalPath)" />
+    <meta property="og:type" content="@(site.Nav == "news" && site.JsonLd is not null ? "article" : "website")" />
+    <meta property="og:site_name" content="@s["seo.siteName"]" />
+    <meta property="og:title" content="@site.Title" />
+    <meta property="og:description" content="@site.Description" />
+    <meta property="og:url" content="@(origin + site.CanonicalPath)" />
+    <meta property="og:image" content="@(origin + (site.OgImage ?? "/site-assets/hero-consultant.webp"))" />
+    <link rel="icon" href="/ta-logo.png" />
+    <link rel="stylesheet" href="~/css/styles.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/dich-vu.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/trang-phu.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    @if (site.JsonLd is not null) {<script type="application/ld+json">@Html.Raw(site.JsonLd.Replace("</", "<\\/"))</script>}
+    <script defer src="~/js/site.js" asp-append-version="true"></script>
+</head>
+<body>
+<a class="skip-link" href="#top">Bỏ qua menu</a>
+<header class="site-header"><div class="wrap header-inner">
+    <a aria-label="T.A – Về trang chủ" class="brand" href="/"><img alt="Logo T.A Tư vấn giải pháp" height="70" src="/site-assets/ta-logo.png" width="86" /><span class="brand-copy"><strong>@s["brand.name"]</strong><small>@s["brand.slogan"]</small></span></a>
+    <button aria-controls="nav" aria-expanded="false" aria-label="Mở menu" class="menu-toggle" type="button">☰</button>
+    <nav aria-label="Điều hướng chính" id="nav">
+        <a class="@Cur("home")" aria-current="@Aria("home")" href="/"><svg aria-hidden="true" class="nav-icon" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" viewBox="0 0 24 24"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"></path></svg><span>TRANG CHỦ</span></a>
+        <a href="/#about"><svg aria-hidden="true" class="nav-icon" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"></circle><path d="M4 21v-2a8 8 0 0 1 16 0v2"></path></svg><span>GIỚI THIỆU</span></a>
+        <a href="/#services"><svg aria-hidden="true" class="nav-icon" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" viewBox="0 0 24 24"><rect height="14" rx="2" width="18" x="3" y="7"></rect><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M3 13h18M12 13v3"></path></svg><span>DỊCH VỤ</span></a>
+        <a href="/#process"><svg aria-hidden="true" class="nav-icon" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" viewBox="0 0 24 24"><rect height="18" rx="2" width="16" x="4" y="3"></rect><path d="M8 8h8M8 12h8M8 16h3"></path></svg><span>QUY TRÌNH</span></a>
+        <a class="@Cur("news")" aria-current="@Aria("news")" href="/tin-tuc"><svg aria-hidden="true" class="nav-icon" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" viewBox="0 0 24 24"><rect height="16" rx="2" width="18" x="3" y="4"></rect><path d="M7 8h10M7 12h5M7 16h10"></path></svg><span>TIN TỨC</span></a>
+        <a class="@Cur("contact")" aria-current="@Aria("contact")" href="/lien-he"><svg aria-hidden="true" class="nav-icon" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" viewBox="0 0 24 24"><path d="M21 16.4v3a2 2 0 0 1-2.2 2A18 18 0 0 1 2.6 5.2 2 2 0 0 1 4.6 3h3a2 2 0 0 1 2 1.7l.5 3a2 2 0 0 1-.6 1.7L8 11a14 14 0 0 0 5 5l1.6-1.5a2 2 0 0 1 1.7-.6l3 .5a2 2 0 0 1 1.7 2z"></path></svg><span>LIÊN HỆ</span></a>
+        <div class="nav-visit" aria-label="Văn phòng T.A" role="group">
+            <span class="nav-visit-eyebrow">GHÉ VĂN PHÒNG T.A</span>
+            <iframe class="nav-visit-map" title="Bản đồ văn phòng T.A" loading="lazy" referrerpolicy="no-referrer-when-downgrade" data-src="@s.MapEmbedUrl(15)"></iframe>
+            <p class="nav-visit-addr">⌖ <span>@s["office.shortAddress"]</span></p>
+            <a class="nav-visit-go" href="@s.DirectionsUrl" target="_blank" rel="noopener">➤ Chỉ đường từ vị trí của bạn</a>
+            <a class="nav-visit-alt" href="/lien-he">Ở tỉnh khác? Tư vấn online →</a>
+        </div>
+    </nav>
+    <a class="header-cta btn-action" href="@(s.HotlineHref ?? "/lien-he")"><span class="cta-phone">☎</span><span class="cta-lines"><b>@(string.IsNullOrWhiteSpace(s["contact.hotline"]) ? "LIÊN HỆ TƯ VẤN" : s["contact.hotline"])</b><small>Đồng hành cùng doanh nghiệp</small></span></a>
+</div></header>
+
+@RenderBody()
+
+<footer class="v9-footer" id="contact"><div class="wrap v9-footer-grid">
+    <div class="v9-footer-brand"><h2>@f["brand"]</h2><p>@f["tagline"]</p><p>@f["slogan"]</p></div>
+    <div><h3>@f["col1Title"]</h3>@foreach (var l in f.List("col1")) {<a href="@SiteContext.Link(l["url"])">› @l["label"]</a>}</div>
+    <div><h3>@f["col2Title"]</h3>@foreach (var l in f.List("col2")) {<a href="@SiteContext.Link(l["url"])">› @l["label"]</a>}</div>
+    <div><h3>LIÊN HỆ</h3>
+        <p>✉ Email: @if (string.IsNullOrWhiteSpace(s["contact.email"])) {<text>cập nhật khi triển khai</text>} else {<a href="mailto:@s["contact.email"]">@s["contact.email"]</a>}</p>
+        <p>☎ Hotline: @if (s.HotlineHref is null) {<text>cập nhật khi triển khai</text>} else {<a href="@s.HotlineHref">@s["contact.hotline"]</a>}</p>
+        <p>⌖ @s["office.shortAddress"]</p>
+        <a class="v9-footer-contact-link" href="/lien-he">Thông tin liên hệ →</a>
+    </div>
+</div><div class="wrap v9-footer-bottom"><span>@f["copyright"].Replace("{year}", DateTime.UtcNow.AddHours(7).Year.ToString()) MST @s["company.taxCode"].</span><a href="#top">Về đầu trang ↑</a></div></footer>
+</body>
+</html>

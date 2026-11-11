@@ -1,0 +1,12 @@
+@model SectionVm
+@{ var c = Model.C; }
+<section class="team-about" id="@Model.Key"><span class="section-anchor" id="team"></span><div class="wrap team-about-grid">
+    @if (c.Has("image")) {<div class="team-about-photo"><img alt="@c["imageAlt"]" loading="lazy" src="@SiteContext.Img(c["image"])" /></div>}
+    <div class="team-about-copy">
+        @if (c.Has("eyebrow")) {<span class="eyebrow">@c["eyebrow"]</span>}
+        <h2>@c["title"]</h2>
+        <p>@SiteHtml.Br(c["intro"])</p>
+        <div class="team-values">@foreach (var v in c.List("values")) {<div><b>@v["title"]</b><small>@v["text"]</small></div>}</div>
+        @if (c.Has("linkLabel")) {<a class="text-link" href="@SiteContext.Link(c["linkUrl"])">@c["linkLabel"]</a>}
+    </div>
+</div></section>

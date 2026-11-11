@@ -1,0 +1,48 @@
+@model WebsiteLeadsVm
+@using TAWebsite.Core.Data
+@{
+    ViewData["ParentTitle"] = "Website TA";
+    ViewData["ParentController"] = "Website";
+    ViewData["Title"] = "Liên hệ – báo giá";
+    ViewData["Heading"] = "Yêu cầu liên hệ – báo giá";
+    ViewData["Subtitle"] = "Yêu cầu khách gửi từ form trên website (tuvangiaiphapta.vn/lien-he). Cập nhật trạng thái khi đã gọi lại, báo giá hoặc chốt.";
+    ViewData["PageIcon"] = "inbox";
+    var vi = System.Globalization.CultureInfo.GetCultureInfo("vi-VN");
+}
+@if (Model.Error is not null) {<div class="ta-alert ta-alert--danger" role="alert">@UiIcon.Render("alert-circle")<div class="ta-alert__body">@Model.Error</div></div>}
+<section class="card ta-table-card" aria-label="Danh sách yêu cầu">
+    <form class="ta-table-toolbar d-flex flex-wrap gap-2 align-items-center" method="get" asp-action="Index">
+        <div class="ta-search">@UiIcon.Render("search")<input class="form-control" type="search" name="q" value="@Model.Search" maxlength="100" aria-label="Tìm yêu cầu" placeholder="Tên, số điện thoại, email, công ty..." /></div>
+        <select class="form-select w-auto" name="status" aria-label="Trạng thái">
+            <option value="">Mọi trạng thái</option>
+            @foreach (var s in LeadStatus.All) {<option value="@s.Code" selected="@(s.Code == Model.Status)">@s.Name</option>}
+        </select>
+        <button class="btn" type="submit">@UiIcon.Render("search")<span>Lọc</span></button>
+    </form>
+    @if (Model.Items.Count == 0)
+    {
+        <div class="ta-empty"><span class="ta-empty__icon">@UiIcon.Render("inbox")</span><p class="ta-empty__title">Chưa có yêu cầu</p><p class="ta-empty__text">Yêu cầu gửi từ form Liên hệ – báo giá trên website sẽ hiện ở đây.</p></div>
+    }
+    else
+    {
+        <div class="ta-table-wrap">
+            <table class="ta-table ta-table-stack" data-ta-pager="25">
+                <thead><tr><th scope="col">Thời gian</th><th scope="col">Khách hàng</th><th scope="col">Dịch vụ quan tâm</th><th scope="col">Tình trạng DN</th><th scope="col">Trạng thái</th><th scope="col" class="ta-col-actions">Thao tác</th></tr></thead>
+                <tbody>
+                @foreach (var l in Model.Items)
+                {
+                    var st = LeadStatus.All.First(s => s.Code == l.Status);
+                    <tr data-ta-row>
+                        <td class="ta-nowrap" data-label="Thời gian">@WebsiteUi.Local(l.CreatedAt).ToString("dd/MM/yyyy HH:mm", vi)</td>
+                        <td class="ta-cell-strong"><a class="text-reset" asp-action="Details" asp-route-id="@l.Id">@l.FullName</a><div class="ta-cell-sub"><a href="tel:@l.Phone">@l.Phone</a>@(l.CompanyName is null ? "" : " · " + l.CompanyName)</div></td>
+                        <td data-label="Dịch vụ">@(l.Services ?? "—")</td>
+                        <td data-label="Tình trạng">@(l.CompanyType ?? "—")</td>
+                        <td data-label="Trạng thái"><span class="badge @st.Css">@st.Name</span></td>
+                        <td class="ta-col-actions"><a class="btn btn-sm" asp-action="Details" asp-route-id="@l.Id">@UiIcon.Render("eye")<span>Xem</span></a></td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    }
+</section>

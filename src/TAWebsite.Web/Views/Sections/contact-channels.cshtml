@@ -1,0 +1,8 @@
+@model SectionVm
+@{ var c = Model.C; var s = Model.Site.Settings; const string pending = "Cập nhật khi triển khai"; }
+<section aria-label="Kênh liên hệ"><div class="wrap ct-channels">
+    <div class="ct-channel"><i aria-hidden="true">☎</i><div><b>Hotline</b>@if (s.HotlineHref is null) {<span>@pending</span>} else {<a href="@s.HotlineHref"><span>@s["contact.hotline"]</span></a>}<small>@c["hotlineNote"]</small></div></div>
+    <div class="ct-channel"><i aria-hidden="true">✉</i><div><b>Email</b>@if (string.IsNullOrWhiteSpace(s["contact.email"])) {<span>@pending</span>} else {<a href="mailto:@s["contact.email"]"><span>@s["contact.email"]</span></a>}<small>@c["emailNote"]</small></div></div>
+    <div class="ct-channel"><i aria-hidden="true">💬</i><div><b>Zalo / Nhắn tin</b>@if (s.ZaloHref is null) {<span>@pending</span>} else {<a href="@s.ZaloHref" target="_blank" rel="noopener"><span>@s["contact.zalo"]</span></a>}<small>@c["zaloNote"]</small></div></div>
+    <div class="ct-channel"><i aria-hidden="true">⌖</i><div><b>Văn phòng</b><span>@s["office.shortAddress"]</span><small>@c["officeNote"]</small></div></div>
+</div></section>

@@ -1,0 +1,75 @@
+@model NewsVm
+@{
+    ViewData["Site"] = Model.Site;
+    var hero = Model.Page.Sections.First(s => s.Def.Key == "hero");
+    var sidebar = Model.Page.Sections.First(s => s.Def.Key == "sidebar");
+    var r = Model.Result;
+    var featured = Model.Featured;
+    var featuredIds = featured.Select(p => p.Id).ToHashSet();
+    var grid = r.Items.Where(p => !featuredIds.Contains(p.Id)).ToList();
+    string PageUrl(int n) => "/tin-tuc?" + string.Join("&", new[] { Model.Category is null ? null : "cm=" + Model.Category, Model.Search is null ? null : "q=" + Uri.EscapeDataString(Model.Search), n > 1 ? "trang=" + n : null }.Where(x => x is not null));
+    ViewData["HeroExtra"] = new Microsoft.AspNetCore.Html.HtmlString(
+        $"<form class=\"nw-search\" role=\"search\" action=\"/tin-tuc\" method=\"get\"><label for=\"nw-q\" style=\"position:absolute;left:-9999px\">Tìm bài viết</label><input id=\"nw-q\" name=\"q\" value=\"{System.Net.WebUtility.HtmlEncode(Model.Search ?? "")}\" maxlength=\"100\" placeholder=\"Tìm bài viết: hóa đơn, quyết toán, thành lập…\" type=\"search\"/>" +
+        (Model.Category is null ? "" : $"<input type=\"hidden\" name=\"cm\" value=\"{Model.Category}\"/>") + "<button class=\"btn btn-navy\" type=\"submit\">TÌM KIẾM</button></form>");
+}
+<main class="dv-main" id="top">
+    @if (hero.IsVisible) {<partial name="~/Views/Sections/page-hero.cshtml" model="@(new SectionVm(hero, Model.Site, []))" view-data="ViewData" />}
+    <section class="dv-section" style="padding-top:40px"><div class="wrap">
+        @if (Model.Categories.Count > 0)
+        {
+            <nav aria-label="Lọc theo chuyên mục" class="nw-filters">
+                <a href="/tin-tuc@(Model.Search is null ? "" : "?q=" + Uri.EscapeDataString(Model.Search))" aria-current="@(Model.Category is null ? "true" : null)">Tất cả</a>
+                @foreach (var c in Model.Categories.Where(c => c.PostCount > 0))
+                {
+                    <a href="/tin-tuc?cm=@c.Slug@(Model.Search is null ? "" : "&q=" + Uri.EscapeDataString(Model.Search))" aria-current="@(Model.Category == c.Slug ? "true" : null)">@c.Name</a>
+                }
+            </nav>
+        }
+        <div class="nw-layout">
+            <div>
+                @if (featured.Count > 0)
+                {
+                    var lead = featured[0];
+                    <div class="nw-featured">
+                        <a class="nw-hero-card" href="@SiteHtml.PostUrl(lead)"><img alt="" src="@SiteContext.Img(lead.CoverMediaId)" /><div><span class="nw-tag">NỔI BẬT@(lead.CategoryName is null ? "" : " · " + lead.CategoryName.ToUpperInvariant())</span><h2>@lead.Title</h2>@if (lead.Summary is not null) {<p>@lead.Summary</p>}<div class="nw-meta"><span>@SiteHtml.Date(lead.PublishedAt)</span><span>@lead.ReadMinutes phút đọc</span></div></div></a>
+                        @if (featured.Count > 1)
+                        {
+                            <div class="nw-side-cards">
+                                @foreach (var p in featured.Skip(1))
+                                {
+                                    <a class="nw-card" href="@SiteHtml.PostUrl(p)"><div class="thumb"><img alt="" loading="lazy" src="@SiteContext.Img(p.CoverMediaId)" /></div><div class="body"><span class="nw-tag soft">@(p.CategoryName?.ToUpperInvariant() ?? "TIN TỨC")</span><h3>@p.Title</h3><div class="nw-meta"><span>@SiteHtml.Date(p.PublishedAt)</span><span>@p.ReadMinutes phút đọc</span></div></div></a>
+                                }
+                            </div>
+                        }
+                    </div>
+                }
+                <div class="nw-grid-head"><h2>@(Model.Search is not null ? $"Kết quả cho “{Model.Search}”" : Model.Category is not null ? Model.Categories.FirstOrDefault(c => c.Slug == Model.Category)?.Name ?? "Bài viết" : "Bài viết mới")</h2><span>@r.Total bài viết</span></div>
+                @if (grid.Count > 0)
+                {
+                    <div class="nw-grid">
+                        @foreach (var p in grid)
+                        {
+                            <a class="nw-card" href="@SiteHtml.PostUrl(p)"><div class="thumb"><img alt="" loading="lazy" src="@SiteContext.Img(p.CoverMediaId)" /></div><div class="body"><span class="nw-tag soft">@(p.CategoryName?.ToUpperInvariant() ?? "TIN TỨC")</span><h3>@p.Title</h3>@if (p.Summary is not null) {<p>@p.Summary</p>}<div class="nw-meta"><span>@SiteHtml.Date(p.PublishedAt)</span><span>@p.ReadMinutes phút đọc</span></div></div></a>
+                        }
+                    </div>
+                }
+                else if (featured.Count == 0)
+                {
+                    <div class="nw-empty"><b>@(Model.Search is null && Model.Category is null ? "Bài viết đang được biên soạn" : "Không tìm thấy bài viết phù hợp")</b><p>@(Model.Search is null && Model.Category is null ? "Cẩm nang kế toán – thuế của T.A sẽ sớm được cập nhật." : "Thử từ khóa khác hoặc xem tất cả chuyên mục.")</p><a class="btn btn-outline" href="/tin-tuc">XEM TẤT CẢ</a></div>
+                }
+                @if (r.Pages > 1)
+                {
+                    <nav aria-label="Phân trang" class="nw-pager">
+                        @if (r.Page > 1) {<a href="@PageUrl(r.Page - 1)">← Trước</a>}
+                        @for (var n = Math.Max(1, r.Page - 2); n <= Math.Min(r.Pages, r.Page + 2); n++)
+                        {
+                            if (n == r.Page) {<span aria-current="page">@n</span>} else {<a href="@PageUrl(n)">@n</a>}
+                        }
+                        @if (r.Page < r.Pages) {<a href="@PageUrl(r.Page + 1)">Sau →</a>}
+                    </nav>
+                }
+            </div>
+            @if (sidebar.IsVisible) {<partial name="~/Views/Sections/news-sidebar.cshtml" model="@(new SectionVm(sidebar, Model.Site, Model.Popular))" />}
+        </div>
+    </div></section>
+</main>

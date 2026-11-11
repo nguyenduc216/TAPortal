@@ -1,0 +1,45 @@
+@model TAPortal.Web.Services.WebsiteLeadItem
+@using TAWebsite.Core.Data
+@{
+    ViewData["ParentTitle"] = "Liên hệ – báo giá";
+    ViewData["ParentController"] = "WebsiteLeads";
+    ViewData["Title"] = "Yêu cầu của " + Model.FullName;
+    ViewData["Heading"] = Model.FullName;
+    var vi = System.Globalization.CultureInfo.GetCultureInfo("vi-VN");
+    ViewData["Subtitle"] = "Gửi lúc " + WebsiteUi.Local(Model.CreatedAt).ToString("dd/MM/yyyy HH:mm", vi) + (Model.SourcePage is null ? "" : " từ " + Model.SourcePage);
+    ViewData["PageIcon"] = "inbox";
+    var canEdit = AdminPermissions.Has(User, AdminPermissions.WebsiteLeadsEdit);
+    (string Label, string? Value)[] rows =
+    [
+        ("Số điện thoại", Model.Phone), ("Email", Model.Email), ("Doanh nghiệp", Model.CompanyName), ("Dịch vụ quan tâm", Model.Services),
+        ("Loại hình / tình trạng", Model.CompanyType), ("Quy mô", Model.Scale), ("Thời gian liên hệ", Model.ContactTime), ("Mô tả thêm", Model.Message)
+    ];
+}
+@section PageActions {
+    <a class="btn btn-ta-gold" href="tel:@Model.Phone">@UiIcon.Render("phone")<span>Gọi @Model.Phone</span></a>
+    @if (Model.Email is not null) {<a class="btn" href="mailto:@Model.Email">@UiIcon.Render("mail")<span>Gửi email</span></a>}
+}
+<div class="ta-web-post-layout">
+    <section class="card" aria-label="Thông tin yêu cầu">
+        <div class="card-header"><h2 class="card-title">@UiIcon.Render("file-text")Thông tin khách gửi</h2></div>
+        <div class="card-body">
+            <dl class="ta-web-dl">
+                @foreach (var (label, value) in rows) {<dt>@label</dt><dd>@(string.IsNullOrWhiteSpace(value) ? "—" : value)</dd>}
+            </dl>
+        </div>
+    </section>
+    <form class="card" asp-action="Update" asp-route-id="@Model.Id" method="post">
+        <input type="hidden" name="stamp" value="@Convert.ToBase64String(Model.Stamp)" />
+        <div class="card-header"><h2 class="card-title">@UiIcon.Render("checks")Xử lý</h2></div>
+        <div class="card-body">
+            <fieldset disabled="@(!canEdit)">
+                <label class="form-label" for="leadStatus">Trạng thái</label>
+                <select class="form-select" id="leadStatus" name="status">@foreach (var s in LeadStatus.All) {<option value="@s.Code" selected="@(s.Code == Model.Status)">@s.Name</option>}</select>
+                <label class="form-label mt-2" for="leadNote">Ghi chú nội bộ</label>
+                <div class="ta-input-icon ta-input-icon--top">@UiIcon.Render("file-text")<textarea class="form-control" id="leadNote" name="note" rows="5" maxlength="2000" placeholder="Đã gọi lúc..., hẹn khảo sát ngày...">@Model.Note</textarea></div>
+            </fieldset>
+            @if (Model.UpdatedAt is DateTime u) {<p class="ta-cell-sub mt-2 mb-0">Cập nhật @WebsiteUi.Local(u).ToString("dd/MM/yyyy HH:mm", vi)</p>}
+        </div>
+        @if (canEdit) {<div class="card-footer"><button class="btn btn-ta-gold w-100" type="submit">@UiIcon.Render("device-floppy")<span>Lưu</span></button></div>}
+    </form>
+</div>

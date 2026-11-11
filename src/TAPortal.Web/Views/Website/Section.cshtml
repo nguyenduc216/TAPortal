@@ -1,0 +1,46 @@
+@model WebsiteSectionVm
+@using TAWebsite.Core.Content
+@{
+    var type = Model.Section.SectionType;
+    ViewData["ParentTitle"] = Model.Page.Name;
+    ViewData["ParentController"] = "Website";
+    ViewData["Title"] = Model.Section.Name;
+    ViewData["Heading"] = Model.Section.Name;
+    ViewData["Subtitle"] = $"Trang {Model.Page.Name} · {type.Name}. {type.Description}";
+    ViewData["PageIcon"] = "pencil";
+    var canEdit = AdminPermissions.Has(User, AdminPermissions.WebsiteContentEdit);
+    var anchorUrl = Model.Page.Path is null ? Model.PublicUrl : Model.PublicUrl + Model.Page.Path;
+}
+@section PageActions {
+    <a class="btn" asp-action="Page" asp-route-id="@Model.Page.Key">@UiIcon.Render("arrow-left")<span>Về trang @Model.Page.Name</span></a>
+    <a class="btn" href="@anchorUrl" target="_blank" rel="noopener">@UiIcon.Render("external-link")<span>Xem trên website</span></a>
+}
+@if (Model.Errors.Count > 0)
+{
+    <div class="ta-alert ta-alert--danger" role="alert">@UiIcon.Render("alert-circle")<div class="ta-alert__body"><b>Chưa lưu được:</b><ul class="mb-0">@foreach (var e in Model.Errors) {<li>@e</li>}</ul></div></div>
+}
+<form class="card" asp-action="Section" asp-route-page="@Model.Page.Key" asp-route-key="@Model.Section.Key" method="post" data-ta-web-editor>
+    <input type="hidden" name="stamp" value="@Model.Stamp" />
+    <div class="card-body">
+        <fieldset disabled="@(!canEdit)" class="ta-web-fields">
+            @foreach (var field in type.Fields)
+            {
+                <partial name="_WebsiteField" model="@(new WebsiteFieldVm(field, Model.Content, "c." + field.Key))" />
+            }
+        </fieldset>
+    </div>
+    @if (canEdit)
+    {
+        <div class="card-footer d-flex flex-wrap gap-2 justify-content-between">
+            <span class="ta-cell-sub">Thay đổi hiện trên website trong vòng 1 phút sau khi lưu.</span>
+            <button class="btn btn-ta-gold" type="submit">@UiIcon.Render("device-floppy")<span>Lưu section</span></button>
+        </div>
+    }
+</form>
+@if (canEdit && Model.IsEdited)
+{
+    <form class="mt-3 text-end" asp-action="ResetSection" asp-route-page="@Model.Page.Key" asp-route-key="@Model.Section.Key" method="post"
+          data-ta-confirm="Khôi phục nội dung mặc định (bản mockup) cho section này? Nội dung đã sửa sẽ mất.">
+        <button class="btn btn-outline-danger btn-sm" type="submit">@UiIcon.Render("refresh")<span>Khôi phục nội dung mặc định</span></button>
+    </form>
+}
