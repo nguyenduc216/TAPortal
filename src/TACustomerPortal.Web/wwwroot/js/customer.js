@@ -450,6 +450,11 @@ document.addEventListener("change", event => {
     img.hidden = false;
     box.querySelector("[data-cp-logo-empty]")?.setAttribute("hidden", "");
 });
-const initPayPage = () => { startCountdowns(); initDirtyForms(); };
+// Status cards that slide on phones: bring the selected one into view without scrolling the page.
+const showCurrentStat = () => document.querySelectorAll(".cp-stats").forEach(row => {
+    const current = row.querySelector("[aria-current=page]");
+    if (current && row.scrollWidth > row.clientWidth) row.scrollLeft = current.offsetLeft - row.offsetLeft - 12;
+});
+const initPayPage = () => { startCountdowns(); initDirtyForms(); showCurrentStat(); };
 document.addEventListener("ta:load", initPayPage);
 if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", initPayPage); else initPayPage();

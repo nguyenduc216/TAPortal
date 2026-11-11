@@ -189,6 +189,14 @@ a.cp-stat:hover { transform: translateY(-1px); border-color: var(--cp-hover-line
 .cp-stat__label { color: var(--cp-ink-3); font-size: 11.5px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
 .cp-stat__value { margin-top: 10px; font-size: 18px; font-weight: 700; letter-spacing: -.01em; }
 .cp-stat__hint { margin-top: 2px; color: var(--cp-ink-3); font-size: 12px; }
+/* Phones: the status cards become one row that slides sideways (the next card peeks in) */
+@media (max-width: 640px) {
+    .cp-stats { display: flex; gap: 10px; margin: 0 -12px 12px; padding: 2px 12px 8px; overflow-x: auto; scroll-snap-type: x mandatory; scroll-padding: 0 12px; overscroll-behavior-x: contain; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+    .cp-stats::-webkit-scrollbar { display: none; }
+    .cp-stats > .cp-stat { flex: 0 0 min(72%, 260px); scroll-snap-align: start; padding: 12px 14px; }
+    .cp-stats .cp-stat__value { margin-top: 6px; }
+    a.cp-stat:hover { transform: none; }
+}
 .cp-blob { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 9px; background: var(--cp-blue-50); color: var(--cp-blue-600); }
 .cp-blob .ta-icon { width: 18px; height: 18px; }
 .cp-blob--gold { background: var(--cp-gold-100); color: var(--cp-gold-text); }
