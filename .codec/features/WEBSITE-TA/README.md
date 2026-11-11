@@ -59,4 +59,4 @@ Quyền mới (module `WEBSITE`): `WEBSITE.VIEW`, `WEBSITE.CONTENT.EDIT`, `WEBSI
 
 | Change ID | Ngày UTC | Nội dung | Commit SHA | Migration | Publish | Merge |
 |---|---|---|---|---|---|---|
-| `WEBSITE-TA-CHG-20261111T163408Z-D94863` | 2026-11-11 | Giai đoạn 1 – nền tảng CMS + frontend | d0cc5c5 | EXECUTED | NOT_PUBLISHED | PENDING |
+| `WEBSITE-TA-CHG-20261111T163408Z-D94863` | 2026-11-11 | Giai đoạn 1 – nền tảng CMS + frontend | d0cc5c5, c7e97d1 | EXECUTED | DEPLOYED portal | main |
