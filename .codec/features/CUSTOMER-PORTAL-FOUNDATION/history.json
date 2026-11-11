@@ -528,10 +528,10 @@
     "change_id": "CUSTOMER-PORTAL-FOUNDATION-CHG-20261111T112456Z-A427C0",
     "created_at": "2026-11-11T11:24:56.291865+00:00",
     "title": "Chi tiet don: sua giao dien mobile, doi thoi han / tao lai QR",
-    "status": "IMPLEMENTED",
+    "status": "DEPLOYED",
     "commit_sha": "77e4ec7",
     "migration_status": "NOT_APPLICABLE",
-    "publish_status": "NOT_PUBLISHED",
-    "merge_status": "PENDING_APPROVAL"
+    "publish_status": "DEPLOYED",
+    "merge_status": "MERGED"
   }
 ]

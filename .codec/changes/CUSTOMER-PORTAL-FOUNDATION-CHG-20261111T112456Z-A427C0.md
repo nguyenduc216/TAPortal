@@ -4,7 +4,7 @@
 - Change ID: `CUSTOMER-PORTAL-FOUNDATION-CHG-20261111T112456Z-A427C0`
 - Created UTC: 2026-11-11T11:24:56Z
 - Tiêu đề: Chi tiết đơn: sửa giao diện mobile, đổi thời hạn / tạo lại QR
-- Trạng thái: IMPLEMENTED
+- Trạng thái: DEPLOYED
 
 ## Yêu cầu và phạm vi
 Operator (2026-11-11, ảnh chụp trên điện thoại): (1) giao diện chi tiết đơn trên mobile chưa chuẩn; (2) chưa đổi được thời hạn QR (ví dụ QR 1 ngày muốn thành 4 ngày); (3) chưa biết cách hủy QR để tạo QR mới.
@@ -26,11 +26,11 @@ Operator (2026-11-11, ảnh chụp trên điện thoại): (1) giao diện chi t
 - Trình duyệt (Playwright, 360 px, HTML render từ test host): scrollWidth = 360 (không tràn ngang), bảng hàng hóa dạng thẻ, khối đổi thời hạn hiển thị đủ số.
 
 ## Publish
-- invoice. Xem report.
+- invoice DEPLOYED 2026-11-11 11:34Z (artifact ce8fe1db…3d7e, health 200). Xem report.
 
 ## Git
 - Branch: feature/customer-portal-mvp01
-- Commit SHA: xem report
+- Commit SHA: 77e4ec7
 - Merge: main
 
 ## Rủi ro, quyết định và việc còn lại

@@ -59,4 +59,4 @@ CHECKPOINT_4A: PASS (existing artifact integrity, isolated localhost startup and
 | `CUSTOMER-PORTAL-FOUNDATION-CHG-20261110T060913Z-B1DDA6` | 2026-11-10 | Tai anh QR kem thong tin va sua link mo app ngan hang dien san | bd93fff | NOT_APPLICABLE | DEPLOYED | MERGED |
 | `CUSTOMER-PORTAL-FOUNDATION-CHG-20261110T064757Z-60CE97` | 2026-11-10 | Sua dau ngoac thua lam trang thanh toan hien '} else {' | c964ffd | NOT_APPLICABLE | DEPLOYED | MERGED |
 | `CUSTOMER-PORTAL-FOUNDATION-CHG-20261110T070417Z-914962` | 2026-11-10 | Nut sao chep tren trang thanh toan va danh sach app ngan hang tu VietQR | 8972a5e | NOT_APPLICABLE | DEPLOYED | MERGED |
-| `CUSTOMER-PORTAL-FOUNDATION-CHG-20261111T112456Z-A427C0` | 2026-11-11 | Chi tiet don: sua giao dien mobile, doi thoi han / tao lai QR | 77e4ec7 | NOT_APPLICABLE | NOT_PUBLISHED | PENDING_APPROVAL |
+| `CUSTOMER-PORTAL-FOUNDATION-CHG-20261111T112456Z-A427C0` | 2026-11-11 | Chi tiet don: sua giao dien mobile, doi thoi han / tao lai QR | 77e4ec7 | NOT_APPLICABLE | DEPLOYED | MERGED |
