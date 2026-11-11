@@ -19,11 +19,12 @@
     - Release build 0 errors + all Safe* tests
   Any FAIL stops before push/upload. Exit code: 0 = all DEPLOYED (or dry run OK), 1 = stopped or rolled back.
   Targets: portal = TAPortal.Web (TA.Portal), invoice = TACustomerPortal.Web (TA.Invoice),
-           webhooks = TAPortal.Webhooks (TA.Webhooks, https://webhook.hoadontudong.vn, health /health).
+           webhooks = TAPortal.Webhooks (TA.Webhooks, https://webhook.hoadontudong.vn, health /health),
+           website = TAWebsite.Web (TA.LandingPage, https://tuvangiaiphapta.vn, health /health; server/Setup-TAWebsiteSite.ps1).
 #>
 [CmdletBinding()]
 param(
-    [Parameter(Mandatory = $true)][ValidateSet('portal', 'invoice', 'webhooks')][string[]] $Target,
+    [Parameter(Mandatory = $true)][ValidateSet('portal', 'invoice', 'webhooks', 'website')][string[]] $Target,
     [switch] $DryRun,
     [switch] $Rollback,
     # Confirms that every migration in the audited range was executed under the migration policy.
@@ -35,7 +36,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $Repo = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
-$Projects = @{ portal = 'TAPortal.Web'; invoice = 'TACustomerPortal.Web'; webhooks = 'TAPortal.Webhooks' }
+$Projects = @{ portal = 'TAPortal.Web'; invoice = 'TACustomerPortal.Web'; webhooks = 'TAPortal.Webhooks'; website = 'TAWebsite.Web' }
 $RemoteRoot = 'C:\TADeploy'
 $Stamp = (Get-Date).ToUniversalTime().ToString('yyyyMMddTHHmmssZ')
 $PublishRoot = Join-Path $Repo 'src\publish'

@@ -33,7 +33,8 @@
     "targets": {
       "TAPortal.Web": "D:\\T.A\\TAPortal\\TAPortal\\src\\publish\\deployed-TAPortal.Web",
       "TACustomerPortal.Web": "D:\\T.A\\TAPortal\\TAPortal\\src\\publish\\deployed-TACustomerPortal.Web",
-      "TAPortal.Webhooks": "D:\\T.A\\TAPortal\\TAPortal\\src\\publish\\deployed-TAPortal.Webhooks"
+      "TAPortal.Webhooks": "D:\\T.A\\TAPortal\\TAPortal\\src\\publish\\deployed-TAPortal.Webhooks",
+      "TAWebsite.Web": "D:\\T.A\\TAPortal\\TAPortal\\src\\publish\\deployed-TAWebsite.Web"
     },
     "allow_alternate_target": false,
     "create_target_directory": true,
@@ -58,7 +59,8 @@
     "shared_dependents": [
       "TAPortal.Web",
       "TACustomerPortal.Web",
-      "TAPortal.Webhooks"
+      "TAPortal.Webhooks",
+      "TAWebsite.Web"
     ],
     "artifact_manifest_method": "SHA256_UTF8_LF_SORTED_RELATIVE_POSIX",
     "artifact_manifest_dir": ".codec/reports",
@@ -69,7 +71,8 @@
       "targets": {
         "portal": "TAPortal.Web",
         "invoice": "TACustomerPortal.Web",
-        "webhooks": "TAPortal.Webhooks"
+        "webhooks": "TAPortal.Webhooks",
+        "website": "TAWebsite.Web"
       },
       "requires_operator_request": true,
       "server_backup_and_auto_rollback": true,
