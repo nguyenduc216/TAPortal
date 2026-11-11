@@ -39,6 +39,9 @@ app.Use((context, next) =>
         h["Referrer-Policy"] = "strict-origin-when-cross-origin";
         h["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()";
         h.XFrameOptions = "SAMEORIGIN";
+        // Pages always revalidate, so an edit saved in TA Portal shows on the next load (images and CSS keep their own cache).
+        if (context.Response.ContentType?.StartsWith("text/html", StringComparison.OrdinalIgnoreCase) == true)
+            h.CacheControl = "no-cache, max-age=0";
         return Task.CompletedTask;
     });
     return next(context);

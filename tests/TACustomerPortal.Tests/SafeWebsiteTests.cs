@@ -302,7 +302,9 @@ public sealed class SafeWebsiteTests
         reader.Overrides[("home", "hero")] = new JsonObject { ["title"] = "Dòng 1\nDòng <2>", ["primaryLabel"] = "GỌI", ["primaryUrl"] = "javascript:alert(1)" };
         await using var f = SiteFactory(reader);
         var client = f.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
-        var home = await client.GetStringAsync("/");
+        var homeResponse = await client.GetAsync("/");
+        Assert.Contains("no-cache", homeResponse.Headers.CacheControl!.ToString()); // edits show on the next load
+        var home = await homeResponse.Content.ReadAsStringAsync();
         Assert.Contains("Dòng 1<br/>Dòng &lt;2&gt;", home);
         Assert.DoesNotContain("javascript:", home);
         Assert.Contains("href=\"/lien-he\">GỌI</a>", home); // unsafe link falls back to the contact page
