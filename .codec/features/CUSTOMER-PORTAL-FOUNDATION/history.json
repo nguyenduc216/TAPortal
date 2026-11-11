@@ -533,5 +533,15 @@
     "migration_status": "NOT_APPLICABLE",
     "publish_status": "DEPLOYED",
     "merge_status": "MERGED"
+  },
+  {
+    "change_id": "CUSTOMER-PORTAL-FOUNDATION-CHG-20261111T114023Z-9B9B64",
+    "created_at": "2026-11-11T11:40:23.137215+00:00",
+    "title": "The trang thai truot ngang tren dien thoai",
+    "status": "IMPLEMENTED",
+    "commit_sha": "a34bca6",
+    "migration_status": "NOT_APPLICABLE",
+    "publish_status": "NOT_PUBLISHED",
+    "merge_status": "PENDING_APPROVAL"
   }
 ]
