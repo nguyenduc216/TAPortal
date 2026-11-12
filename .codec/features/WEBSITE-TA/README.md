@@ -45,10 +45,10 @@ Quyền mới (module `WEBSITE`): `WEBSITE.VIEW`, `WEBSITE.CONTENT.EDIT`, `WEBSI
 | GĐ | Nội dung | Kết quả |
 |---|---|---|
 | 1 | Nền tảng: migration 035, `TAWebsite.Core`, mục Website TA trong Portal (trang/section, ảnh, cài đặt, bài viết, liên hệ), dự án `TAWebsite.Web` với layout + Trang chủ + Liên hệ + Tin tức + Bài viết | Sửa nội dung trong Portal, xem trên website chạy local |
-| 2 | Chuyển nốt các trang mockup: Giới thiệu, Dịch vụ, 2 trang dịch vụ chi tiết; trình soạn bài viết (định dạng, chèn ảnh), xem trước bản nháp | Đủ trang như mockup |
+| 2 ✅ | Chuyển nốt các trang mockup: Giới thiệu, Dịch vụ, 2 trang dịch vụ chi tiết; trình soạn bài viết (định dạng, chèn ảnh), xem trước bản nháp | Đủ trang như mockup |
 | 3 | Lead: email thông báo cho T.A khi có yêu cầu mới, chống spam nâng cao, xuất Excel | Form báo giá dùng thật |
 | 4 | SEO & hiệu năng: sitemap.xml, robots, Open Graph, schema.org (LocalBusiness, Article), redirect URL cũ, thu nhỏ ảnh | Sẵn sàng index |
-| 5 | Go-live: target deploy `website`, chuyển site IIS `TA.LandingPage` sang ASP.NET Core (**operator**: app pool No Managed Code, appsettings, đăng ký target trong `deploy-config.json`), giữ bản tĩnh cũ làm backup | tuvangiaiphapta.vn chạy bản mới |
+| 5 ✅ | Go-live: target deploy `website`, chuyển site IIS `TA.LandingPage` sang ASP.NET Core (**operator**: app pool No Managed Code, appsettings, đăng ký target trong `deploy-config.json`), giữ bản tĩnh cũ làm backup | tuvangiaiphapta.vn chạy bản mới |
 | 6 | Vận hành: lịch đăng bài, thống kê lượt xem, phân quyền biên tập viên, lịch sử phiên bản nội dung | |
 
 ## Phụ thuộc / quyết định chờ operator

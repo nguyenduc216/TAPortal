@@ -3,10 +3,10 @@
     "change_id": "WEBSITE-TA-CHG-20261111T163408Z-D94863",
     "created_at": "2026-11-11T16:34:08.966977+00:00",
     "title": "Website TA: CMS trong Portal + du an frontend TAWebsite.Web (giai doan 1 nen tang)",
-    "status": "LIVE",
-    "commit_sha": "8ad5231",
+    "status": "LIVE_PHASE2",
+    "commit_sha": "c0738fe",
     "migration_status": "EXECUTED",
-    "publish_status": "DEPLOYED portal 36abdde; DEPLOYED website 8ad5231 (tuvangiaiphapta.vn)",
+    "publish_status": "DEPLOYED portal+website c0738fe",
     "merge_status": "PENDING_APPROVAL",
     "branch": "feature/website-ta",
     "migration_executed_at": "2026-11-11T17:42:32Z"
