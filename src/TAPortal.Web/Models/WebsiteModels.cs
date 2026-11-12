@@ -25,6 +25,19 @@ public sealed record WebsitePostEditVm(Guid? Id, WebsitePostInput Input, Website
     public bool IsCreate => Id is null;
 }
 
+// Columns of the "Yêu cầu báo giá" Excel export.
+public static class LeadExport
+{
+    public static readonly IReadOnlyList<string> Headers =
+        ["Thời gian", "Họ tên", "Điện thoại", "Email", "Công ty", "Dịch vụ quan tâm", "Tình trạng DN", "Quy mô", "Thời gian liên hệ", "Nội dung", "Trang gửi", "Trạng thái", "Ghi chú nội bộ"];
+
+    public static readonly IReadOnlyList<double> Widths = [17, 24, 14, 26, 28, 32, 20, 14, 18, 50, 22, 15, 40];
+
+    public static IReadOnlyList<string?> Row(TAPortal.Web.Services.WebsiteLeadItem l) =>
+        [WebsiteUi.Local(l.CreatedAt).ToString("dd/MM/yyyy HH:mm"), l.FullName, l.Phone, l.Email, l.CompanyName, l.Services, l.CompanyType, l.Scale, l.ContactTime,
+         l.Message, l.SourcePage, TAWebsite.Core.Data.LeadStatus.Name(l.Status), l.Note];
+}
+
 public sealed record WebsiteLeadsVm(IReadOnlyList<WebsiteLeadItem> Items, byte? Status, string? Search, string? Error);
 
 public static class WebsiteUi

@@ -414,6 +414,67 @@ public sealed class SafeWebsiteTests
         Assert.Equal(HttpStatusCode.BadRequest, noToken.StatusCode);
     }
 
+    private static S.WebsiteLeadItem SampleLead(string name, byte status) => new(Guid.NewGuid(), DateTime.UtcNow, name, "0905123456", "a@b.vn", "=HYPERLINK(\"x\")",
+        "Kế toán – thuế trọn gói", "Mới thành lập", null, null, "Xin báo giá <b>gấp</b>", "/lien-he", status, null, null, [1]);
+
+    [Fact]
+    public async Task DashboardSummarisesWebsiteLeadsOnlyForUsersWhoMaySeeThem()
+    {
+        var store = new MemoryAdminStore();
+        store.Leads.Add(SampleLead("Trần Bình", 0));
+        store.Leads.Add(SampleLead("Lê Châu", 3));
+        await using (var f = AdminFactory(store, AdminSecurity.AdminPermissions.DashboardView, AdminSecurity.AdminPermissions.WebsiteLeadsView))
+        {
+            var html = WebUtility.HtmlDecode(await AdminClient(f).GetStringAsync("/"));
+            Assert.Contains("data-ta-dashboard-leads", html);
+            Assert.Contains("Yêu cầu báo giá từ website", html);
+            Assert.Contains("Trần Bình", html);
+            Assert.Contains("Chưa xử lý", html);
+            Assert.Contains("/WebsiteLeads/Details/" + store.Leads[0].Id, html);
+        }
+        await using (var f = AdminFactory(store, AdminSecurity.AdminPermissions.DashboardView))
+        {
+            var html = WebUtility.HtmlDecode(await AdminClient(f).GetStringAsync("/"));
+            Assert.DoesNotContain("data-ta-dashboard-leads", html);
+            Assert.DoesNotContain("Trần Bình", html);
+        }
+    }
+
+    [Fact]
+    public async Task LeadsExportIsAuditedAndProducesAWorkbookWithoutFormulas()
+    {
+        var store = new MemoryAdminStore();
+        store.Leads.Add(SampleLead("Trần Bình", 0));
+        await using var f = AdminFactory(store, AdminSecurity.AdminPermissions.WebsiteLeadsView);
+        var client = AdminClient(f);
+        Assert.Contains("Xuất Excel", await client.GetStringAsync("/WebsiteLeads"));
+        var response = await client.GetAsync("/WebsiteLeads/Export");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(S.XlsxWriter.ContentType, response.Content.Headers.ContentType?.MediaType);
+        Assert.Equal(1, store.Exports);
+        var bytes = await response.Content.ReadAsByteArrayAsync();
+        var sheet = Assert.Single(S.XlsxReader.Read(new MemoryStream(bytes)));
+        Assert.Equal("Yêu cầu báo giá", sheet.Name);
+        using var zip = new System.IO.Compression.ZipArchive(new MemoryStream(bytes));
+        using var reader = new StreamReader(zip.GetEntry("xl/worksheets/sheet1.xml")!.Open());
+        var xml = reader.ReadToEnd();
+        Assert.Contains("Trần Bình", xml);
+        Assert.Contains("=HYPERLINK(&quot;x&quot;)", xml);
+        Assert.DoesNotContain("<f>", xml);
+        Assert.Contains("Xin báo giá &lt;b&gt;gấp&lt;/b&gt;", xml);
+        await using var noAccess = AdminFactory(store, AdminSecurity.AdminPermissions.WebsiteView);
+        Assert.Equal(HttpStatusCode.Forbidden, (await AdminClient(noAccess).GetAsync("/WebsiteLeads/Export")).StatusCode);
+    }
+
+    [Fact]
+    public void XlsxColumnNamesFollowExcel()
+    {
+        Assert.Equal("A", S.XlsxWriter.Column(0));
+        Assert.Equal("Z", S.XlsxWriter.Column(25));
+        Assert.Equal("AA", S.XlsxWriter.Column(26));
+        Assert.Equal("AM", S.XlsxWriter.Column(38));
+    }
+
     // ---- helpers --------------------------------------------------------------------------------------------------
     private static string RepoRoot()
     {
@@ -527,7 +588,13 @@ public sealed class SafeWebsiteTests
             return Task.FromResult(Ok(key));
         }
         public Task<S.WebsiteResult> DeletePostAsync(Guid actor, string? ip, Guid id) { Posts.Remove(id); return Task.FromResult(Ok(id)); }
-        public Task<IReadOnlyList<S.WebsiteLeadItem>> LeadsAsync(byte? status, string? search) => Task.FromResult<IReadOnlyList<S.WebsiteLeadItem>>([]);
+        public readonly List<S.WebsiteLeadItem> Leads = [];
+        public int Exports;
+        public Task<IReadOnlyList<S.WebsiteLeadItem>> LeadsAsync(byte? status, string? search) => Task.FromResult<IReadOnlyList<S.WebsiteLeadItem>>(Leads);
+        public Task<IReadOnlyList<S.WebsiteLeadItem>> LeadsForExportAsync(byte? status, string? search) => Task.FromResult<IReadOnlyList<S.WebsiteLeadItem>>(Leads);
+        public Task<S.WebsiteLeadSummary?> LeadSummaryAsync(DateTime nowUtc) =>
+            Task.FromResult<S.WebsiteLeadSummary?>(new(Leads.Count(l => l.Status == 0), Leads.Count, Leads.Count, Leads.Count, Leads.Take(6).ToList()));
+        public Task<S.WebsiteResult> AuditLeadsExportAsync(Guid actor, string? ip, byte? status, string? search) { Exports++; return Task.FromResult(Ok()); }
         public Task<S.WebsiteLeadItem?> LeadAsync(Guid id) => Task.FromResult<S.WebsiteLeadItem?>(null);
         public Task<S.WebsiteResult> UpdateLeadAsync(Guid actor, string? ip, Guid id, byte status, string? note, string? stamp) => Task.FromResult(Ok(id));
     }

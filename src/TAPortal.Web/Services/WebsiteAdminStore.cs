@@ -28,6 +28,9 @@ public sealed record WebsitePostEdit(Guid Id, string Slug, string Title, string?
 public sealed record WebsiteLeadItem(Guid Id, DateTime CreatedAt, string FullName, string Phone, string? Email, string? CompanyName, string? Services,
     string? CompanyType, string? Scale, string? ContactTime, string? Message, string? SourcePage, byte Status, string? Note, DateTime? UpdatedAt, byte[] Stamp);
 
+// Dashboard block "Yêu cầu báo giá từ website": counts by Vietnam day and the latest requests.
+public sealed record WebsiteLeadSummary(int New, int Today, int Last7Days, int Total, IReadOnlyList<WebsiteLeadItem> Recent);
+
 public sealed record WebsiteOverview(int PostsPublished, int PostsDraft, int Media, int LeadsNew, int LeadsTotal, int SectionsEdited, bool TablesReady);
 
 public sealed class WebsitePostInput
@@ -106,6 +109,9 @@ public interface IWebsiteAdminStore
     Task<WebsiteResult> DeletePostAsync(Guid actor, string? ip, Guid id);
 
     Task<IReadOnlyList<WebsiteLeadItem>> LeadsAsync(byte? status, string? search);
+    Task<IReadOnlyList<WebsiteLeadItem>> LeadsForExportAsync(byte? status, string? search);
+    Task<WebsiteLeadSummary?> LeadSummaryAsync(DateTime nowUtc);
+    Task<WebsiteResult> AuditLeadsExportAsync(Guid actor, string? ip, byte? status, string? search);
     Task<WebsiteLeadItem?> LeadAsync(Guid id);
     Task<WebsiteResult> UpdateLeadAsync(Guid actor, string? ip, Guid id, byte status, string? note, string? stamp);
 }
@@ -203,10 +209,20 @@ WHERE Id=@id AND IsDeleted=0 AND RowVersion=@stamp;
 
     public const string LeadColumns = "Id, CreatedAt, FullName, Phone, Email, CompanyName, Services, CompanyType, Scale, ContactTime, Message, SourcePage, Status, Note, UpdatedAt, RowVersion";
 
-    public const string Leads = "SELECT TOP 500 " + LeadColumns + """
+    public const int ExportLimit = 20_000;
+
+    public const string Leads = "SELECT TOP (@take) " + LeadColumns + """
  FROM dbo.WebsiteLeads WHERE (@status IS NULL OR Status=@status)
  AND (@q IS NULL OR FullName LIKE @q OR Phone LIKE @q OR Email LIKE @q OR CompanyName LIKE @q) ORDER BY CreatedAt DESC;
 """;
+
+    // @today/@week: start of the Vietnam day (and 6 days earlier) expressed in UTC, like CreatedAt.
+    public const string LeadSummary = """
+SELECT SUM(CASE WHEN Status=0 THEN 1 ELSE 0 END), SUM(CASE WHEN CreatedAt>=@today THEN 1 ELSE 0 END),
+ SUM(CASE WHEN CreatedAt>=@week THEN 1 ELSE 0 END), COUNT(*) FROM dbo.WebsiteLeads;
+""";
+
+    public const string LeadRecent = "SELECT TOP 6 " + LeadColumns + " FROM dbo.WebsiteLeads ORDER BY CASE WHEN Status=0 THEN 0 ELSE 1 END, CreatedAt DESC;";
 }
 
 public sealed class SqlWebsiteAdminStore(IConfiguration configuration, AdminAuditOptions audit) : IWebsiteAdminStore
@@ -510,18 +526,57 @@ WHERE Id=@id AND IsDeleted=0;
         });
 
     // ---- leads --------------------------------------------------------------------------------------------------
-    public async Task<IReadOnlyList<WebsiteLeadItem>> LeadsAsync(byte? status, string? search)
+    public Task<IReadOnlyList<WebsiteLeadItem>> LeadsAsync(byte? status, string? search) => LeadsAsync(status, search, 500);
+
+    public Task<IReadOnlyList<WebsiteLeadItem>> LeadsForExportAsync(byte? status, string? search) => LeadsAsync(status, search, WebsiteAdminSql.ExportLimit);
+
+    private async Task<IReadOnlyList<WebsiteLeadItem>> LeadsAsync(byte? status, string? search, int take)
     {
         var list = new List<WebsiteLeadItem>();
         await using var cn = Connection();
         await cn.OpenAsync();
         await using var cmd = new SqlCommand(WebsiteAdminSql.Leads, cn);
+        cmd.Parameters.AddWithValue("@take", take);
         cmd.Parameters.AddWithValue("@status", (object?)status ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@q", Like(search));
         await using var r = await cmd.ExecuteReaderAsync();
         while (await r.ReadAsync()) list.Add(ReadLead(r));
         return list;
     }
+
+    public async Task<WebsiteLeadSummary?> LeadSummaryAsync(DateTime nowUtc)
+    {
+        await using var cn = Connection();
+        await cn.OpenAsync();
+        if (Convert.ToInt32(await Scalar(cn, null, "SELECT CASE WHEN OBJECT_ID(N'dbo.WebsiteLeads', N'U') IS NULL THEN 0 ELSE 1 END")) == 0) return null;
+        var today = (nowUtc + WebsitePostInput.VietnamOffset).Date - WebsitePostInput.VietnamOffset;
+        int n, d, w, t;
+        await using (var cmd = new SqlCommand(WebsiteAdminSql.LeadSummary, cn))
+        {
+            cmd.Parameters.AddWithValue("@today", today);
+            cmd.Parameters.AddWithValue("@week", today.AddDays(-6));
+            await using var r = await cmd.ExecuteReaderAsync();
+            await r.ReadAsync();
+            int I(int i) => r.IsDBNull(i) ? 0 : r.GetInt32(i);
+            (n, d, w, t) = (I(0), I(1), I(2), I(3));
+        }
+        var recent = new List<WebsiteLeadItem>();
+        await using (var cmd = new SqlCommand(WebsiteAdminSql.LeadRecent, cn))
+        {
+            await using var r = await cmd.ExecuteReaderAsync();
+            while (await r.ReadAsync()) recent.Add(ReadLead(r));
+        }
+        return new(n, d, w, t, recent);
+    }
+
+    // Exporting customer contact data is audited (who, when, which filter) before the file is built.
+    public Task<WebsiteResult> AuditLeadsExportAsync(Guid actor, string? ip, byte? status, string? search) =>
+        Write(actor, AdminPermissions.WebsiteLeadsView, async (cn, tx) =>
+        {
+            await Audit(cn, tx, actor, ip, "WEBSITE_LEADS_EXPORT", "WebsiteLeads", "export", "",
+                AuditSql.Json(("status", status is byte b ? LeadStatus.Name(b) : "all"), ("search", Truncate(search?.Trim(), 100) ?? "")));
+            return new(WebsiteOutcome.Saved);
+        });
 
     public async Task<WebsiteLeadItem?> LeadAsync(Guid id)
     {

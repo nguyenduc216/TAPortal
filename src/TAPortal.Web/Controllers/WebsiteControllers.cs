@@ -375,6 +375,27 @@ public sealed class WebsiteLeadsController(IWebsiteAdminStore store, ILogger<Web
         catch (SqlException ex) { logger.LogError(ex, "WEBSITE_ADMIN_UNAVAILABLE"); return View(new WebsiteLeadsVm([], status, q, WebsiteController.StoreUnavailable)); }
     }
 
+    // Excel file of the requests matching the current filter (same filter as the list). The export is audited first;
+    // if the audit cannot be written the file is not produced.
+    public async Task<IActionResult> Export(byte? status, string? q)
+    {
+        if (UsersController.ActorId(User) is not Guid actor) return Forbid();
+        try
+        {
+            var audit = await store.AuditLeadsExportAsync(actor, HttpContext.Connection.RemoteIpAddress?.ToString(), status, q);
+            if (audit.Outcome != WebsiteOutcome.Saved) { TempData["Error"] = WebsiteUi.Message(audit.Outcome); return RedirectToAction(nameof(Index), new { status, q }); }
+            var leads = await store.LeadsForExportAsync(status, q);
+            var bytes = XlsxWriter.Write("Yêu cầu báo giá", LeadExport.Headers, leads.Select(LeadExport.Row), LeadExport.Widths);
+            return File(bytes, XlsxWriter.ContentType, $"yeu-cau-bao-gia-{WebsiteUi.Local(DateTime.UtcNow):yyyyMMdd-HHmm}.xlsx");
+        }
+        catch (SqlException ex)
+        {
+            logger.LogError(ex, "WEBSITE_ADMIN_UNAVAILABLE");
+            TempData["Error"] = WebsiteController.StoreUnavailable;
+            return RedirectToAction(nameof(Index), new { status, q });
+        }
+    }
+
     public async Task<IActionResult> Details(Guid id)
     {
         var lead = await store.LeadAsync(id);

@@ -110,3 +110,17 @@
     .ta-web-dl { grid-template-columns: minmax(0, 1fr); }
     .ta-web-cat__form { grid-template-columns: 1fr 1fr; }
 }
+
+/* Dashboard (Tổng quan) → "Yêu cầu báo giá từ website" */
+.ta-dash-leads { margin-bottom: 16px; }
+.ta-dash-leads__stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-bottom: 1px solid var(--ta-border, #e6edf3); }
+.ta-dash-leads__stat { display: flex; flex-direction: column; padding: 14px 20px; border-left: 1px solid var(--ta-border, #e6edf3); color: var(--ta-text-2); text-decoration: none; font-size: 13px; }
+.ta-dash-leads__stat:first-child { border-left: 0; }
+.ta-dash-leads__stat b { font-size: 26px; line-height: 1.15; font-weight: 750; color: var(--ta-navy, #052b50); }
+a.ta-dash-leads__stat:hover { background: var(--ta-surface-2, #f7fafc); text-decoration: none; }
+.ta-dash-leads__stat.is-hot b { color: #c0392b; }
+@media (max-width: 640px) {
+    .ta-dash-leads__stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .ta-dash-leads__stat:nth-child(3) { border-left: 0; }
+    .ta-dash-leads__stat:nth-child(n+3) { border-top: 1px solid var(--ta-border, #e6edf3); }
+}

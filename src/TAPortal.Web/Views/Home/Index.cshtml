@@ -42,6 +42,42 @@ else
     </a>
 </section>
 }
+@if (ViewData.ContainsKey("WebsiteLeads"))
+{
+    var leads = ViewData["WebsiteLeads"] as TAPortal.Web.Services.WebsiteLeadSummary;
+    <section class="card ta-dash-leads" aria-labelledby="leadsTitle" data-ta-dashboard-leads>
+        <div class="card-header"><h2 class="card-title" id="leadsTitle">@UiIcon.Render("inbox")Yêu cầu báo giá từ website</h2>
+            <div class="card-actions"><a class="btn btn-sm" asp-controller="WebsiteLeads" asp-action="Index">@UiIcon.Render("chevron-right")<span>Xem tất cả</span></a></div></div>
+        @if (leads is null)
+        {
+            <div class="card-body text-secondary">@(Equals(ViewData["WebsiteLeads"], "not-ready") ? "Bảng yêu cầu liên hệ của website chưa sẵn sàng." : "Không tải được số liệu yêu cầu báo giá. Chi tiết đã được ghi vào nhật ký ứng dụng.")</div>
+        }
+        else
+        {
+            <div class="ta-dash-leads__stats">
+                <a class="ta-dash-leads__stat @(leads.New > 0 ? "is-hot" : "")" asp-controller="WebsiteLeads" asp-action="Index" asp-route-status="0"><b>@N(leads.New)</b><span>Chưa xử lý</span></a>
+                <div class="ta-dash-leads__stat"><b>@N(leads.Today)</b><span>Hôm nay</span></div>
+                <div class="ta-dash-leads__stat"><b>@N(leads.Last7Days)</b><span>7 ngày qua</span></div>
+                <div class="ta-dash-leads__stat"><b>@N(leads.Total)</b><span>Tổng cộng</span></div>
+            </div>
+            @if (leads.Recent.Count == 0)
+            {
+                <div class="ta-empty"><span class="ta-empty__icon">@UiIcon.Render("inbox")</span><p class="ta-empty__text">Chưa có yêu cầu nào từ form Liên hệ – báo giá trên website.</p></div>
+            }
+            else
+            {
+                <ul class="ta-list">
+                @foreach (var l in leads.Recent)
+                {
+                    var st = TAWebsite.Core.Data.LeadStatus.All.First(s => s.Code == l.Status);
+                    <li><span><a class="fw-bold text-reset" asp-controller="WebsiteLeads" asp-action="Details" asp-route-id="@l.Id">@l.FullName</a><span class="text-secondary"> — <a href="tel:@l.Phone">@l.Phone</a>@(l.Services is null ? "" : " · " + l.Services)</span></span>
+                        <span class="d-flex align-items-center gap-2"><span class="badge @st.Css">@st.Name</span><time class="text-secondary small" datetime="@l.CreatedAt.ToString("o")">@WebsiteUi.Local(l.CreatedAt).ToString("HH:mm dd/MM/yyyy", vi)</time></span></li>
+                }
+                </ul>
+            }
+        }
+    </section>
+}
 <div class="ta-dash-grid">
     <section class="card" aria-labelledby="recentTitle">
         <div class="card-header"><h2 class="card-title" id="recentTitle">@UiIcon.Render("history")Thay đổi quản trị gần đây</h2></div>

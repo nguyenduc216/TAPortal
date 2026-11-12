@@ -18,6 +18,7 @@
             @foreach (var s in LeadStatus.All) {<option value="@s.Code" selected="@(s.Code == Model.Status)">@s.Name</option>}
         </select>
         <button class="btn" type="submit">@UiIcon.Render("search")<span>Lọc</span></button>
+        @if (Model.Items.Count > 0) {<a class="btn ms-auto" asp-action="Export" asp-route-status="@Model.Status" asp-route-q="@Model.Search" download>@UiIcon.Render("file-text")<span>Xuất Excel</span></a>}
     </form>
     @if (Model.Items.Count == 0)
     {

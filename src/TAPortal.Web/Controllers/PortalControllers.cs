@@ -10,10 +10,20 @@ using TAPortal.Web.Services;
 namespace TAPortal.Web.Controllers;
 
 [Authorize(Policy = AdminPermissions.Policy.DashboardView)]
-public sealed class HomeController(IDashboardStore dashboard, AdminAuditOptions audit, AdminLoginThrottleOptions throttle, ILogger<HomeController> logger) : Controller
+public sealed class HomeController(IDashboardStore dashboard, IWebsiteAdminStore website, AdminAuditOptions audit, AdminLoginThrottleOptions throttle, ILogger<HomeController> logger) : Controller
 {
     public async Task<IActionResult> Index()
     {
+        // "Yêu cầu báo giá từ website" block: only for users allowed to see the requests; a failure hides the numbers, not the page.
+        if (AdminPermissions.Has(User, AdminPermissions.WebsiteLeadsView))
+        {
+            try { ViewData["WebsiteLeads"] = await website.LeadSummaryAsync(DateTime.UtcNow) ?? (object)"not-ready"; }
+            catch (Exception ex) when (ex is SqlException or InvalidOperationException or ArgumentException)
+            {
+                logger.LogError(ex, "Website lead summary could not be loaded.");
+                ViewData["WebsiteLeads"] = "error";
+            }
+        }
         DashboardSnapshot? data = null;
         try
         {
