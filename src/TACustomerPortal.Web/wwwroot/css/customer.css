@@ -740,6 +740,12 @@ textarea.cp-input { height: auto; min-height: 72px; padding-top: 8px; padding-bo
 .cp-backdrop__item--qr { color: var(--cp-gold-700); }
 .cp-backdrop__item--receipt { color: #0EA5A4; }
 .cp-backdrop__item--coin { color: var(--cp-gold-500); }
+.cp-backdrop__item--bank { color: var(--cp-green-700); }
+.cp-backdrop__item--tax { color: #DC6B19; }
+.cp-backdrop__item--transfer { color: var(--cp-blue-600); }
+.cp-backdrop__item--card { color: #7C5CC4; }
+.cp-backdrop__item--transfer svg { animation: cp-swap 3.2s ease-in-out infinite; }
+@keyframes cp-swap { 50% { transform: translateX(6%); } }
 @keyframes cp-drift {
     0% { top: 105%; opacity: 0; transform: rotate(-14deg); }
     12% { opacity: .3; }
@@ -759,3 +765,19 @@ textarea.cp-input { height: auto; min-height: 72px; padding-top: 8px; padding-bo
 /* Reconciliation: period totals line and "Đồng bộ từ ngân hàng" (2026-11-12). */
 .cp-tx-sync { justify-content: space-between; align-items: center; }
 .cp-tx-sync p { margin: 0; }
+
+/* Sign-in gold panel on wide screens (operator 2026-11-12: "vẫn còn nhiều khoảng trống"): the panel stops growing past
+   720px, its content becomes one centred column, and the illustration scales up to fill that column. */
+@media (min-width: 1200px) {
+    .cp-auth:not(.cp-auth--doc) { grid-template-columns: minmax(360px, min(44%, 720px)) 1fr; }
+    .cp-auth__panel { padding-inline: 56px; }
+    .cp-auth__panel > * { width: 100%; max-width: 560px; margin-inline: auto; }
+    .cp-auth__headline h1 { font-size: 32px; }
+    .cp-auth__headline p { font-size: 14.5px; }
+    .cp-show { width: 100%; }
+    .cp-auth__points { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+    .cp-auth__points li { flex-direction: column; align-items: flex-start; gap: 8px; padding: 12px; border-radius: 12px; background: rgba(255, 255, 255, .08); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .14); line-height: 1.35; }
+}
+@media (min-width: 1200px) and (min-height: 860px) {
+    .cp-show { zoom: 1.22; max-width: calc(560px / 1.22); }
+}

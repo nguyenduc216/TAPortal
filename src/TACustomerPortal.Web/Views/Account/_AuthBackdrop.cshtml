@@ -1,4 +1,5 @@
-@* Light side backdrop: invoice sheets, QR tiles and receipts drifting slowly behind the sign-in card. Decorative only. *@
+@* Light side backdrop: invoice sheets, QR tiles, receipts, banks, tax tags and money transfers drifting slowly behind
+   the sign-in card. Decorative only. *@
 @{
     // x (%), size (px), duration (s), delay (s, negative = already on its way), kind
     var items = new (int X, int Size, int Dur, int Delay, string Kind)[]
@@ -6,6 +7,8 @@
         (6, 64, 26, -4, "invoice"), (18, 34, 21, -15, "qr"), (30, 46, 30, -9, "receipt"), (44, 28, 19, -2, "coin"),
         (58, 56, 28, -20, "invoice"), (70, 32, 22, -11, "qr"), (82, 50, 27, -6, "receipt"), (92, 30, 20, -17, "coin"),
         (12, 40, 33, -24, "receipt"), (64, 26, 24, -1, "coin"), (38, 58, 35, -28, "invoice"), (88, 38, 25, -13, "qr"),
+        (24, 44, 29, -18, "bank"), (76, 40, 31, -3, "bank"), (50, 38, 27, -14, "tax"), (3, 34, 23, -10, "tax"),
+        (96, 42, 26, -22, "transfer"), (34, 36, 22, -7, "transfer"), (54, 30, 32, -26, "card"), (15, 32, 25, -1, "card"),
     };
 }
 <div class="cp-backdrop" aria-hidden="true">
@@ -24,6 +27,18 @@
                     break;
                 case "receipt":
                     <svg viewBox="0 0 40 56"><path d="M4 2h32v52l-5-4-5 4-5-4-5 4-5-4-7 4z" /><path d="M10 14h20M10 22h20M10 30h12M22 40h8" /></svg>
+                    break;
+                case "bank":
+                    <svg viewBox="0 0 48 44"><path d="M4 16 24 4l20 12H4z" /><path d="M9 20v14M19 20v14M29 20v14M39 20v14M4 40h40" /><circle cx="24" cy="11" r="1.5" /></svg>
+                    break;
+                case "tax":
+                    <svg viewBox="0 0 48 48"><path d="M26 4h16a2 2 0 0 1 2 2v16L22 44 4 26z" /><circle cx="35" cy="13" r="3" /><path d="m17 30 10-10" /><circle cx="17" cy="21" r="2" /><circle cx="27" cy="30" r="2" /></svg>
+                    break;
+                case "transfer":
+                    <svg viewBox="0 0 48 40"><path d="M6 12h32l-8-8M42 28H10l8 8" /><circle cx="6" cy="12" r="2" /><circle cx="42" cy="28" r="2" /></svg>
+                    break;
+                case "card":
+                    <svg viewBox="0 0 52 36"><rect x="2" y="2" width="48" height="32" rx="5" /><path d="M2 11h48M9 25h10M24 25h6" /></svg>
                     break;
                 default:
                     <svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="17" /><path d="M24 12h-6a4 4 0 0 0 0 8h4a4 4 0 0 1 0 8h-7M20 8v4M20 28v4" /></svg>
