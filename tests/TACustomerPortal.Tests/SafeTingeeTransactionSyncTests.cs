@@ -62,6 +62,25 @@ public sealed class SafeTingeeTransactionSyncTests
         Assert.Equal(("FT1", 5_400_000m, "credit"), (tx.Code, tx.Amount, tx.Type));
     }
 
+    // Operator 2026-11-12: money paid straight into a linked root account (MB notifies only its VA) is kept too.
+    [Fact]
+    public async Task RootAccountPaymentsBelongToTheSyncAndMerchantWideQueriesSendNoVaFilter()
+    {
+        var accounts = TingeeTransactionSync.Accounts([new(Guid.NewGuid(), 42, "VQRQTEST0001", "200000000008"), new(Guid.NewGuid(), 42, "100000000001", null)]);
+        Assert.Equal(3, accounts.Count);
+        Assert.True(TingeeTransactionSync.Belongs(Item() with { VaAccountNumber = null, AccountNumber = "200000000008" }, accounts));
+        Assert.True(TingeeTransactionSync.Belongs(Item() with { VaAccountNumber = "VQRQTEST0001", AccountNumber = "200000000008" }, accounts));
+        Assert.False(TingeeTransactionSync.Belongs(Item() with { VaAccountNumber = null, AccountNumber = "999999999999" }, accounts));
+
+        var handler = new Recorder("""{"code":"00","message":"Success","data":{"totalCount":0,"items":[]}}""");
+        var options = Options.Create(new TingeeOptions { ClientId = "id", SecretKey = "secret", MerchantId = 99, BaseUrl = TingeeOptions.ProductionBaseUrl });
+        var api = new TingeeApi(new TingeeClient(new HttpClient(handler), options, TimeProvider.System), options);
+        await api.GetTransactionsAsync(new TingeeTransactionQuery { MerchantId = 42, StartTime = "20261110000000", EndTime = "20261112235959" });
+        using var sent = JsonDocument.Parse(handler.Body);
+        Assert.False(sent.RootElement.TryGetProperty("vaAccountNumbers", out _));
+        Assert.Equal(42, sent.RootElement.GetProperty("merchantId").GetInt64());
+    }
+
     [Fact]
     public async Task SyncRefusesBadPeriodsWithoutCallingThePartner()
     {

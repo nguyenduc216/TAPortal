@@ -7,7 +7,7 @@ using Microsoft.Extensions.Logging;
 
 namespace TAPortal.Integrations.Tingee;
 
-/// <param name="Accounts">Receiving accounts (VA) that were queried.</param>
+/// <param name="Accounts">Receiving accounts (VA and root account numbers) that were queried.</param>
 /// <param name="Found">Transactions the partner reported on them in the period.</param>
 /// <param name="Added">Of those, how many the system had not received (no webhook) and were queued now.</param>
 /// <param name="Pending">Queued transactions still waiting for the payment processor when the call returned.</param>
@@ -25,6 +25,9 @@ public sealed record TingeeSyncResult(int Accounts, int Found, int Added, int Ad
 /// code) — so the payment processor in the webhook site matches it to an order or leaves it for reconciliation, and a
 /// webhook that arrives later is a duplicate. Only the receiving accounts of the given customer (or of every customer)
 /// are queried; ReceivedAt is the bank's transaction time, so the transaction lands on the day it happened.
+/// Operator 2026-11-12 (partner support): money paid straight into a linked root account (e.g. MB, whose notifications
+/// only cover the VA) still appears in the merchant's history, so each merchant is also read without a VA filter and
+/// transactions on the linked root account numbers are kept as well.
 /// </summary>
 public sealed class TingeeTransactionSync(ITingeeApi tingee, IConfiguration configuration, TimeProvider clock, ILogger<TingeeTransactionSync> logger)
 {
@@ -32,10 +35,11 @@ public sealed class TingeeTransactionSync(ITingeeApi tingee, IConfiguration conf
     public const int MaxDays = 31;
     private const int WindowDays = 9, PageSize = 200, MaxPages = 25, VaPerCall = 50;
     private static readonly TimeSpan Vietnam = TimeSpan.FromHours(7);
-    private static readonly TimeSpan MinInterval = TimeSpan.FromSeconds(20);
+    private static readonly TimeSpan MinInterval = TimeSpan.FromSeconds(5);
     private static readonly ConcurrentDictionary<string, DateTimeOffset> LastRun = new();
+    private static readonly ConcurrentDictionary<string, byte> Running = new();
 
-    public sealed record Target(Guid CustomerId, long? MerchantId, string VaAccountNumber);
+    public sealed record Target(Guid CustomerId, long? MerchantId, string VaAccountNumber, string? AccountNumber);
 
     /// <summary>Syncs [<paramref name="fromUtc"/>, <paramref name="toUtc"/>) for one customer, or all when null; waits up to <paramref name="settle"/> for the processor.</summary>
     public async Task<TingeeSyncResult> SyncAsync(Guid? customerId, DateTime fromUtc, DateTime toUtc, TimeSpan? settle = null, CancellationToken ct = default)
@@ -48,10 +52,24 @@ public sealed class TingeeTransactionSync(ITingeeApi tingee, IConfiguration conf
         if (toUtc - fromUtc > TimeSpan.FromDays(MaxDays)) return TingeeSyncResult.Failed($"Mỗi lần đồng bộ tối đa {MaxDays} ngày.");
 
         var key = customerId?.ToString() ?? "*";
-        if (LastRun.TryGetValue(key, out var last) && now - last < MinInterval)
-            return TingeeSyncResult.Failed("Vừa đồng bộ xong, vui lòng thử lại sau ít giây.");
-        LastRun[key] = now;
+        // One run at a time per customer: a second click while one runs (or right after it) is told so instead of
+        // calling the partner twice.
+        if (!Running.TryAdd(key, 0)) return TingeeSyncResult.Failed("Đang đồng bộ, vui lòng chờ lần đồng bộ trước hoàn tất rồi tải lại trang.");
+        try
+        {
+            if (LastRun.TryGetValue(key, out var last) && clock.GetUtcNow() - last < MinInterval)
+                return TingeeSyncResult.Failed("Vừa đồng bộ xong, vui lòng thử lại sau ít giây.");
+            return await RunAsync(key, customerId, fromUtc, toUtc, now, settle, ct);
+        }
+        finally
+        {
+            LastRun[key] = clock.GetUtcNow();
+            Running.TryRemove(key, out _);
+        }
+    }
 
+    private async Task<TingeeSyncResult> RunAsync(string key, Guid? customerId, DateTime fromUtc, DateTime toUtc, DateTimeOffset now, TimeSpan? settle, CancellationToken ct)
+    {
         var targets = await TargetsAsync(customerId, ct);
         if (targets.Count == 0) return TingeeSyncResult.Failed("Chưa có tài khoản nhận tiền nào được liên kết.");
 
@@ -59,21 +77,16 @@ public sealed class TingeeTransactionSync(ITingeeApi tingee, IConfiguration conf
         try
         {
             foreach (var group in targets.GroupBy(t => t.MerchantId))
-            foreach (var vas in group.Select(t => t.VaAccountNumber).Distinct().Chunk(VaPerCall))
-            for (var start = fromUtc; start < toUtc; start = start.AddDays(WindowDays))
             {
-                var end = start.AddDays(WindowDays) < toUtc ? start.AddDays(WindowDays) : toUtc;
-                for (var page = 0; page < MaxPages; page++)
+                var accounts = Accounts(group);
+                // Whole merchant first (catches money paid into a root account without VA), then by VA as before.
+                try { await ReadAsync(group.Key, null, accounts, fromUtc, toUtc, items, ct); }
+                catch (TingeeApiException ex)
                 {
-                    var result = await tingee.GetTransactionsAsync(new TingeeTransactionQuery
-                    {
-                        SkipCount = page * PageSize, MaxResultCount = PageSize, MerchantId = group.Key, VaAccountNumbers = vas,
-                        StartTime = Local(start), EndTime = Local(end.AddSeconds(-1)),
-                    }, ct);
-                    foreach (var item in result.Items)
-                        if (Code(item) is string code && (vas.Contains(item.VaAccountNumber ?? "", StringComparer.Ordinal) || vas.Contains(item.AccountNumber ?? "", StringComparer.Ordinal))) items[code] = item;
-                    if (result.Items.Count < PageSize || (page + 1) * PageSize >= result.TotalCount) break;
+                    logger.LogWarning(ex, "TINGEE_SYNC_MERCHANT_READ_FAILED customer={Customer} code={Code} log={Log}", key, ex.Code, ex.LogCode);
                 }
+                foreach (var vas in group.Select(t => t.VaAccountNumber).Distinct().Chunk(VaPerCall))
+                    await ReadAsync(group.Key, vas, accounts, fromUtc, toUtc, items, ct);
             }
         }
         catch (TingeeApiException ex)
@@ -93,8 +106,36 @@ public sealed class TingeeTransactionSync(ITingeeApi tingee, IConfiguration conf
         var pending = await SettleAsync(added.Select(i => DedupKey(Code(i)!)).ToList(), settle ?? TimeSpan.FromSeconds(8), ct);
         logger.LogInformation("TINGEE_SYNC customer={Customer} accounts={Accounts} found={Found} added={Added} pending={Pending}",
             key, targets.Count, items.Count, added.Count, pending);
-        return new(targets.Select(t => t.VaAccountNumber).Distinct().Count(), items.Count, added.Count, credit.Count, credit.Sum(i => i.Amount),
+        return new(Accounts(targets).Count, items.Count, added.Count, credit.Count, credit.Sum(i => i.Amount),
             debit.Count, debit.Sum(i => i.Amount), pending);
+    }
+
+    /// <summary>VA and root account numbers of the targets: a history item on any of them belongs to the sync.</summary>
+    public static HashSet<string> Accounts(IEnumerable<Target> targets) =>
+        targets.SelectMany(t => new[] { t.VaAccountNumber, t.AccountNumber }).Where(a => !string.IsNullOrWhiteSpace(a)).Select(a => a!.Trim()).ToHashSet(StringComparer.Ordinal);
+
+    /// <summary>True when the history item was paid into one of <paramref name="accounts"/> (by VA or by root account number).</summary>
+    public static bool Belongs(TingeeTransactionItem item, IReadOnlySet<string> accounts) =>
+        (item.VaAccountNumber is string va && accounts.Contains(va.Trim())) || (item.AccountNumber is string acc && accounts.Contains(acc.Trim()));
+
+    private async Task ReadAsync(long? merchantId, IReadOnlyList<string>? vas, IReadOnlySet<string> accounts, DateTime fromUtc, DateTime toUtc,
+        Dictionary<string, TingeeTransactionItem> items, CancellationToken ct)
+    {
+        for (var start = fromUtc; start < toUtc; start = start.AddDays(WindowDays))
+        {
+            var end = start.AddDays(WindowDays) < toUtc ? start.AddDays(WindowDays) : toUtc;
+            for (var page = 0; page < MaxPages; page++)
+            {
+                var result = await tingee.GetTransactionsAsync(new TingeeTransactionQuery
+                {
+                    SkipCount = page * PageSize, MaxResultCount = PageSize, MerchantId = merchantId, VaAccountNumbers = vas,
+                    StartTime = Local(start), EndTime = Local(end.AddSeconds(-1)),
+                }, ct);
+                foreach (var item in result.Items)
+                    if (Code(item) is string code && Belongs(item, accounts)) items[code] = item;
+                if (result.Items.Count < PageSize || (page + 1) * PageSize >= result.TotalCount) break;
+            }
+        }
     }
 
     private async Task<SqlConnection> Open(CancellationToken ct)
@@ -108,7 +149,7 @@ public sealed class TingeeTransactionSync(ITingeeApi tingee, IConfiguration conf
     {
         await using var cn = await Open(ct);
         await using var cmd = new SqlCommand("""
-SELECT b.CustomerId,m.MerchantId,b.VaAccountNumber
+SELECT b.CustomerId,m.MerchantId,b.VaAccountNumber,b.AccountNumber
 FROM dbo.CustomerBankAccounts b
 LEFT JOIN dbo.TingeeMerchants m ON m.CustomerId=b.CustomerId
 WHERE b.Status<>'DELETED' AND b.VaAccountNumber IS NOT NULL AND b.VaAccountNumber<>'' AND (@c IS NULL OR b.CustomerId=@c)
@@ -116,7 +157,7 @@ WHERE b.Status<>'DELETED' AND b.VaAccountNumber IS NOT NULL AND b.VaAccountNumbe
         cmd.Parameters.AddWithValue("@c", (object?)customerId ?? DBNull.Value);
         var list = new List<Target>();
         await using var r = await cmd.ExecuteReaderAsync(ct);
-        while (await r.ReadAsync(ct)) list.Add(new(r.GetGuid(0), r.IsDBNull(1) ? null : r.GetInt64(1), r.GetString(2)));
+        while (await r.ReadAsync(ct)) list.Add(new(r.GetGuid(0), r.IsDBNull(1) ? null : r.GetInt64(1), r.GetString(2), r.IsDBNull(3) ? null : r.GetString(3)));
         return list;
     }
 
