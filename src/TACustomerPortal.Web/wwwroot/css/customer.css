@@ -755,3 +755,7 @@ textarea.cp-input { height: auto; min-height: 72px; padding-top: 8px; padding-bo
     .cp-backdrop__item { opacity: .14; }
     .cp-show__steps li:not(:first-child)::before { opacity: 0; }
 }
+
+/* Reconciliation: period totals line and "Đồng bộ từ ngân hàng" (2026-11-12). */
+.cp-tx-sync { justify-content: space-between; align-items: center; }
+.cp-tx-sync p { margin: 0; }

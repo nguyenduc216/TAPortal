@@ -70,5 +70,21 @@ public sealed class PaymentReconciliationController(IPaymentTransactionStore tra
         return Back(back);
     }
 
+    // "Đồng bộ từ Tingee" (operator 2026-11-12): fetches the receiving accounts' history (the filtered customer, or every
+    // customer) and queues the transactions whose webhook never arrived. Period: the filter's dates, else the last 3 days.
+    [HttpPost, ValidateAntiForgeryToken]
+    [Authorize(Policy = AdminPermissions.Policy.ReconciliationManage)]
+    public async Task<IActionResult> Sync(Guid? customerId, DateOnly? from, DateOnly? to, string? back, [FromServices] TingeeTransactionSync sync, [FromServices] TimeProvider clock)
+    {
+        var today = DateOnly.FromDateTime(clock.GetUtcNow().UtcDateTime.AddHours(7));
+        var end = to ?? today;
+        var start = from ?? end.AddDays(-2);
+        if (end < start) (start, end) = (end, start);
+        var (fromUtc, toUtc) = PaymentTxText.Days(start, end);
+        var result = await sync.SyncAsync(customerId, fromUtc!.Value, toUtc!.Value, ct: HttpContext.RequestAborted);
+        TempData[result.Ok ? "Success" : "Error"] = TingeeTransactionSync.Message(result, start, end) + (result.Ok ? $" ({result.Accounts} tài khoản nhận tiền.)" : "");
+        return Back(back);
+    }
+
     private IActionResult Back(string? back) => !string.IsNullOrEmpty(back) && Url.IsLocalUrl(back) ? LocalRedirect(back) : RedirectToAction(nameof(Index));
 }

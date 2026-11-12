@@ -18,6 +18,7 @@ public static class IntegrationsServiceCollectionExtensions
         services.AddHttpClient<TingeeClient>(client => client.Timeout = TimeSpan.FromSeconds(30));
         services.TryAddScoped<ITingeeApi, TingeeApi>();
         services.TryAddScoped<ITingeeInvoiceApi, TingeeInvoiceApi>();
+        services.TryAddScoped<TingeeTransactionSync>();
         return services;
     }
 }
