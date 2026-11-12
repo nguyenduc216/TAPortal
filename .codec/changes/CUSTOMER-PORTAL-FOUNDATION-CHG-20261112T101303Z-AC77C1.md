@@ -4,7 +4,7 @@
 - Change ID: `CUSTOMER-PORTAL-FOUNDATION-CHG-20261112T101303Z-AC77C1`
 - Created UTC: 2026-11-12T10:13:03.846527+00:00
 - Tiêu đề: Trang đăng nhập/đăng ký: minh họa thu tiền → hóa đơn và nền động
-- Trạng thái: IMPLEMENTED
+- Trạng thái: DEPLOYED
 
 ## Yêu cầu và phạm vi
 Operator (2026-11-12): trang đăng nhập Hóa đơn tự động "hơi đơn điệu, thiếu thông tin". Bên vàng thêm thông tin hoặc hình ảnh cho cuốn hút; bên trắng thêm hiệu ứng nền chạy bên dưới để nhìn vào nhận ra đây là hóa đơn điện tử.
@@ -30,9 +30,9 @@ Operator (2026-11-12): trang đăng nhập Hóa đơn tự động "hơi đơn �
 
 ## Git
 - Branch: feature/auth-visual
-- Commit SHA: xem report
+- Commit SHA: 889619c
 - PR:
-- Merge: xem report
+- Merge: fast-forward main
 - Merge SHA:
 
 ## Rủi ro, quyết định và việc còn lại
