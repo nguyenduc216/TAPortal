@@ -33,7 +33,7 @@ Operator (2026-11-12), trang đăng ký Hóa đơn tự động:
 - Script / absolute path: `database/migrations/036-portal-content.sql` (bảng dbo.PortalContent; quyền INVOICEAPP.CONTENT.VIEW/EDIT cấp SYS_ADMIN, marker A0000036-...)
 - Thứ tự chạy: sau 035
 - Preflight / Verify / Rollback: verify `database/scripts/061-verify-portal-content.sql`; rollback `database/scripts/062-rollback-portal-content.sql` (từ chối khi đã có nội dung sửa)
-- Execution: NOT_EXECUTED
+- Execution: EXECUTED 2026-11-12T06:29:25Z qua `deploy/windows/Invoke-TAMigrations.ps1 -Plan "036:061:062"` (pre-check NOT_APPLIED → dry-run có rollback PASS → gates → chạy thật VERIFY_STATUS=PASS). Log: `.codec/reports/CUSTOMER-PORTAL-FOUNDATION-CHG-20261112T062541Z-73C192-migrations-20261112T062756Z.log`.
 
 ## Test và kết quả
 - Release build 0 lỗi; Safe tests 663/663 (mới: SafePortalContentTests, AnIndividualMaySignUpWithoutATaxCode, ValidSignUpCreatesTheAccountAndMailsAGeneratedPassword, WhenMailCannotBeSentTheAccountIsKeptAndTheUserIsToldWhatToDo, InvoiceAppContentPagesOpenAndPreviewWithoutSaving).

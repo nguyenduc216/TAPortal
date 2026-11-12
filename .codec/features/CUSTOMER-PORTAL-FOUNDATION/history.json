@@ -570,7 +570,7 @@
     "title": "Đăng ký cá nhân, mật khẩu gửi email, mẫu email và điều khoản dịch vụ",
     "status": "IMPLEMENTED",
     "commit_sha": null,
-    "migration_status": "NOT_EXECUTED",
+    "migration_status": "EXECUTED",
     "publish_status": "NOT_PUBLISHED",
     "merge_status": "PENDING_APPROVAL"
   }
