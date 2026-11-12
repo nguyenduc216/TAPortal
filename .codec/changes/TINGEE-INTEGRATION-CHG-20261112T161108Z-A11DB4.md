@@ -4,7 +4,7 @@
 - Change ID: `TINGEE-INTEGRATION-CHG-20261112T161108Z-A11DB4`
 - Created UTC: 2026-11-12T16:11:08.772116+00:00
 - Tiêu đề: History page size 50 (partner refuses 200 with 1108)
-- Trạng thái: IMPLEMENTED
+- Trạng thái: DEPLOYED
 
 ## Yêu cầu và phạm vi
 Operator (2026-11-12): bấm "Đồng bộ từ ngân hàng" báo "Không lấy được lịch sử giao dịch… Mã tra cứu TG26111216062679840A".
@@ -27,9 +27,9 @@ Nguyên nhân (dbo.TingeeApiLogs): mọi lời gọi transaction/get-paging vớ
 
 ## Git
 - Branch: feature/tx-sync
-- Commit SHA: xem report
+- Commit SHA: c9801ac
 - PR:
-- Merge: xem report
+- Merge: fast-forward main
 - Merge SHA:
 
 ## Rủi ro, quyết định và việc còn lại

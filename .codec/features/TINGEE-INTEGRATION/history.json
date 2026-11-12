@@ -457,10 +457,10 @@
     "change_id": "TINGEE-INTEGRATION-CHG-20261112T161108Z-A11DB4",
     "created_at": "2026-11-12T16:11:08.772116+00:00",
     "title": "History page size 50 (partner refuses 200 with 1108)",
-    "status": "IMPLEMENTED",
-    "commit_sha": null,
+    "status": "DEPLOYED",
+    "commit_sha": "c9801ac",
     "migration_status": "NOT_APPLICABLE",
-    "publish_status": "NOT_PUBLISHED",
-    "merge_status": "PENDING_APPROVAL"
+    "publish_status": "DEPLOYED",
+    "merge_status": "MERGED"
   }
 ]
