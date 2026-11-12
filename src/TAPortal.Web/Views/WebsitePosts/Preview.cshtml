@@ -1,0 +1,39 @@
+@model WebsitePostEdit
+@using TAWebsite.Core.Content
+@inject IConfiguration Configuration
+@{
+    Layout = null;
+    var publicUrl = WebsiteUi.PublicUrl(Configuration);
+    var (body, toc) = PostHtml.WithToc(PostHtml.Sanitize(Model.BodyHtml).Replace("src=\"/media/", "src=\"" + WebsiteUi.MediaBase + "/"));
+    var vi = System.Globalization.CultureInfo.GetCultureInfo("vi-VN");
+}
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="robots" content="noindex,nofollow" />
+    <title>Xem trước: @Model.Title</title>
+    @foreach (var css in new[] { "styles.css", "dich-vu.css", "trang-phu.css", "site.css" }) {<link rel="stylesheet" href="@publicUrl/css/@css" />}
+    <style>.ta-preview-bar{position:sticky;top:0;z-index:50;background:#d7a407;color:#052b50;font:700 13px/1.4 'Be Vietnam Pro',sans-serif;padding:10px 16px;display:flex;gap:12px;justify-content:center;flex-wrap:wrap}.ta-preview-bar a{color:#052b50;text-decoration:underline}</style>
+</head>
+<body>
+<div class="ta-preview-bar">XEM TRƯỚC – @(Model.Status == 1 ? "bài đã xuất bản" : "bản nháp, khách chưa thấy") · <a href="/WebsitePosts/Edit/@Model.Id">← Quay lại sửa bài</a></div>
+<main class="dv-main" id="top">
+<article>
+    <header class="ar-head"><div class="wrap"><div class="ar-head-inner">
+        <h1>@Model.Title</h1>
+        @if (Model.Summary is not null) {<p class="ar-lead">@Model.Summary</p>}
+        <div class="ar-byline"><img alt="" src="/site-assets/ta-logo.png" /><span>Biên soạn: <b>@(Model.AuthorName ?? "Ban chuyên môn T.A")</b></span><span>@(Model.PublishedAt is DateTime d ? WebsiteUi.Local(d).ToString("dd/MM/yyyy", vi) : "Chưa đăng")</span><span>@PostHtml.ReadMinutes(Model.BodyHtml) phút đọc</span></div>
+    </div></div></header>
+    <div class="wrap">
+        @if (Model.CoverMediaId is Guid cover) {<figure class="ar-cover"><img alt="" src="@WebsiteUi.ImageUrl(cover)" /></figure>}
+        <div class="ar-layout @(toc.Count == 0 ? "no-toc" : "")">
+            <nav aria-label="Mục lục bài viết" class="ar-toc">@if (toc.Count > 0) {<b>MỤC LỤC</b><ol>@foreach (var (id, title) in toc) {<li><a href="#@id">@title</a></li>}</ol>}</nav>
+            <div class="ar-body">@Html.Raw(body)</div>
+        </div>
+    </div>
+</article>
+</main>
+</body>
+</html>

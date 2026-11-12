@@ -1,0 +1,85 @@
+{
+ "key": "svc-accounting",
+ "path": "/dich-vu/ke-toan-thue",
+ "name": "Dịch vụ: Kế toán – thuế",
+ "title": "Dịch vụ kế toán – thuế trọn gói | T.A Tư vấn giải pháp",
+ "description": "Ghi sổ, kê khai thuế định kỳ, báo cáo tài chính, quyết toán và dịch vụ chuyên sâu cho doanh nghiệp nhỏ và vừa.",
+ "main": "dv-main",
+ "nav": "services",
+ "styles": [],
+ "scripts": [],
+ "sections": [
+  {
+   "key": "hero",
+   "type": "rich-html",
+   "name": "Banner đầu trang",
+   "content": {
+    "html": "<section aria-labelledby=\"dv-title\" class=\"dv-hero\"><div class=\"wrap dv-hero-grid\">\n<div>\n<nav aria-label=\"Breadcrumb\" class=\"dv-crumb\"><a href=\"/\">Trang chủ</a><span aria-hidden=\"true\">›</span><a href=\"/dich-vu\">Dịch vụ</a><span aria-hidden=\"true\">›</span><span>Kế toán – thuế trọn gói</span></nav>\n<span class=\"dv-kicker\">DỊCH VỤ 02 · KẾ TOÁN – THUẾ</span>\n<h1 id=\"dv-title\">Kế toán – thuế <em>trọn gói</em>: sổ sách minh bạch, kê khai đúng hạn</h1>\n<p class=\"dv-hero-lead\">T.A đảm nhận ghi sổ, kê khai, báo cáo và quyết toán theo lịch. Doanh nghiệp tập trung kinh doanh, vẫn nắm rõ số liệu và tình trạng nghĩa vụ thuế mỗi tháng.</p>\n<div class=\"dv-hero-actions\"><a class=\"btn btn-gold btn-action\" href=\"/lien-he?dv=ke-toan\">☎ NHẬN BÁO GIÁ THEO KHẢO SÁT</a><a class=\"btn btn-outline btn-action\" href=\"#goi\">SO SÁNH GÓI</a></div>\n<div class=\"dv-facts\">\n<div><b>Hằng tháng</b><span>Báo cáo tình hình cho chủ DN</span></div>\n<div><b>Nhắc lịch</b><span>Trước mỗi hạn kê khai, nộp thuế</span></div>\n<div><b>Bàn giao</b><span>Sổ sách, tờ khai theo kỳ</span></div>\n</div>\n</div>\n<div class=\"dv-commit-photo\"><img alt=\"Chuyên viên kế toán rà soát chứng từ cho doanh nghiệp\" src=\"/site-assets/service-2.webp\"/><div class=\"dv-commit-badge\"><b>Chuyên viên phụ trách riêng</b><span>Một đầu mối theo dõi chứng từ, tờ khai và báo cáo của doanh nghiệp.</span></div></div>\n</div></section>"
+   }
+  },
+  {
+   "key": "pains",
+   "type": "rich-html",
+   "name": "Vấn đề thường gặp",
+   "content": {
+    "html": "<section class=\"dv-section\"><div class=\"wrap\">\n<div class=\"dv-head\"><div><span class=\"eyebrow\">VẤN ĐỀ THƯỜNG GẶP</span><h2>Doanh nghiệp tìm đến T.A khi…</h2></div><p>Những tình huống quen thuộc với chủ doanh nghiệp nhỏ và vừa – và cách dịch vụ giải quyết.</p></div>\n<div class=\"dv-pains\">\n<div class=\"dv-pain\"><b>Không có thời gian theo dõi hạn thuế</b><p>Lo trễ hạn, bị phạt chậm nộp, chậm kê khai.</p><span>→ Lịch nghĩa vụ &amp; nhắc hạn chủ động</span></div>\n<div class=\"dv-pain\"><b>Chứng từ rời rạc, thiếu hóa đơn</b><p>Chi phí không đủ điều kiện được trừ khi quyết toán.</p><span>→ Quy trình thu thập chứng từ hằng tháng</span></div>\n<div class=\"dv-pain\"><b>Sổ sách tồn đọng nhiều kỳ</b><p>Số liệu không khớp giữa sổ, tờ khai và ngân hàng.</p><span>→ Rà soát, đối chiếu, điều chỉnh</span></div>\n<div class=\"dv-pain\"><b>Có số liệu nhưng không dùng được</b><p>Báo cáo chỉ để nộp, không hỗ trợ điều hành.</p><span>→ Báo cáo quản trị dễ đọc</span></div>\n</div></div></section>"
+   }
+  },
+  {
+   "key": "scope",
+   "type": "rich-html",
+   "name": "Phạm vi công việc theo kỳ",
+   "content": {
+    "html": "<section class=\"dv-section dv-soft\" id=\"pham-vi\"><div class=\"wrap\">\n<div class=\"dv-head\"><div><span class=\"eyebrow\">PHẠM VI CÔNG VIỆC</span><h2>T.A làm gì trong từng kỳ</h2></div><p>Phạm vi cụ thể được ghi trong hợp đồng; dưới đây là các đầu việc tiêu chuẩn của gói trọn gói.</p></div>\n<div aria-label=\"Kỳ công việc\" class=\"dv-scope-tabs\" role=\"tablist\">\n<button aria-controls=\"sc-month\" aria-selected=\"true\" id=\"st-month\" role=\"tab\" type=\"button\">Hằng tháng</button>\n<button aria-controls=\"sc-quarter\" aria-selected=\"false\" id=\"st-quarter\" role=\"tab\" tabindex=\"-1\" type=\"button\">Hằng quý</button>\n<button aria-controls=\"sc-year\" aria-selected=\"false\" id=\"st-year\" role=\"tab\" tabindex=\"-1\" type=\"button\">Cuối năm</button>\n</div>\n<div aria-labelledby=\"st-month\" class=\"dv-scope-grid\" id=\"sc-month\" role=\"tabpanel\">\n<div class=\"dv-scope-card\"><h3>Chứng từ &amp; hóa đơn</h3><ul class=\"dv-check\"><li>Tiếp nhận, phân loại chứng từ</li><li>Kiểm tra hóa đơn đầu vào, đầu ra</li><li>Cảnh báo hóa đơn rủi ro</li></ul></div>\n<div class=\"dv-scope-card\"><h3>Ghi sổ kế toán</h3><ul class=\"dv-check\"><li>Hạch toán nghiệp vụ phát sinh</li><li>Đối chiếu ngân hàng, quỹ tiền mặt</li><li>Theo dõi công nợ, kho (nếu có)</li></ul></div>\n<div class=\"dv-scope-card\"><h3>Kê khai &amp; báo cáo</h3><ul class=\"dv-check\"><li>Tờ khai thuế GTGT, TNCN (nếu kê khai tháng)</li><li>Tính lương, bảo hiểm theo dữ liệu cung cấp</li><li>Báo cáo nhanh tình hình cho chủ DN</li></ul></div>\n</div>\n<div aria-labelledby=\"st-quarter\" class=\"dv-scope-grid\" hidden id=\"sc-quarter\" role=\"tabpanel\">\n<div class=\"dv-scope-card\"><h3>Tờ khai theo quý</h3><ul class=\"dv-check\"><li>Tờ khai GTGT, TNCN (nếu kê khai quý)</li><li>Báo cáo tình hình sử dụng hóa đơn (nếu áp dụng)</li></ul></div>\n<div class=\"dv-scope-card\"><h3>Tạm nộp thuế TNDN</h3><ul class=\"dv-check\"><li>Ước tính số thuế tạm nộp</li><li>Nhắc hạn và lập giấy nộp tiền</li></ul></div>\n<div class=\"dv-scope-card\"><h3>Rà soát quý</h3><ul class=\"dv-check\"><li>Đối chiếu doanh thu, chi phí lũy kế</li><li>Báo cáo kết quả kinh doanh quý</li></ul></div>\n</div>\n<div aria-labelledby=\"st-year\" class=\"dv-scope-grid\" hidden id=\"sc-year\" role=\"tabpanel\">\n<div class=\"dv-scope-card\"><h3>Báo cáo tài chính</h3><ul class=\"dv-check\"><li>Khóa sổ, kết chuyển cuối năm</li><li>Lập và nộp báo cáo tài chính năm</li></ul></div>\n<div class=\"dv-scope-card\"><h3>Quyết toán thuế</h3><ul class=\"dv-check\"><li>Quyết toán thuế TNDN</li><li>Quyết toán thuế TNCN (khi có ủy quyền)</li></ul></div>\n<div class=\"dv-scope-card\"><h3>Lưu trữ &amp; bàn giao</h3><ul class=\"dv-check\"><li>In, đóng sổ sách kế toán năm</li><li>Bàn giao bộ hồ sơ lưu trữ</li></ul></div>\n</div>\n</div></section>"
+   }
+  },
+  {
+   "key": "monthly-cycle",
+   "type": "rich-html",
+   "name": "Một tháng làm việc cùng T.A",
+   "content": {
+    "html": "<section class=\"dv-section\"><div class=\"wrap\">\n<div class=\"dv-head center\"><span class=\"eyebrow\">CÁCH PHỐI HỢP</span><h2>Một tháng làm việc cùng T.A</h2><p>Lịch phối hợp cố định giúp doanh nghiệp biết khi nào cần gửi chứng từ và khi nào nhận báo cáo.</p></div>\n<div class=\"dv-cycle\">\n<div><small>Ngày 1 – 5</small><b>Gửi chứng từ</b><p>Hóa đơn, sao kê, bảng lương, hợp đồng phát sinh trong tháng.</p><span class=\"who\">Doanh nghiệp</span></div>\n<div><small>Ngày 5 – 10</small><b>Kiểm tra &amp; bổ sung</b><p>T.A rà soát, gửi danh sách chứng từ thiếu hoặc cần làm rõ.</p><span class=\"who\">T.A → Doanh nghiệp</span></div>\n<div><small>Ngày 10 – 15</small><b>Ghi sổ &amp; đối chiếu</b><p>Hạch toán, đối chiếu ngân hàng, công nợ.</p><span class=\"who\">T.A</span></div>\n<div><small>Trước ngày 20</small><b>Kê khai &amp; nộp</b><p>Gửi tờ khai, số thuế phải nộp để doanh nghiệp xác nhận.</p><span class=\"who\">T.A + Doanh nghiệp</span></div>\n<div><small>Cuối tháng</small><b>Báo cáo tháng</b><p>Tóm tắt doanh thu, chi phí, công nợ, việc cần lưu ý.</p><span class=\"who\">T.A → Chủ DN</span></div>\n</div></div></section>"
+   }
+  },
+  {
+   "key": "packages",
+   "type": "rich-html",
+   "name": "Gói dịch vụ",
+   "content": {
+    "html": "<section class=\"dv-section dv-sky\" id=\"goi\"><div class=\"wrap\">\n<div class=\"dv-head center\"><span class=\"eyebrow\">GÓI DỊCH VỤ</span><h2>Chọn gói theo quy mô hoạt động</h2><p>Chi phí được báo sau khảo sát, dựa trên số lượng chứng từ, ngành nghề và số lao động.</p></div>\n<div class=\"dv-packages\">\n<div class=\"dv-pack\"><small>KHỞI ĐỘNG</small><h3>Doanh nghiệp mới</h3><p>Mới thành lập, phát sinh ít, chưa có hoặc có ít nhân sự.</p>\n<div class=\"dv-pack-price\">Báo giá theo khảo sát<span>Phù hợp giai đoạn năm đầu</span></div>\n<ul class=\"dv-check\"><li>Kê khai thuế định kỳ</li><li>Ghi sổ kế toán</li><li>BCTC &amp; quyết toán năm</li><li>Nhắc lịch nghĩa vụ</li></ul>\n<a class=\"btn btn-outline btn-action\" href=\"/lien-he?dv=ke-toan\">TƯ VẤN GÓI NÀY</a></div>\n<div class=\"dv-pack featured\"><span class=\"dv-pack-flag\">PHỔ BIẾN</span><small>TIÊU CHUẨN</small><h3>Doanh nghiệp đang vận hành</h3><p>Có hoạt động mua bán đều đặn, có nhân sự, cần theo dõi công nợ.</p>\n<div class=\"dv-pack-price\">Báo giá theo khảo sát<span>Theo khối lượng chứng từ hằng tháng</span></div>\n<ul class=\"dv-check\"><li>Toàn bộ gói Khởi động</li><li>Tính lương, bảo hiểm, TNCN</li><li>Theo dõi công nợ, kho</li><li>Báo cáo tình hình hằng tháng</li></ul>\n<a class=\"btn btn-gold btn-action\" href=\"/lien-he?dv=ke-toan\">TƯ VẤN GÓI NÀY</a></div>\n<div class=\"dv-pack\"><small>TOÀN DIỆN</small><h3>Doanh nghiệp cần quản trị</h3><p>Quy mô lớn hơn, nhiều mảng hoạt động, cần số liệu ra quyết định.</p>\n<div class=\"dv-pack-price\">Báo giá theo khảo sát<span>Thiết kế theo nhu cầu</span></div>\n<ul class=\"dv-check\"><li>Toàn bộ gói Tiêu chuẩn</li><li>Báo cáo quản trị theo mảng</li><li>Kế hoạch dòng tiền</li><li>Rà soát rủi ro thuế định kỳ</li></ul>\n<a class=\"btn btn-outline btn-action\" href=\"/lien-he?dv=ke-toan\">TƯ VẤN GÓI NÀY</a></div>\n</div></div></section>"
+   }
+  },
+  {
+   "key": "tax-calendar",
+   "type": "rich-html",
+   "name": "Lịch nghĩa vụ thuế",
+   "content": {
+    "html": "<section class=\"dv-section\" id=\"lich-thue\"><div class=\"wrap\">\n<div class=\"dv-head\"><div><span class=\"eyebrow\">LỊCH NGHĨA VỤ THUẾ</span><h2>Các mốc hạn nộp cần nhớ</h2></div><p>T.A theo dõi các mốc này cho khách hàng và gửi nhắc trước hạn. Ngày hạn trùng ngày nghỉ được lùi sang ngày làm việc tiếp theo.</p></div>\n<div class=\"dv-cal\">\n<div class=\"dv-cal-item\"><div class=\"dv-cal-head\"><span class=\"dv-cal-date\"><b>20</b><small>THÁNG SAU</small></span><span>KÊ KHAI THEO THÁNG</span></div><div class=\"dv-cal-body\"><h3>Tờ khai GTGT, TNCN tháng</h3><p>Hạn nộp tờ khai và tiền thuế: ngày 20 của tháng tiếp theo.</p></div></div>\n<div class=\"dv-cal-item\"><div class=\"dv-cal-head\"><span class=\"dv-cal-date\"><b>30</b><small>ĐẦU QUÝ SAU</small></span><span>KÊ KHAI THEO QUÝ</span></div><div class=\"dv-cal-body\"><h3>Tờ khai quý &amp; tạm nộp TNDN</h3><p>Ngày cuối cùng của tháng đầu quý tiếp theo (30/4, 31/7, 31/10, 31/1).</p></div></div>\n<div class=\"dv-cal-item\"><div class=\"dv-cal-head\"><span class=\"dv-cal-date\"><b>31</b><small>THÁNG 3</small></span><span>QUYẾT TOÁN NĂM</span></div><div class=\"dv-cal-body\"><h3>BCTC, quyết toán TNDN, TNCN</h3><p>Ngày cuối cùng của tháng thứ 3 kể từ khi kết thúc năm tài chính.</p></div></div>\n<div class=\"dv-cal-item\"><div class=\"dv-cal-head\"><span class=\"dv-cal-date\"><b>30</b><small>THÁNG 4</small></span><span>CÁ NHÂN TỰ QUYẾT TOÁN</span></div><div class=\"dv-cal-body\"><h3>Quyết toán TNCN cá nhân</h3><p>Cá nhân trực tiếp quyết toán: ngày cuối cùng của tháng thứ 4.</p></div></div>\n</div>\n<p class=\"dv-note\">Lịch tóm tắt cho năm tài chính trùng năm dương lịch, tham khảo theo Luật Quản lý thuế; cần cập nhật theo văn bản hiện hành trước khi xuất bản.</p>\n</div></section>"
+   }
+  },
+  {
+   "key": "advanced",
+   "type": "rich-html",
+   "name": "Dịch vụ chuyên sâu",
+   "content": {
+    "html": "<section class=\"dv-section dv-soft\" id=\"chuyen-sau\"><div class=\"wrap\">\n<div class=\"dv-head\"><div><span class=\"eyebrow\">DỊCH VỤ CHUYÊN SÂU</span><h2>Xử lý các vấn đề kế toán – thuế cụ thể</h2></div><p>Có thể sử dụng riêng, không bắt buộc đăng ký gói trọn gói.</p></div>\n<div class=\"dv-catalog\">\n<div class=\"dv-cat\"><span class=\"dv-cat-ico\"><svg viewBox=\"0 0 24 24\"><circle cx=\"11\" cy=\"11\" r=\"7\"/><path d=\"m20 20-4-4M8 11h6\"/></svg></span><small>THEO KHẢO SÁT</small><h3>Rà soát, làm lại sổ sách</h3><p>Đối chiếu số liệu nhiều kỳ, điều chỉnh sai sót, chuẩn hóa hồ sơ.</p></div>\n<div class=\"dv-cat\"><span class=\"dv-cat-ico\"><svg viewBox=\"0 0 24 24\"><path d=\"M6 3h9l4 4v14H6z\"/><path d=\"M14 3v5h5M9 13h7M9 17h5\"/></svg></span><small>THEO NĂM</small><h3>BCTC &amp; quyết toán thuế</h3><p>Dành cho DN có kế toán nội bộ cần hỗ trợ khâu cuối năm.</p></div>\n<div class=\"dv-cat\"><span class=\"dv-cat-ico\"><svg viewBox=\"0 0 24 24\"><path d=\"M12 3 20 6v6c0 5-3.5 8.3-8 9.5C7.5 20.3 4 17 4 12V6Z\"/><path d=\"M12 8v5M12 16h.01\"/></svg></span><small>THEO VỤ VIỆC</small><h3>Giải trình, kiểm tra thuế</h3><p>Chuẩn bị số liệu, hồ sơ và đồng hành khi làm việc với cơ quan thuế.</p></div>\n<div class=\"dv-cat\"><span class=\"dv-cat-ico\"><svg viewBox=\"0 0 24 24\"><path d=\"M4 12a8 8 0 0 1 14-5.3L20 9M20 4v5h-5M20 12a8 8 0 0 1-14 5.3L4 15M4 20v-5h5\"/></svg></span><small>THEO HỒ SƠ</small><h3>Hồ sơ hoàn thuế GTGT</h3><p>Rà soát điều kiện, chuẩn bị và theo dõi hồ sơ đề nghị hoàn thuế.</p></div>\n</div></div></section>"
+   }
+  },
+  {
+   "key": "faq",
+   "type": "rich-html",
+   "name": "Câu hỏi thường gặp",
+   "content": {
+    "html": "<section class=\"dv-section\"><div class=\"wrap dv-faq\">\n<div><span class=\"eyebrow\">CÂU HỎI THƯỜNG GẶP</span><h2>Về dịch vụ kế toán – thuế</h2><p>Phạm vi chi tiết được xác nhận khi khảo sát hồ sơ thực tế.</p></div>\n<div>\n<details><summary>Doanh nghiệp chưa có doanh thu có cần kê khai thuế không?</summary><p>Có. Doanh nghiệp vẫn phải nộp tờ khai theo kỳ (kể cả tờ khai không phát sinh) và lập báo cáo tài chính năm.</p></details>\n<details><summary>Gửi chứng từ cho T.A bằng cách nào?</summary><p>Có thể gửi bản điện tử qua thư mục chia sẻ hoặc email, bản giấy được tiếp nhận theo lịch hằng tháng. Hóa đơn điện tử có thể được tra cứu trực tiếp khi doanh nghiệp ủy quyền.</p></details>\n<details><summary>Nếu có sai sót trong kê khai thì xử lý thế nào?</summary><p>T.A lập tờ khai bổ sung, giải thích nguyên nhân và hướng xử lý. Trách nhiệm đối với sai sót do T.A gây ra được quy định rõ trong hợp đồng.</p></details>\n<details><summary>Có thể nâng hoặc đổi gói giữa năm không?</summary><p>Có. Khi khối lượng công việc thay đổi, hai bên rà soát lại phạm vi và điều chỉnh phụ lục hợp đồng.</p></details>\n</div></div></section>"
+   }
+  },
+  {
+   "key": "cta",
+   "type": "rich-html",
+   "name": "Khảo sát miễn phí",
+   "content": {
+    "html": "<section class=\"dv-section dv-soft\"><div class=\"wrap\">\n<div class=\"dv-cta\"><div><span class=\"eyebrow\">KHẢO SÁT MIỄN PHÍ</span><h2>Gửi tình trạng sổ sách, nhận đề xuất trong 1–2 ngày làm việc</h2><p>T.A xem hồ sơ hiện tại, chỉ ra điểm cần lưu ý và đề xuất gói dịch vụ phù hợp, có phạm vi và chi phí rõ ràng.</p></div>\n<div class=\"dv-cta-actions\"><a class=\"btn btn-gold btn-action\" href=\"/lien-he?dv=ke-toan\">☎ ĐẶT LỊCH KHẢO SÁT</a><a class=\"btn btn-outline btn-action\" href=\"/dich-vu\">TẤT CẢ DỊCH VỤ</a></div></div>\n<h2 style=\"font-size:22px;margin:56px 0 18px\">Dịch vụ liên quan</h2>\n<div class=\"dv-related\">\n<a href=\"/dich-vu/thanh-lap-doanh-nghiep\"><img alt=\"\" loading=\"lazy\" src=\"/site-assets/service-4.webp\"/><span><b>Thành lập doanh nghiệp</b><small>Trọn gói, kèm thủ tục sau thành lập</small></span></a>\n<a href=\"/dich-vu#catalog\"><img alt=\"\" loading=\"lazy\" src=\"/site-assets/service-3.webp\"/><span><b>Báo cáo quản trị &amp; dòng tiền</b><small>Số liệu cho quyết định điều hành</small></span></a>\n<a href=\"/dich-vu#catalog\"><img alt=\"\" loading=\"lazy\" src=\"/site-assets/service-6.webp\"/><span><b>Phần mềm quản trị</b><small>Số hóa hóa đơn, công nợ, phê duyệt</small></span></a>\n</div>\n<p class=\"dv-disclaimer\">Nội dung trang là mockup để duyệt bố cục. Thời gian phản hồi, phạm vi gói và thông tin pháp lý cần được T.A xác nhận trước khi xuất bản.</p>\n</div></section>"
+   }
+  }
+ ]
+}

@@ -10,6 +10,9 @@
     ViewData["PageIcon"] = "pencil";
     var canEdit = AdminPermissions.Has(User, AdminPermissions.WebsiteContentEdit);
     var anchorUrl = Model.Page.Path is null ? Model.PublicUrl : Model.PublicUrl + Model.Page.Path;
+    // Visual editor (rich-html): the preview uses the stylesheets of the public website.
+    ViewData["WebCss"] = string.Join("|", new[] { "/css/styles.css", "/css/dich-vu.css", "/css/trang-phu.css", "/css/site.css" }.Concat(Model.Page.Styles).Select(p => Model.PublicUrl + p));
+    ViewData["WebMain"] = Model.Page.MainClass;
 }
 @section PageActions {
     <a class="btn" asp-action="Page" asp-route-id="@Model.Page.Key">@UiIcon.Render("arrow-left")<span>Về trang @Model.Page.Name</span></a>

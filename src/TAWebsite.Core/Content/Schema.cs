@@ -9,7 +9,8 @@ public enum FieldKind
     Lines,     // a list of short strings, one per line (e.g. bullet points)
     Image,     // "asset:<file>" (default image shipped with the site) or "media:<guid>" (uploaded in the Admin)
     Url,       // site path ("/lien-he"), anchor ("#services") or https:// link
-    List       // repeated group of sub-fields (cards, steps, FAQ items...)
+    List,      // repeated group of sub-fields (cards, steps, FAQ items...)
+    Html       // a whole section edited visually in the Admin portal (sanitized with PostHtml.SanitizeSection)
 }
 
 public sealed record FieldDef(string Key, string Label, FieldKind Kind, string? Help = null, IReadOnlyList<FieldDef>? Items = null, int MaxItems = 30)
@@ -20,6 +21,7 @@ public sealed record FieldDef(string Key, string Label, FieldKind Kind, string? 
     public static FieldDef Image(string key, string label, string? help = null) => new(key, label, FieldKind.Image, help);
     public static FieldDef Url(string key, string label, string? help = null) => new(key, label, FieldKind.Url, help ?? "Đường dẫn trong website (/lien-he), mục trong trang (#dich-vu) hoặc https://…");
     public static FieldDef List(string key, string label, int max, params FieldDef[] items) => new(key, label, FieldKind.List, null, items, max);
+    public static FieldDef Html(string key, string label, string? help = null) => new(key, label, FieldKind.Html, help);
 }
 
 public sealed record SectionType(string Key, string Name, string Description, IReadOnlyList<FieldDef> Fields);
@@ -137,6 +139,10 @@ public static class SectionTypes
             FieldDef.List("deadlines", "Hạn nộp", 8, FieldDef.Text("date", "Ngày (vd 20/12)"), FieldDef.Text("title", "Nội dung"), FieldDef.Text("note", "Ghi chú")),
             FieldDef.Text("subscribeTitle", "Tiêu đề đăng ký bản tin"), FieldDef.Text("subscribeText", "Mô tả"),
             FieldDef.Text("ctaTitle", "Tiêu đề hộp liên hệ"), FieldDef.Text("ctaText", "Mô tả hộp liên hệ"), FieldDef.Text("ctaLabel", "Chữ nút")
+        ]),
+        new("rich-html", "Nội dung trực quan", "Section giữ nguyên thiết kế mockup; sửa trực tiếp chữ, ảnh, liên kết và nhân bản/xóa từng khối trên bản xem trước.",
+        [
+            FieldDef.Html("html", "Nội dung", "Bấm vào chữ để sửa, bấm vào ảnh để đổi ảnh. Chọn một khối (thẻ, bước, câu hỏi…) để nhân bản, xóa hoặc đổi thứ tự.")
         ]),
         new("footer", "Chân trang", "Giới thiệu ngắn và 2 cột liên kết (cột Liên hệ lấy từ Cài đặt chung).",
         [

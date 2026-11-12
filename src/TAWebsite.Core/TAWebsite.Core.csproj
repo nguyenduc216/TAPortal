@@ -16,6 +16,7 @@
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Content\site.json" LogicalName="TAWebsite.site.json" />
+    <EmbeddedResource Include="Content\pages\*.json" LogicalName="TAWebsite.pages.%(Filename).json" />
     <EmbeddedResource Include="Assets\*" LogicalName="TAWebsite.assets.%(Filename)%(Extension)" />
   </ItemGroup>
 </Project>

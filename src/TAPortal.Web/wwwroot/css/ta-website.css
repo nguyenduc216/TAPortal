@@ -92,6 +92,14 @@
 .ta-web-dl dt { color: var(--ta-text-2); font-weight: 600; }
 .ta-web-dl dd { margin: 0; white-space: pre-line; }
 
+.ta-web-visual { border: 1px solid var(--ta-border, #dbe7f0); border-radius: 12px; overflow: hidden; background: #f5f9fc; }
+.ta-web-visual__bar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 8px 10px; background: #fff; border-bottom: 1px solid var(--ta-border, #dbe7f0); position: sticky; top: 0; z-index: 3; }
+.ta-web-visual__sel { font-size: 12px; color: var(--ta-text-2); margin-right: 6px; }
+.ta-web-visual__sel b { color: var(--ta-navy, #052b50); }
+.ta-web-visual__frame { display: block; width: 100%; min-height: 420px; border: 0; background: #fff; margin: 0 auto; transition: width .2s; }
+.ta-web-visual.is-mobile .ta-web-visual__frame { width: 390px; max-width: 100%; box-shadow: 0 0 0 1px #dbe7f0; }
+.ta-web-visual__html { border: 0; border-radius: 0; font-family: Consolas, monospace; font-size: 12px; }
+
 @media (max-width: 1100px) {
     .ta-web-posts-layout, .ta-web-post-layout { grid-template-columns: minmax(0, 1fr); }
     .ta-web-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }

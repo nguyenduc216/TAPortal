@@ -19,6 +19,42 @@
     toggle?.setAttribute('aria-expanded', 'false');
   }));
 
+  /* ---------- Tabs (service finder, scope by period) ---------- */
+  $$('[role="tablist"]').forEach(list => {
+    const tabs = $$('[role="tab"]', list);
+    const select = tab => tabs.forEach(t => {
+      const on = t === tab;
+      t.setAttribute('aria-selected', String(on));
+      t.tabIndex = on ? 0 : -1;
+      const panel = document.getElementById(t.getAttribute('aria-controls'));
+      if (panel) panel.hidden = !on;
+    });
+    tabs.forEach((tab, i) => {
+      tab.addEventListener('click', () => select(tab));
+      tab.addEventListener('keydown', e => {
+        const dir = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.key];
+        if (!dir) return;
+        e.preventDefault();
+        const next = tabs[(i + dir + tabs.length) % tabs.length];
+        select(next); next.focus();
+      });
+    });
+  });
+
+  /* ---------- Checklist after company setup ---------- */
+  const todo = $('.dv-todo');
+  if (todo) {
+    const boxes = $$('input[type=checkbox]', todo);
+    const bar = $('.dv-progress-bar span'), label = $('.dv-progress-count');
+    const update = () => {
+      const done = boxes.filter(b => b.checked).length;
+      if (bar) bar.style.width = (done / boxes.length * 100) + '%';
+      if (label) label.textContent = done + '/' + boxes.length;
+    };
+    boxes.forEach(b => b.addEventListener('change', update));
+    update();
+  }
+
   /* ---------- Testimonials ---------- */
   const box = $('.v9-testimonials[data-quotes]');
   if (box) {

@@ -60,6 +60,49 @@ public static class PostHtml
 
     public static string Sanitize(string? html) => string.IsNullOrWhiteSpace(html) ? "" : Sanitizer.Sanitize(html);
 
+    // Whole page sections (rich-html): the mockup markup with its classes, ids, ARIA attributes, inline SVG icons and the
+    // small inline styles of the design. Still no script, iframe, form, event handler or javascript:/data: link.
+    private static readonly HtmlSanitizer SectionSanitizer = CreateSection();
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, string> SectionCache = new();
+
+    private static HtmlSanitizer CreateSection()
+    {
+        var s = new HtmlSanitizer();
+        foreach (var t in new[] { "section", "article", "aside", "header", "footer", "nav", "main", "figure", "figcaption", "details", "summary", "small",
+                     "mark", "time", "dl", "dt", "dd", "caption", "colgroup", "col", "tfoot", "button", "label", "input", "picture", "source",
+                     "svg", "g", "path", "circle", "rect", "line", "polyline", "polygon", "ellipse", "defs", "lineargradient", "radialgradient", "stop", "use", "symbol", "title" })
+            s.AllowedTags.Add(t);
+        s.AllowedTags.Remove("form");
+        foreach (var a in new[] { "class", "id", "role", "hidden", "tabindex", "type", "checked", "disabled", "value", "for", "name", "loading", "fetchpriority",
+                     "viewbox", "xmlns", "fill", "stroke", "stroke-width", "stroke-linecap", "stroke-linejoin", "stroke-dasharray", "stroke-dashoffset", "d",
+                     "cx", "cy", "r", "rx", "ry", "x", "y", "x1", "y1", "x2", "y2", "points", "transform", "opacity", "offset", "stop-color", "stop-opacity",
+                     "gradientunits", "fill-rule", "clip-rule", "preserveaspectratio", "focusable", "open", "srcset", "sizes", "media", "width", "height" })
+            s.AllowedAttributes.Add(a);
+        s.AllowDataAttributes = true;
+        s.AllowedSchemes.Clear();
+        foreach (var scheme in new[] { "http", "https", "mailto", "tel" }) s.AllowedSchemes.Add(scheme);
+        s.RemovingAttribute += (_, e) =>
+        {
+            // ARIA attributes are not in the default allow-list.
+            if (e.Attribute.Name.StartsWith("aria-", StringComparison.OrdinalIgnoreCase)) e.Cancel = true;
+        };
+        s.PostProcessNode += (_, e) =>
+        {
+            if (e.Node is AngleSharp.Html.Dom.IHtmlAnchorElement a && a.GetAttribute("target") == "_blank") a.SetAttribute("rel", "noopener");
+        };
+        return s;
+    }
+
+    public static string SanitizeSection(string? html)
+    {
+        if (string.IsNullOrWhiteSpace(html)) return "";
+        if (SectionCache.TryGetValue(html, out var cached)) return cached;
+        var clean = SectionSanitizer.Sanitize(html);
+        if (SectionCache.Count > 500) SectionCache.Clear();
+        SectionCache[html] = clean;
+        return clean;
+    }
+
     public static string PlainText(string? html, int max = 300)
     {
         if (string.IsNullOrWhiteSpace(html)) return "";

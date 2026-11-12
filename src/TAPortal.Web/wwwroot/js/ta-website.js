@@ -263,6 +263,137 @@
         document.execCommand('insertHTML', false, doc.body.innerHTML);
     });
 
+    // ---- Visual section editor (rich-html) ----------------------------------------------------------------------------
+    // The section HTML is shown in an iframe with the website stylesheets; the <main> element is contenteditable. Clicking
+    // an image opens the library; clicking inside a repeated block (a sibling with the same tag and class exists: card,
+    // step, FAQ item, table row...) selects it for duplicate / delete / move. On submit the HTML goes back to the textarea
+    // (the server sanitizes it again).
+    const EDITOR_CSS = `
+        html { scroll-behavior: auto; } body { margin: 0; background: #fff; }
+        main[contenteditable] { outline: none; }
+        [hidden] { display: block !important; outline: 2px dashed #d7a407; outline-offset: 4px; }
+        details:not([open]) > :not(summary) { display: block; }
+        .reveal { opacity: 1 !important; transform: none !important; }
+        img { cursor: pointer; } img:hover { outline: 3px solid #d7a407; outline-offset: 2px; }
+        [data-v-sel] { outline: 2px solid #0b5a91 !important; outline-offset: 3px; }
+        a { cursor: text; }`;
+
+    const repeatedBlock = (node, main) => {
+        for (let el = node?.nodeType === 1 ? node : node?.parentElement; el && el !== main; el = el.parentElement) {
+            const parent = el.parentElement;
+            if (!parent || parent === main) return null;
+            const same = [...parent.children].filter((c) => c !== el && c.tagName === el.tagName && c.className === el.className);
+            if (same.length) return el;
+        }
+        return null;
+    };
+    const blockName = (el) => {
+        const heading = el.querySelector('h1,h2,h3,b,strong,summary,th,td');
+        const text = (heading || el).textContent.trim().replace(/\s+/g, ' ');
+        return `${el.tagName.toLowerCase()}${el.classList.length ? '.' + el.classList[0] : ''} – ${text.slice(0, 40) || '(trống)'}`;
+    };
+
+    const cleanHtml = (main) => {
+        const copy = main.cloneNode(true);
+        copy.querySelectorAll('[data-v-sel]').forEach((el) => el.removeAttribute('data-v-sel'));
+        return toPublic(copy.innerHTML);
+    };
+
+    const initVisual = (root) => {
+        root.querySelectorAll('[data-ta-visual]:not([data-ready])').forEach((box) => {
+            box.dataset.ready = '1';
+            const frame = box.querySelector('[data-v-frame]');
+            const html = box.querySelector('[data-v-html]');
+            const label = box.querySelector('[data-v-label]');
+            const css = (box.dataset.css || '').split('|').filter(Boolean).map((href) => `<link rel="stylesheet" href="${href}">`).join('');
+            let selected = null;
+            const select = (el) => {
+                selected?.removeAttribute('data-v-sel');
+                selected = el;
+                el?.setAttribute('data-v-sel', '');
+                label.textContent = el ? blockName(el) : 'chưa chọn';
+                box.querySelectorAll('[data-v=dup],[data-v=del],[data-v=up],[data-v=down]').forEach((b) => { b.disabled = !el; });
+            };
+            const fit = () => {
+                const doc = frame.contentDocument;
+                if (doc?.body) frame.style.height = Math.max(420, doc.documentElement.scrollHeight) + 'px';
+            };
+            frame.addEventListener('load', () => {
+                const doc = frame.contentDocument;
+                const main = doc.querySelector('main');
+                main.innerHTML = toAdmin(html.value);
+                main.contentEditable = 'true';
+                doc.addEventListener('click', (e) => {
+                    const img = e.target.closest('img');
+                    if (img) {
+                        e.preventDefault();
+                        openPicker((item) => { img.src = MEDIA_ADMIN + item.id; if (item.alt) img.alt = item.alt; select(repeatedBlock(img, main)); });
+                        return;
+                    }
+                    if (e.target.closest('a,button,summary,label,input')) e.preventDefault();
+                    select(repeatedBlock(e.target, main));
+                });
+                doc.addEventListener('submit', (e) => e.preventDefault());
+                new ResizeObserver(fit).observe(doc.documentElement);
+                [300, 1200, 3000].forEach((t) => setTimeout(fit, t));
+                frame.taMain = main;
+            });
+            frame.srcdoc = `<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">${css}<style>${EDITOR_CSS}</style></head><body><main id="top" class="${box.dataset.main || ''}"></main></body></html>`;
+
+            box.addEventListener('click', (e) => {
+                const button = e.target.closest('[data-v]');
+                if (!button) return;
+                const main = frame.taMain;
+                const action = button.dataset.v;
+                if (action === 'html') {
+                    if (html.hidden) { html.value = cleanHtml(main); html.hidden = false; frame.hidden = true; button.classList.add('active'); }
+                    else { main.innerHTML = toAdmin(html.value); html.hidden = true; frame.hidden = false; button.classList.remove('active'); select(null); setTimeout(fit, 100); }
+                    return;
+                }
+                if (action === 'mobile') { box.classList.toggle('is-mobile'); setTimeout(fit, 300); return; }
+                if (action === 'link') {
+                    const doc = frame.contentDocument;
+                    const node = doc.getSelection()?.anchorNode;
+                    const a = (node?.nodeType === 1 ? node : node?.parentElement)?.closest('a') || selected?.closest('a') || selected?.querySelector('a');
+                    if (!a) { window.alert('Đặt con trỏ vào một liên kết (nút, chữ có link) rồi bấm lại.'); return; }
+                    const url = window.prompt('Địa chỉ liên kết (/lien-he, #muc, https://...):', a.getAttribute('href') || '');
+                    if (url === null) return;
+                    if (!/^(https?:\/\/|\/(?!\/)|#|\?|mailto:|tel:)/i.test(url.trim())) { window.alert('Liên kết không hợp lệ.'); return; }
+                    a.setAttribute('href', url.trim());
+                    return;
+                }
+                if (!selected) return;
+                if (action === 'dup') {
+                    const clone = selected.cloneNode(true);
+                    clone.removeAttribute('data-v-sel');
+                    clone.removeAttribute('id');
+                    clone.querySelectorAll('[id]').forEach((el) => el.removeAttribute('id'));
+                    selected.after(clone);
+                    select(clone);
+                } else if (action === 'del') {
+                    if (!window.confirm('Xóa khối "' + label.textContent + '"?')) return;
+                    const next = selected.nextElementSibling || selected.previousElementSibling;
+                    selected.remove();
+                    select(next && repeatedBlock(next, main) === next ? next : null);
+                } else if (action === 'up' && selected.previousElementSibling) {
+                    selected.previousElementSibling.before(selected);
+                } else if (action === 'down' && selected.nextElementSibling) {
+                    selected.nextElementSibling.after(selected);
+                }
+                fit();
+            });
+        });
+    };
+
+    document.addEventListener('submit', (event) => {
+        event.target.querySelectorAll?.('[data-ta-visual]').forEach((box) => {
+            const html = box.querySelector('[data-v-html]');
+            const main = box.querySelector('[data-v-frame]').taMain;
+            if (html.hidden && main) html.value = cleanHtml(main);
+            else html.value = toPublic(html.value);
+        });
+    }, true);
+
     // ---- Character counters ----------------------------------------------------------------------------------------
     const updateCount = (field) => {
         const limit = Number(field.dataset.taCount);
@@ -276,6 +407,7 @@
 
     const init = () => {
         initRte(document);
+        initVisual(document);
         document.querySelectorAll('[data-ta-count]').forEach(updateCount);
         document.querySelectorAll('[data-ta-web-list]').forEach(renumber);
     };

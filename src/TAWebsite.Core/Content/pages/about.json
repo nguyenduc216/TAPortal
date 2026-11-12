@@ -1,0 +1,57 @@
+{
+ "key": "about",
+ "path": "/gioi-thieu",
+ "name": "Giới thiệu",
+ "title": "Giới thiệu T.A | 15 năm làm nghề – Đồng hành cùng doanh nghiệp",
+ "description": "Câu chuyện, tầm nhìn, sứ mệnh và giá trị cốt lõi của T.A – Tư vấn giải pháp: 15 năm kinh nghiệm kế toán – thuế đồng hành cùng doanh nghiệp.",
+ "main": "",
+ "nav": "about",
+ "styles": [
+  "/css/gioi-thieu.css"
+ ],
+ "scripts": [
+  "/js/gioi-thieu.js"
+ ],
+ "sections": [
+  {
+   "key": "story",
+   "type": "rich-html",
+   "name": "Câu chuyện T.A (đầu trang)",
+   "content": {
+    "html": "<section class=\"intro\" id=\"about\"><div class=\"wrap intro-grid\"><div class=\"intro-text\"><span class=\"kicker\">CÂU CHUYỆN T.A</span><h1>15 năm làm nghề.<br/><em>Một hành trình thấu hiểu doanh nghiệp.</em></h1><p class=\"intro-lead\">“Sau 15 năm gắn bó với nghề kế toán và thuế, điều chúng tôi thấu hiểu không chỉ là những con số, mà còn là áp lực phía sau mỗi quyết định của người làm chủ.”</p><p>“Doanh nghiệp cần nhiều hơn một bộ sổ sách đúng hạn: cần sự an tâm trước thay đổi chính sách, sự rõ ràng về dòng tiền và một người đồng hành đủ hiểu thực tế để cùng tháo gỡ vấn đề.”</p><div class=\"brand-quote\">Giải pháp tối ưu – Phát triển bền vững</div></div><div class=\"intro-visual\"><img alt=\"Hình minh họa kết hợp doanh nghiệp, tư vấn tài chính và tăng trưởng bền vững\" src=\"/site-assets/about-hero-art.png\"/><span class=\"visual-label\">15 NĂM LÀM NGHỀ · THẤU HIỂU · KẾT NỐI</span></div></div></section>"
+   }
+  },
+  {
+   "key": "vision",
+   "type": "rich-html",
+   "name": "Tầm nhìn",
+   "content": {
+    "html": "<section class=\"story theme-navy\" id=\"vision\"><div class=\"wrap story-grid\"><div class=\"story-visual reveal\"><img alt=\"Hình minh họa tầm nhìn: đường chân trời số và dữ liệu tăng trưởng\" src=\"/site-assets/vision-v7.svg\"/><span class=\"image-num label-navy\">01 / TẦM NHÌN</span></div><div class=\"story-text reveal\"><span class=\"kicker\">ĐỊNH HƯỚNG TƯƠNG LAI</span><h2>Tầm nhìn</h2><p>“Chúng tôi nhìn thấy một tương lai nơi mỗi doanh nghiệp, dù ở quy mô nào, đều có thể tiếp cận tư vấn chuyên sâu và công cụ quản trị hiện đại. Trong kỷ nguyên AI, dữ liệu không chỉ để báo cáo quá khứ, mà còn giúp nhìn rõ cơ hội phía trước.”</p><span class=\"small-rule\"></span></div></div></section>"
+   }
+  },
+  {
+   "key": "mission",
+   "type": "rich-html",
+   "name": "Sứ mệnh",
+   "content": {
+    "html": "<section class=\"story story-alt theme-green\" id=\"mission\"><div class=\"wrap story-grid\"><div class=\"story-text reveal\"><span class=\"kicker\">LÝ DO CHÚNG TÔI HIỆN DIỆN</span><h2>Sứ mệnh</h2><p>“Sứ mệnh của T.A là biến những quy định phức tạp, chứng từ rời rạc và nỗi lo về thuế thành quy trình rõ ràng, dễ kiểm soát. Chúng tôi kết nối kinh nghiệm nghề nghiệp với công nghệ và AI để doanh nghiệp bớt gánh nặng vận hành, dành nhiều thời gian hơn cho tăng trưởng.”</p><span class=\"small-rule\"></span></div><div class=\"story-visual reveal\"><img alt=\"Hình minh họa sứ mệnh: con người kết nối dữ liệu và hệ thống tài chính\" src=\"/site-assets/mission-v7.svg\"/><span class=\"image-num label-green\">02 / SỨ MỆNH</span></div></div></section>"
+   }
+  },
+  {
+   "key": "values",
+   "type": "rich-html",
+   "name": "Giá trị cốt lõi",
+   "content": {
+    "html": "<section class=\"story theme-gold\" id=\"values\"><div class=\"wrap story-grid\"><div class=\"story-visual reveal\"><img alt=\"Hình minh họa giá trị cốt lõi: các giá trị tạo nền tảng bền vững\" src=\"/site-assets/values-v8.svg\"/><span class=\"image-num label-gold\">03 / GIÁ TRỊ CỐT LÕI</span></div><div class=\"story-text reveal\"><span class=\"kicker\">NGUYÊN TẮC LÀM NÊN T.A</span><h2>Giá trị cốt lõi</h2><div class=\"values\"><p><strong>Thấu hiểu</strong> – Lắng nghe nỗi lo thật của người làm chủ trước khi đề xuất giải pháp.</p><p><strong>Chính trực</strong> – Làm nghề bằng sự chuẩn xác, minh bạch và trách nhiệm.</p><p><strong>Đồng hành</strong> – Không dừng ở việc hoàn thành hồ sơ, mà cùng khách hàng giải quyết vấn đề.</p><p><strong>Đổi mới</strong> – Ứng dụng công nghệ và AI có chọn lọc, luôn đặt con người và tính bảo mật ở trung tâm.</p></div></div></div></section>"
+   }
+  },
+  {
+   "key": "closing",
+   "type": "rich-html",
+   "name": "Lời kết – kết nối tương lai",
+   "content": {
+    "html": "<section class=\"last-word ai-interactive\" id=\"future-ai\"><div aria-hidden=\"true\" class=\"ai-scene\"><div class=\"ai-grid\"></div><div class=\"ai-glow\"></div><div class=\"ai-nodes\"><span class=\"ai-node n1\">DỮ LIỆU</span><span class=\"ai-node n2\">AI</span><span class=\"ai-node n3\">DÒNG TIỀN</span><span class=\"ai-node n4\">DOANH NGHIỆP</span><span class=\"ai-node n5\">TRI THỨC</span></div><svg class=\"ai-lines\" preserveaspectratio=\"none\" viewbox=\"0 0 1200 380\"><path d=\"M0 300 Q240 80 440 225 T850 150 T1200 240\"></path><path d=\"M0 160 Q250 330 510 100 T1200 170\"></path><path d=\"M0 250 Q400 360 700 230 T1200 90\"></path></svg><div class=\"ai-particles\"></div></div><div class=\"wrap ai-quote-content\"><div class=\"ai-eyebrow\">HÀNH TRÌNH T.A · KẾT NỐI TƯƠNG LAI</div><h2>“15 năm là hành trình tích lũy kinh nghiệm và niềm tin.<br/>Tương lai là hành trình kết nối của tri thức, công nghệ <span class=\"keep-together\">và doanh nghiệp.”</span></h2><p class=\"ai-quote-sub\">Kinh nghiệm nghề nghiệp × Dữ liệu thông minh × Giải pháp cho doanh nghiệp</p></div></section>"
+   }
+  }
+ ]
+}

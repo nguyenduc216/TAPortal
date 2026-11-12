@@ -76,6 +76,18 @@ public sealed partial class SiteController(IWebsiteReader reader, ILogger<SiteCo
         return View("Post", new PostVm(post, body, toc, site, await reader.RelatedAsync(post, 3), previous, next, news.Section("sidebar") ?? EmptyContent));
     }
 
+    // Pages declared in TAWebsite.Core/Content/pages/*.json (Giới thiệu, Dịch vụ, dịch vụ chi tiết...). Lowest priority:
+    // every explicit route above wins.
+    [HttpGet("/{**path}", Order = 1000)]
+    public async Task<IActionResult> ContentPage(string? path)
+    {
+        var def = SiteMap.FindByPath("/" + (path ?? ""));
+        if (def is null || def.Key is "home" or "contact" or "news" || def.Path is null) return NotFound();
+        var page = await reader.PageAsync(def.Key);
+        if (!page.IsPublished) return NotFound();
+        return View("Page", new PageVm(page, await Site(page, def.Nav, def.Path), await reader.LatestAsync(6)));
+    }
+
     [HttpGet("/media/{id}")]
     public async Task<IActionResult> Media(string id)
     {

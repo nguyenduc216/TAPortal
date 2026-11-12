@@ -10,6 +10,7 @@
     var vi = System.Globalization.CultureInfo.GetCultureInfo("vi-VN");
 }
 @section PageActions {
+    @if (!Model.IsCreate) {<a class="btn" href="/WebsitePosts/Preview/@Model.Id" target="_blank" rel="noopener">@UiIcon.Render("eye")<span>Xem trước</span></a>}
     @if (Model.Current is { Status: 1 }) {<a class="btn" href="@(Model.PublicUrl)/tin-tuc/@Model.Current.Slug" target="_blank" rel="noopener">@UiIcon.Render("external-link")<span>Xem trên website</span></a>}
 }
 <form asp-action="@(Model.IsCreate ? "Create" : "Edit")" asp-route-id="@Model.Id" method="post" novalidate data-ta-web-post>

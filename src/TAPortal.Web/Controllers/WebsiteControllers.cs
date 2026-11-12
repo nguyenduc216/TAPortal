@@ -313,6 +313,16 @@ public sealed class WebsitePostsController(IWebsiteAdminStore store, IConfigurat
         return View("Edit", new WebsitePostEditVm(id, input, current, await SafeCategories(), PublicUrl));
     }
 
+    // Draft preview with the website stylesheets; only for signed-in staff (the public site never shows drafts).
+    [HttpGet]
+    public async Task<IActionResult> Preview(Guid id)
+    {
+        var post = await store.PostAsync(id);
+        if (post is null) return NotFound();
+        Response.Headers.CacheControl = "no-store";
+        return View(post);
+    }
+
     [HttpPost]
     [ValidateAntiForgeryToken]
     [Authorize(Policy = AdminPermissions.Policy.WebsitePostsEdit)]

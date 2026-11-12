@@ -1,0 +1,112 @@
+/* Trang Giới thiệu (mockup Giới thiệu V9). */
+/* gioi-thieu-v3.css */
+/* T.A About V3: V10 header/footer remain unchanged; only main content is styled here */
+.intro{background:linear-gradient(110deg,#f7fbfd,#e5f5fc);padding:75px 0 85px}.intro-grid{display:grid;grid-template-columns:1fr 1fr;gap:65px;align-items:center}.kicker{display:block;color:var(--green);font-weight:900;letter-spacing:.15em;font-size:12px;margin-bottom:18px}.intro h1{font-size:clamp(40px,4.1vw,69px);line-height:1.18;letter-spacing:-.05em;margin-bottom:27px}.intro h1 em{color:var(--blue);font-style:normal}.intro-text p{font-size:15px;max-width:670px}.intro-text .intro-lead{font-weight:700;color:#234966;font-size:17px}.brand-quote{display:inline-block;margin-top:22px;background:#ffe36a;padding:12px 22px;font-weight:800;clip-path:polygon(0 0,100% 0,97% 50%,100% 100%,0 100%,3% 50%)}.intro-visual{position:relative}.intro-visual img{width:100%;height:430px;object-fit:cover;border-radius:28px;box-shadow:0 30px 60px #052b5025}.visual-label{position:absolute;bottom:-17px;left:30px;background:var(--navy);color:white;padding:12px 20px;border-radius:6px;font-size:11px;font-weight:800;letter-spacing:.07em}.story{padding:105px 0}.story-alt{background:#f0f8fb}.story-grid{display:grid;grid-template-columns:1fr 1fr;gap:clamp(50px,7vw,130px);align-items:center}.story-visual{position:relative}.story-visual img{height:365px;width:100%;object-fit:cover;border-radius:16px;box-shadow:0 18px 45px #052b501a}.story:nth-of-type(2) .story-visual{transform:rotate(-1.2deg)}.story-alt .story-visual{transform:rotate(1.2deg)}.image-num{position:absolute;bottom:-17px;right:-15px;background:var(--navy);color:#ffe06a;padding:14px 22px;font-size:12px;font-weight:900;letter-spacing:.1em;border-radius:5px}.story-text{max-width:670px}.story-text h2{font-size:clamp(34px,3.3vw,54px);line-height:1.2;letter-spacing:-.045em;margin-bottom:23px}.story-text>p{font-size:17px;line-height:2}.small-rule{display:block;background:var(--gold);height:4px;width:100px;margin-top:30px}.values{display:grid;gap:9px}.values p{font-size:14px;line-height:1.8;margin:0;padding:0 0 9px 20px;border-bottom:1px solid #e1edf2;position:relative}.values p:before{content:'✓';position:absolute;left:0;color:var(--green);font-weight:900}.values strong{color:var(--navy)}.last-word{padding:68px 0;background:linear-gradient(110deg,#052b50,#0d5c8a);text-align:center;color:white}.last-word span{font-size:11px;color:#ffe06a;font-weight:900;letter-spacing:.15em}.last-word h2{font-size:clamp(23px,2.7vw,40px);line-height:1.55;margin:18px auto 0;max-width:1000px}
+@media(max-width:760px){.intro-grid,.story-grid{grid-template-columns:1fr;gap:32px}.intro{padding:48px 0 62px}.intro h1{font-size:clamp(32px,8vw,52px)}.intro-visual img{height:270px}.story{padding:62px 0}.story-visual img{height:260px}.story-alt .story-text{order:2}.story-alt .story-visual{order:1}.story-text>p{font-size:15px}.visual-label{font-size:9px;left:10px}.image-num{right:0}}
+@media(prefers-reduced-motion:reduce){.story-visual{transform:none!important}}
+
+/* gioi-thieu-v4.css */
+/* V4 layout corrections, loaded after home styles and V3 styles */
+main .intro{display:block!important;grid-template-columns:none!important;gap:0!important;padding:72px 0 88px!important}
+main .intro-grid{display:grid!important;grid-template-columns:minmax(0,1.03fr) minmax(0,1fr)!important;gap:clamp(34px,4vw,90px)!important;align-items:center;width:min(94%,1660px);margin:auto}
+main .intro-text{min-width:0}main .intro h1{font-size:clamp(38px,3.35vw,62px);line-height:1.23;letter-spacing:-.04em;overflow-wrap:normal}main .intro h1 em{display:inline}main .intro-text p{max-width:750px}
+main .intro-visual{min-width:0}main .intro-visual img{height:auto;aspect-ratio:874/354;object-fit:contain;display:block;width:100%;border-radius:22px}
+main .story{padding:85px 0}main .story-grid{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:clamp(35px,5vw,110px);width:min(94%,1660px);margin:auto}
+main .story-visual{background:#f6fafd;border:1px solid #dcebf2;border-radius:23px;padding:26px;min-width:0;overflow:visible;transform:none!important;box-shadow:0 15px 38px #052b5012}
+main .story-visual img{width:100%;height:auto;aspect-ratio:2.6/1;object-fit:contain;display:block;border-radius:13px;box-shadow:none}
+main .story .image-num{right:20px;bottom:-17px;min-width:170px;text-align:center;border-radius:8px;color:white}
+main .story .label-navy{background:#052b50;color:white}main .story .label-green{background:#087341;color:white}main .story .label-gold{background:#e3af00;color:#052b50}
+main .theme-navy .story-visual{background:linear-gradient(135deg,#e8f5fc,#fff)}main .theme-green .story-visual{background:linear-gradient(135deg,#e7f7ec,#fff)}main .theme-gold .story-visual{background:linear-gradient(135deg,#fff6d4,#fff)}
+main .theme-navy .small-rule{background:#052b50}main .theme-green .small-rule{background:#087341}main .theme-gold .small-rule{background:#e3af00}
+@media(max-width:900px){main .intro-grid,main .story-grid{grid-template-columns:1fr!important}main .intro{padding:45px 0 70px!important}main .story{padding:65px 0}main .story-visual img{aspect-ratio:2.6/1}main .story-alt .story-text{order:2}main .story-alt .story-visual{order:1}}
+@media(max-width:520px){main .intro h1{font-size:36px}main .intro-visual img{height:auto}main .story-visual{padding:12px}main .story .image-num{right:10px;font-size:10px;min-width:0}}
+
+/* gioi-thieu-v5.css */
+/* V5 – lời kết rõ nét, hai dòng cân đối trên desktop */
+main .last-word{background:linear-gradient(110deg,#052b50 0%,#0a4674 65%,#0d5c8a 100%);padding:70px 24px 76px}
+main .last-word h2{color:#fff!important;text-shadow:0 2px 14px rgba(0,0,0,.12);font-weight:750;font-size:clamp(23px,2.25vw,34px);line-height:1.55;letter-spacing:-.025em;max-width:1480px;margin:20px auto 0}
+main .last-word h2 .last-word-line{display:block;white-space:nowrap}
+main .last-word span{color:#ffd447}
+@media(max-width:1050px){main .last-word h2 .last-word-line{white-space:normal}}
+@media(max-width:600px){main .last-word{padding:55px 18px}main .last-word h2{font-size:clamp(20px,5vw,26px);line-height:1.6}}
+
+/* gioi-thieu-v6.css */
+/* V6: closing statement + subtle original technology connection background */
+main .last-word{position:relative;isolation:isolate;overflow:hidden;background:#052b50 url("/site-assets/future-network-bg.svg") center 60%/cover no-repeat;padding:84px 24px 94px;text-align:center}
+main .last-word::before{content:"";position:absolute;inset:0;z-index:-1;background:linear-gradient(90deg,rgba(5,43,80,.86),rgba(5,43,80,.78) 48%,rgba(5,43,80,.83));pointer-events:none}
+main .last-word .wrap{position:relative;z-index:1}
+main .last-word h2{color:#fff!important;font-weight:750;font-size:clamp(21px,2vw,31px);line-height:1.65;letter-spacing:-.025em;max-width:1560px;margin:0 auto;text-shadow:0 2px 10px rgba(0,0,0,.3)}
+main .last-word h2 .last-word-line{color:#fff;display:block;white-space:nowrap}
+main .last-word h2::after{content:"";display:block;width:90px;height:4px;border-radius:5px;background:#d19f02;margin:28px auto 0}
+@media(max-width:1280px){main .last-word h2 .last-word-line{white-space:normal}}
+@media(max-width:600px){main .last-word{padding:65px 16px 74px}main .last-word h2{font-size:clamp(19px,4.6vw,25px);line-height:1.6}}
+
+/* gioi-thieu-v7.css */
+/* V7: typographic scale, compact rhythm, full-bleed images, interactive AI */
+main .intro{padding:52px 0 58px!important}
+main .intro-grid{width:min(94%,1650px);gap:clamp(34px,4vw,75px)!important}
+main .intro h1{font-size:clamp(37px,3.2vw,59px);line-height:1.19;margin-bottom:18px}
+main .intro-text p{font-size:clamp(16px,1.04vw,19px);line-height:1.7;margin-bottom:13px}
+main .intro-text .intro-lead{font-size:clamp(17px,1.12vw,20px);line-height:1.65}
+main .story{padding:45px 0 52px!important}
+main .story-grid{gap:clamp(30px,4.5vw,80px);align-items:center}
+main .story-visual{padding:0!important;overflow:hidden!important;min-height:330px;aspect-ratio:1.72/1;display:block;box-shadow:0 12px 32px #052b5017;border:0!important;background:transparent!important}
+main .story-visual img{width:100%;height:100%;aspect-ratio:auto!important;position:absolute;inset:0;object-fit:cover!important;border-radius:inherit!important;transition:transform .65s ease,filter .65s ease}
+main .story-visual:hover img{transform:scale(1.045);filter:saturate(1.13)}
+main .story .image-num{bottom:18px;right:18px;z-index:2;box-shadow:0 7px 22px #0003}
+main .story-text h2{font-size:clamp(34px,3vw,52px);margin-bottom:15px}
+main .story-text>p{font-size:clamp(17px,1.12vw,20px);line-height:1.75}
+main .story-text .values p{font-size:clamp(15px,1vw,18px);line-height:1.65}
+main .story-text .small-rule{margin-top:22px}
+main .kicker{font-size:13px;margin-bottom:12px}
+main .last-word{min-height:365px;padding:68px 24px 75px!important;display:grid;place-items:center;background:#052b50!important;isolation:isolate;position:relative;overflow:hidden}
+main .last-word::before{content:"";position:absolute;inset:0;z-index:-1;background:linear-gradient(90deg,#052b50e8,#062e55b8 50%,#052b50e8);pointer-events:none}
+main .last-word .ai-quote-content{z-index:4;position:relative;max-width:1550px;width:94%}
+main .last-word h2{font-size:clamp(27px,2.55vw,45px)!important;line-height:1.47!important;letter-spacing:-.03em;max-width:1450px!important;margin:16px auto!important;font-weight:750}
+main .last-word h2 strong{color:#fff;font-weight:900}
+main .last-word h2::after{margin:20px auto 0}
+.ai-eyebrow{color:#ffe06a;font-size:13px;font-weight:850;letter-spacing:.14em}
+.ai-quote-sub{color:#d4e9f8;font-size:clamp(14px,.95vw,17px);margin:8px auto 0;line-height:1.6}
+.ai-scene,.ai-grid,.ai-glow,.ai-lines,.ai-particles,.ai-nodes{position:absolute;inset:0;pointer-events:none}
+.ai-scene{z-index:-2;background:radial-gradient(ellipse at 50% 110%,#126ba6 0%,#052b50 72%);overflow:hidden}
+.ai-grid{opacity:.2;background-image:linear-gradient(#66baf740 1px,transparent 1px),linear-gradient(90deg,#66baf740 1px,transparent 1px);background-size:55px 55px;transform:perspective(650px) rotateX(45deg) scale(1.6);transform-origin:center bottom}
+.ai-glow{background:radial-gradient(350px circle at var(--mx,50%) var(--my,50%),#30c9ff5c,transparent 75%);opacity:.35;transition:opacity .3s}
+.ai-interactive:hover .ai-glow{opacity:.9}
+.ai-lines{width:100%;height:100%;opacity:.4}
+.ai-lines path{fill:none;stroke:#39c8ff;stroke-width:1.8;stroke-dasharray:8 15;animation:flowline 8s linear infinite}
+.ai-lines path:nth-child(2){stroke:#f9cf4b;animation-duration:11s}
+.ai-lines path:nth-child(3){stroke:#4fe5a5;animation-duration:9s}
+@keyframes flowline{to{stroke-dashoffset:-300}}
+.ai-node{position:absolute;border:1px solid #72d8ff80;border-radius:30px;background:#0d56808c;color:#d9f5ff;font-size:11px;font-weight:800;letter-spacing:.1em;padding:10px 15px;box-shadow:0 0 25px #18b5ff32;animation:nodefloat 5s ease-in-out infinite}
+.n1{top:16%;left:8%}.n2{top:14%;right:12%;animation-delay:-1s}.n3{bottom:18%;left:11%;animation-delay:-2s}.n4{bottom:17%;right:8%;animation-delay:-3s}.n5{top:45%;right:4%;animation-delay:-4s}
+@keyframes nodefloat{50%{transform:translateY(-12px)}}
+.ai-particles i{position:absolute;width:4px;height:4px;border-radius:50%;background:#7deaff;box-shadow:0 0 12px #65dcff;animation:particle 5s ease-in-out infinite}
+@keyframes particle{0%,100%{opacity:.1;transform:translateY(0)}50%{opacity:1;transform:translateY(-24px)}}
+@media(max-width:900px){main .intro-grid,main .story-grid{grid-template-columns:1fr!important}main .intro{padding:35px 0 44px!important}main .story{padding:34px 0 45px!important}main .story-visual{min-height:250px}main .last-word{min-height:350px}.ai-node{font-size:9px}.n5{display:none}}
+@media(max-width:600px){main .story-visual{min-height:220px}main .last-word{padding:55px 15px!important}main .last-word h2{font-size:clamp(24px,5.2vw,32px)!important}.ai-node{opacity:.55}.n3,.n4{display:none}}
+@media(prefers-reduced-motion:reduce){.ai-lines path,.ai-node,.ai-particles i{animation:none!important}main .story-visual img{transition:none!important}}
+
+/* gioi-thieu-v8.css */
+/* V8: four semantically correct core values and readable future statement */
+main .last-word .ai-quote-content{max-width:1740px;width:min(96%,1740px)}
+main .last-word h2{max-width:1700px!important;font-size:clamp(27px,2.1vw,40px)!important;line-height:1.55!important;letter-spacing:-.035em!important;text-wrap:balance}
+main .last-word h2 .keep-together{white-space:nowrap;color:#fff;font-weight:850}
+main #values .story-visual{aspect-ratio:1.72/1;min-height:340px}
+main #values .story-visual img{object-fit:cover!important}
+@media(max-width:1100px){main .last-word h2{font-size:clamp(24px,3.3vw,36px)!important}}
+@media(max-width:650px){main .last-word h2{font-size:clamp(22px,5.2vw,29px)!important}main .last-word h2 .keep-together{white-space:normal}main #values .story-visual{min-height:220px}}
+
+/* gioi-thieu-v9.css */
+/* V9: correct the inherited 11px font size from .last-word span. */
+main .last-word h2 .keep-together {
+  font-size: inherit !important;
+  line-height: inherit !important;
+  letter-spacing: inherit !important;
+  font-weight: inherit !important;
+  color: inherit !important;
+  white-space: nowrap;
+}
+@media (max-width: 650px) {
+  main .last-word h2 .keep-together { white-space: normal; }
+}
+

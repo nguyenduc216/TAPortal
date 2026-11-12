@@ -11,6 +11,7 @@ namespace TAPortal.Web.Services;
 public static class WebsiteSectionForm
 {
     public const int MaxText = 4000;
+    public const int MaxHtml = 400_000;
 
     public static (JsonObject Content, List<string> Errors) Read(SectionType type, IFormCollection form)
     {
@@ -42,6 +43,13 @@ public static class WebsiteSectionForm
 
     private static string Value(FieldDef field, string raw, string label, List<string> errors)
     {
+        if (field.Kind == FieldKind.Html)
+        {
+            if (raw.Length > MaxHtml) { errors.Add($"{label}: nội dung quá dài (tối đa {MaxHtml / 1000} nghìn ký tự)."); return ""; }
+            var html = PostHtml.SanitizeSection(raw.Replace("/WebsiteMedia/File/", "/media/"));
+            if (string.IsNullOrWhiteSpace(PostHtml.PlainText(html)) && !html.Contains("<img", StringComparison.OrdinalIgnoreCase)) errors.Add($"{label}: nội dung trống.");
+            return html;
+        }
         var value = field.Kind is FieldKind.TextArea or FieldKind.Lines ? raw.Replace("\r\n", "\n").Trim() : raw.Trim();
         if (value.Length > MaxText) { errors.Add($"{label}: tối đa {MaxText} ký tự."); value = value[..MaxText]; }
         if (field.Kind == FieldKind.Url && !SafeUrl.IsAllowed(value)) { errors.Add($"{label}: liên kết không hợp lệ (chỉ dùng /đường-dẫn, #mục, https://, tel:, mailto:)."); value = ""; }

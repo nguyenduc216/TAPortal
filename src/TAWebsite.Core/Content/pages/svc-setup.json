@@ -1,0 +1,77 @@
+{
+ "key": "svc-setup",
+ "path": "/dich-vu/thanh-lap-doanh-nghiep",
+ "name": "Dịch vụ: Thành lập doanh nghiệp",
+ "title": "Thành lập doanh nghiệp trọn gói | T.A Tư vấn giải pháp",
+ "description": "Tư vấn loại hình, soạn hồ sơ, nhận giấy chứng nhận và hoàn tất thủ tục sau thành lập; thay đổi đăng ký kinh doanh.",
+ "main": "dv-main",
+ "nav": "services",
+ "styles": [],
+ "scripts": [],
+ "sections": [
+  {
+   "key": "hero",
+   "type": "rich-html",
+   "name": "Banner đầu trang",
+   "content": {
+    "html": "<section aria-labelledby=\"dv-title\" class=\"dv-hero\"><div class=\"wrap dv-hero-grid\">\n<div>\n<nav aria-label=\"Breadcrumb\" class=\"dv-crumb\"><a href=\"/\">Trang chủ</a><span aria-hidden=\"true\">›</span><a href=\"/dich-vu\">Dịch vụ</a><span aria-hidden=\"true\">›</span><span>Thành lập doanh nghiệp</span></nav>\n<span class=\"dv-kicker\">DỊCH VỤ 01 · PHÁP LÝ DOANH NGHIỆP</span>\n<h1 id=\"dv-title\">Thành lập doanh nghiệp <em>trọn gói</em>, sẵn sàng hoạt động ngay</h1>\n<p class=\"dv-hero-lead\">T.A tư vấn loại hình, đặt tên, ngành nghề, vốn điều lệ; soạn và nộp hồ sơ; theo dõi kết quả và hoàn tất các thủ tục sau thành lập để doanh nghiệp có thể xuất hóa đơn, kê khai thuế đúng từ ngày đầu.</p>\n<div class=\"dv-hero-actions\"><a class=\"btn btn-gold btn-action\" href=\"/lien-he?dv=thanh-lap\">☎ TƯ VẤN THÀNH LẬP</a><a class=\"btn btn-outline btn-action\" href=\"#ho-so\">HỒ SƠ CẦN CHUẨN BỊ</a></div>\n<div class=\"dv-facts\">\n<div><b>3 ngày làm việc</b><span>Thời hạn cấp GCN theo quy định*</span></div>\n<div><b>1 đầu mối</b><span>Từ tư vấn đến bàn giao</span></div>\n<div><b>8 việc</b><span>Sau thành lập được hướng dẫn</span></div>\n</div>\n</div>\n<div class=\"dv-commit-photo\"><img alt=\"Chuyên viên T.A tư vấn hồ sơ đăng ký doanh nghiệp\" src=\"/site-assets/service-4.webp\"/><div class=\"dv-commit-badge\"><b>Hồ sơ nộp trực tuyến</b><span>Qua Cổng thông tin quốc gia về đăng ký doanh nghiệp.</span></div></div>\n</div></section>"
+   }
+  },
+  {
+   "key": "company-types",
+   "type": "rich-html",
+   "name": "Chọn loại hình doanh nghiệp",
+   "content": {
+    "html": "<section class=\"dv-section\"><div class=\"wrap\">\n<div class=\"dv-head\"><div><span class=\"eyebrow\">BƯỚC ĐẦU TIÊN</span><h2>Chọn loại hình phù hợp với kế hoạch kinh doanh</h2></div><p>Loại hình ảnh hưởng đến trách nhiệm tài sản, khả năng gọi vốn, nghĩa vụ kế toán – thuế. T.A tư vấn dựa trên kế hoạch thực tế, không áp một mẫu cho mọi trường hợp.</p></div>\n<div class=\"dv-table-wrap\"><table class=\"dv-table\">\n<thead><tr><th scope=\"col\">Tiêu chí</th><th scope=\"col\">Hộ kinh doanh</th><th scope=\"col\">Công ty TNHH 1 thành viên</th><th scope=\"col\">Công ty TNHH 2 thành viên trở lên</th><th scope=\"col\">Công ty cổ phần</th></tr></thead>\n<tbody>\n<tr><th scope=\"row\">Chủ sở hữu</th><td>Cá nhân hoặc thành viên hộ gia đình</td><td>01 cá nhân hoặc tổ chức</td><td>Từ 02 đến 50 thành viên</td><td>Tối thiểu 03 cổ đông, không giới hạn tối đa</td></tr>\n<tr><th scope=\"row\">Trách nhiệm tài sản</th><td>Toàn bộ tài sản của chủ hộ</td><td>Trong phạm vi vốn điều lệ</td><td>Trong phạm vi phần vốn góp</td><td>Trong phạm vi số vốn đã góp</td></tr>\n<tr><th scope=\"row\">Tư cách pháp nhân</th><td>Không</td><td>Có</td><td>Có</td><td>Có</td></tr>\n<tr><th scope=\"row\">Huy động vốn</th><td>Hạn chế</td><td>Tăng vốn chủ sở hữu, không phát hành cổ phần</td><td>Nhận thêm thành viên, không phát hành cổ phần</td><td>Được phát hành cổ phần</td></tr>\n<tr><th scope=\"row\">Phù hợp với</th><td><span class=\"tag\">Cửa hàng, dịch vụ nhỏ</span></td><td><span class=\"tag\">Chủ sở hữu duy nhất</span></td><td><span class=\"tag\">Nhóm sáng lập nhỏ</span></td><td><span class=\"tag\">Kế hoạch gọi vốn, mở rộng</span></td></tr>\n</tbody></table></div>\n<p class=\"dv-note\">Bảng so sánh tóm tắt để tham khảo, cần đối chiếu Luật Doanh nghiệp và văn bản hướng dẫn hiện hành.</p>\n</div></section>"
+   }
+  },
+  {
+   "key": "process",
+   "type": "rich-html",
+   "name": "Quy trình 6 bước",
+   "content": {
+    "html": "<section class=\"dv-section dv-soft\" id=\"quy-trinh\"><div class=\"wrap\">\n<div class=\"dv-head center\"><span class=\"eyebrow\">QUY TRÌNH THỰC HIỆN</span><h2>6 bước từ ý tưởng đến doanh nghiệp sẵn sàng hoạt động</h2></div>\n<div class=\"dv-timeline\">\n<div class=\"dv-tl\"><h3>Tư vấn ban đầu</h3><p>Loại hình, tên, ngành nghề, vốn, địa chỉ trụ sở.</p><em>Ngày 1</em></div>\n<div class=\"dv-tl\"><h3>Kiểm tra tên &amp; ngành</h3><p>Tra cứu tên trùng, mã ngành, điều kiện kinh doanh.</p><em>Ngày 1</em></div>\n<div class=\"dv-tl\"><h3>Soạn hồ sơ</h3><p>Giấy đề nghị, điều lệ, danh sách thành viên/cổ đông.</p><em>Ký xác nhận</em></div>\n<div class=\"dv-tl\"><h3>Nộp &amp; theo dõi</h3><p>Nộp trực tuyến, xử lý yêu cầu bổ sung nếu có.</p><em>Theo cơ quan ĐKKD</em></div>\n<div class=\"dv-tl\"><h3>Nhận kết quả</h3><p>Giấy chứng nhận ĐKDN, mã số doanh nghiệp đồng thời là MST.</p><em>Bàn giao</em></div>\n<div class=\"dv-tl\"><h3>Thủ tục sau thành lập</h3><p>Con dấu, chữ ký số, hóa đơn điện tử, tài khoản ngân hàng.</p><em>Hoàn tất</em></div>\n</div></div></section>"
+   }
+  },
+  {
+   "key": "documents",
+   "type": "rich-html",
+   "name": "Hồ sơ chuẩn bị & bàn giao",
+   "content": {
+    "html": "<section class=\"dv-section\" id=\"ho-so\"><div class=\"wrap\">\n<div class=\"dv-head\"><div><span class=\"eyebrow\">CHUẨN BỊ &amp; BÀN GIAO</span><h2>Bạn cung cấp gì – T.A bàn giao gì</h2></div><p>Danh sách rõ ràng để hai bên phối hợp nhanh, tránh hồ sơ phải sửa đi sửa lại.</p></div>\n<div class=\"dv-split\">\n<div class=\"dv-box\"><h3><i>📋</i>Thông tin khách hàng chuẩn bị</h3><ul class=\"dv-check gold\">\n<li><b>CCCD/hộ chiếu</b><small>Của chủ sở hữu, thành viên góp vốn, người đại diện theo pháp luật</small></li>\n<li><b>Tên doanh nghiệp dự kiến</b><small>Nên có 2–3 phương án dự phòng</small></li>\n<li><b>Địa chỉ trụ sở chính</b><small>Xác định rõ, hợp pháp; lưu ý trường hợp căn hộ chung cư</small></li>\n<li><b>Ngành nghề kinh doanh</b><small>Mô tả hoạt động thực tế để T.A chọn mã ngành phù hợp</small></li>\n<li><b>Vốn điều lệ &amp; tỷ lệ góp vốn</b><small>Hình thức góp: tiền, tài sản; thời hạn góp</small></li>\n<li><b>Thông tin liên hệ</b><small>Email, số điện thoại của doanh nghiệp</small></li>\n</ul></div>\n<div class=\"dv-box\"><h3><i>📦</i>T.A bàn giao</h3><ul class=\"dv-check\">\n<li><b>Giấy chứng nhận đăng ký doanh nghiệp</b><small>Bản chính và bản điện tử</small></li>\n<li><b>Điều lệ công ty</b><small>Đã ký, lưu trữ theo quy định</small></li>\n<li><b>Con dấu doanh nghiệp</b><small>Theo mẫu doanh nghiệp lựa chọn</small></li>\n<li><b>Hướng dẫn chữ ký số &amp; hóa đơn điện tử</b><small>Đăng ký, kích hoạt, mẫu hóa đơn</small></li>\n<li><b>Bộ hồ sơ nội bộ ban đầu</b><small>Sổ đăng ký thành viên/cổ đông, quyết định bổ nhiệm</small></li>\n<li><b>Lịch nghĩa vụ thuế năm đầu</b><small>Các mốc kê khai, nộp cần theo dõi</small></li>\n</ul></div>\n</div></div></section>"
+   }
+  },
+  {
+   "key": "checklist",
+   "type": "rich-html",
+   "name": "Checklist sau thành lập",
+   "content": {
+    "html": "<section class=\"dv-section dv-sky\"><div class=\"wrap\">\n<div class=\"dv-head\"><div><span class=\"eyebrow\">SAU KHI CÓ GIẤY PHÉP</span><h2>Checklist việc cần làm sau thành lập</h2></div><p>Nhiều doanh nghiệp bị nhắc nhở hoặc phạt vì bỏ sót các bước sau thành lập. Đánh dấu để tự kiểm tra tiến độ.</p></div>\n<div class=\"dv-progress\">Đã hoàn thành <span class=\"dv-progress-count\">0/8</span><div class=\"dv-progress-bar\"><span></span></div></div>\n<div class=\"dv-todo\">\n<label><input type=\"checkbox\"/><span><b>Treo biển tên tại trụ sở</b><small>Ghi tên, địa chỉ, mã số doanh nghiệp</small></span></label>\n<label><input type=\"checkbox\"/><span><b>Mở tài khoản ngân hàng</b><small>Tài khoản đứng tên doanh nghiệp để giao dịch</small></span></label>\n<label><input type=\"checkbox\"/><span><b>Đăng ký chữ ký số</b><small>Dùng để kê khai thuế, ký hóa đơn, nộp hồ sơ điện tử</small></span></label>\n<label><input type=\"checkbox\"/><span><b>Đăng ký hóa đơn điện tử</b><small>Trước khi phát sinh bán hàng, cung cấp dịch vụ</small></span></label>\n<label><input type=\"checkbox\"/><span><b>Góp đủ vốn điều lệ</b><small>Trong thời hạn 90 ngày kể từ ngày được cấp GCN</small></span></label>\n<label><input type=\"checkbox\"/><span><b>Kích hoạt tài khoản thuế điện tử</b><small>Nộp tờ khai và nộp thuế trực tuyến</small></span></label>\n<label><input type=\"checkbox\"/><span><b>Chọn chế độ &amp; tổ chức sổ sách kế toán</b><small>Phù hợp quy mô và ngành nghề</small></span></label>\n<label><input type=\"checkbox\"/><span><b>Đăng ký lao động, bảo hiểm</b><small>Khi bắt đầu tuyển dụng nhân sự</small></span></label>\n</div>\n<p class=\"dv-note\">Danh sách tham khảo; nghĩa vụ cụ thể phụ thuộc loại hình, ngành nghề và quy định tại thời điểm thành lập.</p>\n</div></section>"
+   }
+  },
+  {
+   "key": "changes",
+   "type": "rich-html",
+   "name": "Thay đổi đăng ký kinh doanh",
+   "content": {
+    "html": "<section class=\"dv-section\" id=\"thay-doi\"><div class=\"wrap\">\n<div class=\"dv-head\"><div><span class=\"eyebrow\">DOANH NGHIỆP ĐANG HOẠT ĐỘNG</span><h2>Thay đổi đăng ký kinh doanh</h2></div><p>Khi có thay đổi, doanh nghiệp cần đăng ký hoặc thông báo trong thời hạn luật định. T.A rà soát cả các việc liên quan như hóa đơn, thuế, con dấu.</p></div>\n<div class=\"dv-changes\">\n<div class=\"dv-change\"><i>Aa</i><span>Đổi tên doanh nghiệp<small>Kèm cập nhật hóa đơn, con dấu</small></span></div>\n<div class=\"dv-change\"><i>⌖</i><span>Thay đổi địa chỉ trụ sở<small>Cùng hoặc khác cơ quan thuế quản lý</small></span></div>\n<div class=\"dv-change\"><i>≡</i><span>Bổ sung, thay đổi ngành nghề<small>Kiểm tra điều kiện kinh doanh</small></span></div>\n<div class=\"dv-change\"><i>₫</i><span>Tăng, giảm vốn điều lệ<small>Hồ sơ góp vốn, quyết định liên quan</small></span></div>\n<div class=\"dv-change\"><i>👤</i><span>Thay đổi người đại diện<small>Cập nhật chữ ký số, ngân hàng</small></span></div>\n<div class=\"dv-change\"><i>⇄</i><span>Chuyển nhượng vốn, thành viên<small>Lưu ý nghĩa vụ thuế chuyển nhượng</small></span></div>\n<div class=\"dv-change\"><i>⌂</i><span>Mở chi nhánh, văn phòng đại diện<small>Địa điểm kinh doanh</small></span></div>\n<div class=\"dv-change\"><i>⏸</i><span>Tạm ngừng, tiếp tục kinh doanh<small>Thông báo đúng thời hạn</small></span></div>\n<div class=\"dv-change\"><i>⇪</i><span>Chuyển đổi loại hình<small>Hộ KD lên DN, TNHH sang cổ phần</small></span></div>\n</div></div></section>"
+   }
+  },
+  {
+   "key": "faq",
+   "type": "rich-html",
+   "name": "Câu hỏi thường gặp",
+   "content": {
+    "html": "<section class=\"dv-section dv-soft\"><div class=\"wrap dv-faq\">\n<div><span class=\"eyebrow\">CÂU HỎI THƯỜNG GẶP</span><h2>Về thành lập doanh nghiệp</h2><p>Câu trả lời mang tính tham khảo, T.A tư vấn cụ thể theo hồ sơ thực tế.</p></div>\n<div>\n<details><summary>Có cần chứng minh vốn điều lệ khi thành lập không?</summary><p>Với đa số ngành nghề thông thường, doanh nghiệp tự kê khai vốn điều lệ và góp đủ trong thời hạn luật định. Một số ngành nghề có điều kiện yêu cầu vốn pháp định hoặc ký quỹ.</p></details>\n<details><summary>Có được đặt trụ sở tại nhà riêng hoặc căn hộ chung cư không?</summary><p>Nhà riêng có thể sử dụng nếu địa chỉ rõ ràng, hợp pháp. Căn hộ chung cư có mục đích để ở thường không được dùng làm trụ sở; T.A sẽ kiểm tra trường hợp cụ thể.</p></details>\n<details><summary>Vốn điều lệ nên đăng ký bao nhiêu?</summary><p>Nên cân đối giữa quy mô hoạt động, yêu cầu đối tác, khả năng góp vốn thực tế và trách nhiệm tài sản; không nên đăng ký quá cao so với khả năng góp.</p></details>\n<details><summary>Sau thành lập, khi nào phải bắt đầu kê khai thuế?</summary><p>Nghĩa vụ kê khai phát sinh từ khi doanh nghiệp được cấp mã số thuế, kể cả khi chưa có doanh thu. Nên thiết lập dịch vụ kế toán ngay từ tháng đầu.</p></details>\n</div></div></section>"
+   }
+  },
+  {
+   "key": "cta",
+   "type": "rich-html",
+   "name": "Ưu đãi khi kết hợp",
+   "content": {
+    "html": "<section class=\"dv-section\"><div class=\"wrap\">\n<div class=\"dv-cta\"><div><span class=\"eyebrow\">ƯU ĐÃI KHI KẾT HỢP</span><h2>Thành lập xong, kế toán – thuế bắt đầu ngay</h2><p>Kết hợp thành lập doanh nghiệp với gói kế toán – thuế để không bỏ lỡ kỳ kê khai đầu tiên và có sổ sách chuẩn từ ngày đầu.</p></div>\n<div class=\"dv-cta-actions\"><a class=\"btn btn-gold btn-action\" href=\"/lien-he?dv=thanh-lap\">☎ TƯ VẤN THÀNH LẬP</a><a class=\"btn btn-outline btn-action\" href=\"/dich-vu/ke-toan-thue\">XEM GÓI KẾ TOÁN</a></div></div>\n<h2 style=\"font-size:22px;margin:56px 0 18px\">Dịch vụ liên quan</h2>\n<div class=\"dv-related\">\n<a href=\"/dich-vu/ke-toan-thue\"><img alt=\"\" loading=\"lazy\" src=\"/site-assets/service-1.webp\"/><span><b>Kế toán – thuế trọn gói</b><small>Ghi sổ, kê khai, báo cáo theo kỳ</small></span></a>\n<a href=\"/dich-vu#catalog\"><img alt=\"\" loading=\"lazy\" src=\"/site-assets/service-5.webp\"/><span><b>Hộ kinh doanh</b><small>Đăng ký, sổ sách và kê khai</small></span></a>\n<a href=\"/dich-vu#catalog\"><img alt=\"\" loading=\"lazy\" src=\"/site-assets/service-6.webp\"/><span><b>Hóa đơn điện tử &amp; chữ ký số</b><small>Thiết lập ngay sau thành lập</small></span></a>\n</div>\n<p class=\"dv-disclaimer\">* Theo Luật Doanh nghiệp, cơ quan đăng ký kinh doanh cấp giấy chứng nhận trong 03 ngày làm việc kể từ ngày nhận hồ sơ hợp lệ. Nội dung trang là mockup, cần đối chiếu quy định hiện hành trước khi xuất bản.</p>\n</div></section>"
+   }
+  }
+ ]
+}

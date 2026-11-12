@@ -7,6 +7,24 @@
 }
 @switch (f.Kind)
 {
+    case FieldKind.Html:
+        <div class="ta-web-visual" data-ta-visual data-css="@ViewData["WebCss"]" data-main="@ViewData["WebMain"]">
+            <div class="ta-web-visual__bar" role="toolbar" aria-label="Sửa trực quan">
+                <span class="ta-web-visual__sel">Khối đang chọn: <b data-v-label>chưa chọn</b></span>
+                <button type="button" class="btn btn-sm" data-v="dup" disabled>@UiIcon.Render("copy")<span>Nhân bản</span></button>
+                <button type="button" class="btn btn-sm" data-v="up" disabled>↑</button>
+                <button type="button" class="btn btn-sm" data-v="down" disabled>↓</button>
+                <button type="button" class="btn btn-sm btn-ghost-danger" data-v="del" disabled>@UiIcon.Render("trash")<span>Xóa khối</span></button>
+                <button type="button" class="btn btn-sm" data-v="link">@UiIcon.Render("link")<span>Liên kết</span></button>
+                <span class="ms-auto"></span>
+                <button type="button" class="btn btn-sm" data-v="mobile">@UiIcon.Render("phone")<span>Cỡ điện thoại</span></button>
+                <button type="button" class="btn btn-sm" data-v="html">&lt;/&gt; HTML</button>
+            </div>
+            <iframe class="ta-web-visual__frame" title="Bản xem trước có thể sửa" data-v-frame></iframe>
+            <textarea class="ta-web-visual__html form-control" name="@Model.Name" rows="24" hidden data-v-html>@value</textarea>
+            @if (f.Help is not null) {<small class="form-hint">@f.Help</small>}
+        </div>
+        break;
     case FieldKind.List:
         var items = Model.Content.List(f.Key);
         <div class="ta-web-list" data-ta-web-list="@Model.Name" data-max="@f.MaxItems">

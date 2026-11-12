@@ -1,0 +1,3 @@
+@model SectionVm
+@* Mockup section edited visually in TA Portal; sanitized (allow-list) before it is written to the page. *@
+@Html.Raw(PostHtml.SanitizeSection(Model.C["html"]))

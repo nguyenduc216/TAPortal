@@ -107,6 +107,38 @@ public sealed class SafeWebsiteTests
     }
 
     [Fact]
+    public void SectionHtmlKeepsTheDesignButNotScripts()
+    {
+        var html = PostHtml.SanitizeSection("<section class=\"dv-section\" id=\"x\" style=\"padding-top:40px\"><div role=\"tablist\" aria-label=\"Giai đoạn\">"
+            + "<button role=\"tab\" aria-selected=\"true\" aria-controls=\"p1\" onclick=\"evil()\">A</button></div><div id=\"p1\" role=\"tabpanel\" hidden>B</div>"
+            + "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\"><path d=\"M1 1h2\"/></svg><a href=\"javascript:alert(1)\">x</a>"
+            + "<script>alert(1)</script><iframe src=\"https://evil\"></iframe><form action=\"https://evil\"><input name=\"q\"></form></section>");
+        foreach (var kept in new[] { "class=\"dv-section\"", "id=\"x\"", "role=\"tablist\"", "aria-label=\"Giai đoạn\"", "aria-controls=\"p1\"", "hidden", "<svg", "<path", "padding-top" })
+            Assert.Contains(kept, html);
+        Assert.Matches("(?i)viewbox=\"0 0 24 24\"", html);
+        foreach (var removed in new[] { "onclick", "javascript:", "<script", "<iframe", "<form" }) Assert.DoesNotContain(removed, html, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void PhaseTwoPagesComeFromTheMockups()
+    {
+        foreach (var (key, path, sections) in new[] { ("about", "/gioi-thieu", 5), ("services", "/dich-vu", 8), ("svc-setup", "/dich-vu/thanh-lap-doanh-nghiep", 8), ("svc-accounting", "/dich-vu/ke-toan-thue", 9) })
+        {
+            var page = SiteMap.Get(key);
+            Assert.Equal(path, page.Path);
+            Assert.Equal(sections, page.Sections.Count);
+            Assert.Same(page, SiteMap.FindByPath(path + "/"));
+            Assert.All(page.Sections, s => Assert.Equal("rich-html", s.Type));
+            var html = string.Join("", page.Sections.Select(s => s.Defaults["html"]!.GetValue<string>()));
+            Assert.DoesNotContain(".html\"", html); // every mockup link points to a site route
+            Assert.DoesNotContain("src=\"assets/", html);
+            Assert.All(Regex.Matches(html, "src=\"/site-assets/([^\"]+)\"").Select(m => m.Groups[1].Value), a => Assert.True(SiteAssets.Exists(a), a));
+        }
+        Assert.Contains("/css/gioi-thieu.css", SiteMap.Get("about").Styles);
+        Assert.Equal("dv-main", SiteMap.Get("services").MainClass);
+    }
+
+    [Fact]
     public void SavedContentReplacesDefaultsFieldByField()
     {
         var section = SiteMap.Get("home").Section("hero")!;
@@ -219,7 +251,7 @@ public sealed class SafeWebsiteTests
         var store = new MemoryAdminStore();
         await using var f = AdminFactory(store, "WEBSITE.VIEW", "WEBSITE.CONTENT.EDIT", "WEBSITE.POSTS.EDIT", "WEBSITE.MEDIA.EDIT", "WEBSITE.SETTINGS.EDIT", "WEBSITE.LEADS.VIEW", "WEBSITE.LEADS.EDIT");
         var client = AdminClient(f);
-        foreach (var url in new[] { "/Website", "/Website/Page/home", "/Website/Page/contact", "/Website/Section?page=home&key=hero", "/Website/Section?page=contact&key=form",
+        foreach (var url in new[] { "/Website", "/Website/Page/home", "/Website/Page/contact", "/Website/Page/about", "/Website/Section?page=about&key=closing", "/Website/Section?page=home&key=hero", "/Website/Section?page=contact&key=form",
                      "/Website/Settings", "/WebsiteMedia", "/WebsitePosts", "/WebsitePosts/Create", "/WebsiteLeads" })
         {
             var response = await client.GetAsync(url);
@@ -238,6 +270,17 @@ public sealed class SafeWebsiteTests
         var saved = store.Sections[("home", "faq")];
         Assert.Equal("Câu hỏi", new SectionContent(saved)["title"]);
         Assert.Single(new SectionContent(saved).List("items"));
+
+        var visual = await client.GetStringAsync("/Website/Section?page=services&key=pillars");
+        Assert.Contains("data-ta-visual", visual);
+        Assert.Contains("/css/dich-vu.css", visual);
+        var savedVisual = await client.PostAsync("/Website/Section?page=services&key=pillars", Form(Token(visual), ("stamp", ""),
+            ("c.html", "<section class=\"dv-section\"><h2 onclick=\"x()\">Ba nhóm</h2><img src=\"/WebsiteMedia/File/abc\"><script>x</script></section>")));
+        Assert.Equal(HttpStatusCode.Redirect, savedVisual.StatusCode);
+        var stored = new SectionContent(store.Sections[("services", "pillars")])["html"];
+        Assert.Contains("src=\"/media/abc\"", stored);
+        Assert.DoesNotContain("onclick", stored);
+        Assert.DoesNotContain("script", stored);
 
         var bad = await client.PostAsync("/Website/Section?page=home&key=hero", Form(Token(editor), ("c.primaryUrl", "javascript:alert(1)")));
         Assert.Equal(HttpStatusCode.BadRequest, bad.StatusCode);
@@ -289,6 +332,12 @@ public sealed class SafeWebsiteTests
         Assert.Equal("thu-tuc-sau-thanh-lap", post.Input.Slug);
         Assert.DoesNotContain("script", post.Input.BodyHtml);
         Assert.DoesNotContain("onclick", post.Input.BodyHtml);
+        var preview = await client.GetAsync($"/WebsitePosts/Preview/{store.Posts.Keys.Single()}");
+        Assert.Equal(HttpStatusCode.OK, preview.StatusCode);
+        var previewHtml = await preview.Content.ReadAsStringAsync();
+        Assert.Contains("XEM TRƯỚC", previewHtml);
+        Assert.Contains("<h2 id=\"muc-1\">A</h2>", previewHtml);
+        Assert.DoesNotContain("<script>x", previewHtml);
         var invalid = await client.PostAsync("/WebsitePosts/Create", Form(token, ("Input.Title", ""), ("Input.Publish", "true")));
         Assert.Equal(HttpStatusCode.BadRequest, invalid.StatusCode);
         Assert.Single(store.Posts);
@@ -316,6 +365,14 @@ public sealed class SafeWebsiteTests
         Assert.Equal(HttpStatusCode.OK, (await client.GetAsync("/tin-tuc")).StatusCode);
         Assert.Contains("Disallow: /", await client.GetStringAsync("/robots.txt"));
         Assert.Equal("image/webp", (await client.GetAsync("/site-assets/service-1.webp")).Content.Headers.ContentType!.MediaType);
+        foreach (var (url, nav) in new[] { ("/gioi-thieu", "GIỚI THIỆU"), ("/dich-vu", "DỊCH VỤ"), ("/dich-vu/thanh-lap-doanh-nghiep", "DỊCH VỤ"), ("/dich-vu/ke-toan-thue/", "DỊCH VỤ") })
+        {
+            var page = await client.GetStringAsync(url);
+            Assert.Matches($"class=\"is-current\"[^>]*>(?:(?!</a>).)*<span>{nav}</span>", page);
+        }
+        Assert.Contains("/css/gioi-thieu.css", await client.GetStringAsync("/gioi-thieu"));
+        Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync("/dich-vu/khong-co")).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync("/global")).StatusCode);
     }
 
     [Fact]
