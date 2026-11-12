@@ -157,6 +157,7 @@
                     rows = new[]
                     {
                         new[] { "Ngân hàng nhận", Model.BankName ?? "" },
+                        new[] { "Tài khoản thụ hưởng", Model.AccountName ?? "" },
                         new[] { "Số tài khoản", Model.Account ?? Model.Transfer?.Account ?? "" },
                         new[] { "Nội dung chuyển khoản", Model.Transfer?.Content ?? transfer },
                         new[] { "Mã đơn hàng", o.OrderNo },
@@ -184,12 +185,17 @@
             <div><dt>Mã đơn hàng</dt><dd><span class="cp-code">@o.OrderNo</span></dd></div>
             @* Copy buttons (operator 2026-11-10): for banks whose app cannot be opened with the transfer filled in. *@
             @if (Model.Open && Model.BankName is string bankName) {<div><dt>Ngân hàng nhận</dt><dd>@bankName</dd></div>}
+            @if (Model.Open && Model.AccountName is string holder) {<div><dt>Tài khoản thụ hưởng</dt><dd>@holder</dd></div>}
             @if (Model.Open && (Model.Account ?? Model.Transfer?.Account) is string acc) {<div><dt>Số tài khoản</dt><dd class="cp-pay__copy"><span>@acc</span><button type="button" data-cp-copy-text="@acc" title="Sao chép số tài khoản" aria-label="Sao chép số tài khoản">@UiIcon.Render("copy")</button></dd></div>}
             @if (Model.Open) {<div><dt>Số tiền</dt><dd class="cp-pay__copy"><span>@PaymentText.Money(o.Remaining)</span><button type="button" data-cp-copy-text="@o.Remaining.ToString("0", System.Globalization.CultureInfo.InvariantCulture)" title="Sao chép số tiền" aria-label="Sao chép số tiền">@UiIcon.Render("copy")</button></dd></div>}
             @if (Model.Open) {<div><dt>Nội dung chuyển khoản</dt><dd class="cp-pay__copy"><span class="cp-code">@(Model.Transfer?.Content ?? transfer)</span><button type="button" data-cp-copy-text="@(Model.Transfer?.Content ?? transfer)" title="Sao chép nội dung" aria-label="Sao chép nội dung chuyển khoản">@UiIcon.Render("copy")</button></dd></div>}
             <div><dt>Ngày tạo</dt><dd>@PaymentText.VietnamTime(o.CreatedAt)</dd></div>
         </dl>
 
+        @if (Model.Open && Model.QrOnly)
+        {
+            <p class="cp-note" data-cp-pay-qr-only>@UiIcon.Render("info-circle")<span>Quét mã QR (hoặc tải ảnh mã QR rồi quét từ ảnh) để thanh toán được xác nhận tự động. Chuyển khoản tay vào số tài khoản trên vẫn nhận được tiền, nhưng người bán sẽ xác nhận sau.</span></p>
+        }
         @if (Model.Transfer is { } t)
         {
             <button class="cp-btn cp-btn--primary cp-btn--block cp-pay__transfer" type="button" data-cp-open-dialog="bankApps">@UiIcon.Render("building-bank")<span>Chuyển khoản @PaymentText.Money(o.Remaining)</span></button>
@@ -199,6 +205,8 @@
                     <button class="cp-pay__apps-close" type="button" aria-label="Đóng" data-cp-close-dialog>×</button>
                 </div>
                 @* Autofill apps open their transfer screen with the QR's account, amount and content; the others only open the app. *@
+                @if (!Model.QrOnly)
+                {
                 <div class="cp-pay__apps-group">Điền sẵn thông tin chuyển khoản</div>
                 <p class="cp-hint">Ứng dụng mở màn hình chuyển khoản với số tài khoản, số tiền và nội dung <span class="cp-code">@(t.Content ?? transfer)</span>. Kiểm tra lại rồi xác nhận.</p>
                 <ul class="cp-pay__app-grid">
@@ -207,7 +215,8 @@
                         <li><a href="@BankAppLinks.Link(app, t, origin + pay)" rel="noopener noreferrer"><img src="@BankAppLinks.Icon(app)" alt="" width="44" height="44" loading="lazy" referrerpolicy="no-referrer" /><span>@app.Name</span></a></li>
                     }
                 </ul>
-                <div class="cp-pay__apps-group">Ngân hàng khác: chỉ mở ứng dụng</div>
+                }
+                <div class="cp-pay__apps-group">@(Model.QrOnly ? "Mở ứng dụng ngân hàng rồi quét ảnh mã QR" : "Ngân hàng khác: chỉ mở ứng dụng")</div>
                 <p class="cp-hint">Ngân hàng chưa hỗ trợ điền sẵn. Tải ảnh mã QR, mở ứng dụng rồi chọn quét mã QR từ ảnh trong máy, hoặc sao chép số tài khoản, số tiền, nội dung ở trang thanh toán.</p>
                 <button class="cp-btn cp-btn--ghost cp-btn--block" type="button" data-cp-save-qr>@downloadIcon<span>Tải ảnh mã QR</span></button>
                 <ul class="cp-pay__app-grid">

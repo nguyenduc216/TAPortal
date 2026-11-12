@@ -274,8 +274,10 @@ public sealed class PayInvoiceInput
 /// </summary>
 public sealed record PayPageVm(string Token, string SellerName, string? SellerTaxCode, string? SellerLogo, string? BuyerName, string? BuyerLogo,
     Order Order, string Status, string? QrSvg, string? BankName, string? Account, DateTime UtcNow, bool InvoiceEditable, DateTime? InvoiceUpdatedAt,
-    PayInvoiceInput Saved, PayInvoiceInput Input, QrTransfer? Transfer = null)
+    PayInvoiceInput Saved, PayInvoiceInput Input, QrTransfer? Transfer = null, string? AccountName = null, bool QrOnly = false)
 {
+    // QrOnly (operator 2026-11-12): the QR pays an alias (MB via the partner: "VQR…"), which no bank accepts when typed or
+    // prefilled. Account is then the real beneficiary account; only a scanned QR is confirmed automatically.
     public string Title => string.IsNullOrWhiteSpace(Order.Description) ? "Đơn hàng " + Order.OrderNo : Order.Description!;
     public bool Open => QrSvg is not null;
 

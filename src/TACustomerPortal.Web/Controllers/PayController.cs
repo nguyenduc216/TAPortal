@@ -112,6 +112,8 @@ public sealed class PayController(IOrderPageStore pages, ILogoStore logos, IPaym
         var open = status is OrderStatus.Awaiting or OrderStatus.Partial;
         var sellerLogo = await logos.LogoVersionAsync(page.CustomerId, null);
         var buyerLogo = contact is null ? null : await logos.LogoVersionAsync(page.CustomerId, contact.Id);
+        var qrKey = order.QrAccount ?? bank?.ReceiveAccount;
+        var qrOnly = qrKey is not null && !qrKey.All(char.IsAsciiDigit) && !string.IsNullOrWhiteSpace(bank?.AccountNumber);
         var defaults = new PayInvoiceInput
         {
             TaxCode = page.InvoiceBuyerTaxCode ?? contact?.TaxCode,
@@ -119,9 +121,9 @@ public sealed class PayController(IOrderPageStore pages, ILogoStore logos, IPaym
         };
         return new PayPageVm(token, page.SellerName, page.SellerTaxCode, sellerLogo is { } s ? LogoImage.Version(s) : null, contact?.Name,
             buyerLogo is { } bl ? LogoImage.Version(bl) : null, order, status, open && order.QrPayload is not null ? QrImage.Svg(order.QrPayload) : null,
-            bank?.BankName, order.QrAccount ?? bank?.ReceiveAccount, now,
+            bank?.BankName, qrOnly ? bank!.AccountNumber : qrKey, now,
             order.InvoiceStatus is OrderInvoiceStatus.None or OrderInvoiceStatus.Failed && status is not (OrderStatus.Cancelled or OrderStatus.CancelledPaid)
                 && contact?.TaxCode is null,
-            page.InvoiceBuyerUpdatedAt, defaults, posted ?? defaults, open ? BankAppLinks.Read(order.QrPayload) : null);
+            page.InvoiceBuyerUpdatedAt, defaults, posted ?? defaults, open ? BankAppLinks.Read(order.QrPayload) : null, bank?.AccountName, qrOnly);
     }
 }
