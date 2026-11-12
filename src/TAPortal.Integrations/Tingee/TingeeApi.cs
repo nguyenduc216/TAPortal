@@ -172,11 +172,11 @@ public sealed class TingeeApiException(string? code, string? message, string? de
     public string? LogCode { get; init; }
 }
 
-/// <summary>transaction/get-paging body: times are UTC+7 "yyyyMMddHHmmss", at most 10 days apart; maxResultCount at most 200.</summary>
+/// <summary>transaction/get-paging body: times are UTC+7 "yyyyMMddHHmmss", at most 10 days apart; maxResultCount documented up to 200 but 200 is refused with 1108; 50 is used.</summary>
 public sealed record TingeeTransactionQuery
 {
     [JsonPropertyName("skipCount")] public int SkipCount { get; init; }
-    [JsonPropertyName("maxResultCount")] public int MaxResultCount { get; init; } = 200;
+    [JsonPropertyName("maxResultCount")] public int MaxResultCount { get; init; } = 50;
     [JsonPropertyName("merchantId")] public long? MerchantId { get; init; }
     [JsonPropertyName("vaAccountNumbers")] public IReadOnlyList<string>? VaAccountNumbers { get; init; }
     [JsonPropertyName("startTime")] public required string StartTime { get; init; }

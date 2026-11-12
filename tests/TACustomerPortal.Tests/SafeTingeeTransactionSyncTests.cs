@@ -55,7 +55,7 @@ public sealed class SafeTingeeTransactionSyncTests
         using var sent = JsonDocument.Parse(handler.Body);
         Assert.Equal("20261110000000", sent.RootElement.GetProperty("startTime").GetString());
         Assert.Equal("20261112235959", sent.RootElement.GetProperty("endTime").GetString());
-        Assert.Equal(200, sent.RootElement.GetProperty("maxResultCount").GetInt32());
+        Assert.Equal(50, sent.RootElement.GetProperty("maxResultCount").GetInt32());
         Assert.Equal(42, sent.RootElement.GetProperty("merchantId").GetInt64());
         Assert.Equal("1", sent.RootElement.GetProperty("vaAccountNumbers")[0].GetString());
         var tx = Assert.Single(page.Items);

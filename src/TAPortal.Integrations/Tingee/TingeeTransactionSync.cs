@@ -33,7 +33,9 @@ public sealed class TingeeTransactionSync(ITingeeApi tingee, IConfiguration conf
 {
     /// <summary>Longest period one sync may cover; the partner allows 10 days per call, so it is split.</summary>
     public const int MaxDays = 31;
-    private const int WindowDays = 9, PageSize = 200, MaxPages = 25, VaPerCall = 50;
+    // The partner documents 200 per page but answers 1108 ("page too large") to 200 (seen 2026-11-12): start at 50 (its own
+    // sample) and halve down to 10 on 1108.
+    private const int WindowDays = 9, PageSize = 50, MinPageSize = 10, MaxPages = 100, VaPerCall = 50;
     private static readonly TimeSpan Vietnam = TimeSpan.FromHours(7);
     private static readonly TimeSpan MinInterval = TimeSpan.FromSeconds(5);
     private static readonly ConcurrentDictionary<string, DateTimeOffset> LastRun = new();
@@ -124,16 +126,28 @@ public sealed class TingeeTransactionSync(ITingeeApi tingee, IConfiguration conf
         for (var start = fromUtc; start < toUtc; start = start.AddDays(WindowDays))
         {
             var end = start.AddDays(WindowDays) < toUtc ? start.AddDays(WindowDays) : toUtc;
+            var size = PageSize;
+            var skip = 0;
             for (var page = 0; page < MaxPages; page++)
             {
-                var result = await tingee.GetTransactionsAsync(new TingeeTransactionQuery
+                TingeePage<TingeeTransactionItem> result;
+                try
                 {
-                    SkipCount = page * PageSize, MaxResultCount = PageSize, MerchantId = merchantId, VaAccountNumbers = vas,
-                    StartTime = Local(start), EndTime = Local(end.AddSeconds(-1)),
-                }, ct);
+                    result = await tingee.GetTransactionsAsync(new TingeeTransactionQuery
+                    {
+                        SkipCount = skip, MaxResultCount = size, MerchantId = merchantId, VaAccountNumbers = vas,
+                        StartTime = Local(start), EndTime = Local(end.AddSeconds(-1)),
+                    }, ct);
+                }
+                catch (TingeeApiException ex) when (ex.Code == "1108" && size > MinPageSize)
+                {
+                    size = Math.Max(MinPageSize, size / 2); // page still too large for the partner: halve and ask again
+                    continue;
+                }
                 foreach (var item in result.Items)
                     if (Code(item) is string code && Belongs(item, accounts)) items[code] = item;
-                if (result.Items.Count < PageSize || (page + 1) * PageSize >= result.TotalCount) break;
+                skip += result.Items.Count;
+                if (result.Items.Count < size || skip >= result.TotalCount) break;
             }
         }
     }
