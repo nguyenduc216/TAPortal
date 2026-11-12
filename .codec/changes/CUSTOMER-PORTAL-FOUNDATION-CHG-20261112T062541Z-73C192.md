@@ -4,7 +4,7 @@
 - Change ID: `CUSTOMER-PORTAL-FOUNDATION-CHG-20261112T062541Z-73C192`
 - Created UTC: 2026-11-12T06:25:41.344750+00:00
 - Tiêu đề: Đăng ký cá nhân, mật khẩu gửi email, mẫu email và điều khoản dịch vụ
-- Trạng thái: IMPLEMENTED
+- Trạng thái: DEPLOYED
 
 ## Yêu cầu và phạm vi
 Operator (2026-11-12), trang đăng ký Hóa đơn tự động:
@@ -44,9 +44,9 @@ Operator (2026-11-12), trang đăng ký Hóa đơn tự động:
 
 ## Git
 - Branch: feature/signup-individual
-- Commit SHA: xem report
+- Commit SHA: 0f5c9d4
 - PR:
-- Merge: xem report
+- Merge: fast-forward main
 - Merge SHA:
 
 ## Rủi ro, quyết định và việc còn lại
