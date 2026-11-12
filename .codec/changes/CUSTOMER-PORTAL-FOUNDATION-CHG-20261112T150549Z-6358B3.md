@@ -4,7 +4,7 @@
 - Change ID: `CUSTOMER-PORTAL-FOUNDATION-CHG-20261112T150549Z-6358B3`
 - Created UTC: 2026-11-12T15:05:49.343415+00:00
 - Tiêu đề: Sign-in gold panel fills wide screens
-- Trạng thái: IMPLEMENTED
+- Trạng thái: DEPLOYED
 
 ## Yêu cầu và phạm vi
 Operator (2026-11-12): trang đăng nhập trên màn hình rộng "vẫn còn nhiều khoảng trống" ở panel vàng; bên nền trắng thêm animation về ngân hàng, thuế, trao đổi giao dịch.
@@ -27,9 +27,9 @@ Operator (2026-11-12): trang đăng nhập trên màn hình rộng "vẫn còn n
 
 ## Git
 - Branch: feature/tx-sync
-- Commit SHA: xem report
+- Commit SHA: 306c51f
 - PR:
-- Merge: xem report
+- Merge: fast-forward main
 - Merge SHA:
 
 ## Rủi ro, quyết định và việc còn lại
