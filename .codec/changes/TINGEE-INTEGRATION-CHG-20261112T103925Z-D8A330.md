@@ -4,7 +4,7 @@
 - Change ID: `TINGEE-INTEGRATION-CHG-20261112T103925Z-D8A330`
 - Created UTC: 2026-11-12T10:39:25.892952+00:00
 - Tiêu đề: Đồng bộ giao dịch thiếu IPN từ lịch sử Tingee; tổng tiền vào/ra trên đối soát
-- Trạng thái: IMPLEMENTED
+- Trạng thái: DEPLOYED
 
 ## Yêu cầu và phạm vi
 Operator (2026-11-12): hôm nay có giao dịch 5,4 triệu vào tài khoản (không qua QR) nhưng trang tra soát không thấy; cần biết mỗi ngày tiền vào, tiền ra bao nhiêu; khi IPN không bắn về thì cần nút đồng bộ lấy lại các giao dịch chưa có IPN; kiểm tra API Tingee có đủ chức năng.
@@ -32,9 +32,9 @@ Kiểm tra: DB production (chỉ đọc) — IPN Payment cuối cùng về dbo.T
 
 ## Git
 - Branch: feature/tx-sync
-- Commit SHA: xem report
+- Commit SHA: 33019c5
 - PR:
-- Merge: xem report
+- Merge: fast-forward main
 - Merge SHA:
 
 ## Rủi ro, quyết định và việc còn lại
