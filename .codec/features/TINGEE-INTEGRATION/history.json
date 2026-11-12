@@ -447,10 +447,10 @@
     "change_id": "TINGEE-INTEGRATION-CHG-20261112T153512Z-791FCD",
     "created_at": "2026-11-12T15:35:12.047501+00:00",
     "title": "Sync also reads root-account payments; one sync run at a time",
-    "status": "IMPLEMENTED",
-    "commit_sha": null,
+    "status": "DEPLOYED",
+    "commit_sha": "357f115",
     "migration_status": "NOT_APPLICABLE",
-    "publish_status": "NOT_PUBLISHED",
-    "merge_status": "PENDING_APPROVAL"
+    "publish_status": "DEPLOYED",
+    "merge_status": "MERGED"
   }
 ]

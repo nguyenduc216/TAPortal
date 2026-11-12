@@ -4,7 +4,7 @@
 - Change ID: `TINGEE-INTEGRATION-CHG-20261112T153512Z-791FCD`
 - Created UTC: 2026-11-12T15:35:12.047501+00:00
 - Tiêu đề: Sync also reads root-account payments; one sync run at a time
-- Trạng thái: IMPLEMENTED
+- Trạng thái: DEPLOYED
 
 ## Yêu cầu và phạm vi
 Operator (2026-11-12): bộ phận hỗ trợ của đối tác cho biết giao dịch chuyển thẳng vào số tài khoản gốc đã liên kết vẫn rà soát được; bấm "Đồng bộ từ ngân hàng" thì báo "Vừa đồng bộ xong, vui lòng thử lại sau ít giây".
@@ -32,9 +32,9 @@ Nguyên nhân:
 
 ## Git
 - Branch: feature/tx-sync
-- Commit SHA: xem report
+- Commit SHA: 357f115
 - PR:
-- Merge: xem report
+- Merge: fast-forward main
 - Merge SHA:
 
 ## Rủi ro, quyết định và việc còn lại
