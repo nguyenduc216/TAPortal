@@ -15,7 +15,7 @@ namespace TACustomerPortal.Web.Controllers;
 [Route("account")]
 [ResponseCache(Location = ResponseCacheLocation.None, NoStore = true)]
 public sealed class AccountController(ICustomerStore store, PasswordService passwords, LoginAttemptLimiter attempts, IPasswordResetStore resets,
-    IEmailSender email, IOptions<EmailOptions> emailOptions, ILogger<AccountController> logger) : Controller
+    IEmailSender email, IOptions<EmailOptions> emailOptions, IPortalContentStore content, ILogger<AccountController> logger) : Controller
 {
     // Perform the same expensive password verification for unknown usernames.
     private static readonly string DummyHash = new PasswordService().Hash(Guid.NewGuid() + "Aa1!");
@@ -80,34 +80,44 @@ public sealed class AccountController(ICustomerStore store, PasswordService pass
         return memberships.Count == 1 ? LocalRedirect(Url.Content("~/")) : RedirectToAction(nameof(SelectCustomer));
     }
 
-    // ---- self sign-up (operator decision 2026-11-06) ----------------------------------------------------------------
+    // ---- self sign-up (operator decisions 2026-11-06 and 2026-11-12) -----------------------------------------------
+    // A business, a household business or an individual (who may have no tax code). No password is typed: the system creates
+    // one, emails it with the login details (template "Thông tin đăng nhập", edited in the Admin portal) and asks for a new
+    // one at first login. Nobody is signed in by the sign-up itself, so only the owner of the mailbox can use the account.
     [AllowAnonymous, HttpGet("register")]
     public IActionResult Register() => User.Identity?.IsAuthenticated == true ? LocalRedirect(Url.Content("~/")) : View(new SignupVm());
 
     [AllowAnonymous, HttpPost("register"), EnableRateLimiting("login")]
     public async Task<IActionResult> Register(SignupVm vm, [FromServices] ISignupStore signups)
     {
-        vm.TaxCode = TaxCodeRules.Normalize(vm.TaxCode) ?? "";
+        vm.TaxCode = TaxCodeRules.Normalize(vm.TaxCode);
         vm.Email = vm.Email?.Trim().ToLowerInvariant() ?? "";
         vm.Phone = vm.Phone?.Trim() ?? "";
         vm.CompanyName = vm.CompanyName?.Trim() ?? "";
         vm.ContactName = vm.ContactName?.Trim() ?? "";
         vm.Address = string.IsNullOrWhiteSpace(vm.Address) ? null : vm.Address.Trim();
-        if (vm.CustomerType is not (SignupVm.Business or SignupVm.Household)) vm.CustomerType = SignupVm.Business;
-        var taxOk = vm.CustomerType == SignupVm.Business ? TaxCodeRules.IsLookupable(vm.TaxCode) : TaxCodeRules.IsValid(vm.TaxCode);
-        if (vm.TaxCode.Length > 0 && !taxOk)
-            ModelState.AddModelError(nameof(vm.TaxCode), vm.CustomerType == SignupVm.Business
-                ? "Mã số thuế doanh nghiệp gồm 10 chữ số (chi nhánh: 10 chữ số-3 chữ số)."
-                : "Mã số thuế hộ kinh doanh gồm 10 hoặc 12 chữ số.");
-        var (passwordOk, passwordError) = PasswordPolicy.Validate(vm.Password);
-        if (!passwordOk) ModelState.AddModelError(nameof(vm.Password), passwordError);
+        if (vm.CustomerType is not (SignupVm.Business or SignupVm.Household or SignupVm.Individual)) vm.CustomerType = SignupVm.Business;
+        if (vm.TaxCode is null)
+        {
+            if (vm.CustomerType != SignupVm.Individual) ModelState.AddModelError(nameof(vm.TaxCode), "Nhập mã số thuế.");
+        }
+        else if (vm.CustomerType == SignupVm.Business ? !TaxCodeRules.IsLookupable(vm.TaxCode) : !TaxCodeRules.IsValid(vm.TaxCode))
+            ModelState.AddModelError(nameof(vm.TaxCode), vm.CustomerType switch
+            {
+                SignupVm.Business => "Mã số thuế doanh nghiệp gồm 10 chữ số (chi nhánh: 10 chữ số-3 chữ số).",
+                SignupVm.Household => "Mã số thuế hộ kinh doanh gồm 10 hoặc 12 chữ số.",
+                _ => "Mã số thuế cá nhân gồm 10 hoặc 12 chữ số (số CCCD). Có thể để trống."
+            });
         if (!ModelState.IsValid) { Response.StatusCode = StatusCodes.Status400BadRequest; return View(vm); }
 
+        var password = PasswordPolicy.GenerateTemporary();
+        var terms = await content.GetAsync(PortalContentCodes.Terms);
         SignupResult result;
         try
         {
             result = await signups.RegisterAsync(new SignupRequest(vm.TaxCode, vm.CompanyName, vm.CustomerType, vm.Address, vm.ContactName, vm.Email, vm.Phone,
-                passwords.Hash(vm.Password), HttpContext.Connection.RemoteIpAddress?.ToString()));
+                passwords.Hash(password), HttpContext.Connection.RemoteIpAddress?.ToString(),
+                terms is null ? "default" : terms.UpdatedAt.ToString("yyyy-MM-ddTHH:mm:ssZ", System.Globalization.CultureInfo.InvariantCulture)));
         }
         catch (Exception ex) when (IsDataUnavailable(ex))
         {
@@ -130,15 +140,49 @@ public sealed class AccountController(ICustomerStore store, PasswordService pass
                 break;
             case SignupOutcome.Created:
                 logger.LogInformation("CUSTOMER_SELF_REGISTERED customer {CustomerId} user {UserId}", result.CustomerId, result.UserId);
-                var user = new CustomerUser(result.UserId, vm.Email, vm.ContactName, vm.Email, "");
-                await HttpContext.SignOutAsync();
-                await HttpContext.SignInAsync(CustomerIdentity.Create(user, result.CustomerId), new AuthenticationProperties { IsPersistent = false });
-                TempData["Success"] = $"Đăng ký thành công. Chào mừng {vm.CompanyName}! Chọn gói dịch vụ để bắt đầu.";
-                return RedirectToAction("Index", "ServicePackages");
+                var sent = await SendLoginDetails(vm, result.CustomerCode, password);
+                TempData["SignupEmail"] = vm.Email;
+                TempData["SignupName"] = vm.CompanyName;
+                TempData["SignupSent"] = sent;
+                return RedirectToAction(nameof(RegisterDone));
         }
         Response.StatusCode = StatusCodes.Status400BadRequest;
         return View(vm);
     }
+
+    [AllowAnonymous, HttpGet("register/done")]
+    public IActionResult RegisterDone() =>
+        TempData["SignupEmail"] is string mail
+            ? View(new SignupDoneVm(mail, TempData["SignupName"] as string ?? "", TempData["SignupSent"] is true))
+            : RedirectToAction(nameof(Login));
+
+    /// <summary>The account exists either way; a mail failure is logged and the page says to use "Quên mật khẩu" or support.</summary>
+    private async Task<bool> SendLoginDetails(SignupVm vm, string? customerCode, string password)
+    {
+        if (!email.IsConfigured) { logger.LogError("CUSTOMER_SIGNUP_EMAIL_NOT_CONFIGURED"); return false; }
+        try
+        {
+            var baseUrl = emailOptions.Value.PublicBaseUrl!.TrimEnd('/');
+            var spec = PortalEmailTemplates.AccountCreated;
+            var saved = await content.GetAsync(spec.Code);
+            var mail = PortalEmailRenderer.Render(spec, saved?.Subject, saved?.Body, new Dictionary<string, string>
+            {
+                ["NguoiLienHe"] = vm.ContactName, ["TenKhachHang"] = vm.CompanyName, ["MaKhachHang"] = customerCode ?? vm.TaxCode ?? "",
+                ["DiaChiDangNhap"] = baseUrl + "/account/login", ["TenDangNhap"] = vm.Email, ["MatKhau"] = password
+            }, baseUrl);
+            await email.SendAsync(new EmailMessage(vm.Email, mail.Subject, mail.TextBody, mail.HtmlBody));
+            return true;
+        }
+        catch (Exception ex) when (ex is System.Net.Mail.SmtpException or InvalidOperationException or FormatException)
+        {
+            logger.LogError(ex, "CUSTOMER_SIGNUP_EMAIL_FAILED reference {Reference}", RequestReference);
+            return false;
+        }
+    }
+
+    /// <summary>The terms of service as a page (the sign-up form shows the same text in a dialog).</summary>
+    [AllowAnonymous, HttpGet("terms")]
+    public IActionResult Terms() => View();
 
     /// <summary>Name and address registered for an enterprise tax code, to fill the sign-up and buyer forms (public data).</summary>
     [AllowAnonymous, HttpGet("tax-lookup"), EnableRateLimiting("lookup")]
@@ -225,7 +269,7 @@ public sealed class AccountController(ICustomerStore store, PasswordService pass
             {
                 var token = PasswordResetTokens.New();
                 await resets.SaveTokenAsync(account.UserId, PasswordResetTokens.Hash(token)!, now.Add(PasswordResetTokens.Lifetime), HttpContext.Connection.RemoteIpAddress?.ToString());
-                await email.SendAsync(ResetEmail(account, emailOptions.Value.PublicBaseUrl!.TrimEnd('/') + "/account/reset-password?token=" + token));
+                await email.SendAsync(await ResetEmail(account, emailOptions.Value.PublicBaseUrl!.TrimEnd('/') + "/account/reset-password?token=" + token));
                 logger.LogInformation("CUSTOMER_PASSWORD_RESET_SENT user {UserId}", account.UserId);
             }
         }
@@ -270,31 +314,16 @@ public sealed class AccountController(ICustomerStore store, PasswordService pass
         return RedirectToAction(nameof(Login));
     }
 
-    private static EmailMessage ResetEmail(RecoveryAccount account, string link)
+    private async Task<EmailMessage> ResetEmail(RecoveryAccount account, string link)
     {
-        var name = System.Net.WebUtility.HtmlEncode(account.DisplayName);
-        var user = System.Net.WebUtility.HtmlEncode(account.Username);
-        var href = System.Net.WebUtility.HtmlEncode(link);
-        var minutes = (int)PasswordResetTokens.Lifetime.TotalMinutes;
-        var text = $"""
-            Xin chào {account.DisplayName},
-
-            Có yêu cầu đặt lại mật khẩu Hóa đơn tự động cho tài khoản {account.Username}.
-            Mở liên kết sau để đặt mật khẩu mới (hiệu lực {minutes} phút, chỉ dùng một lần):
-            {link}
-
-            Nếu bạn không yêu cầu, hãy bỏ qua email này; mật khẩu hiện tại vẫn giữ nguyên.
-            Hóa đơn tự động
-            """;
-        var html = $"""
-            <p>Xin chào {name},</p>
-            <p>Có yêu cầu đặt lại mật khẩu Hóa đơn tự động cho tài khoản <strong>{user}</strong>.</p>
-            <p><a href="{href}" style="display:inline-block;padding:10px 18px;background:#1d4ed8;color:#ffffff;border-radius:6px;text-decoration:none">Đặt mật khẩu mới</a></p>
-            <p>Liên kết có hiệu lực {minutes} phút và chỉ dùng được một lần. Nếu nút không mở được, chép địa chỉ sau vào trình duyệt:<br><span style="word-break:break-all">{href}</span></p>
-            <p>Nếu bạn không yêu cầu, hãy bỏ qua email này; mật khẩu hiện tại vẫn giữ nguyên.</p>
-            <p>Hóa đơn tự động</p>
-            """;
-        return new(account.Email, "Đặt lại mật khẩu Hóa đơn tự động", text, html);
+        var spec = PortalEmailTemplates.PasswordReset;
+        var saved = await content.GetAsync(spec.Code);
+        var mail = PortalEmailRenderer.Render(spec, saved?.Subject, saved?.Body, new Dictionary<string, string>
+        {
+            ["NguoiLienHe"] = account.DisplayName, ["TenDangNhap"] = account.Username, ["LienKet"] = link,
+            ["ThoiHanPhut"] = ((int)PasswordResetTokens.Lifetime.TotalMinutes).ToString(System.Globalization.CultureInfo.InvariantCulture)
+        }, emailOptions.Value.PublicBaseUrl!);
+        return new(account.Email, mail.Subject, mail.TextBody, mail.HtmlBody);
     }
 
     [AllowAnonymous, HttpGet("access-denied")]

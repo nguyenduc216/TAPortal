@@ -1,0 +1,12 @@
+@{ ViewData["Title"] = "Điều khoản sử dụng"; }
+<div class="cp-auth cp-auth--doc">
+    <div class="cp-auth__form">
+        <div class="cp-auth__card cp-auth__card--doc">
+            <span class="cp-brand cp-brand--ink"><img src="~/images/logo.png" class="cp-brand__logo" alt="" width="34" height="34" /><span class="cp-brand__text">Hóa đơn tự động<small>Thu tiền &amp; xuất hóa đơn</small></span></span>
+            <h2>@TAPortal.Shared.PortalTerms.Title</h2>
+            <partial name="_TermsBody" />
+            <p class="cp-auth__foot"><a asp-action="Register">Quay lại đăng ký</a> · <a asp-action="Login">Đăng nhập</a></p>
+        </div>
+        <partial name="_AuthMaker" />
+    </div>
+</div>

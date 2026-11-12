@@ -287,6 +287,48 @@ public sealed class SafeWebsiteTests
         Assert.False(store.Sections.ContainsKey(("home", "hero")));
     }
 
+    // Operator 2026-11-12: Admin → Hóa đơn tự động (Mẫu email, Điều khoản dịch vụ). Uses the same admin host; without a database
+    // the built-in texts are shown. Preview never writes; a viewer cannot post.
+    [Fact]
+    public async Task InvoiceAppContentPagesOpenAndPreviewWithoutSaving()
+    {
+        var store = new MemoryAdminStore();
+        await using (var f = AdminFactory(store, AdminSecurity.AdminPermissions.InvoiceAppContentView, AdminSecurity.AdminPermissions.InvoiceAppContentEdit))
+        {
+            var client = AdminClient(f);
+            foreach (var url in new[] { "/InvoiceAppContent", "/InvoiceAppContent/Email/EMAIL.ACCOUNT_CREATED", "/InvoiceAppContent/Email/EMAIL.PASSWORD_RESET", "/InvoiceAppContent/Terms" })
+            {
+                var response = await client.GetAsync(url);
+                Assert.True(response.StatusCode == HttpStatusCode.OK, $"{url}: {(int)response.StatusCode}");
+                var body = await response.Content.ReadAsStringAsync();
+                Assert.False(Regex.IsMatch(body, @"@(if|foreach|for|switch)\s*\("), $"{url}: raw Razor code in output");
+            }
+            Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync("/InvoiceAppContent/Email/EMAIL.NOPE")).StatusCode);
+            var editor = await client.GetStringAsync("/InvoiceAppContent/Email/EMAIL.ACCOUNT_CREATED");
+            Assert.Contains("Mẫu email</span>", editor);                                   // sidebar group "Hóa đơn tự động"
+            Assert.Contains("srcdoc=\"", editor);
+            Assert.Contains("images/logo.png", WebUtility.HtmlDecode(editor));
+            var preview = await client.PostAsync("/InvoiceAppContent/Email/EMAIL.ACCOUNT_CREATED", Form(Token(editor), ("subject", "Chào {{NguoiLienHe}}"),
+                ("body", "Nội dung thử {{SoTien}}"), ("command", "save")));
+            Assert.Equal(HttpStatusCode.OK, preview.StatusCode);                          // refused: shown again with the reasons
+            var refused = WebUtility.HtmlDecode(await preview.Content.ReadAsStringAsync());
+            Assert.Contains("Không có giá trị {{SoTien}}", refused);
+            Assert.Contains("phải giữ {{ThongTinDangNhap}}", refused);
+            var terms = WebUtility.HtmlDecode(await client.GetStringAsync("/InvoiceAppContent/Terms"));
+            Assert.Contains("Điều 16.", terms);
+            Assert.Contains("[TÊN CÔNG TY]", terms);                                       // the warning lists what is left to fill in
+        }
+        await using (var f = AdminFactory(store, AdminSecurity.AdminPermissions.InvoiceAppContentView))
+        {
+            var client = AdminClient(f);
+            var editor = await client.GetStringAsync("/InvoiceAppContent/Terms");
+            Assert.Contains("<fieldset disabled", editor);
+            Assert.Equal(HttpStatusCode.Forbidden, (await client.PostAsync("/InvoiceAppContent/Terms", Form(Token(editor), ("body", "## Điều 1. X"), ("command", "save")))).StatusCode);
+        }
+        await using (var f = AdminFactory(store, AdminSecurity.AdminPermissions.WebsiteView))
+            Assert.Equal(HttpStatusCode.Forbidden, (await AdminClient(f).GetAsync("/InvoiceAppContent")).StatusCode);
+    }
+
     [Fact]
     public async Task ViewOnlyUserCannotWrite()
     {

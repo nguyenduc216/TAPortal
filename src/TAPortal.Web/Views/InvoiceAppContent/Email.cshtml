@@ -1,0 +1,49 @@
+@model TAPortal.Web.Controllers.InvoiceAppEmailVm
+@{
+    ViewData["ParentTitle"] = "Mẫu email";
+    ViewData["ParentController"] = "InvoiceAppContent";
+    ViewData["Title"] = Model.Spec.Name;
+    ViewData["Heading"] = "Mẫu email: " + Model.Spec.Name;
+    ViewData["Subtitle"] = Model.Spec.Description;
+    ViewData["PageIcon"] = "mail";
+    var canEdit = AdminPermissions.Has(User, AdminPermissions.InvoiceAppContentEdit);
+}
+@if (Model.Errors.Count > 0) {<div class="ta-alert ta-alert--danger" role="alert">@UiIcon.Render("alert-circle")<div class="ta-alert__body">@foreach (var e in Model.Errors) {<div>@e</div>}</div></div>}
+<div class="ta-content-split">
+    <form class="card" asp-action="Email" asp-route-id="@Model.Spec.Code" method="post">
+        <div class="card-header"><h2 class="card-title">@UiIcon.Render("pencil")Nội dung</h2><span class="ta-cell-sub ms-auto">@(Model.Saved is null ? "Đang dùng nội dung mặc định" : "Sửa lần cuối " + Model.Saved.UpdatedAt.AddHours(7).ToString("dd/MM/yyyy HH:mm"))</span></div>
+        <div class="card-body">
+            <fieldset disabled="@(!canEdit)">
+                <label class="form-label" for="subject">Tiêu đề email</label>
+                <div class="ta-input-icon">@UiIcon.Render("pencil")<input class="form-control" id="subject" name="subject" value="@Model.Subject" maxlength="300" required /></div>
+                <label class="form-label mt-3" for="body">Nội dung</label>
+                <div class="ta-input-icon">@UiIcon.Render("file-text")<textarea class="form-control ta-mono-area" id="body" name="body" rows="22" maxlength="20000" required>@Model.Body</textarea></div>
+                <small class="form-hint">Dòng trống tách đoạn; dòng bắt đầu bằng "- " thành danh sách. Chèn giá trị bằng {{Tên}} trong bảng bên dưới. {{@PortalEmailTemplates.LoginBox}} và {{@PortalEmailTemplates.Button}} phải nằm riêng một dòng.</small>
+            </fieldset>
+            <h3 class="ta-web-group mt-3">Giá trị dùng được</h3>
+            <table class="ta-table">
+                <tbody>
+                @foreach (var p in Model.Spec.Placeholders)
+                {
+                    <tr><td><code>{{@p.Key}}</code>@if (Model.Spec.Required.Contains(p.Key)) {<span class="ta-cell-sub"> (bắt buộc)</span>}</td><td>@p.Description</td></tr>
+                }
+                </tbody>
+            </table>
+        </div>
+        @if (canEdit)
+        {
+            <div class="card-footer d-flex flex-wrap gap-2 justify-content-end">
+                @if (Model.Saved is not null) {<button class="btn" type="submit" name="command" value="reset" formnovalidate data-ta-confirm="Bỏ nội dung đã sửa và dùng lại nội dung mặc định?">@UiIcon.Render("refresh")<span>Khôi phục mặc định</span></button>}
+                <button class="btn" type="submit" name="command" value="preview">@UiIcon.Render("eye")<span>Xem trước</span></button>
+                <button class="btn btn-ta-gold" type="submit" name="command" value="save">@UiIcon.Render("device-floppy")<span>Lưu mẫu</span></button>
+            </div>
+        }
+    </form>
+    <section class="card" aria-label="Xem trước email">
+        <div class="card-header"><h2 class="card-title">@UiIcon.Render("eye")Xem trước (dữ liệu mẫu)</h2></div>
+        <div class="card-body">
+            <p class="mb-2"><span class="ta-cell-sub">Tiêu đề:</span> <strong>@Model.Preview.Subject</strong></p>
+            <iframe class="ta-email-preview" title="Xem trước email" sandbox srcdoc="@Model.Preview.HtmlBody"></iframe>
+        </div>
+    </section>
+</div>

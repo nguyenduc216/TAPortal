@@ -649,3 +649,33 @@ textarea.cp-input { height: auto; min-height: 72px; padding-top: 8px; padding-bo
 .cp-pay__copy button.is-copied { background: var(--cp-green-100); border-color: var(--cp-green-500); color: var(--cp-green-700); }
 .cp-pay__copy .ta-icon { width: 15px; height: 15px; }
 .cp-pay__facts > div:has(.cp-pay__copy) { align-items: center; }
+
+/* Sign-in pages (operator 2026-11-12): the maker line sits at the very bottom of the light area, under the card, on every
+   width; terms of service as a dialog on the sign-up form and as a page. */
+.cp-auth__form { flex-direction: column; }
+.cp-auth__form > .cp-auth__card { margin: auto 0; }
+.cp-auth__maker { margin: 24px 0 0; text-align: center; }
+.cp-auth__maker .cp-maker { display: inline; margin: 0; padding: 0; color: var(--cp-ink-3); font-size: 12px; opacity: 1; }
+.cp-auth__maker .cp-maker:hover { color: var(--cp-blue-600); }
+.cp-check a { color: var(--cp-blue-600); }
+.cp-auth--doc { grid-template-columns: 1fr; }
+.cp-auth__card--doc { width: min(860px, 100%); }
+.cp-auth__card--doc h2 { margin: 18px 0 2px; }
+.cp-brand--ink .cp-brand__text { color: var(--cp-ink); }
+.cp-brand--ink .cp-brand__text small { color: var(--cp-ink-3); }
+.cp-terms__date { margin: 0 0 12px; color: var(--cp-ink-3); font-size: 12.5px; }
+.cp-terms { display: grid; gap: 8px; }
+.cp-terms__item { border: 1px solid var(--cp-line); border-radius: 10px; background: var(--cp-surface); }
+.cp-terms__item summary { padding: 10px 14px; font-weight: 600; cursor: pointer; }
+.cp-terms__item[open] summary { border-bottom: 1px solid var(--cp-line); }
+.cp-terms__item p, .cp-terms__item ul { margin: 10px 14px; font-size: 13.5px; line-height: 1.6; color: var(--cp-ink-2); }
+.cp-terms__item ul { padding-left: 20px; }
+.cp-terms-dialog { width: min(760px, calc(100vw - 24px)); max-height: calc(100vh - 32px); padding: 0; border: 0; border-radius: 14px; box-shadow: var(--cp-shadow-md); }
+.cp-terms-dialog[open] { display: flex; flex-direction: column; }
+.cp-terms-dialog::backdrop { background: rgba(15, 23, 42, .55); }
+.cp-terms-dialog__head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 20px; border-bottom: 1px solid var(--cp-line); }
+.cp-terms-dialog__head h2 { font-size: 17px; font-weight: 700; }
+.cp-terms-dialog__close { display: grid; place-items: center; width: 34px; height: 34px; border: 0; border-radius: 8px; background: transparent; color: var(--cp-ink-3); cursor: pointer; }
+.cp-terms-dialog__close:hover { background: var(--cp-surface-2); }
+.cp-terms-dialog__body { flex: 1; overflow: auto; padding: 14px 20px; background: var(--cp-bg); }
+.cp-terms-dialog__foot { display: flex; justify-content: flex-end; gap: 8px; padding: 12px 20px; border-top: 1px solid var(--cp-line); }

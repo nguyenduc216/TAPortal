@@ -1,0 +1,26 @@
+@model TAPortal.Web.Controllers.InvoiceAppEmailsVm
+@{
+    ViewData["Title"] = "Mẫu email";
+    ViewData["Heading"] = "Mẫu email Hóa đơn tự động";
+    ViewData["Subtitle"] = "Nội dung các email hệ thống Hóa đơn tự động gửi cho khách hàng. Logo, khung và chân email được thêm tự động.";
+    ViewData["PageIcon"] = "mail";
+}
+<section class="card ta-table-card" aria-label="Danh sách mẫu email">
+    <div class="ta-table-wrap">
+        <table class="ta-table ta-table-stack">
+            <thead><tr><th scope="col">Mẫu</th><th scope="col">Khi nào gửi</th><th scope="col">Trạng thái</th><th scope="col" class="ta-col-actions">Thao tác</th></tr></thead>
+            <tbody>
+            @foreach (var t in PortalEmailTemplates.All)
+            {
+                var saved = Model.Saved.GetValueOrDefault(t.Code);
+                <tr>
+                    <td class="ta-cell-strong"><a class="text-reset" asp-action="Email" asp-route-id="@t.Code">@t.Name</a><div class="ta-cell-sub">@(saved?.Subject ?? t.DefaultSubject)</div></td>
+                    <td data-label="Khi nào gửi">@t.Description</td>
+                    <td data-label="Trạng thái">@(saved is null ? "Nội dung mặc định" : "Đã sửa " + saved.UpdatedAt.AddHours(7).ToString("dd/MM/yyyy HH:mm"))</td>
+                    <td class="ta-col-actions"><a class="btn btn-sm" asp-action="Email" asp-route-id="@t.Code">@UiIcon.Render("pencil")<span>Xem / sửa</span></a></td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+</section>

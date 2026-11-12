@@ -65,6 +65,7 @@ builder.Services.AddScoped<IEmployeeStore, SqlEmployeeStore>();
 builder.Services.AddScoped<IHrCatalogStore, SqlHrCatalogStore>();
 builder.Services.AddScoped<IContractStore, SqlContractStore>();
 builder.Services.AddScoped<IWebsiteAdminStore, SqlWebsiteAdminStore>(); // Website TA (WEBSITE-TA)
+builder.Services.AddSingleton<TAPortal.Shared.IPortalContentStore, TAPortal.Shared.SqlPortalContentStore>(); // Hóa đơn tự động emails and terms
 builder.Services.AddScoped<ICustomerAdminStore, SqlCustomerAdminStore>();
 builder.Services.AddScoped<ICustomerProfileStore, SqlCustomerProfileStore>();
 builder.Services.AddScoped<ICustomerImportStore, SqlCustomerImportStore>();

@@ -563,5 +563,15 @@
     "migration_status": "NOT_APPLICABLE",
     "publish_status": "DEPLOYED",
     "merge_status": "MERGED"
+  },
+  {
+    "change_id": "CUSTOMER-PORTAL-FOUNDATION-CHG-20261112T062541Z-73C192",
+    "created_at": "2026-11-12T06:25:41.344750+00:00",
+    "title": "Đăng ký cá nhân, mật khẩu gửi email, mẫu email và điều khoản dịch vụ",
+    "status": "IMPLEMENTED",
+    "commit_sha": null,
+    "migration_status": "NOT_EXECUTED",
+    "publish_status": "NOT_PUBLISHED",
+    "merge_status": "PENDING_APPROVAL"
   }
 ]

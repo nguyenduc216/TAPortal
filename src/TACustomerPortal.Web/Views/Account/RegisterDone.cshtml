@@ -1,0 +1,29 @@
+@model SignupDoneVm
+@{ ViewData["Title"] = "Đăng ký thành công"; }
+<div class="cp-auth">
+    <section class="cp-auth__panel" aria-hidden="true">
+        <span class="cp-brand"><img src="~/images/logo.png" class="cp-brand__logo" alt="" width="34" height="34" /><span class="cp-brand__text">Hóa đơn tự động<small>Thu tiền &amp; xuất hóa đơn</small></span></span>
+        <div class="cp-auth__headline">
+            <h1>Chào mừng bạn đến với <em>Hóa đơn tự động.</em></h1>
+            <p>Đăng nhập bằng thông tin trong email, đổi mật khẩu rồi chọn gói dịch vụ để bắt đầu.</p>
+        </div>
+        <span></span>
+    </section>
+    <div class="cp-auth__form">
+        <div class="cp-auth__card" data-cp-signup-done>
+            <div class="cp-eyebrow">Hóa đơn tự động</div>
+            <h2>Đăng ký thành công</h2>
+            @if (Model.EmailSent)
+            {
+                <div class="cp-note" role="status">@UiIcon.Render("mail")<div>Tài khoản <strong>@Model.Name</strong> đã được tạo. Thông tin đăng nhập đã gửi đến <strong>@Model.Email</strong>. Nếu chưa thấy, hãy kiểm tra cả thư mục Thư rác / Quảng cáo.</div></div>
+            }
+            else
+            {
+                <div class="cp-alert" role="alert">Tài khoản <strong>@Model.Name</strong> đã được tạo nhưng hệ thống chưa gửi được email đến <strong>@Model.Email</strong>. Hãy dùng "Quên mật khẩu" để nhận liên kết đặt mật khẩu, hoặc liên hệ bộ phận hỗ trợ Hóa đơn tự động.</div>
+            }
+            <a class="cp-btn cp-btn--primary cp-btn--block" asp-action="Login" style="margin-top:16px">@UiIcon.Render("login-2")<span>Đến trang đăng nhập</span></a>
+            @if (!Model.EmailSent) {<p class="cp-auth__foot"><a asp-action="ForgotPassword">Quên mật khẩu</a></p>}
+        </div>
+        <partial name="_AuthMaker" />
+    </div>
+</div>
