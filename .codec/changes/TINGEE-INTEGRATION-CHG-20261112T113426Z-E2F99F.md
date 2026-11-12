@@ -4,7 +4,7 @@
 - Change ID: `TINGEE-INTEGRATION-CHG-20261112T113426Z-E2F99F`
 - Created UTC: 2026-11-12T11:34:26.894359+00:00
 - Tiêu đề: Trang thanh toán: tài khoản thụ hưởng thật khi QR dùng mã VQR (MB)
-- Trạng thái: IMPLEMENTED
+- Trạng thái: DEPLOYED
 
 ## Yêu cầu và phạm vi
 Operator (2026-11-12): trang thanh toán đơn DH261110-0001 (MB Bank) hiện "Số tài khoản VQRQANNLO4384"; không phải số tài khoản MB của T.A, chuyển khoản thì ngân hàng báo không tìm thấy. Yêu cầu hiện tài khoản thụ hưởng.
@@ -27,9 +27,9 @@ Nguyên nhân: với MB qua Tingee, cả VA (VQRQ…1102) và tài khoản của
 
 ## Git
 - Branch: feature/tx-sync
-- Commit SHA: xem report
+- Commit SHA: 189a449
 - PR:
-- Merge: xem report
+- Merge: fast-forward main
 - Merge SHA:
 
 ## Rủi ro, quyết định và việc còn lại
