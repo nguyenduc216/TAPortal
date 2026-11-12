@@ -42,17 +42,23 @@ public sealed class SafeUiDesignSystemTests
         Assert.Equal(File.ReadAllBytes(adminFile), File.ReadAllBytes(customerFile));
     }
 
-    // Operator 2026-11-06: the Customer Portal's own logo, redrawn as a clean vector (straight edges, even gaps); the
-    // favicon and the link-preview image are rendered from it. The Admin portal keeps the T.A logo.
+    // Operator 2026-11-12: the Hóa đơn tự động logo is the e-invoice cycle illustration (receipt → bank → tax office); the
+    // sidebar logo, favicon, home-screen icon and link-preview image are all cut from it. The Admin portal keeps the T.A logo.
     [Fact]
-    public void TheCustomerPortalShowsItsVectorLogo()
+    public void TheCustomerPortalShowsItsOwnLogo()
     {
         var layout = File.ReadAllText(Path.Combine(Root, "src", "TACustomerPortal.Web", "Views", "Shared", "_Layout.cshtml"));
-        Assert.Contains("<img src=\"~/images/logo.svg\" class=\"cp-brand__logo\"", layout);
-        var svg = File.ReadAllText(Path.Combine(CustomerWww, "images", "logo.svg"));
-        Assert.StartsWith("<svg ", svg);
-        Assert.Contains("viewBox=", svg);
-        Assert.DoesNotContain("<image", svg);
+        Assert.Contains("<img src=\"~/images/logo.png\" class=\"cp-brand__logo\"", layout);
+        Assert.Contains("<link rel=\"apple-touch-icon\" href=\"~/images/apple-touch-icon.png\" />", layout);
+        foreach (var (file, size) in new[] { ("logo.png", 256), ("apple-touch-icon.png", 180), ("favicon-32x32.png", 32) })
+        {
+            var png = File.ReadAllBytes(Path.Combine(CustomerWww, "images", file));
+            Assert.Equal(new byte[] { 0x89, 0x50, 0x4E, 0x47 }, png[..4]);
+            Assert.Equal(size, System.Buffers.Binary.BinaryPrimitives.ReadInt32BigEndian(png.AsSpan(16)));
+        }
+        Assert.False(File.Exists(Path.Combine(CustomerWww, "images", "logo.svg")));
+        foreach (var view in Directory.EnumerateFiles(Path.Combine(Root, "src", "TACustomerPortal.Web", "Views"), "*.cshtml", SearchOption.AllDirectories))
+            Assert.DoesNotContain("images/logo.svg", File.ReadAllText(view));
         Assert.False(File.Exists(Path.Combine(CustomerWww, "images", "ta-logo.png")));
         Assert.True(File.Exists(Path.Combine(AdminWww, "images", "ta-logo.png")));
     }

@@ -553,5 +553,15 @@
     "migration_status": "NOT_APPLICABLE",
     "publish_status": "DEPLOYED",
     "merge_status": "MERGED"
+  },
+  {
+    "change_id": "CUSTOMER-PORTAL-FOUNDATION-CHG-20261112T054901Z-6AAF00",
+    "created_at": "2026-11-12T05:49:01.559612+00:00",
+    "title": "Logo mới Hóa đơn tự động (vòng hóa đơn điện tử)",
+    "status": "IMPLEMENTED",
+    "commit_sha": null,
+    "migration_status": "NOT_APPLICABLE",
+    "publish_status": "NOT_PUBLISHED",
+    "merge_status": "PENDING_APPROVAL"
   }
 ]

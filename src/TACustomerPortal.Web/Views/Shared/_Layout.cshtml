@@ -53,8 +53,9 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="ta-build" content="@TAPortal.Shared.BuildInfo.Id" data-url="@Url.Content("~" + TAPortal.Shared.BuildInfo.Path)" data-logo="@Url.Content("~/images/logo.svg")" />
+    <meta name="ta-build" content="@TAPortal.Shared.BuildInfo.Id" data-url="@Url.Content("~" + TAPortal.Shared.BuildInfo.Path)" data-logo="@Url.Content("~/images/logo.png")" />
     <link rel="icon" type="image/png" href="~/images/favicon-32x32.png" />
+    <link rel="apple-touch-icon" href="~/images/apple-touch-icon.png" />
     <meta name="theme-color" content="#A16207" />
     <title>@ViewData["Title"] · Hóa đơn tự động</title>
     <link rel="stylesheet" href="~/css/customer.css" asp-append-version="true" />
@@ -66,7 +67,7 @@
     <aside class="cp-sidebar" id="taSidebar" aria-label="Điều hướng chính">
         <div class="cp-sidebar__brand">
             <a class="cp-brand" asp-controller="Dashboard" asp-action="Index" aria-label="Hóa đơn tự động — Tổng quan">
-                <img src="~/images/logo.svg" class="cp-brand__logo" alt="" width="34" height="34" />
+                <img src="~/images/logo.png" class="cp-brand__logo" alt="" width="34" height="34" />
                 <span class="cp-brand__text">Hóa đơn tự động<small>Thu tiền &amp; xuất hóa đơn</small></span>
             </a>
             <button type="button" class="cp-sidebar__close" data-ta-drawer-close aria-label="Đóng menu">@UiIcon.Render("x")</button>

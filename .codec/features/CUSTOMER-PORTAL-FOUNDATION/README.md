@@ -62,3 +62,4 @@ CHECKPOINT_4A: PASS (existing artifact integrity, isolated localhost startup and
 | `CUSTOMER-PORTAL-FOUNDATION-CHG-20261111T112456Z-A427C0` | 2026-11-11 | Chi tiet don: sua giao dien mobile, doi thoi han / tao lai QR | 77e4ec7 | NOT_APPLICABLE | DEPLOYED | MERGED |
 | `CUSTOMER-PORTAL-FOUNDATION-CHG-20261111T114023Z-9B9B64` | 2026-11-11 | The trang thai truot ngang tren dien thoai | a34bca6 | NOT_APPLICABLE | DEPLOYED | MERGED |
 | `CUSTOMER-PORTAL-FOUNDATION-CHG-20261111T115031Z-7CC4D1` | 2026-11-11 | Danh sach don: cham mau trang thai, mo ta thu gon | 075af61 | NOT_APPLICABLE | DEPLOYED | MERGED |
+| `CUSTOMER-PORTAL-FOUNDATION-CHG-20261112T054901Z-6AAF00` | 2026-11-12 | Logo mới Hóa đơn tự động (vòng hóa đơn điện tử) | — | NOT_APPLICABLE | NOT_PUBLISHED | PENDING_APPROVAL |
