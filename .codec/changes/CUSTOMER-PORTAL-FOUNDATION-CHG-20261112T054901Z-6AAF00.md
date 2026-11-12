@@ -4,7 +4,7 @@
 - Change ID: `CUSTOMER-PORTAL-FOUNDATION-CHG-20261112T054901Z-6AAF00`
 - Created UTC: 2026-11-12T05:49:01.559612+00:00
 - Tiêu đề: Logo mới Hóa đơn tự động (vòng hóa đơn điện tử)
-- Trạng thái: IMPLEMENTED
+- Trạng thái: DEPLOYED
 
 ## Yêu cầu và phạm vi
 Operator (2026-11-12): thay logo của hệ thống hóa đơn điện tử (Hóa đơn tự động) bằng ảnh minh họa vòng hóa đơn điện tử (hóa đơn → ngân hàng → cơ quan thuế) do operator gửi.
@@ -32,9 +32,9 @@ Operator (2026-11-12): thay logo của hệ thống hóa đơn điện tử (Hó
 
 ## Git
 - Branch: ui/hoadon-logo
-- Commit SHA: xem report
+- Commit SHA: 4bad975
 - PR:
-- Merge: xem report
+- Merge: fast-forward main
 - Merge SHA:
 
 ## Rủi ro, quyết định và việc còn lại
