@@ -502,3 +502,13 @@ ul.ta-stat-list { display: grid; gap: 4px; }
 .ta-list-turn tbody, .ta-list-turn > [data-ta-row] { animation: ta-turn .18s ease both; }
 @keyframes ta-turn { from { opacity: .35; } to { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; } }
+
+/* 18. Mobile card slides (operator 2026-11-13): on phones a KPI/stat card group scrolls sideways one card at a time,
+   the next card peeking in, instead of stacking full-width cards down the page. */
+@media (max-width: 767.98px) {
+    .ta-kpi-grid, .ta-kpi-grid--3 { display: flex; gap: var(--ta-sp-3); margin-inline: calc(-1 * var(--ta-sp-4)); padding: 2px var(--ta-sp-4) 8px; overflow-x: auto; scroll-snap-type: x mandatory; scroll-padding-inline: var(--ta-sp-4); overscroll-behavior-x: contain; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+    .ta-kpi-grid::-webkit-scrollbar { display: none; }
+    .ta-kpi-grid > * { flex: 0 0 min(78%, 300px); height: auto; scroll-snap-align: start; }
+    .ta-kpi-grid .ta-stat-card { padding: var(--ta-sp-4); }
+    .ta-kpi-grid .ta-stat-card:hover { box-shadow: none; }
+}

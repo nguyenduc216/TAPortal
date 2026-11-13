@@ -781,3 +781,11 @@ textarea.cp-input { height: auto; min-height: 72px; padding-top: 8px; padding-bo
 @media (min-width: 1200px) and (min-height: 860px) {
     .cp-show { zoom: 1.22; max-width: calc(560px / 1.22); }
 }
+
+/* Operator 2026-11-13: every stat/service card group slides sideways on phones, like .cp-stats. */
+@media (max-width: 640px) {
+    .cp-grid:has(> .cp-stat), .cp-grid:has(> .cp-service) { display: flex; gap: 10px; margin: 0 -12px 12px; padding: 2px 12px 8px; overflow-x: auto; scroll-snap-type: x mandatory; scroll-padding: 0 12px; overscroll-behavior-x: contain; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+    .cp-grid:has(> .cp-stat)::-webkit-scrollbar, .cp-grid:has(> .cp-service)::-webkit-scrollbar { display: none; }
+    .cp-grid:has(> .cp-stat) > *, .cp-grid:has(> .cp-service) > * { flex: 0 0 min(78%, 280px); scroll-snap-align: start; }
+    .cp-grid:has(> .cp-stat) > .cp-stat { padding: 12px 14px; }
+}
