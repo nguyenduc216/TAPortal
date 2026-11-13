@@ -15,7 +15,8 @@ namespace TACustomerPortal.Web.Controllers;
 [Route("account")]
 [ResponseCache(Location = ResponseCacheLocation.None, NoStore = true)]
 public sealed class AccountController(ICustomerStore store, PasswordService passwords, LoginAttemptLimiter attempts, IPasswordResetStore resets,
-    IEmailSender email, IOptions<EmailOptions> emailOptions, IPortalContentStore content, ILogger<AccountController> logger) : Controller
+    IEmailSender email, IOptions<EmailOptions> emailOptions, IPortalContentStore content, ILogger<AccountController> logger,
+    IPasswordSecurityStore passwordSecurity) : Controller
 {
     // Perform the same expensive password verification for unknown usernames.
     private static readonly string DummyHash = new PasswordService().Hash(Guid.NewGuid() + "Aa1!");
@@ -63,6 +64,13 @@ public sealed class AccountController(ICustomerStore store, PasswordService pass
             return View(vm);
         }
 
+        // Operator 2026-11-13: a password on the weak list (edited in the Admin portal) must be replaced first.
+        if (!user.MustChangePassword && (await passwordSecurity.GetAsync()).IsWeak(vm.Password))
+        {
+            user = user with { MustChangePassword = true };
+            try { await store.RequirePasswordChange(user.Id); }
+            catch (Exception ex) when (IsDataUnavailable(ex)) { logger.LogWarning(ex, "CUSTOMER_WEAK_PASSWORD_FLAG_FAILED user {UserId}", user.Id); }
+        }
         await HttpContext.SignOutAsync();
         await HttpContext.SignInAsync(CustomerIdentity.Create(user, memberships.Count == 1 ? memberships[0].CustomerId : null), new AuthenticationProperties { IsPersistent = false });
         try
@@ -234,10 +242,16 @@ public sealed class AccountController(ICustomerStore store, PasswordService pass
         if (!ModelState.IsValid)
             return View(vm);
         var user = await store.FindUser(UserId);
+        var security = await passwordSecurity.GetAsync();
         var policy = PasswordPolicy.Validate(vm.NewPassword);
         if (user is null || !passwords.Verify(vm.CurrentPassword, user.PasswordHash) || !policy.IsValid || vm.CurrentPassword == vm.NewPassword)
         {
             ModelState.AddModelError("", "Kiểm tra mật khẩu hiện tại và mật khẩu mới (ít nhất 8 ký tự, có chữ, số và ký tự đặc biệt).");
+            return View(vm);
+        }
+        if (security.IsWeak(vm.NewPassword))
+        {
+            ModelState.AddModelError("", security.ValidateNew(vm.NewPassword).Error);
             return View(vm);
         }
 
@@ -247,8 +261,34 @@ public sealed class AccountController(ICustomerStore store, PasswordService pass
             return View(vm);
         }
 
+        // Operator 2026-11-13: the new password is emailed to the account's address; a failed email never undoes the change.
+        var mailed = false;
+        if (!string.IsNullOrWhiteSpace(user.Email) && email.IsConfigured)
+        {
+            try
+            {
+                await email.SendAsync(PasswordChangedEmail(user.Email, user.DisplayName, user.Username, vm.NewPassword));
+                mailed = true;
+            }
+            catch (Exception ex) when (ex is System.Net.Mail.SmtpException or InvalidOperationException or FormatException or IOException)
+            {
+                logger.LogWarning(ex, "CUSTOMER_PASSWORD_EMAIL_FAILED user {UserId}", user.Id);
+            }
+        }
         await HttpContext.SignOutAsync();
+        TempData["Notice"] = "Đã đổi mật khẩu" + (mailed ? " và gửi mật khẩu mới về email của bạn" : "") + ". Vui lòng đăng nhập bằng mật khẩu mới.";
         return RedirectToAction(nameof(Login));
+    }
+
+    public static EmailMessage PasswordChangedEmail(string to, string displayName, string username, string password)
+    {
+        var at = DateTime.UtcNow.AddHours(7).ToString("HH:mm dd/MM/yyyy", System.Globalization.CultureInfo.InvariantCulture);
+        var text = $"Xin chào {displayName},\n\nMật khẩu tài khoản Hóa đơn tự động ({username}) vừa được đổi lúc {at} (giờ Việt Nam).\nMật khẩu mới: {password}\n\n" +
+            "Hãy lưu mật khẩu ở nơi an toàn và xóa email này sau khi đã ghi nhớ. Nếu bạn không thực hiện thay đổi này, hãy liên hệ ngay bộ phận hỗ trợ Hóa đơn tự động.\n\nHóa đơn tự động";
+        static string e(string? s) => System.Net.WebUtility.HtmlEncode(s ?? "");
+        var html = $"<p>Xin chào {e(displayName)},</p><p>Mật khẩu tài khoản Hóa đơn tự động (<b>{e(username)}</b>) vừa được đổi lúc {e(at)} (giờ Việt Nam).</p>" +
+            $"<p>Mật khẩu mới: <b>{e(password)}</b></p><p>Hãy lưu mật khẩu ở nơi an toàn và xóa email này sau khi đã ghi nhớ. Nếu bạn không thực hiện thay đổi này, hãy liên hệ ngay bộ phận hỗ trợ Hóa đơn tự động.</p><p>Hóa đơn tự động</p>";
+        return new(to, "Hóa đơn tự động - Mật khẩu mới của bạn", text, html);
     }
 
     // ---- Quên mật khẩu: a one-time link (30 minutes) to the account's email. The answer never reveals whether the
@@ -297,7 +337,7 @@ public sealed class AccountController(ICustomerStore store, PasswordService pass
         vm.Valid = account is not null;
         vm.Username = account?.Username;
         if (account is null || !ModelState.IsValid) return View(vm);
-        var policy = PasswordPolicy.Validate(vm.NewPassword);
+        var policy = (await passwordSecurity.GetAsync()).ValidateNew(vm.NewPassword);
         if (!policy.IsValid)
         {
             ModelState.AddModelError(nameof(vm.NewPassword), policy.Error);

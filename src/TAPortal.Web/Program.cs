@@ -41,6 +41,7 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
                 new("password_stamp", stamp!)
             };
             if (!string.IsNullOrWhiteSpace(user.Email)) claims.Add(new(System.Security.Claims.ClaimTypes.Email, user.Email));
+            if (user.MustChangePassword) claims.Add(new(TAPortal.Web.Controllers.AccountController.MustChangePasswordClaim, "1"));
             claims.AddRange(user.Roles.Select(r => new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.Role, r)));
             claims.AddRange(user.Permissions.Select(p => new System.Security.Claims.Claim("permission", p)));
             claims.AddRange((user.RoleNames ?? []).Select(n => new System.Security.Claims.Claim("role_name", n)));
@@ -55,6 +56,7 @@ builder.Services.AddAuthorization(options => options.AddPolicy("SystemAdminOnly"
 builder.Services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProvider>();
 builder.Services.AddScoped<IAuthorizationHandler, PermissionHandler>();
 builder.Services.AddSingleton<PasswordService>();
+builder.Services.AddSingleton<IPasswordSecurityStore, SqlPasswordSecurityStore>(); // weak password list + initial password (operator 2026-11-13)
 builder.Services.AddScoped<PortalDb>();
 builder.Services.AddScoped<MembershipAdminStore>();
 builder.Services.AddScoped<ICustomerPortalAccounts, SqlCustomerPortalAccounts>();
@@ -159,6 +161,18 @@ app.Use((context, next) =>
 });
 app.UseRouting();
 app.UseAuthentication();
+// Operator 2026-11-13: an account signed in with an initial/weak password (or MustChangePassword=1) sees only "Đổi mật khẩu".
+string[] passwordChangeAllowed = ["/account/changepassword", "/account/logout", "/account/login", "/account/accessdenied", TAPortal.Shared.BuildInfo.Path];
+app.Use(async (context, next) =>
+{
+    if (context.User.HasClaim(TAPortal.Web.Controllers.AccountController.MustChangePasswordClaim, "1")
+        && !passwordChangeAllowed.Any(p => context.Request.Path.StartsWithSegments(p, StringComparison.OrdinalIgnoreCase)))
+    {
+        context.Response.Redirect(context.Request.PathBase + "/account/changepassword");
+        return;
+    }
+    await next();
+});
 app.UseAuthorization();
 app.MapControllerRoute(name: "default", pattern: "{controller=Home}/{action=Index}/{id?}");
 TAPortal.Shared.BuildInfo.MapBuildInfo(app);

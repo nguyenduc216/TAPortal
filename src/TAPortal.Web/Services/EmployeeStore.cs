@@ -408,7 +408,7 @@ public sealed class SqlEmployeeStore(IConfiguration configuration, AdminAuditOpt
             {
                 userId = await PortalDb.InsertUserAsync(cn, tx, audit.RequireDurableAudit,
                     new UserCreateVm { Username = username, DisplayName = core.FullName, Email = email, Phone = core.CompanyPhone ?? core.MobilePhone, RoleId = null },
-                    passwordHash, actorId, roleIds, ipAddress);
+                    passwordHash, actorId, roleIds, ipAddress, input.MustChangePassword);
             }
             catch (UnauthorizedAccessException) { return new(EmployeeOutcome.RoleForbidden, id); }
             if (await Exec(cn, tx, EmployeeSql.Link, ("@id", id), ("@rv", core.RowVersion), ("@u", userId), ("@by", actorId)) != 1) return new(EmployeeOutcome.Conflict, id);

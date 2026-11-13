@@ -190,6 +190,10 @@ public sealed class EmployeeAccountInput
     public string? Password { get; set; }
     public List<Guid>? RoleIds { get; set; }
     [ValidateNever] public string? Stamp { get; set; }
+    /// <summary>Use the initial password from "Cài đặt bảo mật mật khẩu" (default 123456) instead of typing one.</summary>
+    public bool UseInitialPassword { get; set; }
+    /// <summary>Set by the controller (never bound): the password is initial/weak, so it must be changed at the first sign-in.</summary>
+    [ValidateNever, Microsoft.AspNetCore.Mvc.ModelBinding.BindNever] public bool MustChangePassword { get; set; }
 }
 
 public sealed record EmployeeAccountCandidate(Guid Id, string Username, string DisplayName, string? Email, bool LoginEligible);

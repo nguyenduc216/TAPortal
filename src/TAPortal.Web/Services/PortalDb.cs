@@ -3,10 +3,11 @@ using TAPortal.Web.Models;
 
 namespace TAPortal.Web.Services;
 
-public sealed record AuthUserSnapshot(Guid Id, string Username, string DisplayName, string? Email, string? Phone, string PasswordHash, IReadOnlyList<string> Roles, IReadOnlyList<string> Permissions, IReadOnlyList<string>? RoleNames = null);
+public sealed record AuthUserSnapshot(Guid Id, string Username, string DisplayName, string? Email, string? Phone, string PasswordHash, IReadOnlyList<string> Roles, IReadOnlyList<string> Permissions, IReadOnlyList<string>? RoleNames = null, bool MustChangePassword = false);
 
 // Login-eligible user row only (IsDeleted=0 AND IsActive=1 AND Status='ACTIVE'); ineligible accounts look exactly like unknown ones.
-public sealed record LoginCandidate(Guid Id, string Username, string DisplayName, string? Email, string? Phone, string PasswordHash);
+// MustChangePassword: the next page is "Đổi mật khẩu" (initial or weak password; operator 2026-11-13).
+public sealed record LoginCandidate(Guid Id, string Username, string DisplayName, string? Email, string? Phone, string PasswordHash, bool MustChangePassword = false);
 // RoleNames: display names of the active roles (shown in the top bar instead of codes).
 public sealed record AuthGrants(IReadOnlyList<string> Roles, IReadOnlyList<string> Permissions, IReadOnlyList<string>? RoleNames = null);
 
@@ -17,6 +18,8 @@ public interface IAdminAuthStore
     Task<LoginCandidate?> FindLoginCandidateAsync(string username);
     Task<AuthGrants> LoadGrantsAsync(Guid userId);
     Task TouchLoginAsync(Guid userId);
+    /// <summary>Sets Users.MustChangePassword=1 (signed in with a weak password).</summary>
+    Task RequirePasswordChangeAsync(Guid userId) => Task.CompletedTask;
 }
 
 public sealed class PortalDb : IAdminAuthStore
@@ -43,7 +46,7 @@ public sealed class PortalDb : IAdminAuthStore
         var candidate = await FindLoginCandidateAsync(username);
         if (candidate is null) return null;
         var grants = await LoadGrantsAsync(candidate.Id);
-        return new(candidate.Id, candidate.Username, candidate.DisplayName, candidate.Email, candidate.Phone, candidate.PasswordHash, grants.Roles, grants.Permissions, grants.RoleNames);
+        return new(candidate.Id, candidate.Username, candidate.DisplayName, candidate.Email, candidate.Phone, candidate.PasswordHash, grants.Roles, grants.Permissions, grants.RoleNames, candidate.MustChangePassword);
     }
 
     public async Task<LoginCandidate?> FindLoginCandidateAsync(string username)
@@ -51,7 +54,7 @@ public sealed class PortalDb : IAdminAuthStore
         await using var cn = Open();
         await cn.OpenAsync();
         const string sql = """
-SELECT TOP 1 Id,Username,DisplayName,Email,Phone,PasswordHash
+SELECT TOP 1 Id,Username,DisplayName,Email,Phone,PasswordHash,MustChangePassword
 FROM dbo.Users
 WHERE NormalizedUsername=@u AND IsDeleted=0 AND IsActive=1 AND Status='ACTIVE';
 """;
@@ -59,7 +62,7 @@ WHERE NormalizedUsername=@u AND IsDeleted=0 AND IsActive=1 AND Status='ACTIVE';
         cmd.Parameters.AddWithValue("@u", username.Trim().ToUpperInvariant());
         await using var rd = await cmd.ExecuteReaderAsync();
         if (!await rd.ReadAsync()) return null;
-        return new(rd.GetGuid(0), rd.GetString(1), rd.GetString(2), rd.IsDBNull(3) ? null : rd.GetString(3), rd.IsDBNull(4) ? null : rd.GetString(4), rd.IsDBNull(5) ? string.Empty : rd.GetString(5));
+        return new(rd.GetGuid(0), rd.GetString(1), rd.GetString(2), rd.IsDBNull(3) ? null : rd.GetString(3), rd.IsDBNull(4) ? null : rd.GetString(4), rd.IsDBNull(5) ? string.Empty : rd.GetString(5), !rd.IsDBNull(6) && rd.GetBoolean(6));
     }
 
     public async Task<AuthGrants> LoadGrantsAsync(Guid id)
@@ -146,11 +149,11 @@ WHERE r.Id=@r AND r.IsActive=1 AND r.IsDeleted=0
   WHERE a.Id=@by AND a.IsActive=1 AND a.IsDeleted=0 AND a.Status='ACTIVE' AND ar.Code='SYS_ADMIN' AND ar.IsActive=1 AND ar.IsDeleted=0);
 """;
 
-    public async Task<Guid> CreateUserAsync(UserCreateVm vm, string passwordHash, Guid? createdBy = null)
+    public async Task<Guid> CreateUserAsync(UserCreateVm vm, string passwordHash, Guid? createdBy = null, bool mustChangePassword = false)
     {
         await using var cn = Open(); await cn.OpenAsync();
         await using var tx = (SqlTransaction)await cn.BeginTransactionAsync();
-        var id = await InsertUserAsync(cn, tx, _audit.RequireDurableAudit, vm, passwordHash, createdBy, vm.RoleId.HasValue ? [vm.RoleId.Value] : [], null);
+        var id = await InsertUserAsync(cn, tx, _audit.RequireDurableAudit, vm, passwordHash, createdBy, vm.RoleId.HasValue ? [vm.RoleId.Value] : [], null, mustChangePassword);
         await tx.CommitAsync();
         return id;
     }
@@ -159,13 +162,14 @@ WHERE r.Id=@r AND r.IsActive=1 AND r.IsDeleted=0
     // ACTIVE user, grants each role through CreateUserRoleSql (active roles only; SYS_ADMIN only when the creator is an
     // active SYS_ADMIN, else UnauthorizedAccessException) and writes the USER_CREATED audit row (AuditUnavailableException
     // when durable audit is mandatory and could not be written). Nothing is committed here.
+    // mustChangePassword: an initial/weak password handed out by staff, replaced at the first sign-in (operator 2026-11-13).
     public static async Task<Guid> InsertUserAsync(SqlConnection cn, SqlTransaction tx, bool requireDurableAudit, UserCreateVm vm, string passwordHash,
-        Guid? createdBy, IReadOnlyCollection<Guid> roleIds, string? ipAddress)
+        Guid? createdBy, IReadOnlyCollection<Guid> roleIds, string? ipAddress, bool mustChangePassword = false)
     {
         var id = Guid.NewGuid();
         const string sql = """
-INSERT dbo.Users(Id,Username,NormalizedUsername,Email,NormalizedEmail,Phone,DisplayName,PasswordHash,Status,IsActive,CreatedBy)
-VALUES(@id,@username,@nu,@email,@ne,@phone,@name,@hash,'ACTIVE',1,@createdBy);
+INSERT dbo.Users(Id,Username,NormalizedUsername,Email,NormalizedEmail,Phone,DisplayName,PasswordHash,MustChangePassword,Status,IsActive,CreatedBy)
+VALUES(@id,@username,@nu,@email,@ne,@phone,@name,@hash,@must,'ACTIVE',1,@createdBy);
 """;
         await using (var cmd = new SqlCommand(sql, cn, tx))
         {
@@ -177,6 +181,7 @@ VALUES(@id,@username,@nu,@email,@ne,@phone,@name,@hash,'ACTIVE',1,@createdBy);
             cmd.Parameters.AddWithValue("@phone", (object?)vm.Phone ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@name", vm.DisplayName.Trim());
             cmd.Parameters.AddWithValue("@hash", passwordHash);
+            cmd.Parameters.AddWithValue("@must", mustChangePassword);
             cmd.Parameters.AddWithValue("@createdBy", (object?)createdBy ?? DBNull.Value);
             await cmd.ExecuteNonQueryAsync();
         }
@@ -199,11 +204,20 @@ VALUES(@id,@username,@nu,@email,@ne,@phone,@name,@hash,'ACTIVE',1,@createdBy);
         return id;
     }
 
+    public async Task RequirePasswordChangeAsync(Guid userId)
+    {
+        await using var cn = Open(); await cn.OpenAsync();
+        await using var cmd = new SqlCommand("UPDATE dbo.Users SET MustChangePassword=1 WHERE Id=@id AND MustChangePassword=0", cn);
+        cmd.Parameters.AddWithValue("@id", userId);
+        await cmd.ExecuteNonQueryAsync();
+    }
+
+    // A password the user chose: MustChangePassword is cleared.
     public async Task UpdatePasswordAsync(Guid userId, string passwordHash)
     {
         await using var cn = Open(); await cn.OpenAsync();
         await using var tx = (SqlTransaction)await cn.BeginTransactionAsync();
-        await using (var cmd = new SqlCommand("UPDATE dbo.Users SET PasswordHash=@h,UpdatedAt=SYSUTCDATETIME(),UpdatedBy=@id WHERE Id=@id", cn, tx))
+        await using (var cmd = new SqlCommand("UPDATE dbo.Users SET PasswordHash=@h,MustChangePassword=0,UpdatedAt=SYSUTCDATETIME(),UpdatedBy=@id WHERE Id=@id", cn, tx))
         {
             cmd.Parameters.AddWithValue("@h", passwordHash);
             cmd.Parameters.AddWithValue("@id", userId);

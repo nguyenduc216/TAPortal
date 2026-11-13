@@ -45,6 +45,22 @@ public sealed class PasswordService
         var validation = PasswordPolicy.Validate(password);
         if (!validation.IsValid)
             throw new ArgumentException(validation.Error, nameof(password));
+        return Derive(password);
+    }
+
+    /// <summary>
+    /// Hash of an initial password staff hand out that may not pass PasswordPolicy (e.g. 123456 from the weak list).
+    /// Only for accounts saved with MustChangePassword=1, so the password is replaced at the first sign-in.
+    /// </summary>
+    public string HashTemporary(string password)
+    {
+        if (string.IsNullOrWhiteSpace(password))
+            throw new ArgumentException("Mật khẩu không được để trống.", nameof(password));
+        return Derive(password);
+    }
+
+    private static string Derive(string password)
+    {
         var salt = RandomNumberGenerator.GetBytes(SaltSize);
         var key = Rfc2898DeriveBytes.Pbkdf2(password, salt, Iterations, HashAlgorithmName.SHA256, KeySize);
         return $"PBKDF2$SHA256${Iterations}${Convert.ToBase64String(salt)}${Convert.ToBase64String(key)}";

@@ -14,6 +14,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllersWithViews(o => o.Filters.Add(new AutoValidateAntiforgeryTokenAttribute()));
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddSingleton<PasswordService>();
+builder.Services.AddSingleton<IPasswordSecurityStore, SqlPasswordSecurityStore>(); // weak password list, edited in the Admin portal (operator 2026-11-13)
 builder.Services.AddSingleton<LoginAttemptLimiter>();
 builder.Services.AddScoped<ICustomerStore, CustomerStore>();
 builder.Services.AddScoped<ISignupStore, SqlSignupStore>();

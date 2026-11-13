@@ -67,7 +67,8 @@ public sealed class UsersController(PortalDb db, PasswordService passwords, IUse
     [Authorize(Policy = PermissionPolicies.Prefix + "AUTH.USERS.CREATE")]
     public async Task<IActionResult> Create(UserCreateVm vm)
     {
-        var policy = PasswordPolicy.Validate(vm.Password);
+        // Operator 2026-11-13: a weak/initial password is allowed here and must be changed at the first sign-in.
+        var policy = (await HttpContext.RequestServices.GetRequiredService<IPasswordSecurityStore>().GetAsync()).ValidateAssigned(vm.Password);
         if (!policy.IsValid) ModelState.AddModelError(nameof(vm.Password), policy.Error);
         if (!string.IsNullOrWhiteSpace(vm.Username) && await db.UsernameExistsAsync(vm.Username)) ModelState.AddModelError(nameof(vm.Username), "Tên đăng nhập đã tồn tại.");
         if (ModelState.IsValid && await db.EmailInUseAsync(vm.Email, null)) ModelState.AddModelError(nameof(vm.Email), "Email đã được sử dụng bởi tài khoản khác.");
@@ -78,7 +79,7 @@ public sealed class UsersController(PortalDb db, PasswordService passwords, IUse
         {
             try
             {
-                await db.CreateUserAsync(vm, passwords.Hash(vm.Password), ActorId(User));
+                await db.CreateUserAsync(vm, policy.MustChange ? passwords.HashTemporary(vm.Password) : passwords.Hash(vm.Password), ActorId(User), policy.MustChange);
                 TempData["Success"] = "Đã tạo người dùng mới.";
                 return RedirectToAction(nameof(Index));
             }
@@ -353,7 +354,7 @@ public sealed partial class CustomersController(PortalDb db, ICustomerAdminStore
             if (input.UserId.HasValue) return BadRequest();
             if (string.IsNullOrWhiteSpace(input.Username) || string.IsNullOrWhiteSpace(input.DisplayName))
                 ModelState.AddModelError("", "Vui lòng nhập tên đăng nhập và họ tên.");
-            var policy = PasswordPolicy.Validate(input.Password);
+            var policy = (await HttpContext.RequestServices.GetRequiredService<IPasswordSecurityStore>().GetAsync()).ValidateNew(input.Password);
             if (!policy.IsValid) ModelState.AddModelError("", policy.Error);
             else if (ModelState.IsValid) hash = passwords.Hash(input.Password!);
         }

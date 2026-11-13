@@ -10,6 +10,8 @@ public interface ICustomerStore
     Task<IReadOnlyList<CustomerMembership>> Memberships(Guid userId);
     Task<bool> ChangePassword(Guid id, string oldHash, string newHash);
     Task TouchLogin(Guid id);
+    /// <summary>Sets Users.MustChangePassword=1 (signed in with a password on the weak list; operator 2026-11-13).</summary>
+    Task RequirePasswordChange(Guid id) => Task.CompletedTask;
 }
 
 public sealed class CustomerStore(IConfiguration configuration) : ICustomerStore
@@ -55,6 +57,15 @@ AND u.IsActive=1 AND u.IsDeleted=0 AND u.Status='ACTIVE' ORDER BY c.Name
         cmd.Parameters.AddWithValue("@old", oldHash);
         cmd.Parameters.AddWithValue("@new", newHash);
         return await cmd.ExecuteNonQueryAsync() == 1;
+    }
+
+    public async Task RequirePasswordChange(Guid id)
+    {
+        await using var cn = Connection();
+        await cn.OpenAsync();
+        await using var cmd = new SqlCommand("UPDATE dbo.Users SET MustChangePassword=1 WHERE Id=@id AND MustChangePassword=0", cn);
+        cmd.Parameters.AddWithValue("@id", id);
+        await cmd.ExecuteNonQueryAsync();
     }
 
     public async Task TouchLogin(Guid id)

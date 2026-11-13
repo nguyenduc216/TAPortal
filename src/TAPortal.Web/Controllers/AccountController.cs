@@ -9,11 +9,13 @@ using TAPortal.Web.Services;
 
 namespace TAPortal.Web.Controllers;
 
-public sealed class AccountController(PortalDb db, IAdminAuthStore auth, PasswordService passwords, IAdminLoginThrottle throttle, ILogger<AccountController> logger) : Controller
+public sealed class AccountController(PortalDb db, IAdminAuthStore auth, PasswordService passwords, IAdminLoginThrottle throttle, ILogger<AccountController> logger,
+    IPasswordSecurityStore passwordSecurity, IServiceProvider services) : Controller
 {
     // Unknown, ineligible or hash-less accounts still pay the full PBKDF2 cost so response time does not reveal which accounts exist.
     private static readonly string DummyHash = new PasswordService().Hash(Guid.NewGuid() + "Aa1!");
     internal const string GenericLoginError = "Tài khoản hoặc mật khẩu không đúng.";
+    internal const string MustChangePasswordClaim = "must_change_password";
 
     // PasswordService.Verify returns early (no PBKDF2) for empty/malformed hashes; never let that path be observable.
     private bool VerifyWithConstantWork(string password, string? storedHash)
@@ -72,6 +74,14 @@ public sealed class AccountController(PortalDb db, IAdminAuthStore auth, Passwor
             new("password_stamp", Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(user.PasswordHash))))
         };
         if (!string.IsNullOrWhiteSpace(user.Email)) claims.Add(new Claim(ClaimTypes.Email, user.Email));
+        // Operator 2026-11-13: an initial password or one on the weak list must be replaced before anything else.
+        var mustChange = user.MustChangePassword;
+        if (!mustChange && (await passwordSecurity.GetAsync()).IsWeak(vm.Password))
+        {
+            mustChange = true;
+            await auth.RequirePasswordChangeAsync(user.Id);
+        }
+        if (mustChange) claims.Add(new Claim(MustChangePasswordClaim, "1"));
         claims.AddRange(grants.Roles.Select(r => new Claim(ClaimTypes.Role, r)));
         claims.AddRange(grants.Permissions.Select(p => new Claim("permission", p)));
         claims.AddRange((grants.RoleNames ?? []).Select(n => new Claim("role_name", n)));
@@ -81,6 +91,7 @@ public sealed class AccountController(PortalDb db, IAdminAuthStore auth, Passwor
             new AuthenticationProperties { IsPersistent = vm.RememberMe, AllowRefresh = true });
         await auth.TouchLoginAsync(user.Id);
 
+        if (mustChange) return RedirectToAction(nameof(ChangePassword));
         if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl)) return LocalRedirect(returnUrl);
         return Landing(principal);
     }
@@ -113,15 +124,20 @@ public sealed class AccountController(PortalDb db, IAdminAuthStore auth, Passwor
 
     [Authorize]
     [HttpGet]
-    public IActionResult ChangePassword() => View(new ChangePasswordVm());
+    public IActionResult ChangePassword()
+    {
+        ViewBag.MustChange = User.HasClaim(MustChangePasswordClaim, "1");
+        return View(new ChangePasswordVm());
+    }
 
     [Authorize]
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> ChangePassword(ChangePasswordVm vm)
     {
+        ViewBag.MustChange = User.HasClaim(MustChangePasswordClaim, "1");
         if (!ModelState.IsValid) return View(vm);
-        var policy = PasswordPolicy.Validate(vm.NewPassword);
+        var policy = (await passwordSecurity.GetAsync()).ValidateNew(vm.NewPassword);
         if (!policy.IsValid)
         {
             ModelState.AddModelError(nameof(vm.NewPassword), policy.Error);
@@ -149,9 +165,32 @@ public sealed class AccountController(PortalDb db, IAdminAuthStore auth, Passwor
             ModelState.AddModelError(string.Empty, "Không thể ghi nhật ký audit nên mật khẩu chưa được đổi. Liên hệ quản trị hệ thống.");
             return View(vm);
         }
-        TempData["Success"] = "Đã đổi mật khẩu thành công.";
-        return RedirectToAction(nameof(Profile));
+        // Operator 2026-11-13: the new password is emailed to the account's address. A failed email never undoes the change.
+        var mailed = false;
+        if (!string.IsNullOrWhiteSpace(user.Email))
+        {
+            try
+            {
+                var error = await services.GetRequiredService<TAPortal.Integrations.Notifications.NotificationSettings>()
+                    .SendSystemEmailAsync(user.Email, "TAPortal - Mật khẩu mới của bạn", PasswordChangedEmail(user.DisplayName, user.Username, vm.NewPassword));
+                mailed = error is null;
+                if (error is not null) logger.LogWarning("ADMIN_PASSWORD_EMAIL_FAILED user {UserId}: {Error}", user.Id, error);
+            }
+            catch (Exception ex) when (ex is Microsoft.Data.SqlClient.SqlException or InvalidOperationException or System.Security.Cryptography.CryptographicException)
+            {
+                logger.LogWarning(ex, "ADMIN_PASSWORD_EMAIL_FAILED user {UserId}", user.Id);
+            }
+        }
+        // The password stamp changed, so the session ends: sign in again with the new password.
+        await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+        TempData["Success"] = "Đã đổi mật khẩu thành công" + (mailed ? " và gửi mật khẩu mới về email của bạn" : "") + ". Vui lòng đăng nhập lại bằng mật khẩu mới.";
+        return RedirectToAction(nameof(Login));
     }
+
+    public static string PasswordChangedEmail(string displayName, string username, string password) =>
+        $"Xin chào {displayName},\n\nMật khẩu tài khoản TAPortal ({username}) vừa được đổi lúc {DateTime.UtcNow.AddHours(7):HH:mm dd/MM/yyyy} (giờ Việt Nam).\n" +
+        $"Mật khẩu mới: {password}\n\nHãy lưu mật khẩu ở nơi an toàn và xóa email này sau khi đã ghi nhớ. " +
+        "Nếu bạn không thực hiện thay đổi này, hãy báo ngay cho quản trị hệ thống.\n\nTư vấn giải pháp T.A";
 
     [AllowAnonymous]
     public IActionResult AccessDenied() => View();

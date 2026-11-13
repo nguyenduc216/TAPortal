@@ -1,0 +1,30 @@
+@model TAPortal.Web.Controllers.PasswordSecurityVm
+@{
+    ViewData["Title"] = "Bảo mật mật khẩu";
+    ViewData["Subtitle"] = "Danh sách mật khẩu yếu và mật khẩu khởi tạo, áp dụng cho TAPortal và Hóa đơn tự động.";
+    ViewData["PageIcon"] = "lock";
+}
+@if (Model.Errors.Count > 0)
+{
+    <div class="ta-alert ta-alert--danger mb-3" role="alert">@UiIcon.Render("alert-circle")<div class="ta-alert__body">@foreach (var e in Model.Errors) {<div>@e</div>}</div></div>
+}
+<div class="row"><div class="col-xl-8">
+<form class="card" method="post" asp-action="Index" data-password-security>
+    <div class="card-body">
+        <div class="mb-3">
+            <label class="form-label required" for="weakPasswords">Mật khẩu yếu (cách nhau bằng dấu ;)</label>
+            <div class="ta-input-icon ta-input-icon--top">@UiIcon.Render("shield-check")<textarea id="weakPasswords" class="form-control" name="WeakPasswords" rows="6" maxlength="8000" spellcheck="false" autocomplete="off">@Model.WeakPasswords</textarea></div>
+            <div class="form-hint">Hiện có @Model.WeakCount mật khẩu (tính cả mật khẩu khởi tạo, không phân biệt hoa thường). Người dùng không được đặt các mật khẩu này; ai đăng nhập bằng một mật khẩu trong danh sách sẽ phải đổi mật khẩu mới trước khi dùng tiếp.</div>
+        </div>
+        <div>
+            <label class="form-label required" for="temporaryPassword">Mật khẩu khởi tạo</label>
+            <div class="ta-input-icon">@UiIcon.Render("key")<input id="temporaryPassword" class="form-control" name="TemporaryPassword" value="@Model.TemporaryPassword" maxlength="128" autocomplete="off" /></div>
+            <div class="form-hint">Dùng khi tạo tài khoản nhân viên với ô "Dùng mật khẩu khởi tạo mặc định". Tài khoản đó phải đổi mật khẩu ở lần đăng nhập đầu; mật khẩu mới được gửi về email của tài khoản.</div>
+        </div>
+    </div>
+    <div class="card-footer ta-form-actions">
+        <button class="btn" type="submit" name="reset" value="true" data-ta-loading>@UiIcon.Render("refresh")<span>Khôi phục mặc định</span></button>
+        <button class="btn btn-primary ms-auto" type="submit" data-ta-loading data-ta-loading-text="Đang lưu...">@UiIcon.Render("device-floppy")<span>Lưu cài đặt</span></button>
+    </div>
+</form>
+</div></div>

@@ -10,7 +10,7 @@ namespace TAPortal.Web.Controllers;
 // re-checked in SQL by SqlEmployeeStore. Private fields (CCCD, MST cá nhân, BHXH, addresses) are read only with
 // HR.EMPLOYEE.VIEW_PRIVATE and written only with VIEW_PRIVATE + UPDATE_PRIVATE.
 [Authorize(Policy = AdminPermissions.Policy.EmployeesView)]
-public sealed class EmployeesController(IEmployeeStore employees, PasswordService passwords, ILogger<EmployeesController> logger) : Controller
+public sealed class EmployeesController(IEmployeeStore employees, PasswordService passwords, IPasswordSecurityStore passwordSecurity, ILogger<EmployeesController> logger) : Controller
 {
     internal const string StoreUnavailable = "Không đọc được dữ liệu nhân sự. Chi tiết đã ghi vào nhật ký ứng dụng.";
 
@@ -168,8 +168,13 @@ public sealed class EmployeesController(IEmployeeStore employees, PasswordServic
         if (UsersController.ActorId(User) is not Guid actor) return Forbid();
         var errors = new List<string>();
         if (string.IsNullOrWhiteSpace(input.Username)) errors.Add("Vui lòng nhập tên đăng nhập.");
-        var policy = PasswordPolicy.Validate(input.Password);
+        // Operator 2026-11-13: staff may hand out the initial password (setting, default 123456) or another weak one from the
+        // list; the employee must then choose a new password at the first sign-in.
+        var security = await passwordSecurity.GetAsync();
+        if (input.UseInitialPassword) input.Password = security.TemporaryPassword;
+        var policy = security.ValidateAssigned(input.Password);
         if (!policy.IsValid) errors.Add(policy.Error);
+        input.MustChangePassword = policy.MustChange;
         if (!ModelState.IsValid) errors.Add(FirstError());
         if (errors.Count == 0)
         {
@@ -179,14 +184,16 @@ public sealed class EmployeesController(IEmployeeStore employees, PasswordServic
         }
         if (errors.Count == 0)
         {
-            var result = await employees.CreateAccountAsync(actor, id, input, passwords.Hash(input.Password!), Ip);
+            var result = await employees.CreateAccountAsync(actor, id, input, input.MustChangePassword ? passwords.HashTemporary(input.Password!) : passwords.Hash(input.Password!), Ip);
             switch (result.Outcome)
             {
                 case EmployeeOutcome.NotFound: return NotFound();
                 case EmployeeOutcome.Forbidden: return Forbid();
                 case EmployeeOutcome.Saved:
                     logger.LogInformation("Employee account created and linked. Actor {ActorId}, employee {EmployeeId}, audit persisted {AuditPersisted}.", actor, id, result.AuditPersisted);
-                    TempData["Success"] = "Đã tạo tài khoản đăng nhập và liên kết với nhân viên. Giao mật khẩu ban đầu cho nhân viên qua kênh an toàn." + AuditNotice(result.AuditPersisted);
+                    TempData["Success"] = (input.MustChangePassword
+                        ? "Đã tạo tài khoản đăng nhập và liên kết với nhân viên. Nhân viên dùng mật khẩu khởi tạo để đăng nhập lần đầu và sẽ được yêu cầu đổi mật khẩu mới."
+                        : "Đã tạo tài khoản đăng nhập và liên kết với nhân viên. Giao mật khẩu ban đầu cho nhân viên qua kênh an toàn.") + AuditNotice(result.AuditPersisted);
                     return RedirectToAction(nameof(Details), new { id });
                 default:
                     errors.Add(Message(result.Outcome));

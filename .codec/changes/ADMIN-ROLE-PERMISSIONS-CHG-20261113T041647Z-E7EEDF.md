@@ -1,0 +1,46 @@
+# Change ADMIN-ROLE-PERMISSIONS-CHG-20261113T041647Z-E7EEDF
+
+- Feature ID: `ADMIN-ROLE-PERMISSIONS`
+- Change ID: `ADMIN-ROLE-PERMISSIONS-CHG-20261113T041647Z-E7EEDF`
+- Created UTC: 2026-11-13T04:16:47.915368+00:00
+- Tiêu đề: Mat khau yeu, mat khau khoi tao va bat buoc doi mat khau (portal + hoa don); xoa tai khoan va viec thu
+- Trạng thái: IMPLEMENTED
+
+## Yêu cầu và phạm vi
+Operator (2026-11-13):
+- Cấp tài khoản nhân viên với mật khẩu 123456; tài khoản dùng mật khẩu yếu phải đổi mật khẩu mới ngay sau khi đăng nhập; mật khẩu mới được gửi về email.
+- Danh sách mật khẩu yếu (cách nhau bằng dấu ;) cài đặt trong portal quản trị, áp dụng cho cả portal và hóa đơn; tạo sẵn danh sách mặc định.
+- Xóa các tài khoản cũ (trừ admin) và các việc đang có. Operator xác nhận đúng danh sách: 3 tài khoản thử TA_DEV_CRM_019_U1/U2/U3, 3 hồ sơ nhân viên của chúng, 1 việc; giữ admin và 2 tài khoản khách hàng; xóa mềm.
+
+Đã làm:
+- `TAPortal.Shared/PasswordSecurity.cs`: `PasswordSecuritySettings` (danh sách mặc định 20 mật khẩu, mật khẩu khởi tạo 123456, so khớp không phân biệt hoa thường, `ValidateNew`, `ValidateAssigned`); `SqlPasswordSecurityStore` đọc/ghi `dbo.Settings` (SYSTEM, key `Security.WeakPasswords`, `Security.TemporaryPassword`), cache 30 giây, lỗi đọc thì dùng mặc định, ghi kèm audit (chỉ số lượng). `PasswordService.HashTemporary` cho mật khẩu khởi tạo.
+- Portal quản trị: trang "Bảo mật mật khẩu" (SYS_ADMIN) trong menu Quản lý hệ thống; đăng nhập bằng mật khẩu yếu hoặc `MustChangePassword=1` thì chỉ được vào "Đổi mật khẩu" (cổng mới trong `Program.cs`); đổi xong đặt `MustChangePassword=0`, gửi mật khẩu mới qua kênh email SYSTEM, đăng xuất để đăng nhập lại. Tạo tài khoản nhân viên có ô "Dùng mật khẩu khởi tạo mặc định"; mật khẩu yếu/khởi tạo do quản trị đặt thì tài khoản được lưu `MustChangePassword=1`.
+- Hóa đơn: đăng nhập bằng mật khẩu yếu bật `MustChangePassword` (cổng đã có); đổi/đặt lại mật khẩu không được dùng mật khẩu yếu; đổi xong gửi mật khẩu mới qua email (chỉ nói "Hóa đơn tự động").
+- Migration 037: xóa mềm 3 tài khoản thử, 3 hồ sơ nhân viên liên kết, việc còn lại và checklist của nó (đánh dấu DeletedAt 2026-11-13 00:37:00 để rollback đúng các dòng này).
+
+## File thay đổi (relative path, thao tác ADD/MODIFY/DELETE)
+- ADD `src/TAPortal.Shared/PasswordSecurity.cs`, `src/TAPortal.Web/Controllers/PasswordSecurityController.cs`, `src/TAPortal.Web/Views/PasswordSecurity/Index.cshtml`, `tests/TACustomerPortal.Tests/SafePasswordSecurityTests.cs`
+- ADD `database/migrations/037-remove-test-accounts-and-tasks.sql`, `database/scripts/063-verify-remove-test-accounts-and-tasks.sql`, `database/scripts/064-rollback-remove-test-accounts-and-tasks.sql`
+- MODIFY `src/TAPortal.Shared/PasswordService.cs`, `src/TAPortal.Integrations/Notifications/NotificationService.cs`
+- MODIFY `src/TAPortal.Web/{Program.cs,Controllers/AccountController.cs,Controllers/EmployeesController.cs,Controllers/PortalControllers.cs,Services/PortalDb.cs,Services/EmployeePolicy.cs,Services/EmployeeStore.cs}`, views `Account/{Login,ChangePassword}.cshtml`, `Employees/Details.cshtml`, `Shared/_Layout.cshtml`
+- MODIFY `src/TACustomerPortal.Web/{Program.cs,Controllers/AccountController.cs,Services/CustomerStore.cs}`
+
+## Migration SQL (KHÔNG tự chạy)
+- `database/migrations/037-remove-test-accounts-and-tasks.sql` (verify 063, rollback 064), chạy sau 036 bằng `Invoke-TAMigrations.ps1 -Plan "037:063:064"`. Operator đã đồng ý cho migration cập nhật dòng dữ liệu đang có.
+
+## Test và kết quả
+- Release build 0 lỗi; Safe tests 677/677 (mới: SafePasswordSecurityTests).
+
+## Publish
+- portal, invoice, webhooks (Shared và Integrations thay đổi). Xem report.
+
+## Git
+- Branch: feature/tx-sync
+- Commit SHA: xem report
+- PR:
+- Merge: xem report
+- Merge SHA:
+
+## Rủi ro, quyết định và việc còn lại
+- Gửi mật khẩu dạng chữ thường qua email theo yêu cầu operator: ai đọc được hộp thư là có mật khẩu. Email khuyên xóa sau khi ghi nhớ.
+- Tạo 6 nhân viên mới qua giao diện portal (không đưa thông tin cá nhân vào git/.codec).

@@ -95,6 +95,19 @@ public sealed class NotificationSettings(INotificationStore store, ISecretProtec
         return text;
     }
 
+    /// <summary>
+    /// Sends one email now through the SYSTEM SMTP channel (not the outbox); null when sent, else the reason.
+    /// Used for account emails of the Admin portal (operator 2026-11-13: the new password after a change).
+    /// </summary>
+    public async Task<string?> SendSystemEmailAsync(string to, string subject, string body, CancellationToken ct = default)
+    {
+        var c = (await store.ChannelsAsync(NotificationScope.System, null, ct)).FirstOrDefault(x => x.Channel == NotificationChannelKind.Smtp);
+        if (c is null || !c.IsEnabled) return "Chưa bật kênh email hệ thống.";
+        var message = new OutboxMessage($"account:{Guid.NewGuid():N}", NotificationScope.System, null, NotificationChannelKind.Smtp, to.Trim(), subject, body, null, null);
+        var (result, _) = await Dispatch.SendAsync(store, protector, transport, c, message, ct);
+        return result.Ok ? null : result.Error ?? "Gửi email thất bại.";
+    }
+
     public Task<NotificationRecipients> RecipientsAsync(Guid customerId, CancellationToken ct = default) => store.RecipientsAsync(customerId, ct);
 
     public async Task<IReadOnlyList<string>> SaveRecipientsAsync(Guid customerId, string? email, string? zaloPhone, string? telegramChatId, IEnumerable<string> events, Guid actor, CancellationToken ct = default)

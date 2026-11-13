@@ -21,6 +21,10 @@
                     <p>Đăng nhập để tiếp tục sử dụng T.A Portal.</p>
                 </div>
 
+                @if (TempData["Success"] is string signedOutNotice)
+                {
+                    <div class="ta-alert ta-alert--success" role="status">@UiIcon.Render("circle-check")<div class="ta-alert__body">@signedOutNotice</div></div>
+                }
                 @if (ViewData.ModelState.ErrorCount > 0)
                 {
                     <div class="ta-alert ta-alert--danger" role="alert">
