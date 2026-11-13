@@ -120,16 +120,6 @@
                     </ul>
                 </div>
             }
-            @if (Can(AdminPermissions.InvoiceAppContentView))
-            {
-                <div class="ta-nav__group">
-                    <p class="ta-nav__section">Hóa đơn tự động</p>
-                    <ul class="ta-nav__list">
-                        <li><a class="ta-nav__link" asp-controller="InvoiceAppContent" asp-action="Index" title="Mẫu email" aria-current="@(IsCurrent("InvoiceAppContent", "Index") || IsCurrent("InvoiceAppContent", "Email") ? "page" : null)"><span class="ta-nav__icon">@UiIcon.Render("mail")</span><span class="ta-nav__label">Mẫu email</span></a></li>
-                        <li><a class="ta-nav__link" asp-controller="InvoiceAppContent" asp-action="Terms" title="Điều khoản dịch vụ" aria-current="@(IsCurrent("InvoiceAppContent", "Terms") ? "page" : null)"><span class="ta-nav__icon">@UiIcon.Render("file-text")</span><span class="ta-nav__label">Điều khoản dịch vụ</span></a></li>
-                    </ul>
-                </div>
-            }
             @if (canEmployees || canDepartments || canTeams || canJobTitles)
             {
                 <div class="ta-nav__group">
@@ -179,11 +169,10 @@
                     {
                         <li><a class="ta-nav__link" asp-controller="Menus" asp-action="Index" title="Quản lý menu" aria-current="@(IsCurrent("Menus") ? "page" : null)"><span class="ta-nav__icon">@UiIcon.Render("list-tree")</span><span class="ta-nav__label">Quản lý menu</span></a></li>
                     }
-                    @if (User.IsInRole("SYS_ADMIN"))
+                    @if (TAPortal.Web.Controllers.SystemSettingsController.CanOpen(User))
                     {
-                        <li><a class="ta-nav__link" asp-controller="PasswordSecurity" asp-action="Index" title="Bảo mật mật khẩu" aria-current="@(IsCurrent("PasswordSecurity") ? "page" : null)"><span class="ta-nav__icon">@UiIcon.Render("lock")</span><span class="ta-nav__label">Bảo mật mật khẩu</span></a></li>
+                        <li><a class="ta-nav__link" asp-controller="SystemSettings" asp-action="Index" title="Cấu hình hệ thống" aria-current="@(IsCurrent("SystemSettings") || IsCurrent("InvoiceAppContent") || IsCurrent("PasswordSecurity") ? "page" : null)"><span class="ta-nav__icon">@UiIcon.Render("settings")</span><span class="ta-nav__label">Cấu hình hệ thống</span></a></li>
                     }
-                    <li><span class="ta-nav__link is-disabled" aria-disabled="true" title="Cấu hình hệ thống — chức năng chưa triển khai"><span class="ta-nav__icon">@UiIcon.Render("settings")</span><span class="ta-nav__label">Cấu hình hệ thống</span><span class="ta-nav__badge">Sắp có</span></span></li>
                     <li><span class="ta-nav__link is-disabled" aria-disabled="true" title="Nhật ký hoạt động — chức năng chưa triển khai"><span class="ta-nav__icon">@UiIcon.Render("file-text")</span><span class="ta-nav__label">Nhật ký hoạt động</span><span class="ta-nav__badge">Sắp có</span></span></li>
                 </ul>
             </div>

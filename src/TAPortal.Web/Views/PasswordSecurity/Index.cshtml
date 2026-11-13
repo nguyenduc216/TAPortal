@@ -1,9 +1,12 @@
 @model TAPortal.Web.Controllers.PasswordSecurityVm
 @{
+    ViewData["ParentTitle"] = "Cấu hình hệ thống";
+    ViewData["ParentController"] = "SystemSettings";
     ViewData["Title"] = "Bảo mật mật khẩu";
     ViewData["Subtitle"] = "Danh sách mật khẩu yếu và mật khẩu khởi tạo, áp dụng cho TAPortal và Hóa đơn tự động.";
     ViewData["PageIcon"] = "lock";
 }
+<partial name="_SystemSettingsTabs" model="@("password")" />
 @if (Model.Errors.Count > 0)
 {
     <div class="ta-alert ta-alert--danger mb-3" role="alert">@UiIcon.Render("alert-circle")<div class="ta-alert__body">@foreach (var e in Model.Errors) {<div>@e</div>}</div></div>
