@@ -63,7 +63,9 @@
     let i = 0;
     const show = () => {
       $('.v9-quote-text', box).textContent = quotes[i].text;
-      $('.v9-quote-author', box).textContent = quotes[i].author ? '— ' + quotes[i].author : note;
+      const author = $('.v9-quote-author', box);
+      author.textContent = quotes[i].author ? '— ' + quotes[i].author : note;
+      author.classList.toggle('ta-todo', !quotes[i].author && note.startsWith('T.A bổ sung'));
       $$('.v9-dots span', box).forEach((d, k) => d.classList.toggle('active', k === i));
     };
     $('.v9-slide-prev', box)?.addEventListener('click', () => { i = (i + quotes.length - 1) % quotes.length; show(); });

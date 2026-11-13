@@ -475,6 +475,21 @@ public sealed class SafeWebsiteTests
         Assert.Equal("AM", S.XlsxWriter.Column(38));
     }
 
+    [Fact]
+    public async Task PublicPagesShowNoMockupNotesAndMarkMissingDataForTA()
+    {
+        await using var f = SiteFactory(new MemoryReader());
+        var client = f.CreateClient();
+        foreach (var page in SiteMap.Pages.Where(p => p.Path is not null && !p.Path.Contains('{')))
+        {
+            var html = WebUtility.HtmlDecode(await client.GetStringAsync(page.Path));
+            Assert.DoesNotContain("mockup", html, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain("khi triển khai", html, StringComparison.OrdinalIgnoreCase);
+        }
+        var contact = WebUtility.HtmlDecode(await client.GetStringAsync("/lien-he"));
+        Assert.Contains("<span class=\"ta-todo\">T.A bổ sung số hotline</span>", contact);
+    }
+
     // ---- helpers --------------------------------------------------------------------------------------------------
     private static string RepoRoot()
     {

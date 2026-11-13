@@ -62,8 +62,8 @@
     <div><h3>@f["col1Title"]</h3>@foreach (var l in f.List("col1")) {<a href="@SiteContext.Link(l["url"])">› @l["label"]</a>}</div>
     <div><h3>@f["col2Title"]</h3>@foreach (var l in f.List("col2")) {<a href="@SiteContext.Link(l["url"])">› @l["label"]</a>}</div>
     <div><h3>LIÊN HỆ</h3>
-        <p>✉ Email: @if (string.IsNullOrWhiteSpace(s["contact.email"])) {<text>cập nhật khi triển khai</text>} else {<a href="mailto:@s["contact.email"]">@s["contact.email"]</a>}</p>
-        <p>☎ Hotline: @if (s.HotlineHref is null) {<text>cập nhật khi triển khai</text>} else {<a href="@s.HotlineHref">@s["contact.hotline"]</a>}</p>
+        <p>✉ Email: @if (string.IsNullOrWhiteSpace(s["contact.email"])) {<span class="ta-todo">T.A bổ sung email</span>} else {<a href="mailto:@s["contact.email"]">@s["contact.email"]</a>}</p>
+        <p>☎ Hotline: @if (s.HotlineHref is null) {<span class="ta-todo">T.A bổ sung hotline</span>} else {<a href="@s.HotlineHref">@s["contact.hotline"]</a>}</p>
         <p>⌖ @s["office.shortAddress"]</p>
         <a class="v9-footer-contact-link" href="/lien-he">Thông tin liên hệ →</a>
     </div>

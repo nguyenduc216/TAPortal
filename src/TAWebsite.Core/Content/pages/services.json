@@ -70,7 +70,7 @@
    "type": "rich-html",
    "name": "Kêu gọi liên hệ",
    "content": {
-    "html": "<section class=\"dv-section\"><div class=\"wrap\">\n<div class=\"dv-cta\"><div><span class=\"eyebrow\">KHẢO SÁT MIỄN PHÍ</span><h2>Chưa chắc nên bắt đầu từ dịch vụ nào?</h2><p>Gửi tình trạng hiện tại của doanh nghiệp, T.A sẽ đề xuất lộ trình và phạm vi dịch vụ phù hợp.</p></div>\n<div class=\"dv-cta-actions\"><a class=\"btn btn-gold btn-action\" href=\"/lien-he\">☎ LIÊN HỆ TƯ VẤN</a><a class=\"btn btn-outline btn-action\" href=\"/dich-vu/ke-toan-thue#goi\">XEM CÁC GÓI KẾ TOÁN</a></div></div>\n<p class=\"dv-disclaimer\">Nội dung là bản mockup để duyệt bố cục. Thông tin pháp lý cần được đối chiếu với quy định hiện hành trước khi xuất bản.</p>\n</div></section>"
+    "html": "<section class=\"dv-section\"><div class=\"wrap\">\n<div class=\"dv-cta\"><div><span class=\"eyebrow\">KHẢO SÁT MIỄN PHÍ</span><h2>Chưa chắc nên bắt đầu từ dịch vụ nào?</h2><p>Gửi tình trạng hiện tại của doanh nghiệp, T.A sẽ đề xuất lộ trình và phạm vi dịch vụ phù hợp.</p></div>\n<div class=\"dv-cta-actions\"><a class=\"btn btn-gold btn-action\" href=\"/lien-he\">☎ LIÊN HỆ TƯ VẤN</a><a class=\"btn btn-outline btn-action\" href=\"/dich-vu/ke-toan-thue#goi\">XEM CÁC GÓI KẾ TOÁN</a></div></div>\n<p class=\"dv-disclaimer\"><span class=\"ta-todo\">T.A bổ sung: xác nhận danh mục dịch vụ, thời gian phản hồi và đối chiếu thông tin pháp lý trên trang này với quy định hiện hành.</span></p>\n</div></section>"
    }
   }
  ]

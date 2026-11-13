@@ -12,7 +12,7 @@
             <div aria-live="polite" class="v9-quote-card"><span aria-hidden="true" class="v9-quote-mark">“</span><div>
                 <p class="v9-quote-text">@quotes[0]["text"]</p>
                 <div class="v9-stars" aria-label="5 sao">★★★★★</div>
-                <small class="v9-quote-author">@(quotes[0].Has("author") ? "— " + quotes[0]["author"] : c["note"])</small>
+                @if (quotes[0].Has("author")) {<small class="v9-quote-author">— @quotes[0]["author"]</small>} else {<small class="v9-quote-author@(c["note"].StartsWith("T.A bổ sung") ? " ta-todo" : "")">@c["note"]</small>}
             </div></div>
             @if (quotes.Count > 1)
             {

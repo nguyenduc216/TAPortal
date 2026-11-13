@@ -12,7 +12,7 @@ public static class SiteSettingDefs
         new("company.taxCode", "Mã số thuế", "Doanh nghiệp", "4202032682"),
         new("brand.name", "Tên thương hiệu (header)", "Doanh nghiệp", "Tư vấn giải pháp"),
         new("brand.slogan", "Khẩu hiệu (header)", "Doanh nghiệp", "Giải pháp tối ưu - Phát triển bền vững"),
-        new("contact.hotline", "Hotline", "Liên hệ", "", "Để trống: website hiện 'Cập nhật khi triển khai'."),
+        new("contact.hotline", "Hotline", "Liên hệ", "", "Để trống: website hiện nhãn đỏ 'T.A bổ sung'."),
         new("contact.email", "Email", "Liên hệ", ""),
         new("contact.zalo", "Zalo (số điện thoại hoặc link zalo.me)", "Liên hệ", ""),
         new("office.address", "Địa chỉ đầy đủ", "Văn phòng", "Lô NV-14_11, Khu đô thị mới Phước Long, Phường Nam Nha Trang, Tỉnh Khánh Hòa"),
