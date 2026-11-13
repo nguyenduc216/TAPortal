@@ -108,7 +108,11 @@ public sealed class SafeReleaseRegressionTests
             "Account.RegisterDone:GET", "Account.Terms:GET",
             // Public payment page of one order (operator 2026-11-06; reviewed: opened only by a random 32-character token,
             // rate-limited, antiforgery on the invoice details form, which only writes that order's tax code and invoice name).
-            "Pay.Index:GET", "Pay.Status:GET", "Pay.Logo:GET", "Pay.Invoice:POST" }, anonymous);
+            "Pay.Index:GET", "Pay.Status:GET", "Pay.Logo:GET", "Pay.Invoice:POST",
+            // Zalo Mini App JSON API (ZALO-MINI-APP, operator 2026-11-13; reviewed: no cookie, so no antiforgery; rate-limited;
+            // CORS limited to the Mini App origins; the Zalo user and phone are read from Zalo with the client's tokens, never
+            // taken from the body; QR one-time 5 min; password path shares the web login limiter; calls need a signed session).
+            "ZaloMiniApp.Resume:POST", "ZaloMiniApp.Qr:POST", "ZaloMiniApp.Login:POST", "ZaloMiniApp.Select:POST", "ZaloMiniApp.Me:GET", "ZaloMiniApp.Logout:POST" }, anonymous);
         // Everything else falls under the authenticated fallback policy.
         Assert.NotNull(f.Services.GetRequiredService<Microsoft.Extensions.Options.IOptions<AuthorizationOptions>>().Value.FallbackPolicy);
     }

@@ -1,0 +1,71 @@
+@model TAPortal.Integrations.ZaloMiniApp.ZaloPanel
+@{
+    ViewData["Title"] = "Zalo Mini App T.A";
+    ViewData["Subtitle"] = "Đăng nhập Mini App T.A trên Zalo bằng số điện thoại của tài khoản.";
+    ViewData["PageIcon"] = "qrcode";
+    var challenge = TempData["OtpChallenge"]?.ToString();   // TempData turns a GUID string back into a Guid
+}
+<div class="row g-3" data-ta-zalo>
+<div class="col-xl-6">
+<section class="card">
+    <div class="card-header"><h2 class="card-title">@UiIcon.Render("phone")Số điện thoại</h2>
+        @if (Model.Verified) {<span class="ta-badge ta-badge--success ms-auto" data-ta-phone-verified>Đã xác minh</span>}
+        else {<span class="ta-badge ta-badge--warning ms-auto" data-ta-phone-unverified>Chưa xác minh</span>}
+    </div>
+    <div class="card-body">
+        @if (Model.VerificationRequired && !Model.Verified)
+        {
+            <div class="ta-alert ta-alert--warning" role="alert" data-ta-verify-required><div class="ta-alert__body">Vui lòng xác minh số điện thoại bằng mã OTP gửi qua Zalo để tiếp tục sử dụng TA Portal.</div></div>
+        }
+        <p class="text-secondary">Chỉ Zalo đăng ký bằng đúng số điện thoại này mới đăng nhập được Mini App T.A của tài khoản.</p>
+        <form method="post" asp-action="ZaloPhone" class="mb-3">
+            <label class="form-label" for="zaloPhone">Số điện thoại di động</label>
+            <div class="ta-input-icon">@UiIcon.Render("phone")<input id="zaloPhone" name="phone" class="form-control" type="tel" inputmode="tel" autocomplete="tel" maxlength="20" value="@Model.Phone" placeholder="0912345678" required /></div>
+            <button type="submit" class="btn mt-2">@UiIcon.Render("device-floppy")<span>Lưu số điện thoại</span></button>
+        </form>
+        @if (!Model.Verified && Model.PhoneIsMobile)
+        {
+            @if (!Model.OtpAvailable)
+            {
+                <p class="text-secondary mb-0" data-ta-otp-unavailable>Chưa cấu hình mẫu tin OTP Zalo (ZaloMiniApp:OtpTemplateId).</p>
+            }
+            else if (challenge is not null)
+            {
+                <form method="post" asp-action="ZaloConfirmOtp" class="mb-2" data-ta-otp-form>
+                    <input type="hidden" name="challengeId" value="@challenge" />
+                    <label class="form-label" for="otpCode">Mã xác minh (6 chữ số)</label>
+                    <div class="ta-input-icon">@UiIcon.Render("key")<input id="otpCode" name="code" class="form-control" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required autofocus /></div>
+                    <button type="submit" class="btn btn-primary mt-2">@UiIcon.Render("shield-check")<span>Xác minh</span></button>
+                </form>
+                <form method="post" asp-action="ZaloSendOtp"><button type="submit" class="btn">@UiIcon.Render("refresh")<span>Gửi lại mã</span></button></form>
+            }
+            else
+            {
+                <form method="post" asp-action="ZaloSendOtp"><button type="submit" class="btn btn-primary" data-ta-send-otp>@UiIcon.Render("send")<span>Gửi mã xác minh qua Zalo</span></button></form>
+            }
+        }
+    </div>
+</section>
+</div>
+<div class="col-xl-6">
+<section class="card">
+    <div class="card-header"><h2 class="card-title">@UiIcon.Render("qrcode")Đăng nhập Mini App</h2></div>
+    <div class="card-body">
+        <p class="text-secondary">Mở mã QR rồi quét bằng Zalo để vào Mini App. Mỗi mã chỉ dùng được một lần trong 5 phút. Có thể đăng nhập ngay trong Mini App bằng tên đăng nhập và mật khẩu.</p>
+        @if (!Model.QrAvailable) {<p class="text-secondary" data-ta-qr-unavailable>Chưa cấu hình Mini App (ZaloMiniApp:AppId, ZaloMiniApp:SecretKey).</p>}
+        else if (!Model.Verified) {<p class="text-secondary">Xác minh số điện thoại trước để mở mã QR.</p>}
+        <p class="text-secondary mb-0" data-ta-links>@(Model.LinkCount > 0 ? $"Tài khoản đang liên kết với {Model.LinkCount} tài khoản Zalo." : "Tài khoản chưa liên kết với Zalo nào.")</p>
+    </div>
+    <div class="card-footer ta-form-actions">
+        @if (Model.LinkCount > 0)
+        {
+            <form method="post" asp-action="ZaloUnlink" data-ta-confirm="Hủy liên kết Zalo? Lần sau mở Mini App sẽ cần đăng nhập lại."><button type="submit" class="btn text-danger">@UiIcon.Render("x")<span>Hủy liên kết Zalo</span></button></form>
+        }
+        @if (Model.QrAvailable && Model.Verified)
+        {
+            <form method="post" asp-action="ZaloQr" class="ms-auto" data-ta-hard><button type="submit" class="btn btn-primary" data-ta-open-qr>@UiIcon.Render("qrcode")<span>Mở mã QR</span></button></form>
+        }
+    </div>
+</section>
+</div>
+</div>
