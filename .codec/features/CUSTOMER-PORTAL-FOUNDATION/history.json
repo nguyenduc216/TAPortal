@@ -603,5 +603,15 @@
     "migration_status": "NOT_APPLICABLE",
     "publish_status": "DEPLOYED",
     "merge_status": "MERGED"
+  },
+  {
+    "change_id": "CUSTOMER-PORTAL-FOUNDATION-CHG-20261113T052254Z-6CA9E4",
+    "created_at": "2026-11-13T05:22:54.890317+00:00",
+    "title": "QR tu tao lai khi chet, chan trang email, menu theo trang dang mo",
+    "status": "DEPLOYED",
+    "commit_sha": "ddfe35a",
+    "migration_status": "NOT_APPLICABLE",
+    "publish_status": "DEPLOYED",
+    "merge_status": "MERGED"
   }
 ]

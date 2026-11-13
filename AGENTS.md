@@ -94,7 +94,7 @@ Operator (2026-11-05): "Tôi cho phép bạn chạy deployed, migration, push v�
 
 ## CUSTOMER PORTAL BRAND (2026-11-07, operator rule)
 - The Customer Portal is the product "Hóa đơn tự động": every text a customer sees (brand, titles, messages, emails, page metadata) speaks as "Hóa đơn tự động" and never names T.A or "Customer Portal". Support wording: "bộ phận hỗ trợ Hóa đơn tự động".
-- The only exception is one small line "Sản phẩm của Tư vấn giải pháp T.A", linking to https://tuvangiaiphapta.vn (`a.cp-maker`): at the bottom of the sidebar (`Views/Shared/_Layout.cshtml`) and, operator 2026-11-12, at the very bottom of the sign-in pages (login, sign-up, password recovery, terms; `Views/Account/_AuthMaker.cshtml`). The terms of service may name the provider company in its "Thông tin nhà cung cấp" article. Customer data (e.g. a company whose own name contains "T.A") is not affected.
+- The only exception is one small line "Sản phẩm của Tư vấn giải pháp T.A", linking to https://tuvangiaiphapta.vn (`a.cp-maker`): at the bottom of the sidebar (`Views/Shared/_Layout.cshtml`) and, operator 2026-11-12, at the very bottom of the sign-in pages (login, sign-up, password recovery, terms; `Views/Account/_AuthMaker.cshtml`). Operator 2026-11-13: every email template (`PortalEmailRenderer`) ends with "hoadontudong.vn - 1 sản phẩm của Tư vấn giải pháp T.A", hoadontudong.vn linking to https://hoadontudong.vn and the company name to https://tuvangiaiphapta.vn. The terms of service may name the provider company in its "Thông tin nhà cung cấp" article. Customer data (e.g. a company whose own name contains "T.A") is not affected.
 - Enforced by `SafeCustomerBrandTests`.
 
 ## CUSTOMER PORTAL HOVER RULE (2026-11-04, operator rule)

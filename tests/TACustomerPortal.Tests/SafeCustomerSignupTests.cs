@@ -68,7 +68,9 @@ public sealed class SafeCustomerSignupTests
         Assert.Contains("Địa chỉ đăng nhập: https://hoadon.example.vn/account/login", mail.TextBody);
         Assert.Contains("src=\"https://hoadon.example.vn/images/logo.png\"", mail.HtmlBody);
         Assert.Contains(WebUtility.HtmlEncode(password), mail.HtmlBody);
-        Assert.DoesNotMatch(@"(?i)\b(tingee|heno)\b|T\.A\b", mail.HtmlBody + mail.TextBody);
+        // The only T.A mention is the footer's maker line (operator 2026-11-13).
+        var maker = new Regex(@"1 sản phẩm của (<a [^>]+>)?Tư vấn giải pháp T\.A");
+        Assert.DoesNotMatch(@"(?i)\b(tingee|heno)\b|T\.A\b", maker.Replace(mail.HtmlBody + mail.TextBody, ""));
 
         var done = WebUtility.HtmlDecode(await c.GetStringAsync("/account/register/done"));
         Assert.Contains("Thông tin đăng nhập đã gửi đến", done);

@@ -289,6 +289,31 @@
         if (!swapIn(doc, finalUrl, { ...options, push: options.push && finalUrl !== window.location.href || options.forcePush })) window.location.assign(finalUrl);
     };
 
+    // ---- Sidebar follows the current page (operator 2026-11-13) --------------------------------------------------------
+    // The menu keeps its scroll position across soft navigations and scrolls only when the current page's link is out of view.
+    const navScroller = () => {
+        let box = document.getElementById('taNav') || document.getElementById('cpNav');
+        while (box && box !== document.body) {
+            const overflow = window.getComputedStyle(box).overflowY;
+            if ((overflow === 'auto' || overflow === 'scroll') && box.scrollHeight > box.clientHeight) return box;
+            box = box.parentElement;
+        }
+        return null;
+    };
+    let navScrollTop = null;
+    const revealCurrentNav = () => {
+        const box = navScroller();
+        if (!box) return;
+        if (navScrollTop !== null) { box.scrollTop = navScrollTop; navScrollTop = null; }
+        const link = box.querySelector('[aria-current="page"]');
+        if (!link) return;
+        const l = link.getBoundingClientRect(), b = box.getBoundingClientRect();
+        if (l.top < b.top + 8 || l.bottom > b.bottom - 8) box.scrollTop += (l.top - b.top) - (b.height - l.height) / 2;
+    };
+    document.addEventListener('ta:before-swap', () => { navScrollTop = navScroller()?.scrollTop ?? null; });
+    document.addEventListener('ta:load', revealCurrentNav);
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', revealCurrentNav); else revealCurrentNav();
+
     if (swapIds().length > 0 && window.fetch && window.DOMParser) {
         window.history.replaceState({ ta: true }, '', window.location.href);
         const warm = (event) => {

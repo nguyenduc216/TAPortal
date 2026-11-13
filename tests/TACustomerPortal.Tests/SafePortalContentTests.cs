@@ -16,6 +16,19 @@ public sealed class SafePortalContentTests
         ["DiaChiDangNhap"] = "https://hoadon.example.vn/account/login", ["TenDangNhap"] = "an@example.vn", ["MatKhau"] = "Xk7#pQ2m!<t9"
     };
 
+    // Operator 2026-11-13: the footer names the product site and its maker, linking to T.A's website.
+    [Fact]
+    public void EveryEmailEndsWithTheProductSiteAndItsMaker()
+    {
+        foreach (var spec in PortalEmailTemplates.All)
+        {
+            var mail = PortalEmailRenderer.Render(spec, null, null, PortalEmailTemplates.Samples(spec), "https://hoadon.example.vn");
+            Assert.Contains("<a href=\"https://hoadontudong.vn\" style=\"color:#1d4ed8;text-decoration:none\">hoadontudong.vn</a> - 1 sản phẩm của <a href=\"https://tuvangiaiphapta.vn\"", mail.HtmlBody);
+            Assert.Contains(">Tư vấn giải pháp T.A</a>", mail.HtmlBody);
+            Assert.EndsWith("hoadontudong.vn - 1 sản phẩm của Tư vấn giải pháp T.A (https://tuvangiaiphapta.vn)\n", mail.TextBody);
+        }
+    }
+
     [Fact]
     public void TheDefaultLoginEmailHasTheLogoTheLoginBoxAndTheButton()
     {
