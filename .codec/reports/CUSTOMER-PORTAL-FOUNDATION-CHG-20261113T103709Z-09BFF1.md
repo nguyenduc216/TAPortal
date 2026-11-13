@@ -3,11 +3,11 @@
 Feature ID: `CUSTOMER-PORTAL-FOUNDATION`
 Change ID: `CUSTOMER-PORTAL-FOUNDATION-CHG-20261113T103709Z-09BFF1`
 
-1. Mục tiêu và kết quả thực tế:
-2. Danh sách file cập nhật (relative + nếu cần absolute):
-3. Database `TAPortalSys`: migration path + thứ tự + trạng thái NOT_EXECUTED/OPERATOR_CONFIRMED:
-4. Build/test: lệnh, pass/fail/not run:
-5. Publish: project, destination đã duyệt, artifact SHA256, status:
-6. Git: branch, commit SHA, PR, merge SHA hoặc PENDING_APPROVAL:
-7. Rủi ro/rollback/việc operator cần làm:
-8. Bằng chứng kiểm tra (URL/log, không có secrets):
+1. Mục tiêu và kết quả thực tế: cầu nối trang thanh toán có chấm sáng chạy và icon ngân hàng nhấp nháy, chạy cả khi giảm chuyển động.
+2. Danh sách file cập nhật: xem `.codec/changes/CUSTOMER-PORTAL-FOUNDATION-CHG-20261113T103709Z-09BFF1.md`.
+3. Database: không có migration.
+4. Build/test: Release build 0 lỗi; Safe tests qua; kiểm tra animation trên trang thử.
+5. Publish: invoice 9f995337f726. Source commit 7b4d3fa.
+6. Git: branch `feature/tx-sync`, source commit 7b4d3fa; main fast-forward.
+7. Rủi ro/việc còn lại: không.
+8. Bằng chứng: trang thử animation; log deploy.

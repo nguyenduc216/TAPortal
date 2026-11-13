@@ -4,7 +4,7 @@
 - Change ID: `CUSTOMER-PORTAL-FOUNDATION-CHG-20261113T103709Z-09BFF1`
 - Created UTC: 2026-11-13T10:37:09.314223+00:00
 - Tiêu đề: Payment page bridge: moving dot and bank pulse, also under reduced motion
-- Trạng thái: IMPLEMENTED
+- Trạng thái: DEPLOYED
 
 ## Yêu cầu và phạm vi
 Operator (2026-11-13), ảnh trang thanh toán đơn: "Kiểm tra phần này không thấy animation nữa nhỉ", rồi đồng ý làm animation rõ hơn và vẫn chạy khi thiết bị bật giảm chuyển động.
@@ -31,9 +31,9 @@ Kiểm tra: CSS nét đứt (`cp-pay-flow`) không đổi và trùng file đang 
 
 ## Git
 - Branch: feature/tx-sync
-- Commit SHA: xem report
+- Commit SHA: 7b4d3fa
 - PR:
-- Merge: xem report
+- Merge: fast-forward main
 - Merge SHA:
 
 ## Rủi ro, quyết định và việc còn lại
