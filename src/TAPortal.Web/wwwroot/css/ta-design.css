@@ -503,12 +503,17 @@ ul.ta-stat-list { display: grid; gap: 4px; }
 @keyframes ta-turn { from { opacity: .35; } to { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; } }
 
-/* 18. Mobile card slides (operator 2026-11-13): on phones a KPI/stat card group scrolls sideways one card at a time,
-   the next card peeking in, instead of stacking full-width cards down the page. */
+/* 18. Card slides (operator 2026-11-13): a KPI/stat card group is always one row. Up to 4 cards (3 for --3) share
+   the width; more cards slide sideways, the next one peeking in. Phones show one card at a time. */
+.ta-kpi-grid, .ta-kpi-grid--3, .ta-web-stats { --ta-slide-gap: var(--ta-sp-4); --ta-slide-per: 4; display: flex; gap: var(--ta-slide-gap); margin-inline: -4px; padding: 4px 4px 12px; overflow-x: auto; scroll-snap-type: x mandatory; scroll-padding-inline: 4px; overscroll-behavior-x: contain; scrollbar-width: thin; scrollbar-color: var(--ta-border) transparent; }
+.ta-kpi-grid--3 { --ta-slide-per: 3; }
+.ta-web-stats { --ta-slide-gap: 12px; }
+.ta-kpi-grid > *, .ta-web-stats > * { flex: 1 0 max(220px, calc((100% - (var(--ta-slide-per) - 1) * var(--ta-slide-gap)) / var(--ta-slide-per) - 24px)); min-width: 0; height: auto; scroll-snap-align: start; }
+@media (hover: none) { .ta-kpi-grid, .ta-web-stats { scrollbar-width: none; } .ta-kpi-grid::-webkit-scrollbar, .ta-web-stats::-webkit-scrollbar { display: none; } }
 @media (max-width: 767.98px) {
-    .ta-kpi-grid, .ta-kpi-grid--3 { display: flex; gap: var(--ta-sp-3); margin-inline: calc(-1 * var(--ta-sp-4)); padding: 2px var(--ta-sp-4) 8px; overflow-x: auto; scroll-snap-type: x mandatory; scroll-padding-inline: var(--ta-sp-4); overscroll-behavior-x: contain; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
-    .ta-kpi-grid::-webkit-scrollbar { display: none; }
-    .ta-kpi-grid > * { flex: 0 0 min(78%, 300px); height: auto; scroll-snap-align: start; }
+    .ta-kpi-grid, .ta-kpi-grid--3, .ta-web-stats { --ta-slide-gap: var(--ta-sp-3); margin-inline: calc(-1 * var(--ta-sp-4)); padding: 2px var(--ta-sp-4) 8px; scroll-padding-inline: var(--ta-sp-4); scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+    .ta-kpi-grid::-webkit-scrollbar, .ta-web-stats::-webkit-scrollbar { display: none; }
+    .ta-kpi-grid > *, .ta-web-stats > * { flex: 0 0 min(78%, 300px); }
     .ta-kpi-grid .ta-stat-card { padding: var(--ta-sp-4); }
     .ta-kpi-grid .ta-stat-card:hover { box-shadow: none; }
 }

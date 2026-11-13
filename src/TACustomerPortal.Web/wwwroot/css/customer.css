@@ -782,10 +782,16 @@ textarea.cp-input { height: auto; min-height: 72px; padding-top: 8px; padding-bo
     .cp-show { zoom: 1.22; max-width: calc(560px / 1.22); }
 }
 
-/* Operator 2026-11-13: every stat/service card group slides sideways on phones, like .cp-stats. */
+/* Operator 2026-11-13: every stat/service card group is always one row. Up to 4 cards share the width; more cards
+   slide sideways, the next one peeking in. Phones show one card at a time (see .cp-stats above). */
+.cp-stats, .cp-grid:has(> .cp-stat), .cp-grid:has(> .cp-service) { --cp-slide-gap: 12px; display: flex; gap: var(--cp-slide-gap); margin-inline: -4px; padding: 4px 4px 12px; overflow-x: auto; scroll-snap-type: x mandatory; scroll-padding-inline: 4px; overscroll-behavior-x: contain; scrollbar-width: thin; scrollbar-color: var(--cp-line) transparent; }
+.cp-grid:has(> .cp-stat), .cp-grid:has(> .cp-service) { --cp-slide-gap: 14px; }
+.cp-stats > *, .cp-grid:has(> .cp-stat) > *, .cp-grid:has(> .cp-service) > * { flex: 1 0 max(220px, calc((100% - 3 * var(--cp-slide-gap)) / 4 - 24px)); min-width: 0; scroll-snap-align: start; }
+@media (hover: none) { .cp-stats, .cp-grid:has(> .cp-stat), .cp-grid:has(> .cp-service) { scrollbar-width: none; } .cp-stats::-webkit-scrollbar, .cp-grid:has(> .cp-stat)::-webkit-scrollbar, .cp-grid:has(> .cp-service)::-webkit-scrollbar { display: none; } }
 @media (max-width: 640px) {
-    .cp-grid:has(> .cp-stat), .cp-grid:has(> .cp-service) { display: flex; gap: 10px; margin: 0 -12px 12px; padding: 2px 12px 8px; overflow-x: auto; scroll-snap-type: x mandatory; scroll-padding: 0 12px; overscroll-behavior-x: contain; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
-    .cp-grid:has(> .cp-stat)::-webkit-scrollbar, .cp-grid:has(> .cp-service)::-webkit-scrollbar { display: none; }
-    .cp-grid:has(> .cp-stat) > *, .cp-grid:has(> .cp-service) > * { flex: 0 0 min(78%, 280px); scroll-snap-align: start; }
+    .cp-stats, .cp-grid:has(> .cp-stat), .cp-grid:has(> .cp-service) { --cp-slide-gap: 10px; margin: 0 -12px 12px; padding: 2px 12px 8px; scroll-padding: 0 12px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+    .cp-stats::-webkit-scrollbar, .cp-grid:has(> .cp-stat)::-webkit-scrollbar, .cp-grid:has(> .cp-service)::-webkit-scrollbar { display: none; }
+    .cp-stats > .cp-stat { flex: 0 0 min(72%, 260px); }
+    .cp-grid:has(> .cp-stat) > *, .cp-grid:has(> .cp-service) > * { flex: 0 0 min(78%, 280px); }
     .cp-grid:has(> .cp-stat) > .cp-stat { padding: 12px 14px; }
 }

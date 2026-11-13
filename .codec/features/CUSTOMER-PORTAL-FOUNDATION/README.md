@@ -68,3 +68,4 @@ CHECKPOINT_4A: PASS (existing artifact integrity, isolated localhost startup and
 | `CUSTOMER-PORTAL-FOUNDATION-CHG-20261112T150549Z-6358B3` | 2026-11-12 | Sign-in gold panel fills wide screens | 306c51f | NOT_APPLICABLE | DEPLOYED | MERGED |
 | `CUSTOMER-PORTAL-FOUNDATION-CHG-20261113T010304Z-58774A` | 2026-11-13 | Card thong ke dang slide ngang tren mobile (portal + hoa don) | 14ac25b | NOT_APPLICABLE | DEPLOYED | MERGED |
 | `CUSTOMER-PORTAL-FOUNDATION-CHG-20261113T052254Z-6CA9E4` | 2026-11-13 | QR tu tao lai khi chet, chan trang email, menu theo trang dang mo | ddfe35a | NOT_APPLICABLE | DEPLOYED | MERGED |
+| `CUSTOMER-PORTAL-FOUNDATION-CHG-20261113T082428Z-870E4D` | 2026-11-13 | Card groups always one sliding row on every screen (portal + invoice) | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |
