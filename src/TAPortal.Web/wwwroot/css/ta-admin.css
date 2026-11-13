@@ -164,3 +164,38 @@
 .ta-terms-preview details { margin-bottom: 8px; border: 1px solid var(--ta-line, #e2e8f0); border-radius: 8px; }
 .ta-terms-preview summary { padding: 8px 12px; font-weight: 600; cursor: pointer; }
 .ta-terms-preview p, .ta-terms-preview ul { margin: 8px 12px; font-size: 13.5px; }
+
+/* Task list (Công việc → Danh sách): operator 2026-11-13 "làm gọn lại" on phones. The filters become one sideways-scrolling
+   row under the search box, and each task is a compact card (title + status, owner, customer, due + progress). */
+.ta-task-filters__row { display: contents; }
+@media (max-width: 767.98px) {
+    .ta-task-filters { gap: var(--ta-sp-2); padding-top: var(--ta-sp-3); padding-bottom: var(--ta-sp-3); }
+    .ta-task-filters .ta-search { flex: 1 1 100%; max-width: none; }
+    .ta-task-filters__row { display: flex; flex: 1 1 100%; gap: var(--ta-sp-2); margin-inline: calc(-1 * var(--ta-sp-4)); padding: 2px var(--ta-sp-4); overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+    .ta-task-filters__row::-webkit-scrollbar { display: none; }
+    .ta-task-filters__row > * { flex: 0 0 auto; }
+    .ta-task-filters__row .form-select { width: auto; max-width: 62vw; height: 36px; padding-top: 4px; padding-bottom: 4px; font-size: .875rem; }
+    .ta-task-filters__row .btn { height: 36px; }
+
+    .ta-task-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); }
+    .ta-task-table, .ta-task-table tbody { display: block; min-width: 0; }
+    .ta-task-table tr { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "title status" "owner owner" "customer customer" "due progress";
+        column-gap: var(--ta-sp-3); row-gap: 2px; padding: var(--ta-sp-3) var(--ta-sp-4); border-bottom: 1px solid var(--ta-border); }
+    .ta-task-table tbody tr:last-child { border-bottom: 0; }
+    .ta-task-table tbody tr:hover td { background: transparent; }
+    .ta-task-table td { display: block; min-width: 0; padding: 0; border: 0; box-shadow: none !important; }
+    .ta-task-table tr.ta-row--overdue { box-shadow: inset 3px 0 0 var(--ta-danger); }
+    .ta-task-table tr.ta-row--soon { box-shadow: inset 3px 0 0 var(--ta-gold); }
+    .ta-tl__title { grid-area: title; font-size: .9375rem; line-height: 1.35; overflow-wrap: anywhere; }
+    .ta-tl__title .small { margin-top: 1px; }
+    .ta-tl__status { grid-area: status; align-self: start; }
+    .ta-tl__owner, .ta-tl__customer, .ta-tl__due { color: var(--ta-text-2); font-size: var(--ta-fs-small); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .ta-tl__owner { grid-area: owner; margin-top: 4px; }
+    .ta-tl__owner > div { display: inline; margin-left: 4px; }
+    .ta-tl__customer { grid-area: customer; }
+    .ta-tl__owner::before, .ta-tl__customer::before, .ta-tl__due::before { content: attr(data-label) ": "; font-weight: 600; }
+    .ta-tl__due { grid-area: due; display: flex; align-items: center; gap: 6px; margin-top: 4px; }
+    .ta-tl__due > div { display: inline; }
+    .ta-tl__progress { grid-area: progress; display: flex; align-items: center; justify-content: flex-end; gap: 6px; margin-top: 4px; }
+    .ta-tl__progress .ta-progress { width: 56px; margin: 0; }
+}

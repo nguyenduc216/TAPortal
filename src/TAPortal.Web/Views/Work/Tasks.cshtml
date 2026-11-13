@@ -14,8 +14,9 @@
 }
 @if (Model.Error is not null) {<div class="ta-alert ta-alert--danger" role="alert">@UiIcon.Render("alert-circle")<div class="ta-alert__body">@Model.Error</div></div>}
 <section class="card ta-table-card" aria-label="Danh sách công việc">
-    <form class="ta-table-toolbar d-flex flex-wrap gap-2 align-items-center" method="get" asp-action="Tasks">
+    <form class="ta-table-toolbar ta-task-filters d-flex flex-wrap gap-2 align-items-center" method="get" asp-action="Tasks">
         <div class="ta-search">@UiIcon.Render("search")<input class="form-control" type="search" name="q" value="@f.Q" maxlength="100" aria-label="Tìm công việc" placeholder="Tên hoặc mã công việc..." /></div>
+        <div class="ta-task-filters__row">
         <select class="form-select w-auto" name="scope" aria-label="Phạm vi">
             <option value="mine" selected="@(f.Scope == "mine")">Việc tôi làm</option>
             <option value="created" selected="@(f.Scope == "created")">Việc tôi đã tạo / giao</option>
@@ -39,6 +40,7 @@
             @foreach (var c in Model.Lookups.Customers) {<option value="@c.Id" selected="@(c.Id == f.Customer)">@c.Name</option>}
         </select>
         <button class="btn" type="submit">@UiIcon.Render("search")<span>Lọc</span></button>
+        </div>
     </form>
     @if (Model.Tasks is { Count: 0 })
     {
@@ -47,7 +49,7 @@
     else if (Model.Tasks is not null)
     {
         <div class="ta-table-wrap">
-            <table class="table ta-table">
+            <table class="table ta-table ta-task-table">
                 <thead><tr><th>Công việc</th><th>Phụ trách</th><th>Khách hàng</th><th>Hạn</th><th>Tiến độ</th><th>Trạng thái</th></tr></thead>
                 <tbody>
                 @foreach (var t in Model.Tasks)
@@ -55,12 +57,12 @@
                     var overdue = WorkTaskPolicy.IsOverdue(t.Status, t.DueDate, Model.Today);
                     var soon = WorkTaskPolicy.IsDueSoon(t.Status, t.DueDate, Model.Today);
                     <tr class="@(overdue ? "ta-row--overdue" : soon ? "ta-row--soon" : null)">
-                        <td><a asp-action="Details" asp-route-id="@t.Id"><strong>@t.Title</strong></a><div class="text-secondary small">@t.TaskNo@(t.Priority is "HIGH" or "URGENT" ? " · " + WorkTaskPolicy.PriorityLabel(t.Priority) : "")</div></td>
-                        <td>@t.OwnerName@if (t.MemberCount > 0) {<div class="text-secondary small">+@t.MemberCount người cùng làm</div>}</td>
-                        <td>@(t.CustomerName ?? "—")</td>
-                        <td>@(t.DueDate?.ToString("dd/MM/yyyy", vi) ?? "—")@if (overdue) {<div><span class="ta-badge ta-badge--danger">Quá hạn</span></div>} else if (soon) {<div><span class="ta-badge ta-badge--warning">Sắp đến hạn</span></div>}</td>
-                        <td><div class="ta-progress ta-progress--sm" aria-hidden="true"><span style="width:@(t.Progress)%"></span></div><span class="small text-secondary">@t.Progress% · @t.ChecklistDone/@t.ChecklistTotal</span></td>
-                        <td><span class="ta-badge ta-badge--@WorkTaskPolicy.StatusTone(t.Status)">@WorkTaskPolicy.StatusLabel(t.Status)</span></td>
+                        <td class="ta-tl__title"><a asp-action="Details" asp-route-id="@t.Id"><strong>@t.Title</strong></a><div class="text-secondary small">@t.TaskNo@(t.Priority is "HIGH" or "URGENT" ? " · " + WorkTaskPolicy.PriorityLabel(t.Priority) : "")</div></td>
+                        <td class="ta-tl__owner" data-label="Phụ trách">@t.OwnerName@if (t.MemberCount > 0) {<div class="text-secondary small">+@t.MemberCount người cùng làm</div>}</td>
+                        <td class="ta-tl__customer" data-label="Khách hàng">@(t.CustomerName ?? "—")</td>
+                        <td class="ta-tl__due" data-label="Hạn">@(t.DueDate?.ToString("dd/MM/yyyy", vi) ?? "—")@if (overdue) {<div><span class="ta-badge ta-badge--danger">Quá hạn</span></div>} else if (soon) {<div><span class="ta-badge ta-badge--warning">Sắp đến hạn</span></div>}</td>
+                        <td class="ta-tl__progress"><div class="ta-progress ta-progress--sm" aria-hidden="true"><span style="width:@(t.Progress)%"></span></div><span class="small text-secondary">@t.Progress% · @t.ChecklistDone/@t.ChecklistTotal</span></td>
+                        <td class="ta-tl__status"><span class="ta-badge ta-badge--@WorkTaskPolicy.StatusTone(t.Status)">@WorkTaskPolicy.StatusLabel(t.Status)</span></td>
                     </tr>
                 }
                 </tbody>

@@ -48,5 +48,15 @@
     "migration_status": "NOT_APPLICABLE",
     "publish_status": "DEPLOYED",
     "merge_status": "MERGED"
+  },
+  {
+    "change_id": "CONTRACTS-AND-TASKS-CHG-20261113T113022Z-FE45B3",
+    "created_at": "2026-11-13T11:30:22.553137+00:00",
+    "title": "Repair garbled Vietnamese (sqlcmd UTF-8 input), compact task list on mobile",
+    "status": "IMPLEMENTED",
+    "commit_sha": null,
+    "migration_status": "EXECUTED",
+    "publish_status": "NOT_PUBLISHED",
+    "merge_status": "PENDING_APPROVAL"
   }
 ]
