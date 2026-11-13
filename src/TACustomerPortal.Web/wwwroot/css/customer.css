@@ -541,12 +541,30 @@ textarea.cp-input { height: auto; min-height: 72px; padding-top: 8px; padding-bo
 .cp-pay__logo img { width: 100%; height: 100%; object-fit: contain; }
 .cp-pay__initials { display: grid; place-items: center; width: 100%; height: 100%; font-size: 24px; font-weight: 800; color: #fff; background: linear-gradient(135deg, var(--cp-gold-700), var(--cp-gold-900)); }
 .cp-pay__initials--buyer { background: linear-gradient(135deg, var(--cp-blue-500), var(--cp-blue-700)); }
-.cp-pay__bridge { display: flex; align-items: center; height: 76px; }
+.cp-pay__bridge { position: relative; display: flex; align-items: center; height: 76px; }
 .cp-pay__wire { flex: 1; height: 2px; background: repeating-linear-gradient(90deg, var(--cp-blue-500) 0 6px, transparent 6px 11px); background-size: 22px 2px; animation: cp-pay-flow 1.2s linear infinite; }
 .cp-pay__wire:last-child { background-image: repeating-linear-gradient(90deg, var(--cp-gold-500) 0 6px, transparent 6px 11px); }
 .cp-pay__knot { display: grid; place-items: center; width: 34px; height: 34px; flex: none; border-radius: 50%; color: #fff; background: linear-gradient(135deg, var(--cp-blue-600), var(--cp-gold-500)); box-shadow: var(--cp-shadow-md); }
 .cp-pay__knot .ta-icon { width: 18px; height: 18px; }
 @keyframes cp-pay-flow { to { background-position: 22px 0; } }
+/* Operator 2026-11-13: a glowing dot runs customer -> bank -> seller and the bank pulses when it passes. */
+.cp-pay__knot { position: relative; z-index: 1; animation: cp-pay-pulse 2.4s ease-out infinite; }
+.cp-pay__bridge::before { content: ""; position: absolute; top: calc(50% - 5px); left: 0; width: 10px; height: 10px; border-radius: 50%; background: var(--cp-blue-500); box-shadow: 0 0 0 3px rgba(59, 130, 246, .22), 0 0 12px 2px rgba(59, 130, 246, .55); animation: cp-pay-dot 2.4s ease-in-out infinite; pointer-events: none; }
+@keyframes cp-pay-dot {
+    0% { left: 0; opacity: 0; transform: scale(.6); }
+    8% { opacity: 1; transform: none; }
+    42% { left: calc(50% - 5px); background: var(--cp-blue-500); }
+    58% { left: calc(50% - 5px); background: var(--cp-gold-500); box-shadow: 0 0 0 3px rgba(234, 179, 8, .22), 0 0 12px 2px rgba(234, 179, 8, .55); }
+    92% { opacity: 1; transform: none; }
+    100% { left: calc(100% - 10px); opacity: 0; transform: scale(.6); background: var(--cp-gold-500); box-shadow: 0 0 0 3px rgba(234, 179, 8, .22), 0 0 12px 2px rgba(234, 179, 8, .55); }
+}
+@keyframes cp-pay-pulse {
+    0%, 38% { transform: none; box-shadow: 0 0 0 0 rgba(37, 99, 235, 0), var(--cp-shadow-md); }
+    48% { transform: scale(1.12); box-shadow: 0 0 0 4px rgba(37, 99, 235, .3), var(--cp-shadow-md); }
+    62% { transform: none; box-shadow: 0 0 0 12px rgba(234, 179, 8, 0), var(--cp-shadow-md); }
+    100% { transform: none; box-shadow: 0 0 0 0 rgba(234, 179, 8, 0), var(--cp-shadow-md); }
+}
+.cp-pay__bridge.is-paid::before { display: none; }
 .cp-pay__bridge.is-paid .cp-pay__wire { background-image: linear-gradient(90deg, var(--cp-green-700), var(--cp-green-700)); animation: none; }
 .cp-pay__bridge.is-paid .cp-pay__knot { background: var(--cp-green-700); box-shadow: 0 0 0 5px var(--cp-green-100), var(--cp-shadow-md); animation: cp-pop .3s var(--cp-ease) both; }
 .cp-pay__head { display: grid; justify-items: center; gap: 6px; text-align: center; padding-top: 12px; border-top: 1px solid var(--cp-line); }
@@ -610,7 +628,12 @@ textarea.cp-input { height: auto; min-height: 72px; padding-top: 8px; padding-bo
     .cp-pay__invoice-row { grid-template-columns: 1fr; }
     .cp-pay__save { margin-top: 0; justify-self: end; }
 }
-@media (prefers-reduced-motion: reduce) { .cp-pay__wire { animation: none; } }
+/* The payment bridge keeps moving even when the device asks for reduced motion (operator 2026-11-13): it is small and
+   slow, and shows the customer the page is live. More specific than the global reduce rule, so it wins. */
+@media (prefers-reduced-motion: reduce) {
+    .cp-pay__bridge:not(.is-paid) .cp-pay__wire { animation-duration: 1.2s !important; }
+    .cp-pay__bridge:not(.is-paid) .cp-pay__knot, .cp-pay__bridge:not(.is-paid)::before { animation-duration: 2.4s !important; }
+}
 
 /* Products (catalogue, order picker, "keep this price" dialog) */
 .cp-product-thumb { display: grid; place-items: center; width: 36px; height: 36px; flex: 0 0 36px; border: 1px solid var(--cp-line); border-radius: 8px; background: #fff; object-fit: cover; overflow: hidden; color: var(--cp-ink-3); }
