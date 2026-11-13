@@ -1,11 +1,24 @@
 @model SectionVm
 @* Rendered inside the news list and article pages (Site/News, Site/Post), not as a full-width section. *@
-@{ var c = Model.C; var popular = Model.Posts; }
+@{
+    var c = Model.C; var popular = Model.Posts;
+    // Deadlines are typed as dd/MM without a year; hide the ones that passed within the last six months so the list never
+    // shows an expired date (a date more than six months back is read as next year's).
+    var today = DateTime.UtcNow.AddHours(7).Date;
+    var upcoming = c.List("deadlines").Where(d =>
+    {
+        var p = d["date"].Split('/');
+        if (p.Length < 2 || !int.TryParse(p[0], out var day) || !int.TryParse(p[1], out var month) || month is < 1 or > 12) return true;
+        var date = new DateTime(today.Year, month, Math.Min(day, DateTime.DaysInMonth(today.Year, month)));
+        return date >= today || (today - date).TotalDays > 183;
+    }).ToList();
+}
 <aside class="nw-sidebar">
     @if (c.List("deadlines").Count > 0)
     {
         <div class="nw-widget"><h3>@c["deadlinesTitle"]</h3>
-            @foreach (var d in c.List("deadlines"))
+            @if (upcoming.Count == 0) {<p class="ta-todo">T.A bổ sung: các hạn nộp đã qua, cập nhật hạn mới trong Website TA.</p>}
+            @foreach (var d in upcoming)
             {
                 var parts = d["date"].Split('/');
                 <div class="nw-deadline"><span>@parts[0]@if (parts.Length > 1) {<small>TH @parts[1]</small>}</span><div><b>@d["title"]</b><em>@d["note"]</em></div></div>
