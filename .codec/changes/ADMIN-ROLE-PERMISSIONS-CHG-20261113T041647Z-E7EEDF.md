@@ -49,6 +49,7 @@ Operator: "tên đăng nhập là không có dấu, Unicode không có khoảng 
 - Hóa đơn: tự đăng ký sinh tên đăng nhập từ phần trước '@' của email (thêm số nếu trùng), email "Thông tin đăng nhập" gửi tên này; đăng nhập được bằng tên hoặc email.
 - Dữ liệu: migration riêng 904 (verify 905, rollback 906, để ngoài git) đổi tên đăng nhập 6 tài khoản nhân viên; dry-run PASS, gates 677/677, chạy thật VERIFY PASS (2026-11-13 04:47 UTC). Sau đó 0 tài khoản sai quy tắc.
 - Safe tests 678/678.
+- Deploy (health 200): webhooks 0ab8a5c artifact b9c6ff0e…, portal 573e718 artifact 29b215f8…, invoice ab2b54a artifact 2e7ef9db…
 
 ## Rủi ro, quyết định và việc còn lại
 - Gửi mật khẩu dạng chữ thường qua email theo yêu cầu operator: ai đọc được hộp thư là có mật khẩu. Email khuyên xóa sau khi ghi nhớ.
