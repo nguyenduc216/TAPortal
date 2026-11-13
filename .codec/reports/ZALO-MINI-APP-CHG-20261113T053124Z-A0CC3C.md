@@ -18,7 +18,7 @@ Change ID: `ZALO-MINI-APP-CHG-20261113T053124Z-A0CC3C`
 - MODIFY `src/TACustomerPortal.Web/Program.cs` — đăng ký dịch vụ, CORS Mini App, rate limit `miniapp`.
 - ADD `tests/TACustomerPortal.Tests/SafeZaloMiniAppTests.cs` — 22 test.
 - MODIFY `tests/TACustomerPortal.Tests/SafeReleaseRegressionTests.cs` — thêm 6 endpoint ẩn danh đã review vào inventory.
-3. Database `TAPortalSys`: `database/migrations/038-zalo-mini-app-auth.sql` (sau 037), verify 065, rollback 066: NOT_EXECUTED.
+3. Database `TAPortalSys`: `database/migrations/038-zalo-mini-app-auth.sql` (sau 037), verify 065, rollback 066: EXECUTED 2026-11-13T06:37:51Z (dry-run PASS, gates 717/717, verify PASS).
 4. Build/test:
 - `dotnet restore TAPortal.sln`: OK.
 - `dotnet build TAPortal.sln -c Release --no-restore`: 0 errors (5 warnings có sẵn, không thuộc code mới).

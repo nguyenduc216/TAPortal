@@ -5,7 +5,7 @@
     "title": "Zalo Mini App: đăng nhập bằng số điện thoại Zalo, QR một lần, OTP ZNS xác minh số",
     "status": "IMPLEMENTED",
     "commit_sha": null,
-    "migration_status": "NOT_EXECUTED",
+    "migration_status": "EXECUTED 2026-11-13T06:37:51Z",
     "publish_status": "NOT_PUBLISHED",
     "merge_status": "PENDING_APPROVAL",
     "branch": "feature/zalo-mini-app",

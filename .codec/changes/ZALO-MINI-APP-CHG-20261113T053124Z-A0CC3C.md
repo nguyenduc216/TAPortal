@@ -32,7 +32,7 @@ Phạm vi change này: nền tảng backend (DB, dịch vụ, API Mini App, OTP)
 - Script / absolute path: `database/migrations/038-zalo-mini-app-auth.sql`
 - Thứ tự chạy: sau 037
 - Preflight / Verify / Rollback: `database/scripts/065-verify-zalo-mini-app-auth.sql` / `database/scripts/066-rollback-zalo-mini-app-auth.sql`
-- Execution: NOT_EXECUTED
+- Execution: **EXECUTED** 2026-11-13T06:37:51Z qua `deploy/windows/Invoke-TAMigrations.ps1 -Plan "038:065:066"` (operator: "làm nhé" sau đề xuất chạy migration + deploy). Pre-check NOT_APPLIED → dry-run (migration PASS, rollback NOT_APPLIED, @@TRANCOUNT=0) → pre-check lại NOT_APPLIED → backup đầy đủ gần nhất 138 phút (không cần tạo mới) → gates 717/717 → chạy thật VERIFY_STATUS=PASS. Log: `.codec/reports/ZALO-MINI-APP-CHG-20261113T053124Z-A0CC3C-migrations-20261113T063619Z.log`.
 
 ## Test và kết quả
 - `dotnet restore TAPortal.sln`: OK.
@@ -61,4 +61,4 @@ Phạm vi change này: nền tảng backend (DB, dịch vụ, API Mini App, OTP)
 - Endpoint graph.zalo.me (`/v2.0/me`, `/v2.0/me/info`) theo tài liệu Zalo Mini App; NOT_VERIFIED với Zalo thật vì chưa có Mini App ID/secret.
 - CORS mặc định `https://h5.zdn.vn`, `zbrowser://h5.zdn.vn` (cấu hình được), cần xác nhận khi có Mini App thật.
 - Việc operator: nâng OA lên gói Tăng trưởng, tài khoản ZBS, Zalo App, đăng ký mẫu ZNS OTP, tạo Mini App + xin quyền SĐT; sau đó cấu hình `ZaloMiniApp:AppId`, `ZaloMiniApp:SecretKey`, `ZaloMiniApp:OtpTemplateId` trên server (không commit secret).
-- Còn lại: change tiếp theo làm UI QR/OTP/hủy liên kết trên 2 portal; migration 038 NOT_EXECUTED; chưa publish/deploy.
+- Còn lại: change tiếp theo làm UI QR/OTP/hủy liên kết trên 2 portal; migration 038 EXECUTED; chưa publish/deploy.

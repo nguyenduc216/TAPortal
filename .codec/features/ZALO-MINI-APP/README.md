@@ -12,5 +12,5 @@
 
 | Change ID | Ngày UTC | Nội dung | Commit SHA | Migration | Publish | Merge |
 |---|---|---|---|---|---|---|
-| `ZALO-MINI-APP-CHG-20261113T053124Z-A0CC3C` | 2026-11-13 | Zalo Mini App: đăng nhập bằng số điện thoại Zalo, QR một lần, OTP ZNS xác minh số | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |
+| `ZALO-MINI-APP-CHG-20261113T053124Z-A0CC3C` | 2026-11-13 | Zalo Mini App: đăng nhập bằng số điện thoại Zalo, QR một lần, OTP ZNS xác minh số | 39dfc6f | EXECUTED (038) | NOT_PUBLISHED | PENDING_APPROVAL |
 | `ZALO-MINI-APP-CHG-20261113T063523Z-6DBAB9` | 2026-11-13 | Zalo Mini App: trang Zalo trên TA Portal và Hóa đơn tự động (đổi SĐT, OTP, QR, hủy liên kết), cổng xác minh SĐT | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |
