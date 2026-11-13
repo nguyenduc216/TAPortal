@@ -40,13 +40,19 @@ Operator 2026-11-13 ("làm nhé"): giao diện cho change trước trên cả ha
 ## Publish
 - Project: TAPortal.Web, TACustomerPortal.Web, TAPortal.Webhooks (TAPortal.Integrations đổi)
 - Destination (chỉ từ config):
-- Trạng thái: NOT_PUBLISHED
+- Trạng thái: DEPLOYED
+- DEPLOYED 2026-11-13 06:41-06:42Z qua `deploy/windows/Deploy-TARemote.ps1 -Target portal,invoice,webhooks -MigrationsApplied` (audit ddfe35a..d4946e0: 8 commit, 54 file, 717/717 Safe tests, AUDIT PASSED). Source commit d4946e0.
+  - portal: artifact 5eebe89086bcf9bba220919716985f9067640af10754c92a77924fdb793c860c, package 9948C070D8BC6C3B59DFB7E6A2AD11B3E937CFCF99BC41426EEC5EAD407729D8, health 200.
+  - invoice: artifact af3dc68580f69ebcb5a91d1c94396f911062d0cd83a001d6bcc4e9ea17901f0e, package E9A367FDC2F77921838B4C30B17C31B3B8B2C6A2372D29EEBE7A26A77FAC916A, health 200.
+  - webhooks: artifact 29524683cdbd280137a833a140c49e803ebd4bde512b8c2c02c98cdc1c7e5613, package 0F763E1850A17E8D207BCF943994942A28D44E0579AA48A3224F118916886513, health 200.
+- Smoke: `/account/zalo` và `/Account/Zalo` chuyển về đăng nhập (302); `POST /api/zalo-mini-app/resume` trả 400 "Ứng dụng Zalo chưa được cấu hình" (đúng, server chưa có ZaloMiniApp:*).
+- Lần chạy đầu bị từ chối ngay ở bước kiểm tra tham số (`-File` truyền danh sách target thành một chuỗi); không có gì được upload.
 - Artifact SHA256:
 - Smoke test:
 
 ## Git
 - Branch: feature/zalo-mini-app
-- Commit SHA:
+- Commit SHA: d4946e0 (source)
 - PR:
 - Merge: PENDING_APPROVAL
 - Merge SHA:
