@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using TAPortal.Integrations.Tingee;
 
 namespace TACustomerPortal.Web.Services;
@@ -55,7 +56,36 @@ public static class OrderMath
     public static string StatusFor(decimal amount, decimal paid) => paid >= amount ? OrderStatus.Paid : paid > 0 ? OrderStatus.Partial : OrderStatus.Awaiting;
 }
 
-public sealed record OrderPaymentResult(Order Order, string? Error);
+/// <param name="Note">Information for staff that is not an error, e.g. the bank keeps the new QR for less time than asked.</param>
+public sealed record OrderPaymentResult(Order Order, string? Error, string? Note = null);
+
+/// <summary>
+/// Operator 2026-11-13: MB dynamic QRs created with a 4-day lifetime disappeared at the bank within 14-28 hours (status
+/// 1076 "Bill không tồn tại", bank app "Truy vấn mã QR không thành công") while the page still showed days left.
+/// </summary>
+public static class QrLiveness
+{
+    /// <summary>Partner code when the dynamic QR (bill) no longer exists.</summary>
+    public const string BillMissing = "1076";
+    /// <summary>At most one liveness check per order in this interval (pages may be opened often).</summary>
+    public static readonly TimeSpan CheckInterval = TimeSpan.FromMinutes(5);
+    /// <summary>Recorded as UpdatedBy when the system itself replaces a dead QR (from the public payment page).</summary>
+    public static readonly Guid SystemActor = Guid.Empty;
+
+    /// <summary>The lifetime the partner reports right after creation when it is clearly shorter than the one requested; else null.</summary>
+    public static int? Shortened(int requestedMinutes, int? reportedMinutes) =>
+        reportedMinutes is int r && r > 0 && r < requestedMinutes - 5 ? r : null;
+
+    /// <summary>True when the partner says the QR is gone (1076) or reports it expired.</summary>
+    public static bool IsDead(string? errorCode, string? billStatus) =>
+        errorCode == BillMissing || string.Equals(billStatus, "expired", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>Minutes left until the order's own expiry, at least 1: the replacement QR keeps the expiry the customer was given.</summary>
+    public static int MinutesLeft(DateTime expiresUtc, DateTime nowUtc) => Math.Max(1, (int)Math.Ceiling((expiresUtc - nowUtc).TotalMinutes));
+
+    public static string Lifetime(int minutes) =>
+        minutes >= 1440 ? $"{minutes / 1440} ngày {minutes % 1440 / 60} giờ" : minutes >= 60 ? $"{minutes / 60} giờ {minutes % 60} phút" : $"{minutes} phút";
+}
 
 /// <summary>
 /// QR lifecycle of an order (operator decisions 2026-10-30): a dynamic recurring QR accepts several payments until the
@@ -71,6 +101,7 @@ public sealed class OrderPayments(IPaymentStore store, ITingeeApi tingee, TimePr
         var now = clock.GetUtcNow().UtcDateTime;
         var due = order.Remaining;
         Order updated;
+        string? note = null;
         try
         {
             if (TingeeBankCatalog.SupportsDynamicQr(bank.BankBin, bank.AccountType) && bank.VaAccountNumber is not null)
@@ -81,6 +112,7 @@ public sealed class OrderPayments(IPaymentStore store, ITingeeApi tingee, TimePr
                     QrCodeType = TingeeQrTypes.Recurring, ExpireInMinute = order.QrExpireMinutes, Purpose = OrderMath.TransferContent(order.OrderNo), ExtraInfo = order.OrderNo
                 });
                 updated = order with { QrType = TingeeQrTypes.Recurring, QrPayload = qr.QrCode, QrAccount = qr.QrAccount, BillId = qr.BillId };
+                note = await ReportedLifetimeNoteAsync(merchantId, order, qr.QrAccount, qr.BillId);
             }
             else
             {
@@ -100,8 +132,64 @@ public sealed class OrderPayments(IPaymentStore store, ITingeeApi tingee, TimePr
         if (string.IsNullOrEmpty(updated.QrPayload)) return new(order, "Không nhận được mã QR, vui lòng thử lại.");
         updated = updated with { Status = OrderMath.StatusFor(order.Amount, order.PaidAmount), ExpiresAt = now.AddMinutes(order.QrExpireMinutes), LastError = null };
         await store.UpdateOrderAsync(customerId, updated, actor);
-        return new(updated, null);
+        LastLiveCheck[order.Id] = now;
+        return new(updated, null, note);
     }
+
+    private static readonly ConcurrentDictionary<Guid, DateTime> LastLiveCheck = new();
+
+    // Right after creation: does the partner report the lifetime we asked for? (operator 2026-11-13)
+    private async Task<string?> ReportedLifetimeNoteAsync(long merchantId, Order order, string? qrAccount, string? billId)
+    {
+        if (qrAccount is null || billId is null) return null;
+        try
+        {
+            var reported = (await tingee.GetDynamicQrStatusAsync(merchantId, qrAccount, billId)).BillInfo?.ExpireInMinute;
+            logger.LogInformation("QR_LIFETIME order={OrderNo} requested={Requested} reported={Reported}", order.OrderNo, order.QrExpireMinutes, reported);
+            if (QrLiveness.Shortened(order.QrExpireMinutes, reported) is not int actual) return null;
+            logger.LogWarning("QR_LIFETIME_SHORTENED order={OrderNo} requested={Requested} reported={Reported}", order.OrderNo, order.QrExpireMinutes, actual);
+            return $"Lưu ý: ngân hàng chỉ giữ mã QR này khoảng {QrLiveness.Lifetime(actual)} (thấp hơn thời hạn đã chọn). Khi mã hết hiệu lực trước hạn, hệ thống tự tạo mã mới, link QR cho khách hàng giữ nguyên.";
+        }
+        catch (Exception ex) when (ex is TingeeApiException or HttpRequestException or TingeeNotConfiguredException)
+        {
+            logger.LogInformation(ex, "QR lifetime of order {OrderNo} not read.", order.OrderNo);
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Operator 2026-11-13: before a dynamic QR is shown (payment page, order details), checks at most every
+    /// <see cref="QrLiveness.CheckInterval"/> that it still exists at the bank; a QR that is gone is replaced by a new one for
+    /// the amount still due, keeping the order's expiry, so a payer never scans a dead code. Failures keep the current QR.
+    /// </summary>
+    public async Task<Order> EnsureLiveQrAsync(Guid customerId, Order order, Guid actor)
+    {
+        var now = clock.GetUtcNow().UtcDateTime;
+        if (order.QrType != TingeeQrTypes.Recurring || order.QrAccount is null || order.BillId is null || order.Remaining <= 0
+            || order.ExpiresAt is not DateTime expires || OrderMath.EffectiveStatus(order, now) is not (OrderStatus.Awaiting or OrderStatus.Partial))
+            return order;
+        if (LastLiveCheck.TryGetValue(order.Id, out var last) && now - last < QrLiveness.CheckInterval) return order;
+        LastLiveCheck[order.Id] = now;
+        if (await store.MerchantIdAsync(customerId) is not long merchantId) return order;
+        string? code = null, billStatus = null;
+        try { billStatus = (await tingee.GetDynamicQrStatusAsync(merchantId, order.QrAccount, order.BillId)).BillInfo?.Status; }
+        catch (TingeeApiException ex) { code = ex.Code; }
+        catch (Exception ex) when (ex is HttpRequestException or TingeeNotConfiguredException)
+        {
+            logger.LogInformation(ex, "QR liveness of order {OrderNo} not checked.", order.OrderNo);
+            return order;
+        }
+        if (!QrLiveness.IsDead(code, billStatus)) return order;
+        if (order.BankAccountId is not Guid b || await store.BankAccountAsync(customerId, b) is not { } bank) return order;
+        var minutes = QrLiveness.MinutesLeft(expires, now);
+        logger.LogWarning("QR_DEAD_REISSUE order={OrderNo} qrAccount={QrAccount} code={Code} status={Status} minutesLeft={Minutes}", order.OrderNo, order.QrAccount, code, billStatus, minutes);
+        var result = await IssueQrAsync(customerId, merchantId, order with { QrExpireMinutes = minutes }, bank, actor);
+        if (result.Error is not null) logger.LogWarning("QR_DEAD_REISSUE_FAILED order={OrderNo} error={Error}", order.OrderNo, result.Error);
+        return result.Error is null ? result.Order : order;
+    }
+
+    /// <summary>Forgets the last liveness check so the next page view checks again (after a status call found the QR gone).</summary>
+    public static void RecheckSoon(Guid orderId) => LastLiveCheck.TryRemove(orderId, out _);
 
     /// <summary>
     /// Replaces the QR of an order (operator request 2026-11-11: change the QR lifetime, or re-issue a QR): a new QR for the
@@ -137,6 +225,12 @@ public sealed class OrderPayments(IPaymentStore store, ITingeeApi tingee, TimePr
             await store.RecordPartnerPaidAsync(customerId, order.Id, partner);
             var updated = await store.OrderAsync(customerId, order.Id) ?? order with { PartnerPaidAmount = partner };
             return new(updated, null);
+        }
+        catch (TingeeApiException ex) when (ex.Code == QrLiveness.BillMissing)
+        {
+            logger.LogWarning("QR of order {OrderNo} is gone at the bank (1076); the next view replaces it.", order.OrderNo);
+            RecheckSoon(order.Id);
+            return new(order, null, "Mã QR trước đã hết hiệu lực ở phía ngân hàng; hệ thống tự tạo mã mới cho số tiền còn lại, link QR cho khách hàng giữ nguyên.");
         }
         catch (Exception ex) when (ex is TingeeApiException or HttpRequestException or TingeeNotConfiguredException)
         {

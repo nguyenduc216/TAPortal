@@ -60,7 +60,7 @@ public sealed class OrdersController(ICurrentCustomerContext customer, IPaymentS
         if (input.ContactId is Guid buyer && remember.Count > 0) await products.SaveBuyerPricesAsync(m.CustomerId, buyer, remember, Actor);
         var order = await store.OrderAsync(m.CustomerId, created.Id);
         var result = await payments.IssueQrAsync(m.CustomerId, merchantId, order!, bank, Actor);
-        Flash(result.Error is null ? $"Đã tạo đơn {created.OrderNo} và mã QR thanh toán." : $"Đã lưu đơn {created.OrderNo} nhưng chưa tạo được QR: {result.Error}", error: result.Error is not null);
+        Flash(result.Error is null ? $"Đã tạo đơn {created.OrderNo} và mã QR thanh toán." + (result.Note is null ? "" : " " + result.Note) : $"Đã lưu đơn {created.OrderNo} nhưng chưa tạo được QR: {result.Error}", error: result.Error is not null);
         return RedirectToAction(nameof(Details), new { id = created.Id });
     }
 
@@ -69,6 +69,7 @@ public sealed class OrdersController(ICurrentCustomerContext customer, IPaymentS
         if (await Current() is not { } m) return SelectCustomer();
         var order = await store.OrderAsync(m.CustomerId, id);
         if (order is null) return NotFound();
+        order = await payments.EnsureLiveQrAsync(m.CustomerId, order, Actor);
         var now = clock.GetUtcNow().UtcDateTime;
         var status = OrderMath.EffectiveStatus(order, now);
         var bank = order.BankAccountId is Guid b ? await store.BankAccountAsync(m.CustomerId, b) : null;
@@ -109,7 +110,7 @@ public sealed class OrdersController(ICurrentCustomerContext customer, IPaymentS
         if (order is null) return NotFound();
         if (await store.MerchantIdAsync(m.CustomerId) is not long merchantId) return NotFound();
         var result = await payments.RefreshAsync(m.CustomerId, merchantId, order, Actor);
-        Flash(result.Error ?? (result.Order.PartnerDiffers
+        Flash(result.Error ?? result.Note ?? (result.Order.PartnerDiffers
             ? $"Lệch đối soát: hệ thống đã ghi nhận {PaymentText.Money(result.Order.PaidAmount)}, dịch vụ thanh toán báo {PaymentText.Money(result.Order.PartnerPaidAmount ?? 0)}. Giao dịch sẽ được ghi nhận khi ngân hàng gửi thông báo, hoặc được xử lý tại Đối soát giao dịch."
             : $"Khớp đối soát — đã nhận {PaymentText.Money(result.Order.PaidAmount)}."), error: result.Error is not null);
         return RedirectToAction(nameof(Details), new { id });
@@ -151,7 +152,7 @@ public sealed class OrdersController(ICurrentCustomerContext customer, IPaymentS
         var replacing = status is OrderStatus.Awaiting or OrderStatus.Partial;
         var result = await payments.ReplaceQrAsync(m.CustomerId, merchantId, order with { Status = status, BankAccountId = bank.Id }, bank, minutes, Actor);
         Flash(result.Error ?? $"Đã tạo QR mới cho số tiền còn lại {PaymentText.Money(order.Remaining)}, hiệu lực đến {PaymentText.VietnamTime(result.Order.ExpiresAt)}."
-            + (replacing ? " Mã QR cũ đã được thay; link QR cho khách hàng giữ nguyên." : ""), error: result.Error is not null);
+            + (replacing ? " Mã QR cũ đã được thay; link QR cho khách hàng giữ nguyên." : "") + (result.Note is null ? "" : " " + result.Note), error: result.Error is not null);
         return RedirectToAction(nameof(Details), new { id });
     }
 
