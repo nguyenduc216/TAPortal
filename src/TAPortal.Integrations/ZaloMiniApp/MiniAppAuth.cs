@@ -24,40 +24,21 @@ public sealed record MiniAppResult(bool Ok, string? Error = null, string? Sessio
 
 public sealed record MiniAppSession(string ZaloUserId, Guid UserId, MiniAppAccount Account);
 
-public sealed record MiniAppQr(bool Ok, string? Error, string? Link = null, DateTime? ExpiresAtUtc = null);
-
 public sealed class MiniAppAuth(IMiniAppStore store, IZaloGraph graph, IMiniAppPasswordCheck passwords, IDataProtectionProvider protection,
     IOptions<ZaloMiniAppOptions> options, TimeProvider clock)
 {
-    public static readonly TimeSpan QrLifetime = TimeSpan.FromMinutes(5);
+    public static readonly TimeSpan QrLifetime = ZaloAccountService.QrLifetime;
     public static readonly TimeSpan SessionLifetime = TimeSpan.FromHours(12);
     private const string Purpose = "TA.ZaloMiniApp.Session.v1";
 
-    public const string NotConfigured = "Ứng dụng Zalo chưa được cấu hình, vui lòng liên hệ T.A.";
+    public const string NotConfigured = "Ứng dụng Zalo chưa được cấu hình, vui lòng liên hệ bộ phận hỗ trợ.";
     public const string PhoneMismatch = "Số điện thoại Zalo của bạn không trùng với số điện thoại đăng ký của tài khoản.";
     public const string BadCredentials = "Tên đăng nhập hoặc mật khẩu không đúng.";
-    public const string VerifyPhoneFirst = "Tài khoản chưa có số điện thoại đã xác minh. Vui lòng xác minh số điện thoại bằng mã OTP Zalo trước.";
 
     private IDataProtector Protector => protection.CreateProtector(Purpose);
     private DateTime Now => clock.GetUtcNow().UtcDateTime;
 
     /// <summary>The account's phone, when it is a mobile number and the user proved it is theirs.</summary>
-    public async Task<string?> UsablePhoneAsync(MiniAppAccount account, CancellationToken ct = default) =>
-        account.NormalizedPhone is string phone && await store.VerifiedPhoneAsync(account.UserId, ct) == phone ? phone : null;
-
-    /// <summary>A one-time QR for the signed-in web user (TA Portal or Hoa don tu dong).</summary>
-    public async Task<MiniAppQr> CreateQrAsync(Guid userId, string portal, CancellationToken ct = default)
-    {
-        if (!MiniAppPortal.Valid(portal)) throw new ArgumentException("Unknown portal", nameof(portal));
-        if (!options.Value.SignInConfigured) return new(false, NotConfigured);
-        if (await store.AccountAsync(userId, ct) is not { } account) return new(false, "Tài khoản không còn hoạt động.");
-        if (await UsablePhoneAsync(account, ct) is null) return new(false, VerifyPhoneFirst);
-        var token = MiniAppSecrets.NewToken();
-        var expires = Now + QrLifetime;
-        await store.CreateQrAsync(MiniAppSecrets.TokenHash(token), userId, portal, expires, ct);
-        return new(true, null, MiniAppSecrets.QrLink(options.Value.AppId!, token), expires);
-    }
-
     /// <summary>Way 1: the QR token from the web page, with the Zalo phone. The QR is used up even when the phone does not match.</summary>
     public async Task<MiniAppResult> QrSignInAsync(string? qrToken, string accessToken, string? phoneToken, CancellationToken ct = default)
     {

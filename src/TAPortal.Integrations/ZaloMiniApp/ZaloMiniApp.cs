@@ -26,6 +26,11 @@ public sealed class ZaloMiniAppOptions
     public string? OtpTemplateId { get; set; }
     /// <summary>Name of the OTP parameter in that template.</summary>
     public string OtpTemplateParam { get; set; } = "otp";
+    /// <summary>
+    /// Accounts must verify their phone before using the web sites (operator 2026-11-13). Off until the OTP template works,
+    /// so nobody is locked out; the gate also stays off while OtpTemplateId is empty.
+    /// </summary>
+    public bool RequirePhoneVerification { get; set; }
     /// <summary>Origins the Mini App calls the API from (Zalo serves Mini Apps from h5.zdn.vn).</summary>
     public string[] AllowedOrigins { get; set; } = ["https://h5.zdn.vn", "zbrowser://h5.zdn.vn"];
 

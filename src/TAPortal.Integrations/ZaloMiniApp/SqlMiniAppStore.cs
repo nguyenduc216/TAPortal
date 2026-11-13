@@ -10,6 +10,12 @@ public interface IMiniAppStore
     /// <summary>By username, or by the account's email when exactly one account has it (as the web sign-in does).</summary>
     Task<MiniAppAccount?> AccountByUsernameAsync(string username, CancellationToken ct = default);
 
+    /// <summary>
+    /// The user changes their own phone (stored as 0xxxxxxxxx): in one transaction the old Zalo links end and an audit row
+    /// USER_PHONE_CHANGED is written (no phone number in it). The new phone is unverified until its OTP.
+    /// </summary>
+    Task ChangePhoneAsync(Guid userId, string phone, string? ip, CancellationToken ct = default);
+
     Task<string?> VerifiedPhoneAsync(Guid userId, CancellationToken ct = default);
     Task SetVerifiedPhoneAsync(Guid userId, string phone, string method, CancellationToken ct = default);
 
@@ -87,6 +93,22 @@ public sealed class SqlMiniAppStore(IConfiguration configuration) : IMiniAppStor
             ?? (normalized.Contains('@')
                 ? await Account("u.NormalizedEmail=@v AND (SELECT COUNT(1) FROM dbo.Users d WHERE d.NormalizedEmail=@v AND d.IsDeleted=0)=1", ct, ("@v", normalized))
                 : null);
+    }
+
+    public async Task ChangePhoneAsync(Guid userId, string phone, string? ip, CancellationToken ct = default)
+    {
+        await using var cn = await Open(ct);
+        await using var tx = (SqlTransaction)await cn.BeginTransactionAsync(ct);
+        await using var cmd = new SqlCommand("""
+UPDATE dbo.Users SET Phone=@p,UpdatedAt=SYSUTCDATETIME(),UpdatedBy=@u WHERE Id=@u AND IsDeleted=0;
+UPDATE dbo.ZaloMiniAppLinks SET RevokedAt=SYSUTCDATETIME(),RevokedBy=@u WHERE UserId=@u AND RevokedAt IS NULL;
+INSERT dbo.AuditLogs(UserId,Action,EntityName,EntityId,OldValues,NewValues,IpAddress) VALUES(@u,'USER_PHONE_CHANGED','dbo.Users',CONVERT(nvarchar(36),@u),'{}','{}',@ip);
+""", cn, tx);
+        cmd.Parameters.AddWithValue("@u", userId);
+        cmd.Parameters.AddWithValue("@p", phone);
+        cmd.Parameters.AddWithValue("@ip", ip is { Length: <= 64 } ? ip : DBNull.Value);
+        await cmd.ExecuteNonQueryAsync(ct);
+        await tx.CommitAsync(ct);
     }
 
     public async Task<string?> VerifiedPhoneAsync(Guid userId, CancellationToken ct = default) =>

@@ -18,7 +18,7 @@ public sealed class SafeZaloMiniAppTests
         public override DateTimeOffset GetUtcNow() => Now;
     }
 
-    private sealed class Store : IMiniAppStore
+    internal sealed class Store : IMiniAppStore
     {
         public readonly Dictionary<Guid, MiniAppAccount> Accounts = [];
         public readonly Dictionary<Guid, (string Phone, string Method)> Verified = [];
@@ -31,6 +31,13 @@ public sealed class SafeZaloMiniAppTests
         public Task<MiniAppAccount?> AccountAsync(Guid userId, CancellationToken ct = default) => Task.FromResult(Accounts.GetValueOrDefault(userId));
         public Task<MiniAppAccount?> AccountByUsernameAsync(string username, CancellationToken ct = default) =>
             Task.FromResult(Accounts.Values.FirstOrDefault(a => a.Username.Equals(username.Trim(), StringComparison.OrdinalIgnoreCase)));
+        public readonly List<(Guid User, string Phone)> PhoneChanges = [];
+        public Task ChangePhoneAsync(Guid userId, string phone, string? ip, CancellationToken ct = default)
+        {
+            Accounts[userId] = Accounts[userId] with { Phone = phone };
+            PhoneChanges.Add((userId, phone));
+            return Revoke(l => l.User == userId);
+        }
         public Task<string?> VerifiedPhoneAsync(Guid userId, CancellationToken ct = default) => Task.FromResult(Verified.TryGetValue(userId, out var v) ? v.Phone : null);
         public Task SetVerifiedPhoneAsync(Guid userId, string phone, string method, CancellationToken ct = default) { Verified[userId] = (phone, method); return Task.CompletedTask; }
         public Task CreateQrAsync(byte[] tokenHash, Guid userId, string portal, DateTime expiresUtc, CancellationToken ct = default) { Qrs.Add((tokenHash, userId, expiresUtc, false)); return Task.CompletedTask; }
@@ -83,7 +90,7 @@ public sealed class SafeZaloMiniAppTests
     }
 
     /// <summary>Zalo: access token "zalo:&lt;user id&gt;", phone token "phone:&lt;number&gt;".</summary>
-    private sealed class Graph : IZaloGraph
+    internal sealed class Graph : IZaloGraph
     {
         public Task<(ZaloIdentity? Identity, string? Error)> IdentityAsync(string accessToken, string? phoneToken, CancellationToken ct = default)
         {
@@ -101,7 +108,7 @@ public sealed class SafeZaloMiniAppTests
         public bool Verify(string password, string? passwordHash) => passwordHash == "hash:" + password;
     }
 
-    private sealed class Sender : IZnsSender
+    internal sealed class Sender : IZnsSender
     {
         public readonly List<(string Phone, string Template, IReadOnlyDictionary<string, string> Data)> Sent = [];
         public string? Fail;
@@ -120,6 +127,7 @@ public sealed class SafeZaloMiniAppTests
         public readonly Passwords Passwords = new();
         public readonly MiniAppAuth Auth;
         public readonly PhoneVerification Otp;
+        public readonly ZaloAccountService Account;
 
         public Rig(bool configured = true)
         {
@@ -127,6 +135,7 @@ public sealed class SafeZaloMiniAppTests
             var options = Options.Create(new ZaloMiniAppOptions { AppId = configured ? "1234567890" : null, SecretKey = configured ? "secret" : null, OtpTemplateId = "445566" });
             Auth = new(Store, new Graph(), Passwords, new EphemeralDataProtectionProvider(), options, Clock);
             Otp = new(Store, Sender, options, Clock);
+            Account = new(Store, Otp, options, Clock);
             Store.Accounts[Ann] = new(Ann, "ann", "Chị An", "0912 345 678", "hash:Pass@123", false);
             Store.Accounts[Bob] = new(Bob, "bob", "Anh Bình", "+84 987 654 321", "hash:Pass@456", false);
         }
@@ -135,7 +144,7 @@ public sealed class SafeZaloMiniAppTests
 
         public async Task<string> QrToken(Guid user)
         {
-            var qr = await Auth.CreateQrAsync(user, MiniAppPortal.Invoice);
+            var qr = await Account.CreateQrAsync(user, MiniAppPortal.Invoice);
             Assert.True(qr.Ok, qr.Error);
             return Uri.UnescapeDataString(qr.Link!.Split("?qr=")[1]);
         }
@@ -166,12 +175,12 @@ public sealed class SafeZaloMiniAppTests
     public async Task QrNeedsAVerifiedPhoneAndConfiguration()
     {
         var rig = new Rig();
-        Assert.Equal(MiniAppAuth.VerifyPhoneFirst, (await rig.Auth.CreateQrAsync(Ann, MiniAppPortal.Portal)).Error);
+        Assert.Equal(ZaloAccountService.VerifyPhoneFirst, (await rig.Account.CreateQrAsync(Ann, MiniAppPortal.Portal)).Error);
         rig.Verify(Ann, BobPhone);   // verified another number than the account's current one
-        Assert.Equal(MiniAppAuth.VerifyPhoneFirst, (await rig.Auth.CreateQrAsync(Ann, MiniAppPortal.Portal)).Error);
+        Assert.Equal(ZaloAccountService.VerifyPhoneFirst, (await rig.Account.CreateQrAsync(Ann, MiniAppPortal.Portal)).Error);
         rig.Verify(Ann, AnnPhone);
-        Assert.True((await rig.Auth.CreateQrAsync(Ann, MiniAppPortal.Portal)).Ok);
-        Assert.Equal(MiniAppAuth.NotConfigured, (await new Rig(configured: false).Auth.CreateQrAsync(Ann, MiniAppPortal.Portal)).Error);
+        Assert.True((await rig.Account.CreateQrAsync(Ann, MiniAppPortal.Portal)).Ok);
+        Assert.Equal(MiniAppAuth.NotConfigured, (await new Rig(configured: false).Account.CreateQrAsync(Ann, MiniAppPortal.Portal)).Error);
         Assert.All(rig.Store.Qrs, q => Assert.Equal(rig.Clock.Now.UtcDateTime + MiniAppAuth.QrLifetime, q.Expires));
     }
 
@@ -349,6 +358,83 @@ public sealed class SafeZaloMiniAppTests
         rig.Store.Accounts[Ann] = rig.Store.Accounts[Ann] with { Phone = "028 3822 1234" };
         Assert.Contains("chưa có số điện thoại di động", (await rig.Otp.RequestAsync(Ann, null)).Error);
         Assert.Empty(rig.Sender.Sent);
+    }
+
+    [Fact]
+    public async Task ChangingOnesPhoneNeedsAMobileNumberEndsZaloLinksAndAsksForANewOtp()
+    {
+        var rig = new Rig();
+        await rig.Auth.PasswordSignInAsync("ann", "Pass@123", "zalo:Z-ANN", "phone:0912345678");
+        Assert.True((await rig.Account.PanelAsync(Ann))!.Verified);
+        Assert.Equal(1, (await rig.Account.PanelAsync(Ann))!.LinkCount);
+
+        Assert.Contains("không hợp lệ", await rig.Account.ChangePhoneAsync(Ann, "028 3822 1234", null));
+        Assert.Contains("đã là", await rig.Account.ChangePhoneAsync(Ann, "+84 912 345 678", null));
+        Assert.Empty(rig.Store.PhoneChanges);
+
+        Assert.Null(await rig.Account.ChangePhoneAsync(Ann, "+84 900 000 000", "1.2.3.4"));
+        Assert.Equal((Ann, "0900000000"), Assert.Single(rig.Store.PhoneChanges));
+        var panel = (await rig.Account.PanelAsync(Ann))!;
+        Assert.False(panel.Verified);
+        Assert.Equal(0, panel.LinkCount);
+        Assert.Equal(ZaloAccountService.VerifyPhoneFirst, (await rig.Account.CreateQrAsync(Ann, MiniAppPortal.Portal)).Error);
+
+        var otp = await rig.Account.SendOtpAsync(Ann, null);
+        Assert.Equal("84900000000", rig.Sender.Sent.Last().Phone);
+        Assert.Null(await rig.Account.ConfirmOtpAsync(Ann, otp.ChallengeId!.Value, rig.Sender.Sent.Last().Data["otp"]));
+        Assert.True((await rig.Account.PanelAsync(Ann))!.Verified);
+        Assert.True((await rig.Account.CreateQrAsync(Ann, MiniAppPortal.Portal)).Ok);
+    }
+
+    [Fact]
+    public async Task OtpForAnOldPhoneDoesNotVerifyTheNewOne()
+    {
+        var rig = new Rig();
+        var otp = await rig.Account.SendOtpAsync(Ann, null);
+        await rig.Account.ChangePhoneAsync(Ann, "0900000000", null);
+        Assert.Contains("đã thay đổi", await rig.Account.ConfirmOtpAsync(Ann, otp.ChallengeId!.Value, rig.Sender.Sent[0].Data["otp"]));
+        Assert.False((await rig.Account.PanelAsync(Ann))!.Verified);
+    }
+
+    [Fact]
+    public async Task UnlinkEndsEveryZaloLinkOfTheAccountOnly()
+    {
+        var rig = new Rig();
+        await rig.Auth.PasswordSignInAsync("ann", "Pass@123", "zalo:Z-1", "phone:0912345678");
+        await rig.Auth.PasswordSignInAsync("ann", "Pass@123", "zalo:Z-2", "phone:0912345678");
+        await rig.Auth.PasswordSignInAsync("bob", "Pass@456", "zalo:Z-3", "phone:0987654321");
+        Assert.Equal(2, await rig.Account.UnlinkAsync(Ann));
+        Assert.Equal(0, (await rig.Account.PanelAsync(Ann))!.LinkCount);
+        Assert.Equal(1, (await rig.Account.PanelAsync(Bob))!.LinkCount);
+    }
+
+    [Fact]
+    public void PhoneGateIsOffByDefaultAndCoversBothSites()
+    {
+        // Operator 2026-11-13: verification is required at the next sign-in, but only once ZNS works (switch + template).
+        Assert.False(new ZaloMiniAppOptions().RequirePhoneVerification);
+        var root = FindRoot();
+        foreach (var program in new[] { "src/TACustomerPortal.Web/Program.cs", "src/TAPortal.Web/Program.cs" })
+        {
+            var source = File.ReadAllText(Path.Combine(root, program));
+            Assert.Contains("UsePhoneVerificationGate", source);
+            Assert.Contains("AddZaloMiniApp", source);
+            Assert.True(source.IndexOf("UsePhoneVerificationGate", StringComparison.Ordinal) > source.IndexOf("UseAuthentication", StringComparison.Ordinal));
+        }
+        // The admin pages are posts to separate actions: each one must be allowed past the gate.
+        var admin = File.ReadAllText(Path.Combine(root, "src/TAPortal.Web/Program.cs"));
+        foreach (var action in new[] { "zalophone", "zalosendotp", "zaloconfirmotp" }) Assert.Contains($"\"/account/{action}\"", admin);
+    }
+
+    [Fact]
+    public void CustomerPagesSpeakAsHoaDonTuDong()
+    {
+        var root = FindRoot();
+        foreach (var view in new[] { "Index.cshtml", "Qr.cshtml" })
+            Assert.DoesNotContain("T.A", File.ReadAllText(Path.Combine(root, "src/TACustomerPortal.Web/Views/Zalo", view)));
+        foreach (var file in Directory.GetFiles(Path.Combine(root, "src/TAPortal.Integrations/ZaloMiniApp"), "*.cs"))
+            foreach (var line in File.ReadAllLines(file).Where(l => !l.TrimStart().StartsWith("//", StringComparison.Ordinal)))
+                Assert.DoesNotContain("liên hệ T.A", line);
     }
 
     [Fact]

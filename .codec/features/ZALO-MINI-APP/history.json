@@ -11,5 +11,17 @@
     "branch": "feature/zalo-mini-app",
     "migration": "database/migrations/038-zalo-mini-app-auth.sql",
     "tests": "Safe 700/700 passed; Release build 0 errors"
+  },
+  {
+    "change_id": "ZALO-MINI-APP-CHG-20261113T063523Z-6DBAB9",
+    "created_at": "2026-11-13T06:35:23.863399+00:00",
+    "title": "Zalo Mini App: trang Zalo trên TA Portal và Hóa đơn tự động (đổi SĐT, OTP, QR, hủy liên kết), cổng xác minh SĐT",
+    "status": "IMPLEMENTED",
+    "commit_sha": null,
+    "migration_status": "NOT_EXECUTED",
+    "publish_status": "NOT_PUBLISHED",
+    "merge_status": "PENDING_APPROVAL",
+    "branch": "feature/zalo-mini-app",
+    "tests": "Safe 717/717 passed; Release build 0 errors"
   }
 ]

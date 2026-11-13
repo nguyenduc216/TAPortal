@@ -17,6 +17,7 @@
         ("Dịch vụ", "ServicePackages", "Index", "package", "Gói dịch vụ"),
         ("Tài khoản", "Profile", "Personal", "id", "Thông tin cá nhân"),
         ("Tài khoản", "Account", "ChangePassword", "shield-lock", "Bảo mật & mật khẩu"),
+        ("Tài khoản", "Zalo", "Index", "qrcode", "Ứng dụng trên Zalo"),
     ];
 
     private bool IsCurrent(string controller, string action) =>
@@ -107,6 +108,7 @@
                     <div class="cp-user__menu">
                         <a asp-controller="Profile" asp-action="Personal">@UiIcon.Render("id")<span>Thông tin cá nhân</span></a>
                         <a asp-controller="Account" asp-action="ChangePassword">@UiIcon.Render("key")<span>Đổi mật khẩu</span></a>
+                        <a asp-controller="Zalo" asp-action="Index">@UiIcon.Render("qrcode")<span>Ứng dụng trên Zalo</span></a>
                         <a asp-controller="Account" asp-action="SelectCustomer">@UiIcon.Render("switch-horizontal")<span>Đổi doanh nghiệp</span></a>
                         <hr />
                         <form method="post" asp-controller="Account" asp-action="Logout" data-ta-hard><button type="submit" class="cp-danger">@UiIcon.Render("logout")<span>Đăng xuất</span></button></form>

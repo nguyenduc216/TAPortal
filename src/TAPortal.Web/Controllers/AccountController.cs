@@ -9,7 +9,7 @@ using TAPortal.Web.Services;
 
 namespace TAPortal.Web.Controllers;
 
-public sealed class AccountController(PortalDb db, IAdminAuthStore auth, PasswordService passwords, IAdminLoginThrottle throttle, ILogger<AccountController> logger,
+public sealed partial class AccountController(PortalDb db, IAdminAuthStore auth, PasswordService passwords, IAdminLoginThrottle throttle, ILogger<AccountController> logger,
     IPasswordSecurityStore passwordSecurity, IServiceProvider services) : Controller
 {
     // Unknown, ineligible or hash-less accounts still pay the full PBKDF2 cost so response time does not reveal which accounts exist.

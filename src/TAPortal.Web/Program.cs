@@ -83,6 +83,8 @@ builder.Services.AddScoped<IServicePackageStore, SqlServicePackageStore>();
 builder.Services.AddScoped<ITingeeSandboxInbox, SqlTingeeSandboxInbox>();
 builder.Services.AddScoped<TAPortal.Integrations.Tingee.IPaymentTransactionStore, TAPortal.Integrations.Tingee.SqlPaymentTransactionStore>();
 TAPortal.Integrations.Notifications.NotificationServiceCollectionExtensions.AddNotifications(builder.Services);
+// Zalo Mini App account page: phone OTP and the one-time Mini App QR (ZALO-MINI-APP, operator 2026-11-13).
+TAPortal.Integrations.ZaloMiniApp.ZaloMiniAppServiceCollectionExtensions.AddZaloMiniApp(builder.Services, builder.Configuration);
 TAPortal.Integrations.Branding.LogoServiceCollectionExtensions.AddLogos(builder.Services);
 builder.Services.AddScoped<ITingeeSandboxMerchants, SqlTingeeSandboxMerchants>();
 builder.Services.AddHttpClient(TAPortal.Shared.VietQrTaxCodeLookup.ClientName, c => { c.BaseAddress = new Uri("https://api.vietqr.io/"); c.Timeout = TimeSpan.FromSeconds(6); });
@@ -173,6 +175,9 @@ app.Use(async (context, next) =>
     }
     await next();
 });
+// Operator 2026-11-13: once ZaloMiniApp:RequirePhoneVerification is on, an account must verify its phone (Zalo OTP) first.
+TAPortal.Integrations.ZaloMiniApp.PhoneVerificationGate.UsePhoneVerificationGate(app, TAPortal.Web.Controllers.AccountController.ZaloPath,
+    "/account/zalophone", "/account/zalosendotp", "/account/zaloconfirmotp", "/account/changepassword", "/account/logout", "/account/login", "/account/accessdenied", "/home/error", TAPortal.Shared.BuildInfo.Path);
 app.UseAuthorization();
 app.MapControllerRoute(name: "default", pattern: "{controller=Home}/{action=Index}/{id?}");
 TAPortal.Shared.BuildInfo.MapBuildInfo(app);

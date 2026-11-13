@@ -31,7 +31,7 @@ public sealed class ZaloGraphClient(HttpClient http, IOptions<ZaloMiniAppOptions
             return (null, "Phiên Zalo đã hết hạn, vui lòng mở lại ứng dụng.");
         if (phoneToken is null) return (new(zaloUserId, null), null);
 
-        if (string.IsNullOrWhiteSpace(options.Value.SecretKey)) return (null, "Ứng dụng chưa được cấu hình đầy đủ, vui lòng liên hệ T.A.");
+        if (string.IsNullOrWhiteSpace(options.Value.SecretKey)) return (null, "Ứng dụng chưa được cấu hình đầy đủ, vui lòng liên hệ bộ phận hỗ trợ.");
         if (phoneToken.Length > 2048) return (null, "Không đọc được số điện thoại Zalo.");
         using var info = new HttpRequestMessage(HttpMethod.Get, Phone);
         info.Headers.TryAddWithoutValidation("access_token", accessToken);

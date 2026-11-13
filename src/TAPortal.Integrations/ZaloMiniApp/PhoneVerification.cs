@@ -39,7 +39,7 @@ public sealed class PhoneVerification(IMiniAppStore store, IZnsSender sender, IO
 
     public async Task<OtpRequest> RequestAsync(Guid userId, string? ip, CancellationToken ct = default)
     {
-        if (string.IsNullOrWhiteSpace(options.Value.OtpTemplateId)) return new(false, "Chưa cấu hình mẫu tin OTP Zalo, vui lòng liên hệ T.A.");
+        if (string.IsNullOrWhiteSpace(options.Value.OtpTemplateId)) return new(false, "Chưa cấu hình mẫu tin OTP Zalo, vui lòng liên hệ bộ phận hỗ trợ.");
         if (await store.AccountAsync(userId, ct) is not { } account) return new(false, "Tài khoản không còn hoạt động.");
         if (account.NormalizedPhone is not string phone) return new(false, "Tài khoản chưa có số điện thoại di động hợp lệ (ví dụ 0912345678). Vui lòng cập nhật số điện thoại trước.");
         var (count, last) = await store.OtpStatsAsync(userId, Now.AddHours(-1), ct);
@@ -74,7 +74,7 @@ public sealed class PhoneVerification(IMiniAppStore store, IZnsSender sender, IO
 
 public static class ZaloMiniAppServiceCollectionExtensions
 {
-    /// <summary>Mini App sign-in, QR and phone OTP (needs AddNotifications for the SYSTEM ZNS sender, and an IMiniAppPasswordCheck where passwords are checked).</summary>
+    /// <summary>Mini App sign-in, QR and phone OTP (needs AddNotifications for the SYSTEM ZNS sender). The site that hosts the Mini App API also registers MiniAppAuth and its IMiniAppPasswordCheck..</summary>
     public static IServiceCollection AddZaloMiniApp(this IServiceCollection services, Microsoft.Extensions.Configuration.IConfiguration configuration)
     {
         services.Configure<ZaloMiniAppOptions>(configuration.GetSection(ZaloMiniAppOptions.SectionName));
@@ -83,7 +83,7 @@ public static class ZaloMiniAppServiceCollectionExtensions
         services.TryAddScoped<IMiniAppStore, SqlMiniAppStore>();
         services.TryAddScoped<IZnsSender, SystemZnsSender>();
         services.TryAddScoped<PhoneVerification>();
-        services.TryAddScoped<MiniAppAuth>();
+        services.TryAddScoped<ZaloAccountService>();
         return services;
     }
 }

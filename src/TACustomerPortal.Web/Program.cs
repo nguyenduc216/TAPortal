@@ -43,6 +43,7 @@ builder.Services.AddTingee(builder.Configuration);
 // Zalo Mini App sign-in API (/api/zalo-mini-app) and phone OTP (ZALO-MINI-APP, operator 2026-11-13).
 TAPortal.Integrations.ZaloMiniApp.ZaloMiniAppServiceCollectionExtensions.AddZaloMiniApp(builder.Services, builder.Configuration);
 builder.Services.AddScoped<TAPortal.Integrations.ZaloMiniApp.IMiniAppPasswordCheck, TACustomerPortal.Web.Controllers.MiniAppPasswordCheck>();
+builder.Services.AddScoped<TAPortal.Integrations.ZaloMiniApp.MiniAppAuth>();
 builder.Services.AddCors(o => o.AddPolicy(TACustomerPortal.Web.Controllers.MiniAppCors.Policy, p => p
     .WithOrigins(builder.Configuration.GetSection("ZaloMiniApp:AllowedOrigins").Get<string[]>() is { Length: > 0 } origins ? origins : new TAPortal.Integrations.ZaloMiniApp.ZaloMiniAppOptions().AllowedOrigins)
     .WithMethods("GET", "POST").WithHeaders("Content-Type", "Authorization")));
@@ -115,6 +116,9 @@ app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseMustChangePasswordGate();
+// Operator 2026-11-13: once ZaloMiniApp:RequirePhoneVerification is on, an account must verify its phone (Zalo OTP) first.
+TAPortal.Integrations.ZaloMiniApp.PhoneVerificationGate.UsePhoneVerificationGate(app, TACustomerPortal.Web.Controllers.ZaloController.Path,
+    "/account/logout", "/account/error", "/account/access-denied", "/account/login", "/account/change-password", "/account/select-customer", "/api/zalo-mini-app", TAPortal.Shared.BuildInfo.Path);
 app.MapControllerRoute("default", "{controller=Dashboard}/{action=Index}/{id?}");
 app.MapBuildInfo();
 app.Run();

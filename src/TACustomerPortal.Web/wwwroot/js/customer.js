@@ -410,7 +410,8 @@ const startCountdowns = () => document.querySelectorAll("[data-cp-countdown]").f
         clearInterval(timer);
         box.classList.add("is-over");
         out.textContent = "Đã hết hạn";
-        setTimeout(() => location.reload(), 2500);
+        // A page rendered by a POST (Zalo sign-in QR) must not reload: that would resend the form.
+        if (box.dataset.cpCountdownStay === undefined) setTimeout(() => location.reload(), 2500);
     };
     const timer = setInterval(tick, 1000);
     tick();
