@@ -35,7 +35,7 @@
     "title": "Mat khau yeu, mat khau khoi tao va bat buoc doi mat khau (portal + hoa don); xoa tai khoan va viec thu",
     "status": "IMPLEMENTED",
     "commit_sha": null,
-    "migration_status": "NOT_EXECUTED",
+    "migration_status": "EXECUTED",
     "publish_status": "NOT_PUBLISHED",
     "merge_status": "PENDING_APPROVAL"
   }

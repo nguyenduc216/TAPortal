@@ -26,6 +26,7 @@ Operator (2026-11-13):
 - MODIFY `src/TACustomerPortal.Web/{Program.cs,Controllers/AccountController.cs,Services/CustomerStore.cs}`
 
 ## Migration SQL (KHÔNG tự chạy)
+- 037: EXECUTED (pre-check NOT_APPLIED, dry-run có rollback PASS, chạy thật verify PASS). Log: `.codec/reports/ADMIN-ROLE-PERMISSIONS-CHG-20261113T041647Z-E7EEDF-migrations-20261113T041826Z.log`.
 - `database/migrations/037-remove-test-accounts-and-tasks.sql` (verify 063, rollback 064), chạy sau 036 bằng `Invoke-TAMigrations.ps1 -Plan "037:063:064"`. Operator đã đồng ý cho migration cập nhật dòng dữ liệu đang có.
 
 ## Test và kết quả
