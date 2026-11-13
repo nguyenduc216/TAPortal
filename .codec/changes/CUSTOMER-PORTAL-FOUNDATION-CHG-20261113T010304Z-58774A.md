@@ -4,7 +4,7 @@
 - Change ID: `CUSTOMER-PORTAL-FOUNDATION-CHG-20261113T010304Z-58774A`
 - Created UTC: 2026-11-13T01:03:04.168293+00:00
 - Tiêu đề: Card thong ke dang slide ngang tren mobile (portal + hoa don)
-- Trạng thái: IMPLEMENTED
+- Trạng thái: DEPLOYED
 
 ## Yêu cầu và phạm vi
 Operator (2026-11-13): "tất cả các card trên portal và hóa đơn đều đưa về dạng slide ở giao diện mobile" (ảnh trang Việc của tôi: 4 card KPI xếp dọc chiếm cả màn hình).
@@ -27,9 +27,9 @@ Operator (2026-11-13): "tất cả các card trên portal và hóa đơn đều 
 
 ## Git
 - Branch: feature/tx-sync
-- Commit SHA: xem report
+- Commit SHA: 14ac25b
 - PR:
-- Merge: xem report
+- Merge: fast-forward main
 - Merge SHA:
 
 ## Rủi ro, quyết định và việc còn lại
