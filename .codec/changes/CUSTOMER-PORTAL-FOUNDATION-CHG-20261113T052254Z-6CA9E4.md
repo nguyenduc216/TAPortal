@@ -4,7 +4,7 @@
 - Change ID: `CUSTOMER-PORTAL-FOUNDATION-CHG-20261113T052254Z-6CA9E4`
 - Created UTC: 2026-11-13T05:22:54.890317+00:00
 - Tiêu đề: QR tu tao lai khi chet, chan trang email, menu theo trang dang mo
-- Trạng thái: IMPLEMENTED
+- Trạng thái: DEPLOYED
 
 ## Yêu cầu và phạm vi
 Operator (2026-11-13):
@@ -35,9 +35,9 @@ Operator (2026-11-13):
 
 ## Git
 - Branch: feature/tx-sync
-- Commit SHA: xem report
+- Commit SHA: ddfe35a
 - PR:
-- Merge: xem report
+- Merge: fast-forward main
 - Merge SHA:
 
 ## Rủi ro, quyết định và việc còn lại
