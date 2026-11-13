@@ -63,10 +63,10 @@
     "change_id": "CONTRACTS-AND-TASKS-CHG-20261113T114748Z-364101",
     "created_at": "2026-11-13T11:47:48.574815+00:00",
     "title": "Customer staff assignment (manager/executors) and task filter popup",
-    "status": "IMPLEMENTED",
-    "commit_sha": null,
-    "migration_status": "NOT_EXECUTED",
-    "publish_status": "NOT_PUBLISHED",
+    "status": "DEPLOYED",
+    "commit_sha": "fd95f76",
+    "migration_status": "EXECUTED",
+    "publish_status": "DEPLOYED",
     "merge_status": "PENDING_APPROVAL"
   }
 ]

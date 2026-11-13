@@ -4,7 +4,7 @@
 - Change ID: `CONTRACTS-AND-TASKS-CHG-20261113T114748Z-364101`
 - Created UTC: 2026-11-13T11:47:48.574815+00:00
 - Tiêu đề: Customer staff assignment (manager/executors) and task filter popup
-- Trạng thái: IMPLEMENTED
+- Trạng thái: DEPLOYED
 
 ## Yêu cầu và phạm vi
 Operator (2026-11-13): cạnh ô tìm kiếm có nút tìm và nút mở popup lọc (mobile và desktop); popup lọc theo tiến độ (chọn nhiều), nhân viên, khách hàng (chọn nhiều), khoảng thời gian (chọn loại ngày rồi từ ngày - đến ngày). Khách của nhân viên: khách được phân công (1 quản lý, nhiều thực hiện), khách của công việc nhân viên phụ trách/cùng làm, khách của hợp đồng giao cho nhân viên.
@@ -27,7 +27,7 @@ Kiểm tra trước: khách hàng chưa gắn trực tiếp với nhân viên (c
 - Database: TAPortalSys
 - Script: `database/migrations/041-customer-staff.sql` (sau 038; 039/040 là migration dữ liệu một lần, không lưu Git, số giữ lại)
 - Verify 071, Rollback 072.
-- Execution: xem report.
+- Execution: EXECUTED (Invoke-TAMigrations 041:071:072).
 
 ## Test và kết quả
 - Safe tests 724/724 (thêm SafeTaskFilterTests 6, TheTaskListHasASearchBarAndAFilterPopup).
@@ -38,8 +38,8 @@ Kiểm tra trước: khách hàng chưa gắn trực tiếp với nhân viên (c
 
 ## Git
 - Branch: feature/tx-sync
-- Commit SHA: xem report
-- Merge: xem report
+- Commit SHA: fd95f76
+- Merge: fast-forward main
 
 ## Rủi ro, quyết định và việc còn lại
 - Chưa xem trên trang thật. Hiện chưa khách nào có phân công; cần nhập trên trang khách hàng.
