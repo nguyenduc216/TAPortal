@@ -44,4 +44,4 @@ Operator (2026-11-13):
 
 ## Rủi ro, quyết định và việc còn lại
 - Gửi mật khẩu dạng chữ thường qua email theo yêu cầu operator: ai đọc được hộp thư là có mật khẩu. Email khuyên xóa sau khi ghi nhớ.
-- Tạo 6 nhân viên mới qua giao diện portal (không đưa thông tin cá nhân vào git/.codec).
+- 6 nhân viên mới (NV000001-NV000006, vai trò STAFF, mật khẩu khởi tạo đã băm, MustChangePassword=1) nhập bằng migration riêng 901 (verify 902, rollback 903) qua Invoke-TAMigrations ngày 2026-11-13 04:37 UTC: pre-check NOT_APPLIED, dry-run có rollback PASS, gates 677/677, chạy thật VERIFY PASS. Ba file SQL chứa thông tin cá nhân nên để ngoài git tại `D:\Working\T.A\Tech\Projects\TAPortal\private-sql`. Kiểm tra sau chạy: 6 tài khoản STAFF, 7 hồ sơ nhân viên đều có tài khoản liên kết, 0 việc.
