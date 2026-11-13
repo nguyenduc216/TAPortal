@@ -7,6 +7,7 @@
             <div class="ct-map-card"><b>@s["company.name"]</b><span>@s["office.address"]</span><a class="btn btn-gold" href="@s.DirectionsUrl" target="_blank" rel="noopener">➤ Chỉ đường từ vị trí của bạn</a></div></div>
         <div class="dv-box"><h3><i>🕘</i>Giờ làm việc</h3>
             <table class="ct-hours">@foreach (var h in c.List("hours")) {<tr><td>@h["day"]</td><td>@h["time"]</td></tr>}</table>
+            @if (c.Has("hoursNote")) {<p class="@(c["hoursNote"].StartsWith("T.A bổ sung") ? "ta-todo" : "")" style="margin-top:10px;font-size:13px">@c["hoursNote"]</p>}
             @if (c.Has("bringTitle")) {<ul class="dv-check" style="margin-top:14px"><li><b>@c["bringTitle"]</b><small>@c["bringText"]</small></li></ul>}
         </div>
     </div>

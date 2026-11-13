@@ -125,6 +125,7 @@ public static class SectionTypes
         [
             ..Heading,
             FieldDef.List("hours", "Giờ làm việc", 7, FieldDef.Text("day", "Ngày"), FieldDef.Text("time", "Giờ")),
+            FieldDef.Text("hoursNote", "Ghi chú dưới giờ làm việc"),
             FieldDef.Text("bringTitle", "Tiêu đề 'mang theo khi đến'"), FieldDef.Text("bringText", "Nội dung")
         ]),
         new("cta", "Kêu gọi liên hệ", "Dải màu xanh với tiêu đề và 2 nút.",
