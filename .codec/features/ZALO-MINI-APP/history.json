@@ -1,0 +1,15 @@
+[
+  {
+    "change_id": "ZALO-MINI-APP-CHG-20261113T053124Z-A0CC3C",
+    "created_at": "2026-11-13T05:31:24.275655+00:00",
+    "title": "Zalo Mini App: đăng nhập bằng số điện thoại Zalo, QR một lần, OTP ZNS xác minh số",
+    "status": "IMPLEMENTED",
+    "commit_sha": null,
+    "migration_status": "NOT_EXECUTED",
+    "publish_status": "NOT_PUBLISHED",
+    "merge_status": "PENDING_APPROVAL",
+    "branch": "feature/zalo-mini-app",
+    "migration": "database/migrations/038-zalo-mini-app-auth.sql",
+    "tests": "Safe 700/700 passed; Release build 0 errors"
+  }
+]

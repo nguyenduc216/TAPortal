@@ -108,6 +108,20 @@ public sealed class NotificationSettings(INotificationStore store, ISecretProtec
         return result.Ok ? null : result.Error ?? "Gửi email thất bại.";
     }
 
+    /// <summary>
+    /// Sends one ZNS template message now through the SYSTEM Zalo OA channel (not the outbox), with another template than the
+    /// channel's payment one; null when sent, else the reason. Used for the phone OTP (ZALO-MINI-APP, operator 2026-11-13).
+    /// </summary>
+    public async Task<string?> SendSystemZnsAsync(string phone, string templateId, IReadOnlyDictionary<string, string> data, CancellationToken ct = default)
+    {
+        var c = (await store.ChannelsAsync(NotificationScope.System, null, ct)).FirstOrDefault(x => x.Channel == NotificationChannelKind.ZaloOa);
+        if (c is null || !c.IsEnabled) return "Chưa bật kênh Zalo OA hệ thống.";
+        var settings = new Dictionary<string, string>(c.Settings) { ["templateId"] = templateId };
+        var message = new OutboxMessage($"otp:{Guid.NewGuid():N}", NotificationScope.System, null, NotificationChannelKind.ZaloOa, phone, null, "", data, null);
+        var (result, _) = await Dispatch.SendAsync(store, protector, transport, c with { Settings = settings }, message, ct);
+        return result.Ok ? null : result.Error ?? "Gửi tin Zalo thất bại.";
+    }
+
     public Task<NotificationRecipients> RecipientsAsync(Guid customerId, CancellationToken ct = default) => store.RecipientsAsync(customerId, ct);
 
     public async Task<IReadOnlyList<string>> SaveRecipientsAsync(Guid customerId, string? email, string? zaloPhone, string? telegramChatId, IEnumerable<string> events, Guid actor, CancellationToken ct = default)

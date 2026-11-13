@@ -40,6 +40,12 @@ builder.Services.Configure<EmailOptions>(builder.Configuration.GetSection(EmailO
 builder.Services.AddSingleton<IEmailSender, SmtpEmailSender>();
 builder.Services.AddScoped<IPasswordResetStore, SqlPasswordResetStore>();
 builder.Services.AddTingee(builder.Configuration);
+// Zalo Mini App sign-in API (/api/zalo-mini-app) and phone OTP (ZALO-MINI-APP, operator 2026-11-13).
+TAPortal.Integrations.ZaloMiniApp.ZaloMiniAppServiceCollectionExtensions.AddZaloMiniApp(builder.Services, builder.Configuration);
+builder.Services.AddScoped<TAPortal.Integrations.ZaloMiniApp.IMiniAppPasswordCheck, TACustomerPortal.Web.Controllers.MiniAppPasswordCheck>();
+builder.Services.AddCors(o => o.AddPolicy(TACustomerPortal.Web.Controllers.MiniAppCors.Policy, p => p
+    .WithOrigins(builder.Configuration.GetSection("ZaloMiniApp:AllowedOrigins").Get<string[]>() is { Length: > 0 } origins ? origins : new TAPortal.Integrations.ZaloMiniApp.ZaloMiniAppOptions().AllowedOrigins)
+    .WithMethods("GET", "POST").WithHeaders("Content-Type", "Authorization")));
 var protection = builder.Services.AddDataProtection().SetApplicationName("TA.CustomerPortal");
 if (!string.IsNullOrWhiteSpace(builder.Configuration["DataProtection:KeyPath"]))
 {
@@ -73,6 +79,8 @@ builder.Services.AddRateLimiter(o =>
     o.AddPolicy("lookup", context => RateLimitPartition.GetFixedWindowLimiter(context.Connection.RemoteIpAddress?.ToString() ?? "unknown", _ => new FixedWindowRateLimiterOptions { PermitLimit = 20, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
     // Public order payment pages (/pay/{token}): page, logos and the status poll.
     o.AddPolicy("pay", context => RateLimitPartition.GetFixedWindowLimiter(context.Connection.RemoteIpAddress?.ToString() ?? "unknown", _ => new FixedWindowRateLimiterOptions { PermitLimit = 120, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
+    // Zalo Mini App API: sign-in steps and signed-in calls, per address.
+    o.AddPolicy("miniapp", context => RateLimitPartition.GetFixedWindowLimiter(context.Connection.RemoteIpAddress?.ToString() ?? "unknown", _ => new FixedWindowRateLimiterOptions { PermitLimit = 60, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
     o.AddPolicy("login", context => RateLimitPartition.GetFixedWindowLimiter(context.Connection.RemoteIpAddress?.ToString() ?? "unknown", _ => new FixedWindowRateLimiterOptions { PermitLimit = 10, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
 });
 // Read configuration when options are resolved, including host-supplied configuration.
@@ -102,6 +110,7 @@ if (!app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseRouting();
+app.UseCors();
 app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
