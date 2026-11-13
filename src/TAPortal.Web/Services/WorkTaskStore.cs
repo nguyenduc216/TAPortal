@@ -38,7 +38,12 @@ public sealed record WorkLookupEmployee(Guid Id, string Code, string Name, bool 
 public sealed record WorkLookupCustomer(Guid Id, string Code, string Name);
 public sealed record WorkLookupContract(Guid Id, Guid CustomerId, string ContractNo, string Title);
 
-public sealed record WorkLookups(IReadOnlyList<WorkLookupEmployee> Employees, IReadOnlyList<WorkLookupCustomer> Customers, IReadOnlyList<WorkLookupContract> Contracts)
+// Why an employee counts a customer as theirs (task list filter): MANAGER / EXECUTOR (dbo.CustomerStaff, migration 041),
+// TASK (owner or co-worker of a task of that customer) or CONTRACT (owner of a contract of that customer).
+public sealed record WorkLookupLink(Guid EmployeeId, Guid CustomerId, string Source);
+
+public sealed record WorkLookups(IReadOnlyList<WorkLookupEmployee> Employees, IReadOnlyList<WorkLookupCustomer> Customers, IReadOnlyList<WorkLookupContract> Contracts,
+    IReadOnlyList<WorkLookupLink>? Links = null)
 {
     public static readonly WorkLookups Empty = new([], [], []);
 }
@@ -50,6 +55,33 @@ public sealed class WorkTaskFilter
     public Guid? Owner { get; set; }
     public Guid? Customer { get; set; }
     public string? Q { get; set; }
+    // Filter popup (operator 2026-11-13): several statuses, employees (owner or co-worker) and customers at once, and a date
+    // range on the start date, the due date or the completion day. The single Status/Owner/Customer above stay for old links.
+    public List<string> Statuses { get; set; } = [];
+    public List<Guid> Employees { get; set; } = [];
+    public List<Guid> Customers { get; set; } = [];
+    public string? DateField { get; set; }     // start | due | done
+    public DateTime? From { get; set; }
+    public DateTime? To { get; set; }
+
+    public static readonly string[] DateFields = ["due", "start", "done"];
+    public static string DateFieldLabel(string? f) => f switch { "start" => "Ngày bắt đầu", "done" => "Ngày hoàn thành", _ => "Hạn hoàn thành" };
+
+    /// <summary>The effective filter values: old single-value parameters folded in, unknown values dropped.</summary>
+    public (List<string> Statuses, List<Guid> Employees, List<Guid> Customers, string DateField) Normalized()
+    {
+        var statuses = Statuses.Append(Status ?? "").Where(x => WorkTaskPolicy.Statuses.Contains(x) || x is "open" or "overdue").Distinct().ToList();
+        var employees = Employees.Append(Owner ?? Guid.Empty).Where(x => x != Guid.Empty).Distinct().ToList();
+        var customers = Customers.Append(Customer ?? Guid.Empty).Where(x => x != Guid.Empty).Distinct().ToList();
+        return (statuses, employees, customers, DateField is "start" or "done" ? DateField : "due");
+    }
+
+    /// <summary>How many filters of the popup are in use (the badge on the "Bộ lọc" button).</summary>
+    public int ActiveCount()
+    {
+        var (st, em, cu, _) = Normalized();
+        return (st.Count > 0 ? 1 : 0) + (em.Count > 0 ? 1 : 0) + (cu.Count > 0 ? 1 : 0) + (From is not null || To is not null ? 1 : 0);
+    }
 }
 
 public sealed class WorkTaskInput
@@ -176,10 +208,13 @@ SELECT x.TaskId,x.Id,x.Kind,x.Body,x.StatusFrom,x.StatusTo,x.CreatedAt,x.Display
 
  AND (@scope<>'mine' OR t.OwnerEmployeeId=@emp OR EXISTS(SELECT 1 FROM dbo.WorkTaskMembers sm WHERE sm.TaskId=t.Id AND sm.EmployeeId=@emp AND sm.IsActive=1))
  AND (@scope<>'created' OR t.CreatedBy=@actor)
- AND (@status IS NULL OR t.Status=@status OR (@status='open' AND t.Status IN ('NEW','IN_PROGRESS'))
-      OR (@status='overdue' AND t.Status IN ('NEW','IN_PROGRESS') AND t.DueDate<@today))
- AND (@owner IS NULL OR t.OwnerEmployeeId=@owner)
- AND (@customer IS NULL OR t.CustomerId=@customer)
+ AND (@statuses IS NULL OR @statuses LIKE '%,'+t.Status+',%' OR (@statuses LIKE '%,open,%' AND t.Status IN ('NEW','IN_PROGRESS'))
+      OR (@statuses LIKE '%,overdue,%' AND t.Status IN ('NEW','IN_PROGRESS') AND t.DueDate<@today))
+ AND (@employees IS NULL OR @employees LIKE '%,'+CONVERT(varchar(36),t.OwnerEmployeeId)+',%'
+      OR EXISTS(SELECT 1 FROM dbo.WorkTaskMembers fm WHERE fm.TaskId=t.Id AND fm.IsActive=1 AND @employees LIKE '%,'+CONVERT(varchar(36),fm.EmployeeId)+',%'))
+ AND (@customers IS NULL OR (t.CustomerId IS NOT NULL AND @customers LIKE '%,'+CONVERT(varchar(36),t.CustomerId)+',%'))
+ AND (@from IS NULL OR CASE @dateField WHEN 'start' THEN t.StartDate WHEN 'done' THEN CAST(DATEADD(HOUR,7,t.CompletedAt) AS date) ELSE t.DueDate END>=@from)
+ AND (@to IS NULL OR CASE @dateField WHEN 'start' THEN t.StartDate WHEN 'done' THEN CAST(DATEADD(HOUR,7,t.CompletedAt) AS date) ELSE t.DueDate END<=@to)
  AND (@q IS NULL OR t.Title LIKE @q ESCAPE '\' OR t.TaskNo LIKE @q ESCAPE '\')
 ORDER BY CASE WHEN t.Status IN ('NEW','IN_PROGRESS') THEN 0 ELSE 1 END, CASE WHEN t.DueDate IS NULL THEN 1 ELSE 0 END, t.DueDate, t.LastActivityAt DESC;
 """;
@@ -200,6 +235,15 @@ WHERE a.TaskId=@id ORDER BY a.CreatedAt;
 SELECT e.Id,e.EmployeeCode,e.FullName,CASE WHEN e.UserId IS NULL THEN 0 ELSE 1 END FROM dbo.Employees e WHERE e.IsDeleted=0 AND e.IsActive=1 ORDER BY e.FullName;
 SELECT Id,Code,Name FROM dbo.Customers WHERE IsDeleted=0 ORDER BY Name;
 SELECT Id,CustomerId,ContractNo,Title FROM dbo.CustomerContracts WHERE IsDeleted=0 AND Status IN ('DRAFT','ACTIVE') ORDER BY ContractNo;
+IF OBJECT_ID(N'dbo.CustomerStaff', N'U') IS NOT NULL
+ SELECT s.EmployeeId,s.CustomerId,s.Role FROM dbo.CustomerStaff s JOIN dbo.Customers c ON c.Id=s.CustomerId AND c.IsDeleted=0
+ UNION SELECT t.OwnerEmployeeId,t.CustomerId,'TASK' FROM dbo.WorkTasks t WHERE t.IsDeleted=0 AND t.CustomerId IS NOT NULL
+ UNION SELECT m.EmployeeId,t.CustomerId,'TASK' FROM dbo.WorkTaskMembers m JOIN dbo.WorkTasks t ON t.Id=m.TaskId WHERE m.IsActive=1 AND t.IsDeleted=0 AND t.CustomerId IS NOT NULL
+ UNION SELECT k.OwnerEmployeeId,k.CustomerId,'CONTRACT' FROM dbo.CustomerContracts k WHERE k.IsDeleted=0 AND k.OwnerEmployeeId IS NOT NULL;
+ELSE
+ SELECT t.OwnerEmployeeId,t.CustomerId,'TASK' FROM dbo.WorkTasks t WHERE t.IsDeleted=0 AND t.CustomerId IS NOT NULL
+ UNION SELECT m.EmployeeId,t.CustomerId,'TASK' FROM dbo.WorkTaskMembers m JOIN dbo.WorkTasks t ON t.Id=m.TaskId WHERE m.IsActive=1 AND t.IsDeleted=0 AND t.CustomerId IS NOT NULL
+ UNION SELECT k.OwnerEmployeeId,k.CustomerId,'CONTRACT' FROM dbo.CustomerContracts k WHERE k.IsDeleted=0 AND k.OwnerEmployeeId IS NOT NULL;
 """;
 
     public const string ForUpdate = """
@@ -369,6 +413,10 @@ public sealed class SqlWorkTaskStore(IConfiguration configuration, ILogger<SqlWo
             WorkTaskPolicy.CanEdit(a.ViewAll, a.CanAssign, t.CreatedBy == a.UserId), t.OwnerId == a.EmployeeId)).ToList();
     }
 
+    // ",a,b," for the LIKE '%,x,%' lists of the task filter (SQL Server 2014 has no STRING_SPLIT); null = no filter.
+    private static object Csv(IEnumerable<string> values) { var l = values.ToList(); return l.Count == 0 ? DBNull.Value : "," + string.Join(",", l) + ","; }
+    private static string Upper(Guid id) => id.ToString().ToUpperInvariant();
+
     private static List<T> Bucket<T>(Dictionary<Guid, List<T>> map, Guid key) => map.TryGetValue(key, out var l) ? l : map[key] = [];
 
     public async Task<IReadOnlyList<WorkTaskRow>> ListAsync(Guid actor, WorkTaskFilter filter)
@@ -379,10 +427,11 @@ public sealed class SqlWorkTaskStore(IConfiguration configuration, ILogger<SqlWo
         var scope = filter.Scope is "created" or "all" ? filter.Scope : "mine";
         if (scope == "all" && !a.ViewAll) scope = "mine";
         var q = WorkTaskPolicy.Clean(filter.Q, 100);
+        var (statuses, employees, customers, dateField) = filter.Normalized();
         var list = new List<WorkTaskRow>();
         await using var cmd = Command(cn, null, WorkTaskSql.List, [.. Scope(a), ("@scope", scope),
-            ("@status", (object?)(filter.Status is { } s && (WorkTaskPolicy.Statuses.Contains(s) || s is "open" or "overdue") ? s : null) ?? DBNull.Value),
-            ("@owner", Db(filter.Owner)), ("@customer", Db(filter.Customer)), ("@today", new DateParam(WorkClock.Today().ToDateTime(TimeOnly.MinValue))),
+            ("@statuses", Csv(statuses)), ("@employees", Csv(employees.Select(Upper))), ("@customers", Csv(customers.Select(Upper))),
+            ("@dateField", dateField), ("@from", Date(filter.From)), ("@to", Date(filter.To)), ("@today", new DateParam(WorkClock.Today().ToDateTime(TimeOnly.MinValue))),
             ("@q", q is null ? DBNull.Value : "%" + q.Replace("\\", "\\\\").Replace("%", "\\%").Replace("_", "\\_").Replace("[", "\\[") + "%")]);
         await using var r = await cmd.ExecuteReaderAsync();
         while (await r.ReadAsync()) list.Add(Row(r));
@@ -427,7 +476,10 @@ public sealed class SqlWorkTaskStore(IConfiguration configuration, ILogger<SqlWo
         while (await r.ReadAsync()) customers.Add(new(r.GetGuid(0), S(r, 1) ?? "", r.GetString(2)));
         await r.NextResultAsync();
         while (await r.ReadAsync()) contracts.Add(new(r.GetGuid(0), r.GetGuid(1), r.GetString(2), r.GetString(3)));
-        return new(employees, customers, contracts);
+        var links = new List<WorkLookupLink>();
+        if (await r.NextResultAsync())
+            while (await r.ReadAsync()) links.Add(new(r.GetGuid(0), r.GetGuid(1), r.GetString(2)));
+        return new(employees, customers, contracts, links);
     }
 
     // ---- Writes -------------------------------------------------------------------------------------------------------

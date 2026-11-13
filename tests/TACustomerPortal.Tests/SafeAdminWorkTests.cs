@@ -222,6 +222,21 @@ public sealed class SafeAdminWorkTests
     }
 
     [Fact]
+    public async Task TheTaskListHasASearchBarAndAFilterPopup()
+    {
+        // Operator 2026-11-13: search box + search button + "Bộ lọc" beside it; the popup holds several statuses, employees
+        // and customers, and a date range on a chosen date.
+        using var f = Factory("STAFF", new MemoryWork(), "TASKS.VIEW", "TASKS.ASSIGN");
+        var page = WebUtility.HtmlDecode(await Client(f).GetStringAsync("/work/tasks"));
+        Assert.Contains("data-ta-filter-open", page);
+        Assert.Contains("<dialog class=\"ta-filter-dialog\" data-ta-filter-dialog", page);
+        Assert.Contains("type=\"checkbox\" name=\"statuses\" value=\"overdue\"", page);
+        Assert.Contains("name=\"employees\"", page);
+        Assert.Contains("name=\"dateField\"", page);
+        Assert.Contains("data-ta-filter-links", page);
+    }
+
+    [Fact]
     public async Task OtherPeoplesTasksAreInvisibleAndFeaturesFollowPermissions()
     {
         var store = new MemoryWork();

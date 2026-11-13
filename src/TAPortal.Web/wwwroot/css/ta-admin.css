@@ -167,16 +167,52 @@
 
 /* Task list (Công việc → Danh sách): operator 2026-11-13 "làm gọn lại" on phones. The filters become one sideways-scrolling
    row under the search box, and each task is a compact card (title + status, owner, customer, due + progress). */
-.ta-task-filters__row { display: contents; }
+/* Search bar + "Bộ lọc" popup (operator 2026-11-13): the search box with a search button and a filter button beside it, on
+   every screen; the popup (native <dialog>) holds scope, statuses, employees, customers and the date range. */
+.ta-task-filters { display: block; }
+.ta-task-filters__bar { display: flex; align-items: center; gap: var(--ta-sp-2); }
+.ta-task-filters__bar .ta-search { flex: 1 1 auto; max-width: 560px; }
+.ta-task-filters__bar .btn { flex: 0 0 auto; }
+.ta-task-filters__count { display: inline-grid; place-items: center; min-width: 20px; height: 20px; margin-left: 6px; padding: 0 6px; border-radius: 99px; background: var(--ta-blue, #2563eb); color: #fff; font-size: .75rem; font-weight: 700; }
+.ta-task-filters__summary { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: var(--ta-sp-2); }
+.ta-chip { display: inline-flex; align-items: center; gap: 4px; max-width: 100%; padding: 2px 10px; border: 1px solid var(--ta-border); border-radius: 99px; background: var(--ta-surface-2); color: var(--ta-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ta-chip .ta-icon { width: 14px; height: 14px; flex: none; }
+.ta-filter-dialog { width: min(640px, calc(100vw - 32px)); max-height: min(88vh, 860px); padding: 0; border: 1px solid var(--ta-border); border-radius: 14px; box-shadow: 0 24px 60px rgba(15, 23, 42, .25); color: var(--ta-text); background: var(--ta-surface, #fff); }
+.ta-filter-dialog[open] { display: flex; flex-direction: column; }
+.ta-filter-dialog::backdrop { background: rgba(15, 23, 42, .45); }
+.ta-filter-dialog__head, .ta-filter-dialog__foot { display: flex; align-items: center; gap: var(--ta-sp-2); padding: var(--ta-sp-3) var(--ta-sp-4); }
+.ta-filter-dialog__head { border-bottom: 1px solid var(--ta-border); }
+.ta-filter-dialog__title { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 1.0625rem; font-weight: 700; }
+.ta-filter-dialog__head .ta-btn-icon { margin-left: auto; }
+.ta-filter-dialog__body { flex: 1 1 auto; overflow-y: auto; padding: var(--ta-sp-3) var(--ta-sp-4); display: grid; gap: var(--ta-sp-4); }
+.ta-filter-dialog__foot { justify-content: flex-end; border-top: 1px solid var(--ta-border); }
+.ta-filter-group { min-width: 0; margin: 0; padding: 0; border: 0; }
+.ta-filter-group legend { float: none; width: auto; margin-bottom: 6px; padding: 0; font-size: .875rem; font-weight: 700; }
+.ta-filter-group legend small { color: var(--ta-text-2); font-weight: 500; }
+.ta-filter-pills { display: flex; flex-wrap: wrap; gap: 6px; }
+.ta-filter-pill input { position: absolute; opacity: 0; pointer-events: none; }
+.ta-filter-pill span { display: inline-block; padding: 5px 12px; border: 1px solid var(--ta-border); border-radius: 99px; cursor: pointer; font-size: .875rem; user-select: none; }
+.ta-filter-pill input:checked + span { border-color: var(--ta-blue, #2563eb); background: var(--ta-blue-soft, #eff6ff); color: var(--ta-blue-strong, #1d4ed8); font-weight: 600; }
+.ta-filter-pill input:focus-visible + span { outline: 2px solid var(--ta-blue, #2563eb); outline-offset: 2px; }
+.ta-filter-find { margin-bottom: 6px; }
+.ta-filter-list { max-height: 220px; overflow-y: auto; border: 1px solid var(--ta-border); border-radius: 10px; padding: 4px; }
+.ta-filter-option { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 8px; cursor: pointer; font-size: .875rem; }
+.ta-filter-option:hover { background: var(--ta-surface-2); }
+.ta-filter-option[hidden] { display: none; }
+.ta-filter-why { margin-left: auto; color: var(--ta-text-2); font-size: .75rem; white-space: nowrap; }
+.ta-filter-dates { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 1fr); gap: var(--ta-sp-2); align-items: end; }
+.ta-filter-date span { display: block; margin-bottom: 2px; color: var(--ta-text-2); font-size: .75rem; }
+.ta-check-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 2px 12px; max-height: 220px; overflow-y: auto; padding: 6px 8px; border: 1px solid var(--ta-border); border-radius: 10px; }
+.ta-staff-edit > summary { list-style: none; display: inline-flex; }
+.ta-staff-edit > summary::-webkit-details-marker { display: none; }
 @media (max-width: 767.98px) {
-    .ta-task-filters { gap: var(--ta-sp-2); padding-top: var(--ta-sp-3); padding-bottom: var(--ta-sp-3); }
-    .ta-task-filters .ta-search { flex: 1 1 100%; max-width: none; }
-    .ta-task-filters__row { display: flex; flex: 1 1 100%; gap: var(--ta-sp-2); margin-inline: calc(-1 * var(--ta-sp-4)); padding: 2px var(--ta-sp-4); overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
-    .ta-task-filters__row::-webkit-scrollbar { display: none; }
-    .ta-task-filters__row > * { flex: 0 0 auto; }
-    .ta-task-filters__row .form-select { width: auto; max-width: 62vw; height: 36px; padding-top: 4px; padding-bottom: 4px; font-size: .875rem; }
-    .ta-task-filters__row .btn { height: 36px; }
-
+    .ta-task-filters { padding-top: var(--ta-sp-3); padding-bottom: var(--ta-sp-3); }
+    .ta-task-filters__bar .ta-search { max-width: none; }
+    .ta-task-filters__go span, .ta-task-filters__open > span:not(.ta-task-filters__count) { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); }
+    .ta-task-filters__count { margin-left: 4px; }
+    .ta-filter-dialog { width: 100vw; max-width: 100vw; max-height: 92vh; margin: auto 0 0; border-radius: 16px 16px 0 0; }
+    .ta-filter-dates { grid-template-columns: 1fr 1fr; }
+    .ta-filter-dates select { grid-column: 1 / -1; }
     .ta-task-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); }
     .ta-task-table, .ta-task-table tbody { display: block; min-width: 0; }
     .ta-task-table tr { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "title status" "owner owner" "customer customer" "due progress";

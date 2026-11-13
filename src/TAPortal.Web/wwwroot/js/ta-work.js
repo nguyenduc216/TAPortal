@@ -187,4 +187,93 @@
     else scanVoice(document);
     document.addEventListener('ta:load', () => scanVoice(document));
     document.addEventListener('ta:before-swap', stop);
+    // ---- Task list filter popup (Danh sách công việc) ---------------------------------------------------------------
+    // "Bộ lọc" opens a <dialog> inside the search form. Choosing employees narrows the customer list to the customers of
+    // those employees (manager / executor / task / contract, from the JSON the page embeds); the search boxes filter the
+    // employee and customer lists as you type. "Áp dụng" submits the form (GET), so the shell loads the filtered list.
+    const WHY = { MANAGER: 'Quản lý', EXECUTOR: 'Thực hiện', TASK: 'Có việc', CONTRACT: 'Hợp đồng' };
+    const fold = (text) => (text || '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase();
+
+    const filterCustomers = (dialog) => {
+        let links = {};
+        try { links = JSON.parse(dialog.querySelector('[data-ta-filter-links]')?.textContent || '{}'); } catch { links = {}; }
+        const chosen = [...dialog.querySelectorAll('[data-ta-filter-employee]:checked')].map((box) => box.value.toLowerCase());
+        const showAll = dialog.dataset.taAllCustomers === 'true';
+        const narrow = chosen.length > 0 && !showAll;
+        const why = {};
+        for (const id of chosen) {
+            for (const [customer, sources] of Object.entries(links[id] || {})) {
+                const set = why[customer.toLowerCase()] ||= new Set();
+                sources.forEach((s) => set.add(s));
+            }
+        }
+        const query = fold(dialog.querySelector('[data-ta-filter-find="customers"]')?.value);
+        let visible = 0;
+        dialog.querySelectorAll('[data-ta-customer]').forEach((row) => {
+            const id = row.dataset.taCustomer.toLowerCase();
+            const box = row.querySelector('input');
+            const reasons = why[id] ? [...why[id]].map((s) => WHY[s] || s).join(', ') : '';
+            row.querySelector('[data-ta-why]').textContent = chosen.length > 0 ? reasons : '';
+            const match = (!narrow || why[id] || box.checked) && (!query || fold(row.textContent).includes(query));
+            row.hidden = !match;
+            if (match) visible++;
+        });
+        const hint = dialog.querySelector('[data-ta-filter-customer-hint]');
+        if (hint) hint.hidden = !narrow;
+        const none = dialog.querySelector('[data-ta-filter-none]');
+        if (none) none.hidden = visible > 0;
+    };
+
+    const filterEmployees = (dialog) => {
+        const query = fold(dialog.querySelector('[data-ta-filter-find="employees"]')?.value);
+        dialog.querySelectorAll('[data-ta-filter-list="employees"] .ta-filter-option').forEach((row) => {
+            row.hidden = !!query && !fold(row.textContent).includes(query) && !row.querySelector('input').checked;
+        });
+    };
+
+    document.addEventListener('click', (event) => {
+        const open = event.target.closest('[data-ta-filter-open]');
+        if (open) {
+            const dialog = open.closest('form')?.querySelector('[data-ta-filter-dialog]');
+            if (!dialog) return;
+            dialog.dataset.taAllCustomers = 'false';
+            filterCustomers(dialog);
+            if (typeof dialog.showModal === 'function') dialog.showModal(); else dialog.setAttribute('open', '');
+            return;
+        }
+        const dialog = event.target.closest('[data-ta-filter-dialog]');
+        if (!dialog) return;
+        if (event.target === dialog || event.target.closest('[data-ta-filter-close]')) { dialog.close?.(); return; }
+        if (event.target.closest('[data-ta-filter-all-customers]')) { dialog.dataset.taAllCustomers = 'true'; filterCustomers(dialog); return; }
+        if (event.target.closest('[data-ta-filter-reset]')) {
+            dialog.querySelectorAll('input[type=checkbox]').forEach((box) => { box.checked = false; });
+            dialog.querySelectorAll('input[type=date], input[type=search]').forEach((input) => { input.value = ''; });
+            dialog.dataset.taAllCustomers = 'false';
+            filterEmployees(dialog);
+            filterCustomers(dialog);
+        }
+    });
+
+    document.addEventListener('change', (event) => {
+        const dialog = event.target.closest?.('[data-ta-filter-dialog]');
+        if (dialog && event.target.matches('[data-ta-filter-employee]')) { dialog.dataset.taAllCustomers = 'false'; filterCustomers(dialog); }
+    });
+
+    document.addEventListener('input', (event) => {
+        const dialog = event.target.closest?.('[data-ta-filter-dialog]');
+        if (!dialog || !event.target.matches('[data-ta-filter-find]')) return;
+        if (event.target.dataset.taFilterFind === 'employees') filterEmployees(dialog); else filterCustomers(dialog);
+    });
+
+    // Enter in a popup search box filters the list instead of submitting the whole form.
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' && event.target.matches?.('[data-ta-filter-find]')) event.preventDefault();
+    });
+
+    // Submitting closes the popup first (the popup's own search boxes have no name, so they are not sent).
+    document.addEventListener('submit', (event) => {
+        const form = event.target;
+        if (form instanceof HTMLFormElement && form.hasAttribute('data-ta-task-filter')) form.querySelector('[data-ta-filter-dialog]')?.close?.();
+    }, true);
+    document.addEventListener('ta:before-swap', () => document.querySelectorAll('[data-ta-filter-dialog][open]').forEach((d) => d.close?.()));
 })();

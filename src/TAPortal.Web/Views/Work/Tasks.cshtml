@@ -14,33 +14,98 @@
 }
 @if (Model.Error is not null) {<div class="ta-alert ta-alert--danger" role="alert">@UiIcon.Render("alert-circle")<div class="ta-alert__body">@Model.Error</div></div>}
 <section class="card ta-table-card" aria-label="Danh sách công việc">
-    <form class="ta-table-toolbar ta-task-filters d-flex flex-wrap gap-2 align-items-center" method="get" asp-action="Tasks">
-        <div class="ta-search">@UiIcon.Render("search")<input class="form-control" type="search" name="q" value="@f.Q" maxlength="100" aria-label="Tìm công việc" placeholder="Tên hoặc mã công việc..." /></div>
-        <div class="ta-task-filters__row">
-        <select class="form-select w-auto" name="scope" aria-label="Phạm vi">
-            <option value="mine" selected="@(f.Scope == "mine")">Việc tôi làm</option>
-            <option value="created" selected="@(f.Scope == "created")">Việc tôi đã tạo / giao</option>
-            @if (a?.ViewAll == true) {<option value="all" selected="@(f.Scope == "all")">Tất cả công việc</option>}
-        </select>
-        <select class="form-select w-auto" name="status" aria-label="Trạng thái">
-            <option value="">Mọi trạng thái</option>
-            <option value="open" selected="@(f.Status == "open")">Chưa hoàn thành</option>
-            <option value="overdue" selected="@(f.Status == "overdue")">Quá hạn</option>
-            @foreach (var s in WorkTaskPolicy.Statuses) {<option value="@s" selected="@(f.Status == s)">@WorkTaskPolicy.StatusLabel(s)</option>}
-        </select>
-        @if (a?.ViewAll == true || a?.CanAssign == true)
-        {
-            <select class="form-select w-auto" name="owner" aria-label="Người phụ trách">
-                <option value="">Mọi người phụ trách</option>
-                @foreach (var e in Model.Lookups.Employees) {<option value="@e.Id" selected="@(e.Id == f.Owner)">@e.Name</option>}
-            </select>
-        }
-        <select class="form-select w-auto" name="customer" aria-label="Khách hàng">
-            <option value="">Mọi khách hàng</option>
-            @foreach (var c in Model.Lookups.Customers) {<option value="@c.Id" selected="@(c.Id == f.Customer)">@c.Name</option>}
-        </select>
-        <button class="btn" type="submit">@UiIcon.Render("search")<span>Lọc</span></button>
+    @{
+        var (fStatuses, fEmployees, fCustomers, fDateField) = f.Normalized();
+        var activeFilters = f.ActiveCount();
+        var canPickPeople = a?.ViewAll == true || a?.CanAssign == true;
+        // Employee -> customer -> why (Quản lý / Thực hiện / Có việc / Hợp đồng): the popup narrows the customer list to the
+        // customers of the chosen employees.
+        var linkMap = (Model.Lookups.Links ?? []).GroupBy(l => l.EmployeeId).ToDictionary(g => g.Key.ToString(),
+            g => g.GroupBy(l => l.CustomerId).ToDictionary(x => x.Key.ToString(), x => x.Select(l => l.Source).Distinct().ToArray()));
+        string[] statusOrder = ["open", "overdue", .. WorkTaskPolicy.Statuses];
+        string StatusText(string s) => s switch { "open" => "Chưa hoàn thành", "overdue" => "Quá hạn", _ => WorkTaskPolicy.StatusLabel(s) };
+    }
+    <form class="ta-table-toolbar ta-task-filters" method="get" asp-action="Tasks" data-ta-task-filter>
+        <div class="ta-task-filters__bar">
+            <div class="ta-search">@UiIcon.Render("search")<input class="form-control" type="search" name="q" value="@f.Q" maxlength="100" aria-label="Tìm công việc" placeholder="Tên hoặc mã công việc..." /></div>
+            <button class="btn btn-primary ta-task-filters__go" type="submit" aria-label="Tìm kiếm">@UiIcon.Render("search")<span>Tìm</span></button>
+            <button class="btn ta-task-filters__open" type="button" data-ta-filter-open aria-haspopup="dialog">@UiIcon.Render("filter")<span>Bộ lọc</span>@if (activeFilters > 0) {<span class="ta-task-filters__count" aria-label="@activeFilters bộ lọc đang dùng">@activeFilters</span>}</button>
         </div>
+        @if (activeFilters > 0 || !string.IsNullOrEmpty(f.Q))
+        {
+            <div class="ta-task-filters__summary small text-secondary">
+                @if (fStatuses.Count > 0) {<span class="ta-chip">@string.Join(", ", fStatuses.Select(StatusText))</span>}
+                @if (fEmployees.Count > 0) {<span class="ta-chip">@UiIcon.Render("user")@string.Join(", ", Model.Lookups.Employees.Where(e => fEmployees.Contains(e.Id)).Select(e => e.Name))</span>}
+                @if (fCustomers.Count > 0) {<span class="ta-chip">@UiIcon.Render("building")@fCustomers.Count khách hàng</span>}
+                @if (f.From is not null || f.To is not null) {<span class="ta-chip">@UiIcon.Render("calendar")@WorkTaskFilter.DateFieldLabel(fDateField): @(f.From?.ToString("dd/MM/yyyy") ?? "…") – @(f.To?.ToString("dd/MM/yyyy") ?? "…")</span>}
+                <a class="ms-1" asp-action="Tasks" asp-route-scope="@f.Scope">Xóa lọc</a>
+            </div>
+        }
+        <dialog class="ta-filter-dialog" data-ta-filter-dialog aria-labelledby="taskFilterTitle">
+            <div class="ta-filter-dialog__head">
+                <h2 class="ta-filter-dialog__title" id="taskFilterTitle">@UiIcon.Render("filter")Bộ lọc công việc</h2>
+                <button class="btn btn-icon ta-btn-icon" type="button" data-ta-filter-close aria-label="Đóng">@UiIcon.Render("x")</button>
+            </div>
+            <div class="ta-filter-dialog__body">
+                <fieldset class="ta-filter-group">
+                    <legend>Phạm vi</legend>
+                    <select class="form-select" name="scope" aria-label="Phạm vi">
+                        <option value="mine" selected="@(f.Scope == "mine")">Việc tôi làm</option>
+                        <option value="created" selected="@(f.Scope == "created")">Việc tôi đã tạo / giao</option>
+                        @if (a?.ViewAll == true) {<option value="all" selected="@(f.Scope == "all")">Tất cả công việc</option>}
+                    </select>
+                </fieldset>
+                <fieldset class="ta-filter-group">
+                    <legend>Tiến độ / trạng thái <small>(chọn nhiều)</small></legend>
+                    <div class="ta-filter-pills">
+                        @foreach (var s in statusOrder)
+                        {
+                            <label class="ta-filter-pill"><input type="checkbox" name="statuses" value="@s" checked="@fStatuses.Contains(s)" /><span>@StatusText(s)</span></label>
+                        }
+                    </div>
+                </fieldset>
+                @if (canPickPeople)
+                {
+                    <fieldset class="ta-filter-group">
+                        <legend>Nhân viên <small>(phụ trách hoặc cùng làm; chọn nhiều)</small></legend>
+                        <input class="form-control form-control-sm ta-filter-find" type="search" placeholder="Tìm nhân viên..." aria-label="Tìm nhân viên" data-ta-filter-find="employees" />
+                        <div class="ta-filter-list" data-ta-filter-list="employees">
+                            @foreach (var e in Model.Lookups.Employees)
+                            {
+                                <label class="ta-filter-option"><input type="checkbox" name="employees" value="@e.Id" checked="@fEmployees.Contains(e.Id)" data-ta-filter-employee /><span>@e.Name</span></label>
+                            }
+                        </div>
+                    </fieldset>
+                }
+                <fieldset class="ta-filter-group">
+                    <legend>Khách hàng <small>(chọn nhiều)</small></legend>
+                    <p class="ta-filter-hint small text-secondary" data-ta-filter-customer-hint hidden>Chỉ hiện khách hàng của nhân viên đã chọn (quản lý, thực hiện, có công việc hoặc hợp đồng). <button class="btn btn-link btn-sm p-0" type="button" data-ta-filter-all-customers>Hiện tất cả</button></p>
+                    <input class="form-control form-control-sm ta-filter-find" type="search" placeholder="Tìm khách hàng..." aria-label="Tìm khách hàng" data-ta-filter-find="customers" />
+                    <div class="ta-filter-list" data-ta-filter-list="customers">
+                        @foreach (var c in Model.Lookups.Customers)
+                        {
+                            <label class="ta-filter-option" data-ta-customer="@c.Id"><input type="checkbox" name="customers" value="@c.Id" checked="@fCustomers.Contains(c.Id)" /><span>@c.Name</span><small class="ta-filter-why" data-ta-why></small></label>
+                        }
+                        <p class="small text-secondary mb-0" data-ta-filter-none hidden>Nhân viên đã chọn chưa có khách hàng nào.</p>
+                    </div>
+                </fieldset>
+                <fieldset class="ta-filter-group">
+                    <legend>Khoảng thời gian</legend>
+                    <div class="ta-filter-dates">
+                        <select class="form-select" name="dateField" aria-label="Loại ngày">
+                            @foreach (var d in WorkTaskFilter.DateFields) {<option value="@d" selected="@(d == fDateField)">@WorkTaskFilter.DateFieldLabel(d)</option>}
+                        </select>
+                        <label class="ta-filter-date"><span>Từ ngày</span><div class="ta-input-icon">@UiIcon.Render("calendar")<input class="form-control" type="date" name="from" value="@f.From?.ToString("yyyy-MM-dd")" /></div></label>
+                        <label class="ta-filter-date"><span>Đến ngày</span><div class="ta-input-icon">@UiIcon.Render("calendar")<input class="form-control" type="date" name="to" value="@f.To?.ToString("yyyy-MM-dd")" /></div></label>
+                    </div>
+                </fieldset>
+            </div>
+            <div class="ta-filter-dialog__foot">
+                <button class="btn" type="button" data-ta-filter-reset>@UiIcon.Render("refresh")<span>Bỏ chọn tất cả</span></button>
+                <button class="btn btn-ta-gold" type="submit">@UiIcon.Render("search")<span>Áp dụng</span></button>
+            </div>
+            <script type="application/json" data-ta-filter-links>@Html.Raw(System.Text.Json.JsonSerializer.Serialize(linkMap))</script>
+        </dialog>
     </form>
     @if (Model.Tasks is { Count: 0 })
     {
