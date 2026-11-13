@@ -1,0 +1,27 @@
+@inject TAPortal.Shared.IPortalContentStore Content
+@{
+    // Terms of service edited in the Admin portal ("Hóa đơn tự động" > "Điều khoản dịch vụ"); the built-in text until then.
+    var saved = await Content.GetAsync(TAPortal.Shared.PortalContentCodes.Terms);
+    var articles = TAPortal.Shared.PortalTerms.Parse(saved?.Body ?? TAPortal.Shared.PortalTermsDefault.Text);
+    var updated = saved?.UpdatedAt ?? TAPortal.Shared.PortalTermsDefault.Date;
+}
+<p class="cp-terms__date">Cập nhật ngày @updated.AddHours(7).ToString("dd/MM/yyyy")</p>
+<div class="cp-terms" data-cp-terms-body>
+    @foreach (var (article, i) in articles.Select((a, i) => (a, i)))
+    {
+        <details class="cp-terms__item" open="@(i == 0)">
+            <summary>@(article.Title.Length > 0 ? article.Title : "Giới thiệu")</summary>
+            @foreach (var p in article.Paragraphs.SelectMany(b => TAPortal.Shared.PortalEmailRenderer.Runs(b.ToList())))
+            {
+                if (p.All(l => l.StartsWith("- ", StringComparison.Ordinal)))
+                {
+                    <ul>@foreach (var l in p) {<li>@l[2..]</li>}</ul>
+                }
+                else
+                {
+                    <p>@for (var k = 0; k < p.Count; k++) {@if (k > 0) {<br />}@p[k]}</p>
+                }
+            }
+        </details>
+    }
+</div>

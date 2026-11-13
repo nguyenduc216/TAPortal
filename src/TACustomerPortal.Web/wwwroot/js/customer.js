@@ -465,3 +465,43 @@ const showCurrentStat = () => document.querySelectorAll(".cp-stats").forEach(row
 const initPayPage = () => { startCountdowns(); initDirtyForms(); showCurrentStat(); };
 document.addEventListener("ta:load", initPayPage);
 if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", initPayPage); else initPayPage();
+
+// Sign-up (operator 2026-11-12): "Cá nhân" makes the tax code optional, hides the lookup and calls the name "Họ và tên".
+// The server applies the same rules.
+const applySignupType = form => {
+    const individual = form.querySelector("input[name='CustomerType']:checked")?.value === "INDIVIDUAL";
+    const tax = form.querySelector("[data-cp-tax-input]");
+    if (tax) tax.required = !individual;
+    const lookup = form.querySelector("[data-cp-tax-lookup]");
+    if (lookup) lookup.hidden = individual;
+    const taxLabel = form.querySelector("[data-cp-signup-tax-label]");
+    if (taxLabel) taxLabel.textContent = individual ? "Mã số thuế cá nhân (không bắt buộc)" : "Mã số thuế";
+    const nameLabel = form.querySelector("[data-cp-signup-name-label]");
+    if (nameLabel) nameLabel.textContent = individual ? "Họ và tên" : "Tên doanh nghiệp / hộ kinh doanh";
+    const msg = form.querySelector("[data-cp-tax-msg]");
+    if (msg && !msg.classList.contains("is-ok") && !msg.classList.contains("is-error"))
+        msg.textContent = individual
+            ? "Cá nhân không có mã số thuế vẫn đăng ký được; khi đó chỉ dùng phần thu tiền, chưa xuất hóa đơn điện tử đứng tên mình."
+            : "Nhập MST rồi bấm Tra cứu (hoặc rời ô) để tự điền tên và địa chỉ.";
+};
+document.addEventListener("change", event => {
+    const form = event.target.matches("input[name='CustomerType']") && event.target.closest("[data-cp-signup]");
+    if (form) applySignupType(form);
+});
+// Terms of service: the link opens the dialog (the page /account/terms without script); "Tôi đồng ý" ticks the box.
+document.addEventListener("click", event => {
+    const dialog = document.querySelector("[data-cp-terms-dialog]");
+    if (!dialog) return;
+    if (event.target.closest("[data-cp-terms-open]") && typeof dialog.showModal === "function") {
+        event.preventDefault();
+        dialog.showModal();
+    } else if (event.target.closest("[data-cp-terms-close]")) {
+        dialog.close();
+    } else if (event.target.closest("[data-cp-terms-agree]")) {
+        const box = document.querySelector("[data-cp-terms-accept]");
+        if (box) box.checked = true;
+        dialog.close();
+    } else if (event.target === dialog) {
+        dialog.close();
+    }
+});

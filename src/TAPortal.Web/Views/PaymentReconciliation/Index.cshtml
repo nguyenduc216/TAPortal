@@ -18,6 +18,8 @@
 {
     var cards = new (string Code, string Label, string Icon, string Tone, int Count, decimal Amount)[]
     {
+        ("", "Tiền vào", "cash", "ta-stat-icon--green", s.Credit, s.CreditAmount),
+        (PaymentTxStatus.Ignored, "Tiền ra", "arrow-left", "ta-stat-icon--navy", s.Debit, s.DebitAmount),
         (PaymentTxStatus.Unmatched, "Chưa xử lý", "alert-triangle", "ta-stat-icon--gold", s.Unmatched, s.UnmatchedAmount),
         (PaymentTxStatus.Review, "Cần xem lại", "refresh", "ta-stat-icon--gold", s.Review, s.ReviewAmount),
         (PaymentTxStatus.Matched, "Đã khớp đơn", "circle-check", "ta-stat-icon--green", s.Matched, s.MatchedAmount),
@@ -48,6 +50,13 @@
         <label class="form-check-label d-flex gap-1 align-items-center"><input class="form-check-input" type="checkbox" name="unattributed" value="true" checked="@Model.UnattributedOnly" />Chưa gắn khách hàng</label>
         <button class="btn" type="submit">@UiIcon.Render("search")<span>Lọc</span></button>
     </form>
+    <div class="ta-table-toolbar d-flex flex-wrap gap-2 align-items-center justify-content-between" data-pr-sync>
+        <span class="text-muted small">Tiền vào/ra theo bộ lọc. <a asp-action="Index" asp-route-customerId="@Model.CustomerId" asp-route-status="" asp-route-from="@DateTime.UtcNow.AddHours(7).ToString("yyyy-MM-dd")" asp-route-to="@DateTime.UtcNow.AddHours(7).ToString("yyyy-MM-dd")">Xem hôm nay</a></span>
+        <form method="post" asp-action="Sync" class="d-flex gap-2 align-items-center">
+            <input type="hidden" name="customerId" value="@Model.CustomerId" /><input type="hidden" name="from" value="@fromText" /><input type="hidden" name="to" value="@toText" /><input type="hidden" name="back" value="@back" />
+            <button class="btn btn-primary" type="submit" title="Lấy lịch sử giao dịch từ Tingee cho tài khoản nhận tiền (khách hàng đang lọc, hoặc tất cả) và đưa giao dịch chưa có webhook vào xử lý. Theo khoảng ngày đang lọc, mặc định 3 ngày gần nhất, tối đa 31 ngày.">@UiIcon.Render("refresh")<span>Đồng bộ từ Tingee</span></button>
+        </form>
+    </div>
     @if (Model.Items.Count == 0)
     {
         <div class="ta-empty"><span class="ta-empty__icon">@UiIcon.Render("receipt-tax")</span><p class="ta-empty__title">Không có giao dịch</p><p class="ta-empty__text">Giao dịch xuất hiện khi ngân hàng báo biến động số dư về webhook.</p></div>
@@ -73,6 +82,7 @@
                         <td data-label="Trạng thái">
                             <span class="ta-badge @Tone(tone)">@label</span>
                             @foreach (var f in t.FlagList) {<span class="ta-badge ta-badge--danger">@PaymentTxText.Flag(f)</span>}
+                            @if (t.Synced) {<span class="ta-badge ta-badge--warning" title="Không có webhook (IPN) từ Tingee; lấy lại bằng Đồng bộ từ Tingee">Không có IPN · đã đồng bộ</span>}
                             @if (t.Reason is string reason && t.OrderId is null) {<div class="text-secondary small">@reason</div>}
                             @if (t.ResolutionNote is string rn) {<div class="text-secondary small">Ghi chú (@t.ResolvedVia): @rn</div>}
                             @if (PaymentTxStatus.NeedsStaff(t.Status))

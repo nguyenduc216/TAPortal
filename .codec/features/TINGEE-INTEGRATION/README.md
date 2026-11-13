@@ -68,3 +68,7 @@ Database sẵn sàng cho phần thanh toán (verify PASS). Tiếp theo: operator
 | `TINGEE-INTEGRATION-CHG-20261105T042908Z-94446D` | 2026-11-05 | Payment reconciliation: order-number matching, system vs partner amounts, EXPIRED_PAID/CANCELLED_PAID, overpaid, reconciliation pages, order summary cards | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |
 | `TINGEE-INTEGRATION-CHG-20261105T044328Z-2BCDDC` | 2026-11-05 | Notification channels: T.A system channels (Zalo OA, Telegram bot/group, SMTP) and company channels (Zalo OA, Telegram group, SMTP) | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |
 | `TINGEE-INTEGRATION-CHG-20261106T051400Z-A0E31B` | 2026-11-06 | SMTP: them Message-ID de Gmail khong tu choi thu | 7bb181a | NOT_APPLICABLE | DEPLOYED | MERGED |
+| `TINGEE-INTEGRATION-CHG-20261112T103925Z-D8A330` | 2026-11-12 | Đồng bộ giao dịch thiếu IPN từ lịch sử Tingee; tổng tiền vào/ra trên đối soát | 33019c5 | NOT_APPLICABLE | DEPLOYED | MERGED |
+| `TINGEE-INTEGRATION-CHG-20261112T113426Z-E2F99F` | 2026-11-12 | Trang thanh toán: tài khoản thụ hưởng thật khi QR dùng mã VQR (MB) | 189a449 | NOT_APPLICABLE | DEPLOYED | MERGED |
+| `TINGEE-INTEGRATION-CHG-20261112T153512Z-791FCD` | 2026-11-12 | Sync also reads root-account payments; one sync run at a time | 357f115 | NOT_APPLICABLE | DEPLOYED | MERGED |
+| `TINGEE-INTEGRATION-CHG-20261112T161108Z-A11DB4` | 2026-11-12 | History page size 50 (partner refuses 200 with 1108) | c9801ac | NOT_APPLICABLE | DEPLOYED | MERGED |

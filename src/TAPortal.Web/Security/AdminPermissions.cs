@@ -84,6 +84,10 @@ public static class AdminPermissions
     public const string WebsiteSettingsEdit = "WEBSITE.SETTINGS.EDIT";
     public const string WebsiteLeadsView = "WEBSITE.LEADS.VIEW";
     public const string WebsiteLeadsEdit = "WEBSITE.LEADS.EDIT";
+    // Hóa đơn tự động content (email templates, terms of service), inserted by migration 036.
+    public const string InvoiceAppModuleKey = "INVOICEAPP";
+    public const string InvoiceAppContentView = "INVOICEAPP.CONTENT.VIEW";
+    public const string InvoiceAppContentEdit = "INVOICEAPP.CONTENT.EDIT";
     public const string TasksView = "TASKS.VIEW";
     public const string TasksCreate = "TASKS.CREATE";
     public const string TasksAssign = "TASKS.ASSIGN";
@@ -145,6 +149,8 @@ public static class AdminPermissions
         public const string WebsiteSettingsEdit = PermissionPolicies.Prefix + AdminPermissions.WebsiteSettingsEdit;
         public const string WebsiteLeadsView = PermissionPolicies.Prefix + AdminPermissions.WebsiteLeadsView;
         public const string WebsiteLeadsEdit = PermissionPolicies.Prefix + AdminPermissions.WebsiteLeadsEdit;
+        public const string InvoiceAppContentView = PermissionPolicies.Prefix + AdminPermissions.InvoiceAppContentView;
+        public const string InvoiceAppContentEdit = PermissionPolicies.Prefix + AdminPermissions.InvoiceAppContentEdit;
         public const string TasksView = PermissionPolicies.Prefix + AdminPermissions.TasksView;
         public const string TaskTemplatesManage = PermissionPolicies.Prefix + AdminPermissions.TaskTemplatesManage;
         public const string TaskReportView = PermissionPolicies.Prefix + AdminPermissions.TaskReportView;
@@ -232,6 +238,11 @@ public static class AdminPermissions
             new(WebsiteLeadsView, "Xem yêu cầu liên hệ – báo giá từ website", "VIEW"),
             new(WebsiteLeadsEdit, "Cập nhật trạng thái, ghi chú yêu cầu từ website", "EDIT")
         ]),
+        new(InvoiceAppModuleKey, "Hóa đơn tự động",
+        [
+            new(InvoiceAppContentView, "Xem mẫu email và điều khoản dịch vụ Hóa đơn tự động", "VIEW"),
+            new(InvoiceAppContentEdit, "Sửa mẫu email và điều khoản dịch vụ Hóa đơn tự động", "EDIT")
+        ]),
         new("SYSTEM", "Hệ thống",
         [
             new(UsersView, "Xem danh sách người dùng", "VIEW"),
@@ -249,7 +260,7 @@ public static class AdminPermissions
 
     // Codes inserted by migration 028: every module except HR, whose rows come from the HR core bootstrap of TAPortalSys.
     // AUTH.ROLES.MANAGE is inserted too but is not grantable: role management is SYS_ADMIN only (operator 2026-11-07).
-    public static readonly IReadOnlyList<string> MigrationCodes = Modules.Where(m => m.Key is not (HrModuleKey or ContractsModuleKey or TasksModuleKey or WebsiteModuleKey))
+    public static readonly IReadOnlyList<string> MigrationCodes = Modules.Where(m => m.Key is not (HrModuleKey or ContractsModuleKey or TasksModuleKey or WebsiteModuleKey or InvoiceAppModuleKey))
         .SelectMany(m => m.Permissions).Select(p => p.Code).Append(RolesManage).ToList();
 
     // Codes inserted by migration 031 (Công việc, Hợp đồng).
@@ -258,6 +269,10 @@ public static class AdminPermissions
 
     // Codes inserted by migration 035 (Website TA).
     public static readonly IReadOnlyList<string> Migration035Codes = Modules.Where(m => m.Key is WebsiteModuleKey)
+        .SelectMany(m => m.Permissions).Select(p => p.Code).ToList();
+
+    // Codes inserted by migration 036 (Hóa đơn tự động content).
+    public static readonly IReadOnlyList<string> Migration036Codes = Modules.Where(m => m.Key is InvoiceAppModuleKey)
         .SelectMany(m => m.Permissions).Select(p => p.Code).ToList();
 
     public static bool IsCatalogued(string? code) => code is not null && Codes.Contains(code);
@@ -294,6 +309,7 @@ public static class AdminNavigation
         new(AdminPermissions.NotificationsManage, "NotificationSettings", "Index"),
         new(AdminPermissions.WebsiteView, "Website", "Index"),
         new(AdminPermissions.WebsiteLeadsView, "WebsiteLeads", "Index"),
+        new(AdminPermissions.InvoiceAppContentView, "InvoiceAppContent", "Index"),
         new(AdminPermissions.UsersView, "Users", "Index"),
         new(AdminPermissions.RolesView, "Roles", "Index"),
         new(AdminPermissions.MenusManage, "Menus", "Index")

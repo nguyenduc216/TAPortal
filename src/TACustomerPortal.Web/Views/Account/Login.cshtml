@@ -2,11 +2,12 @@
 @{ ViewData["Title"] = "Đăng nhập"; }
 <div class="cp-auth">
     <section class="cp-auth__panel" aria-hidden="true">
-        <span class="cp-brand"><img src="~/images/logo.svg" class="cp-brand__logo" alt="" width="34" height="34" /><span class="cp-brand__text">Hóa đơn tự động<small>Thu tiền &amp; xuất hóa đơn</small></span></span>
+        <span class="cp-brand"><img src="~/images/logo.png" class="cp-brand__logo" alt="" width="34" height="34" /><span class="cp-brand__text">Hóa đơn tự động<small>Thu tiền &amp; xuất hóa đơn</small></span></span>
         <div class="cp-auth__headline">
             <h1>Doanh nghiệp của bạn, <em>trong một nơi.</em></h1>
             <p>Thu tiền bằng QR, tự động xuất hóa đơn điện tử và báo cho khách hàng — an toàn, rõ ràng.</p>
         </div>
+        <partial name="_AuthShowcase" />
         <ul class="cp-auth__points">
             <li><span>@UiIcon.Render("building")</span>Hồ sơ doanh nghiệp luôn cập nhật</li>
             <li><span>@UiIcon.Render("shield-check")</span>Quyền truy cập theo từng doanh nghiệp</li>
@@ -14,6 +15,7 @@
         </ul>
     </section>
     <div class="cp-auth__form">
+        <partial name="_AuthBackdrop" />
         <div class="cp-auth__card">
             <div class="cp-eyebrow">Hóa đơn tự động</div>
             <h2>Chào mừng trở lại</h2>
@@ -32,7 +34,8 @@
                 <p class="cp-auth__forgot"><a asp-action="ForgotPassword">Quên mật khẩu?</a></p>
                 <button type="submit" class="cp-btn cp-btn--primary cp-btn--block">@UiIcon.Render("login-2")<span>Đăng nhập</span></button>
             </form>
-            <p class="cp-auth__foot" data-cp-signup-link>Chưa có tài khoản? <a asp-action="Register">Đăng ký doanh nghiệp</a></p>
+            <p class="cp-auth__foot" data-cp-signup-link>Chưa có tài khoản? <a asp-action="Register">Đăng ký tài khoản</a></p>
         </div>
+        <partial name="_AuthMaker" />
     </div>
 </div>

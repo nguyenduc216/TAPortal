@@ -62,3 +62,7 @@ CHECKPOINT_4A: PASS (existing artifact integrity, isolated localhost startup and
 | `CUSTOMER-PORTAL-FOUNDATION-CHG-20261111T112456Z-A427C0` | 2026-11-11 | Chi tiet don: sua giao dien mobile, doi thoi han / tao lai QR | 77e4ec7 | NOT_APPLICABLE | DEPLOYED | MERGED |
 | `CUSTOMER-PORTAL-FOUNDATION-CHG-20261111T114023Z-9B9B64` | 2026-11-11 | The trang thai truot ngang tren dien thoai | a34bca6 | NOT_APPLICABLE | DEPLOYED | MERGED |
 | `CUSTOMER-PORTAL-FOUNDATION-CHG-20261111T115031Z-7CC4D1` | 2026-11-11 | Danh sach don: cham mau trang thai, mo ta thu gon | 075af61 | NOT_APPLICABLE | DEPLOYED | MERGED |
+| `CUSTOMER-PORTAL-FOUNDATION-CHG-20261112T054901Z-6AAF00` | 2026-11-12 | Logo mới Hóa đơn tự động (vòng hóa đơn điện tử) | 4bad975 | NOT_APPLICABLE | DEPLOYED | MERGED |
+| `CUSTOMER-PORTAL-FOUNDATION-CHG-20261112T062541Z-73C192` | 2026-11-12 | Đăng ký cá nhân, mật khẩu gửi email, mẫu email và điều khoản dịch vụ | 0f5c9d4 | EXECUTED | DEPLOYED | MERGED |
+| `CUSTOMER-PORTAL-FOUNDATION-CHG-20261112T101303Z-AC77C1` | 2026-11-12 | Trang đăng nhập/đăng ký: minh họa thu tiền → hóa đơn và nền động | 889619c | NOT_APPLICABLE | DEPLOYED | MERGED |
+| `CUSTOMER-PORTAL-FOUNDATION-CHG-20261112T150549Z-6358B3` | 2026-11-12 | Sign-in gold panel fills wide screens | 306c51f | NOT_APPLICABLE | DEPLOYED | MERGED |

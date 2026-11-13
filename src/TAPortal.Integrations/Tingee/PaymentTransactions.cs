@@ -8,8 +8,9 @@ public sealed record PaymentTransaction(
     long Id, string Direction, string? TransactionCode, decimal Amount, string? Content, string? Bank, string? AccountNumber, string? VaAccountNumber,
     DateTime? TransactionAtUtc, DateTime ReceivedAtUtc, Guid? CustomerId, string? CustomerName, Guid? OrderId, string? OrderNo, decimal? OrderAmount,
     string Status, string? Flags, string? Reason, string? MatchedBy, decimal? SystemPaidBefore, decimal? SystemPaidAfter, decimal? PartnerPaidTotal,
-    string? OrderStatusAfter, DateTime? ResolvedAtUtc, string? ResolvedVia, string? ResolutionNote)
+    string? OrderStatusAfter, DateTime? ResolvedAtUtc, string? ResolvedVia, string? ResolutionNote, bool Synced = false)
 {
+    /// <summary>Synced = fetched from the partner's history by "Đồng bộ" because its webhook (IPN) never arrived.</summary>
     public IReadOnlyList<string> FlagList => string.IsNullOrEmpty(Flags) ? [] : Flags.Split(',', StringSplitOptions.RemoveEmptyEntries);
     /// <summary>The partner reported a different total than the system counted.</summary>
     public bool PartnerDiffers => PartnerPaidTotal is decimal p && SystemPaidAfter is decimal s && p != s;
@@ -24,7 +25,7 @@ public sealed record PaymentTxFilter(Guid? CustomerId, string? Status = null, Da
     bool UnattributedOnly = false, int Max = 300);
 
 public sealed record PaymentTxSummary(int Unmatched, decimal UnmatchedAmount, int Review, decimal ReviewAmount, int Matched, decimal MatchedAmount,
-    int Resolved, decimal ResolvedAmount, int Ignored, decimal IgnoredAmount);
+    int Resolved, decimal ResolvedAmount, int Ignored, decimal IgnoredAmount, int Credit = 0, decimal CreditAmount = 0, int Debit = 0, decimal DebitAmount = 0);
 
 public sealed record PaymentTxResult(bool Ok, string? Error = null)
 {
@@ -74,8 +75,9 @@ public sealed class SqlPaymentTransactionStore(IConfiguration configuration) : I
     private const string Select = """
 SELECT t.Id,t.Direction,t.TransactionCode,t.Amount,t.Content,t.Bank,t.AccountNumber,t.VaAccountNumber,t.TransactionAt,t.ReceivedAt,t.CustomerId,c.Name,
  t.OrderId,o.OrderNo,o.Amount,t.Status,t.Flags,t.Reason,t.MatchedBy,t.SystemPaidBefore,t.SystemPaidAfter,t.PartnerPaidTotal,t.OrderStatusAfter,
- t.ResolvedAt,t.ResolvedVia,t.ResolutionNote
+ t.ResolvedAt,t.ResolvedVia,t.ResolutionNote,CAST(CASE WHEN i.RequestId LIKE 'sync:%' THEN 1 ELSE 0 END AS bit)
 FROM dbo.PaymentTransactions t
+LEFT JOIN dbo.TingeeWebhookInbox i ON i.Id=t.InboxId
 LEFT JOIN dbo.Customers c ON c.Id=t.CustomerId
 LEFT JOIN dbo.CustomerOrders o ON o.Id=t.OrderId AND o.CustomerId=t.CustomerId
 """;
@@ -86,7 +88,7 @@ LEFT JOIN dbo.CustomerOrders o ON o.Id=t.OrderId AND o.CustomerId=t.CustomerId
         decimal? D(int i) => r.IsDBNull(i) ? null : r.GetDecimal(i);
         DateTime? T(int i) => r.IsDBNull(i) ? null : DateTime.SpecifyKind(r.GetDateTime(i), DateTimeKind.Utc);
         return new(r.GetInt64(0), r.GetString(1), S(2), r.GetDecimal(3), S(4), S(5), S(6), S(7), T(8), T(9)!.Value, r.IsDBNull(10) ? null : r.GetGuid(10), S(11),
-            r.IsDBNull(12) ? null : r.GetGuid(12), S(13), D(14), r.GetString(15), S(16), S(17), S(18), D(19), D(20), D(21), S(22), T(23), S(24), S(25));
+            r.IsDBNull(12) ? null : r.GetGuid(12), S(13), D(14), r.GetString(15), S(16), S(17), S(18), D(19), D(20), D(21), S(22), T(23), S(24), S(25), !r.IsDBNull(26) && r.GetBoolean(26));
     }
 
     private static (string Where, List<(string, object?)> Args) Where(PaymentTxFilter f, bool withStatus)
@@ -127,17 +129,25 @@ LEFT JOIN dbo.CustomerOrders o ON o.Id=t.OrderId AND o.CustomerId=t.CustomerId
         var (where, args) = Where(f, withStatus: false);
         await using var cn = await Open(ct);
         await using var cmd = Command(cn, $"""
-SELECT t.Status,COUNT(*),ISNULL(SUM(t.Amount),0)
+SELECT t.Status,t.Direction,COUNT(*),ISNULL(SUM(t.Amount),0)
 FROM dbo.PaymentTransactions t LEFT JOIN dbo.CustomerOrders o ON o.Id=t.OrderId AND o.CustomerId=t.CustomerId
-WHERE {where} GROUP BY t.Status
+WHERE {where} GROUP BY t.Status,t.Direction
 """, [.. args]);
         var by = new Dictionary<string, (int N, decimal Sum)>();
         await using var r = await cmd.ExecuteReaderAsync(ct);
-        while (await r.ReadAsync(ct)) by[r.GetString(0)] = (r.GetInt32(1), r.GetDecimal(2));
+        var dir = new Dictionary<string, (int N, decimal Sum)>();
+        static void Add(Dictionary<string, (int N, decimal Sum)> d, string k, int n, decimal sum) => d[k] = d.TryGetValue(k, out var v) ? (v.N + n, v.Sum + sum) : (n, sum);
+        while (await r.ReadAsync(ct))
+        {
+            var (n, sum) = (r.GetInt32(2), r.GetDecimal(3));
+            Add(by, r.GetString(0), n, sum);
+            Add(dir, r.GetString(1), n, sum);
+        }
         (int, decimal) G(string s) => by.TryGetValue(s, out var v) ? v : (0, 0);
         var (un, unA) = G(PaymentTxStatus.Unmatched); var (rv, rvA) = G(PaymentTxStatus.Review); var (m, mA) = G(PaymentTxStatus.Matched);
         var (rs, rsA) = G(PaymentTxStatus.Resolved); var (ig, igA) = G(PaymentTxStatus.Ignored);
-        return new(un, unA, rv, rvA, m, mA, rs, rsA, ig, igA);
+        var (cr, crA) = dir.TryGetValue("CREDIT", out var c) ? c : (0, 0m); var (db, dbA) = dir.TryGetValue("DEBIT", out var d) ? d : (0, 0m);
+        return new(un, unA, rv, rvA, m, mA, rs, rsA, ig, igA, cr, crA, db, dbA);
     }
 
     public async Task<PaymentTransaction?> GetAsync(long id, Guid? scopeCustomerId, CancellationToken ct = default)

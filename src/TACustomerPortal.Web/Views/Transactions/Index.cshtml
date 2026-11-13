@@ -6,13 +6,16 @@
     ViewData["Subtitle"] = "Mọi giao dịch ngân hàng báo về tài khoản nhận tiền của doanh nghiệp. Cuối ngày, xử lý các giao dịch chưa khớp đơn hoặc cần xem lại.";
     var s = Model.Summary;
     var back = Context.Request.Path + Context.Request.QueryString;
+    var today = DateTime.UtcNow.AddHours(7).ToString("yyyy-MM-dd");
+    var period = Model.From is null && Model.To is null ? "toàn bộ thời gian" : Model.From == Model.To ? $"ngày {Model.From:dd/MM/yyyy}" : $"{Model.From?.ToString("dd/MM/yyyy") ?? "…"} – {Model.To?.ToString("dd/MM/yyyy") ?? "nay"}";
     var cards = new (string Code, string Label, string Icon, string Tone, int Count, decimal Amount)[]
     {
+        ("", "Tiền vào", "cash", "cp-blob--green", s.Credit, s.CreditAmount),
         (PaymentTxStatus.Unmatched, "Chưa xử lý", "alert-triangle", "cp-blob--red", s.Unmatched, s.UnmatchedAmount),
         (PaymentTxStatus.Review, "Cần xem lại", "refresh", "cp-blob--gold", s.Review, s.ReviewAmount),
         (PaymentTxStatus.Matched, "Đã khớp đơn", "circle-check", "cp-blob--green", s.Matched, s.MatchedAmount),
         (PaymentTxStatus.Resolved, "Đã xử lý", "shield-check", "cp-blob--blue", s.Resolved, s.ResolvedAmount),
-        (PaymentTxStatus.Ignored, "Tiền ra (ghi nợ)", "arrow-left", "", s.Ignored, s.IgnoredAmount),
+        (PaymentTxStatus.Ignored, "Tiền ra", "arrow-left", "", s.Debit, s.DebitAmount),
     };
 }
 <nav class="cp-stats" aria-label="Tổng hợp giao dịch" data-cp-tx-cards>
@@ -33,6 +36,16 @@
         <label class="cp-muted">Đến <div class="cp-input-wrap">@UiIcon.Render("calendar")<input class="cp-input" type="date" name="to" value="@Model.To?.ToString("yyyy-MM-dd")" /></div></label>
         <button class="cp-btn cp-btn--ghost" type="submit">@UiIcon.Render("search")<span>Lọc</span></button>
     </form>
+    <div class="cp-toolbar cp-tx-sync" data-cp-tx-sync>
+        <p class="cp-muted">Tổng tiền vào/ra: <b>@period</b>. <a class="cp-link" asp-action="Index" asp-route-status="" asp-route-from="@today" asp-route-to="@today">Xem hôm nay</a></p>
+        @if (Model.CanManage)
+        {
+            <form method="post" asp-action="Sync" class="cp-inline-form">
+                <input type="hidden" name="from" value="@Model.From?.ToString("yyyy-MM-dd")" /><input type="hidden" name="to" value="@Model.To?.ToString("yyyy-MM-dd")" /><input type="hidden" name="back" value="@back" />
+                <button class="cp-btn cp-btn--primary" type="submit" title="Lấy lại các giao dịch ngân hàng chưa được báo về hệ thống (theo khoảng ngày đang lọc, mặc định 3 ngày gần nhất, tối đa 31 ngày)">@UiIcon.Render("refresh")<span>Đồng bộ từ ngân hàng</span></button>
+            </form>
+        }
+    </div>
     <div class="cp-toolbar cp-filters" aria-label="Lọc theo trạng thái">
         @foreach (var (code, label) in PaymentTxText.Filters)
         {
@@ -63,6 +76,7 @@
                         <td>
                             <span class="cp-badge cp-badge--@tone">@label</span>
                             @foreach (var f in t.FlagList) {<span class="cp-badge cp-badge--red">@PaymentTxText.Flag(f)</span>}
+                            @if (t.Synced) {<span class="cp-badge cp-badge--gold" title="Ngân hàng không báo về hệ thống; giao dịch được lấy lại bằng Đồng bộ từ ngân hàng">Lấy lại qua đồng bộ</span>}
                             @if (t.Reason is string reason && t.Status != PaymentTxStatus.Matched && t.OrderId is null) {<div class="cp-muted">@PartnerText.Scrub(reason)</div>}
                             @if (t.ResolutionNote is string rn) {<div class="cp-muted">Ghi chú: @rn</div>}
                             @if (Model.CanManage && PaymentTxStatus.NeedsStaff(t.Status))

@@ -104,6 +104,8 @@ public sealed class SafeReleaseRegressionTests
             // Self sign-up (operator 2026-11-06; reviewed: antiforgery, rate-limited, unique tax code/email checked under locks)
             // and the public tax code lookup that fills it (rate-limited, sends only the tax code out).
             "Account.Register:GET", "Account.Register:POST", "Account.TaxLookup:GET",
+            // Operator 2026-11-12: the page after a sign-up (only shows the email just used, from TempData) and the terms of service.
+            "Account.RegisterDone:GET", "Account.Terms:GET",
             // Public payment page of one order (operator 2026-11-06; reviewed: opened only by a random 32-character token,
             // rate-limited, antiforgery on the invoice details form, which only writes that order's tax code and invoice name).
             "Pay.Index:GET", "Pay.Status:GET", "Pay.Logo:GET", "Pay.Invoice:POST" }, anonymous);

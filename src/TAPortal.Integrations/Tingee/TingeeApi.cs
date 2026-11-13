@@ -172,6 +172,33 @@ public sealed class TingeeApiException(string? code, string? message, string? de
     public string? LogCode { get; init; }
 }
 
+/// <summary>transaction/get-paging body: times are UTC+7 "yyyyMMddHHmmss", at most 10 days apart; maxResultCount documented up to 200 but 200 is refused with 1108; 50 is used.</summary>
+public sealed record TingeeTransactionQuery
+{
+    [JsonPropertyName("skipCount")] public int SkipCount { get; init; }
+    [JsonPropertyName("maxResultCount")] public int MaxResultCount { get; init; } = 50;
+    [JsonPropertyName("merchantId")] public long? MerchantId { get; init; }
+    [JsonPropertyName("vaAccountNumbers")] public IReadOnlyList<string>? VaAccountNumbers { get; init; }
+    [JsonPropertyName("startTime")] public required string StartTime { get; init; }
+    [JsonPropertyName("endTime")] public required string EndTime { get; init; }
+}
+
+/// <summary>One transaction of transaction/get-paging. <see cref="Code"/> is the bank's code, the same value the payment webhook sends as transactionCode.</summary>
+public sealed record TingeeTransactionItem
+{
+    [JsonPropertyName("transactionId")] public string? TransactionId { get; init; }
+    [JsonPropertyName("merchantId")] public long? MerchantId { get; init; }
+    [JsonPropertyName("bankBin")] public string? BankBin { get; init; }
+    [JsonPropertyName("code")] public string? Code { get; init; }
+    [JsonPropertyName("amount")] public decimal Amount { get; init; }
+    [JsonPropertyName("type")] public string? Type { get; init; }
+    [JsonPropertyName("content")] public string? Content { get; init; }
+    [JsonPropertyName("accountNumber")] public string? AccountNumber { get; init; }
+    [JsonPropertyName("vaAccountNumber")] public string? VaAccountNumber { get; init; }
+    [JsonPropertyName("transactionDate")] public string? TransactionDate { get; init; }
+    [JsonPropertyName("billId")] public string? BillId { get; init; }
+}
+
 public interface ITingeeApi
 {
     bool IsConfigured { get; }
@@ -190,6 +217,9 @@ public interface ITingeeApi
     Task DeleteDynamicQrAsync(long merchantId, string qrAccount, string billId, CancellationToken ct = default);
     /// <summary>Opens a Bank Link SDK session; returns the SDK URL (with its token) for TingeeBankLink.Url.Open.</summary>
     Task<string> CreateBankLinkSessionAsync(TingeeBankLinkSessionRequest request, CancellationToken ct = default);
+    /// <summary>Transaction history (transaction/get-paging), used to fetch payments whose webhook never arrived.</summary>
+    Task<TingeePage<TingeeTransactionItem>> GetTransactionsAsync(TingeeTransactionQuery query, CancellationToken ct = default) =>
+        throw new NotSupportedException("Transaction history is not available.");
 }
 
 public sealed class TingeeApi(TingeeClient client, Microsoft.Extensions.Options.IOptions<TingeeOptions> options) : ITingeeApi
@@ -241,6 +271,9 @@ public sealed class TingeeApi(TingeeClient client, Microsoft.Extensions.Options.
         Check(response);
         return string.IsNullOrWhiteSpace(response.Data) ? throw new TingeeApiException("EMPTY", "Tingee returned no SDK URL.") { LogCode = response.LogCode } : response.Data;
     }
+
+    public async Task<TingeePage<TingeeTransactionItem>> GetTransactionsAsync(TingeeTransactionQuery query, CancellationToken ct = default) =>
+        Data(await client.PostAsync<TingeePage<TingeeTransactionItem>>("/v1/transaction/get-paging", query with { MerchantId = Mid(query.MerchantId) }, ct), allowEmpty: true);
 
     private static T Data<T>(TingeeResponse<T> response, bool allowEmpty = false) where T : class, new()
     {

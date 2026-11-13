@@ -113,6 +113,30 @@ public sealed class SafeCustomerPayPageTests
         Assert.Equal(HttpStatusCode.NotFound, (await c.GetAsync("/pay/" + order.Id)).StatusCode);   // the order id never opens it
     }
 
+    // Operator 2026-11-12: MB through the payment partner pays an alias ("VQR…") that banks reject when typed or prefilled
+    // ("không tìm thấy tài khoản"). The page shows the real beneficiary account and steers the payer to scanning the QR.
+    [Fact]
+    public async Task AnAliasQrShowsTheRealBeneficiaryAccountAndNoPrefilledTransfer()
+    {
+        using var f = Factory("MEMBER", out var store, out _);
+        var pages = f.Services.GetRequiredService<MemoryOrderPageStore>();
+        var bank = new BankAccount(Guid.NewGuid(), "970422", "MBB", "MB Bank", "business-account", "000111222888", "CONG TY TNHH A", "VQRQABCD1102", false, null,
+            BankStatus.Active, null, null, null, null, true, DateTime.UtcNow);
+        store.Banks.Add((A, bank));
+        var order = OpenOrder(null) with { BankAccountId = bank.Id, QrAccount = "VQRQANNLO4384" };
+        store.Orders.Add((A, order));
+        var c = Client(f);
+        var page = WebUtility.HtmlDecode(await c.GetStringAsync("/pay/" + await pages.TokenAsync(A, order.Id)));
+        Assert.Contains("<dt>Tài khoản thụ hưởng</dt><dd>CONG TY TNHH A</dd>", page);
+        Assert.Contains("data-cp-copy-text=\"000111222888\"", page);
+        Assert.DoesNotContain("data-cp-copy-text=\"VQRQANNLO4384\"", page);
+        Assert.Contains("data-cp-pay-qr-only", page);
+        Assert.DoesNotContain("dl.vietqr.io/pay?app=mb", page);                  // no prefilled transfer to the alias
+        var info = Regex.Match(page, "data-cp-qr-info>(.*?)</script>", RegexOptions.Singleline).Groups[1].Value;
+        Assert.Contains("\"CONG TY TNHH A\"", info);                          // drawn under the saved QR image too
+        Assert.Contains("\"000111222888\"", info);
+    }
+
     [Fact]
     public async Task ThePayerCorrectsInvoiceDetailsUntilTheInvoiceIsIssued()
     {

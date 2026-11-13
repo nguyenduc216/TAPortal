@@ -54,6 +54,24 @@ public sealed class TransactionsController(ICurrentCustomerContext customer, IPa
         return Back(back);
     }
 
+    // "Đồng bộ từ ngân hàng" (operator 2026-11-12): fetches the receiving accounts' transactions from the payment partner and
+    // queues the ones whose notification never reached the system, so they are matched like any notification. Period:
+    // the list's dates, else the last 3 days (Vietnam time).
+    [HttpPost]
+    public async Task<IActionResult> Sync(DateOnly? from, DateOnly? to, string? back, [FromServices] TingeeTransactionSync sync, [FromServices] TimeProvider clock)
+    {
+        if (await Current() is not { } m) return SelectCustomer();
+        if (!CanManage(m)) return Forbid();
+        var today = DateOnly.FromDateTime(clock.GetUtcNow().UtcDateTime.AddHours(7));
+        var end = to ?? today;
+        var start = from ?? end.AddDays(-2);
+        if (end < start) (start, end) = (end, start);
+        var (fromUtc, toUtc) = PaymentTxText.Days(start, end);
+        var result = await sync.SyncAsync(m.CustomerId, fromUtc!.Value, toUtc!.Value, ct: HttpContext.RequestAborted);
+        Flash(TingeeTransactionSync.Message(result, start, end), error: !result.Ok);
+        return Back(back);
+    }
+
     // Back to the same filtered list; only local paths are followed.
     private IActionResult Back(string? back) => !string.IsNullOrEmpty(back) && Url.IsLocalUrl(back) ? LocalRedirect(back) : RedirectToAction(nameof(Index));
 }

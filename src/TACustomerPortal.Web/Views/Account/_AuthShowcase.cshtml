@@ -1,0 +1,37 @@
+@* Gold panel illustration: one payment travelling through the product (QR → money in → invoice issued → mailed to the
+   buyer). Decorative only; the figures are sample values, not data. Loops with CSS; static under reduced motion. *@
+<div class="cp-show" aria-hidden="true">
+    <div class="cp-show__stage">
+        <div class="cp-show__chip cp-show__chip--qr">
+            <span class="cp-show__qr">@UiIcon.Render("qrcode")</span>
+            <span><b>Khách quét mã QR</b><small>Chuyển khoản 1.250.000 ₫</small></span>
+        </div>
+        <div class="cp-show__invoice">
+            <div class="cp-show__head">
+                <span class="cp-show__doc">@UiIcon.Render("file-invoice")</span>
+                <span><b>Hóa đơn điện tử</b><small>Ký hiệu 1C26TAA · Số 0000128</small></span>
+            </div>
+            <div class="cp-show__rows">
+                <span><i style="width:62%"></i><i style="width:22%"></i></span>
+                <span><i style="width:48%"></i><i style="width:26%"></i></span>
+                <span><i style="width:55%"></i><i style="width:20%"></i></span>
+            </div>
+            <div class="cp-show__total"><span>Tổng thanh toán</span><b>1.250.000 ₫</b></div>
+            <span class="cp-show__stamp">@UiIcon.Render("circle-check")Đã xuất</span>
+        </div>
+        <div class="cp-show__chip cp-show__chip--bank">
+            <span class="cp-show__ico cp-show__ico--green">@UiIcon.Render("building-bank")</span>
+            <span><b>+1.250.000 ₫</b><small>Tiền đã về tài khoản</small></span>
+        </div>
+        <div class="cp-show__chip cp-show__chip--mail">
+            <span class="cp-show__ico cp-show__ico--blue">@UiIcon.Render("send")</span>
+            <span><b>Đã gửi hóa đơn</b><small>Email cho khách hàng</small></span>
+        </div>
+    </div>
+    <ol class="cp-show__steps">
+        <li>@UiIcon.Render("qrcode")<span>Quét QR</span></li>
+        <li>@UiIcon.Render("cash")<span>Tiền về</span></li>
+        <li>@UiIcon.Render("receipt-tax")<span>Xuất hóa đơn</span></li>
+        <li>@UiIcon.Render("mail")<span>Báo khách</span></li>
+    </ol>
+</div>

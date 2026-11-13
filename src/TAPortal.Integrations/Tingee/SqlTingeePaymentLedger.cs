@@ -31,7 +31,8 @@ public sealed class SqlTingeePaymentLedger(IConfiguration configuration) : ITing
     }
 
     /// <summary>
-    /// Orders (any state) whose receiving account is the account the money arrived in (VA, or the notified root account),
+    /// Orders (any state) whose receiving account is the account the money arrived in (VA, or its root account number:
+    /// a payment straight into a root account still belongs to that account's orders; operator 2026-11-12),
     /// plus any order whose dynamic QR billId appears in the webhook.
     /// </summary>
     public async Task<IReadOnlyList<TingeePaymentCandidate>> CandidatesAsync(TingeePaymentNotice notice, DateTime receivedAtUtc, CancellationToken ct)
@@ -46,7 +47,7 @@ LEFT JOIN dbo.CustomerBankAccounts b ON b.Id=o.BankAccountId AND b.CustomerId=o.
 OUTER APPLY (SELECT TOP 1 tm.MerchantId FROM dbo.TingeeMerchants tm WHERE tm.CustomerId=o.CustomerId ORDER BY tm.CreatedAt DESC) m
 WHERE o.CreatedAt<=@received
   AND ((@va IS NOT NULL AND b.VaAccountNumber=@va)
-    OR (@acc IS NOT NULL AND (b.VaAccountNumber=@acc OR (b.AccountNumber=@acc AND b.IsNotifyAccountNumber=1))){billFilter})
+    OR (@acc IS NOT NULL AND (b.VaAccountNumber=@acc OR b.AccountNumber=@acc)){billFilter})
 """, cn);
         cmd.Parameters.AddWithValue("@va", (object?)notice.VaAccountNumber ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@acc", (object?)notice.AccountNumber ?? DBNull.Value);
