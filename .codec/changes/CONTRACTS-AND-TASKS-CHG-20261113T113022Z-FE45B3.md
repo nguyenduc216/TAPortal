@@ -4,7 +4,7 @@
 - Change ID: `CONTRACTS-AND-TASKS-CHG-20261113T113022Z-FE45B3`
 - Created UTC: 2026-11-13T11:30:22.553137+00:00
 - Tiêu đề: Repair garbled Vietnamese (sqlcmd UTF-8 input), compact task list on mobile
-- Trạng thái: IMPLEMENTED
+- Trạng thái: DEPLOYED
 
 ## Yêu cầu và phạm vi
 Operator (2026-11-13, ảnh Danh sách công việc trên điện thoại): làm gọn giao diện; sửa lỗi tiếng Việt do migration (chạy lại/update tùy).
@@ -28,8 +28,8 @@ Operator (2026-11-13, ảnh Danh sách công việc trên điện thoại): làm
 
 ## Git
 - Branch: feature/tx-sync
-- Commit SHA: xem report
-- Merge: xem report
+- Commit SHA: 6a3e43f
+- Merge: fast-forward main
 
 ## Rủi ro, quyết định và việc còn lại
 - Chưa xem trên điện thoại thật.
