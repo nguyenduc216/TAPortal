@@ -4,7 +4,7 @@
 - Change ID: `ADMIN-ROLE-PERMISSIONS-CHG-20261113T062558Z-482FBB`
 - Created UTC: 2026-11-13T06:25:58.840756+00:00
 - Tiêu đề: Cau hinh he thong gom Mau email, Dieu khoan, Bao mat mat khau
-- Trạng thái: IMPLEMENTED
+- Trạng thái: DEPLOYED
 
 ## Yêu cầu và phạm vi
 Operator (2026-11-13): rà soát "Cấu hình hệ thống" để đưa các chức năng cấu hình vào đây thay vì menu riêng; chọn phương án "Gộp, giữ nhóm Tingee".
@@ -30,9 +30,9 @@ Operator (2026-11-13): rà soát "Cấu hình hệ thống" để đưa các ch�
 
 ## Git
 - Branch: feature/tx-sync
-- Commit SHA: xem report
+- Commit SHA: 6e50bf9
 - PR:
-- Merge: xem report
+- Merge: fast-forward main
 - Merge SHA:
 
 ## Rủi ro, quyết định và việc còn lại
