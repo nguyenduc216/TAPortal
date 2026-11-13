@@ -4,7 +4,7 @@
 - Change ID: `CUSTOMER-PORTAL-FOUNDATION-CHG-20261113T082428Z-870E4D`
 - Created UTC: 2026-11-13T08:24:28.369388+00:00
 - Tiêu đề: Card groups always one sliding row on every screen (portal + invoice)
-- Trạng thái: IMPLEMENTED
+- Trạng thái: DEPLOYED
 
 ## Yêu cầu và phạm vi
 Operator (2026-11-13): "Luôn đảm bảo các card luôn slide trên 1 hàng ở các chức năng có card" (ảnh Đơn hàng & QR trên desktop: 11 card xếp 3 hàng).
@@ -28,9 +28,9 @@ Operator (2026-11-13): "Luôn đảm bảo các card luôn slide trên 1 hàng �
 
 ## Git
 - Branch: feature/tx-sync
-- Commit SHA: xem report
+- Commit SHA: de35119
 - PR:
-- Merge: xem report
+- Merge: fast-forward main
 - Merge SHA:
 
 ## Rủi ro, quyết định và việc còn lại

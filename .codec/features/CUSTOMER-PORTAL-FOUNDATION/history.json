@@ -618,10 +618,10 @@
     "change_id": "CUSTOMER-PORTAL-FOUNDATION-CHG-20261113T082428Z-870E4D",
     "created_at": "2026-11-13T08:24:28.369388+00:00",
     "title": "Card groups always one sliding row on every screen (portal + invoice)",
-    "status": "IMPLEMENTED",
-    "commit_sha": null,
+    "status": "DEPLOYED",
+    "commit_sha": "de35119",
     "migration_status": "NOT_APPLICABLE",
-    "publish_status": "NOT_PUBLISHED",
-    "merge_status": "PENDING_APPROVAL"
+    "publish_status": "DEPLOYED",
+    "merge_status": "MERGED"
   }
 ]

@@ -3,11 +3,11 @@
 Feature ID: `CUSTOMER-PORTAL-FOUNDATION`
 Change ID: `CUSTOMER-PORTAL-FOUNDATION-CHG-20261113T082428Z-870E4D`
 
-1. Mục tiêu và kết quả thực tế:
-2. Danh sách file cập nhật (relative + nếu cần absolute):
-3. Database `TAPortalSys`: migration path + thứ tự + trạng thái NOT_EXECUTED/OPERATOR_CONFIRMED:
-4. Build/test: lệnh, pass/fail/not run:
-5. Publish: project, destination đã duyệt, artifact SHA256, status:
-6. Git: branch, commit SHA, PR, merge SHA hoặc PENDING_APPROVAL:
-7. Rủi ro/rollback/việc operator cần làm:
-8. Bằng chứng kiểm tra (URL/log, không có secrets):
+1. Mục tiêu và kết quả thực tế: mọi nhóm card thống kê/dịch vụ luôn 1 hàng trượt ngang ở mọi khổ màn hình, portal và hóa đơn.
+2. Danh sách file cập nhật: xem `.codec/changes/CUSTOMER-PORTAL-FOUNDATION-CHG-20261113T082428Z-870E4D.md`.
+3. Database: không có migration.
+4. Build/test: Release build 0 lỗi; Safe tests qua; kiểm tra 1500/1000/375px.
+5. Publish: invoice 119667922029, portal d6d9481442a8. Source commit de35119.
+6. Git: branch `feature/tx-sync`, source commit de35119; main fast-forward.
+7. Rủi ro/việc còn lại: không.
+8. Bằng chứng: trang thử 3 khổ màn; log deploy.
