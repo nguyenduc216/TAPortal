@@ -100,5 +100,15 @@
     "migration_status": "NONE_REQUIRED",
     "publish_status": "DRY_RUN_ONLY / NOT_DEPLOYED",
     "merge_status": "PENDING_APPROVAL"
+  },
+  {
+    "change_id": "CODEC-WORKFLOW-CHG-20261113T111810Z-59D810",
+    "created_at": "2026-11-13T11:18:10.307444+00:00",
+    "title": "Keep one-off data migrations out of Git; remove 017, 033, 037",
+    "status": "DEPLOYED",
+    "commit_sha": null,
+    "migration_status": "NOT_APPLICABLE",
+    "publish_status": "NOT_APPLICABLE",
+    "merge_status": "PENDING_APPROVAL"
   }
 ]

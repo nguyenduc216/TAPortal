@@ -17,3 +17,4 @@
 | `CODEC-WORKFLOW-CHG-20261031T205904Z-79AB8C` | 2026-10-31 | Check in operator files and hand off work to another machine | c0be494f4c00807b911b2d3c3ee6fc60b7d8d8c0 | NONE_REQUIRED | NOT_RUN | PENDING_APPROVAL |
 | `CODEC-WORKFLOW-CHG-20261103T092046Z-930047` | 2026-11-03 | Allow agent-executed migrations with dry-run rollback on TAPortalSys | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |
 | `CODEC-WORKFLOW-CHG-20261103T135116Z-54E75E` | 2026-11-03 | Agent deploy of portal and invoice to production IIS over SSH | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |
+| `CODEC-WORKFLOW-CHG-20261113T111810Z-59D810` | 2026-11-13 | Keep one-off data migrations out of Git; remove 017, 033, 037 | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |
