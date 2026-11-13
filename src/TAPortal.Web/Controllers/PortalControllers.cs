@@ -70,6 +70,7 @@ public sealed class UsersController(PortalDb db, PasswordService passwords, IUse
         // Operator 2026-11-13: a weak/initial password is allowed here and must be changed at the first sign-in.
         var policy = (await HttpContext.RequestServices.GetRequiredService<IPasswordSecurityStore>().GetAsync()).ValidateAssigned(vm.Password);
         if (!policy.IsValid) ModelState.AddModelError(nameof(vm.Password), policy.Error);
+        if (!string.IsNullOrWhiteSpace(vm.Username) && !UsernameRules.IsValid(vm.Username.Trim())) ModelState.AddModelError(nameof(vm.Username), UsernameRules.Error);
         if (!string.IsNullOrWhiteSpace(vm.Username) && await db.UsernameExistsAsync(vm.Username)) ModelState.AddModelError(nameof(vm.Username), "Tên đăng nhập đã tồn tại.");
         if (ModelState.IsValid && await db.EmailInUseAsync(vm.Email, null)) ModelState.AddModelError(nameof(vm.Email), "Email đã được sử dụng bởi tài khoản khác.");
         // Only a SYS_ADMIN may create an account holding SYS_ADMIN (re-checked again in SQL by PortalDb.CreateUserRoleSql).
@@ -354,6 +355,8 @@ public sealed partial class CustomersController(PortalDb db, ICustomerAdminStore
             if (input.UserId.HasValue) return BadRequest();
             if (string.IsNullOrWhiteSpace(input.Username) || string.IsNullOrWhiteSpace(input.DisplayName))
                 ModelState.AddModelError("", "Vui lòng nhập tên đăng nhập và họ tên.");
+            else if (!UsernameRules.IsValid(input.Username.Trim()))
+                ModelState.AddModelError("", UsernameRules.Error);
             var policy = (await HttpContext.RequestServices.GetRequiredService<IPasswordSecurityStore>().GetAsync()).ValidateNew(input.Password);
             if (!policy.IsValid) ModelState.AddModelError("", policy.Error);
             else if (ModelState.IsValid) hash = passwords.Hash(input.Password!);

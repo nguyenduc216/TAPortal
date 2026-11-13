@@ -42,6 +42,14 @@ Operator (2026-11-13):
 - Merge: fast-forward main
 - Merge SHA:
 
+## Bổ sung 2026-11-13: quy tắc tên đăng nhập (bắt buộc)
+Operator: "tên đăng nhập là không có dấu, Unicode không có khoảng cách, chỉ chấp nhận dấu chấm, dấu gạch dưới"; 6 tài khoản nhân viên đặt theo tên + viết tắt họ đệm.
+- `TAPortal.Shared/UsernameRules.cs`: chỉ `[A-Za-z0-9._]`, 3-100 ký tự; `FromFullName` (tên + chữ đầu họ đệm, ví dụ Lê Văn An -> anlv), `FromEmail`.
+- Portal: kiểm tra ở tạo người dùng, tạo tài khoản nhân viên (gợi ý sẵn tên theo họ tên), tạo tài khoản khách hàng.
+- Hóa đơn: tự đăng ký sinh tên đăng nhập từ phần trước '@' của email (thêm số nếu trùng), email "Thông tin đăng nhập" gửi tên này; đăng nhập được bằng tên hoặc email.
+- Dữ liệu: migration riêng 904 (verify 905, rollback 906, để ngoài git) đổi tên đăng nhập 6 tài khoản nhân viên; dry-run PASS, gates 677/677, chạy thật VERIFY PASS (2026-11-13 04:47 UTC). Sau đó 0 tài khoản sai quy tắc.
+- Safe tests 678/678.
+
 ## Rủi ro, quyết định và việc còn lại
 - Gửi mật khẩu dạng chữ thường qua email theo yêu cầu operator: ai đọc được hộp thư là có mật khẩu. Email khuyên xóa sau khi ghi nhớ.
 - 6 nhân viên mới (NV000001-NV000006, vai trò STAFF, mật khẩu khởi tạo đã băm, MustChangePassword=1) nhập bằng migration riêng 901 (verify 902, rollback 903) qua Invoke-TAMigrations ngày 2026-11-13 04:37 UTC: pre-check NOT_APPLIED, dry-run có rollback PASS, gates 677/677, chạy thật VERIFY PASS. Ba file SQL chứa thông tin cá nhân nên để ngoài git tại `D:\Working\T.A\Tech\Projects\TAPortal\private-sql`. Kiểm tra sau chạy: 6 tài khoản STAFF, 7 hồ sơ nhân viên đều có tài khoản liên kết, 0 việc.

@@ -90,4 +90,17 @@ public sealed class SafePasswordSecurityTests
         Assert.Contains("\"/account/changepassword\"", program);
         Assert.True(program.IndexOf("passwordChangeAllowed", StringComparison.Ordinal) < program.IndexOf("app.UseAuthorization()", StringComparison.Ordinal));
     }
+
+    [Fact]
+    public void UsernamesAreAsciiLettersDigitsDotAndUnderscoreOnly()
+    {
+        foreach (var ok in new[] { "anlv", "an.lv", "an_lv", "Admin2", "abc" }) Assert.True(UsernameRules.IsValid(ok), ok);
+        foreach (var bad in new[] { "Đông LV", "đônglv", "dong lv", "dong-lv", "dong@example.com", "ab", "", null }) Assert.False(UsernameRules.IsValid(bad), bad);
+        Assert.Equal("anlv", UsernameRules.FromFullName("Lê Văn An"));
+        Assert.Equal("ngocptb", UsernameRules.FromFullName("Phạm Thị Bích Ngọc"));
+        Assert.Equal("ducd", UsernameRules.FromFullName("Đỗ Đức"));
+        Assert.Equal("nguyen.van_a", UsernameRules.FromEmail("Nguyen.Van_A-01@example.com".Replace("-01", "")));
+        Assert.True(UsernameRules.IsValid(UsernameRules.FromEmail("a-b+c@example.com")));
+        Assert.True(UsernameRules.IsValid(UsernameRules.FromEmail("x@example.com")));
+    }
 }

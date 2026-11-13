@@ -168,6 +168,7 @@ public sealed class EmployeesController(IEmployeeStore employees, PasswordServic
         if (UsersController.ActorId(User) is not Guid actor) return Forbid();
         var errors = new List<string>();
         if (string.IsNullOrWhiteSpace(input.Username)) errors.Add("Vui lòng nhập tên đăng nhập.");
+        else if (!UsernameRules.IsValid(input.Username.Trim())) errors.Add(UsernameRules.Error);
         // Operator 2026-11-13: staff may hand out the initial password (setting, default 123456) or another weak one from the
         // list; the employee must then choose a new password at the first sign-in.
         var security = await passwordSecurity.GetAsync();
@@ -271,6 +272,7 @@ public sealed class EmployeesController(IEmployeeStore employees, PasswordServic
             catch (SqlException ex) { logger.LogWarning(ex, "Employee account options unavailable for {EmployeeId}.", id); }
         }
         draft.Email ??= employee.CompanyEmail;
+        draft.Username ??= UsernameRules.FromFullName(employee.FullName);
         return new(employee, await employees.LookupsAsync(), accounts, draft, errors);
     }
 

@@ -27,7 +27,10 @@ public sealed class CustomerStore(IConfiguration configuration) : ICustomerStore
         return await r.ReadAsync() ? new(r.GetGuid(0), r.GetString(1), r.GetString(2), r.IsDBNull(3) ? null : r.GetString(3), r.IsDBNull(4) ? "" : r.GetString(4), r.GetBoolean(5)) : null;
     }
 
-    public Task<CustomerUser?> FindUser(string username) => ReadUser("NormalizedUsername=@value", username.Trim().ToUpperInvariant());
+    // Sign-in by username or by the account's email (self sign-up usernames are no longer the email; operator 2026-11-13).
+    public async Task<CustomerUser?> FindUser(string username) =>
+        await ReadUser("NormalizedUsername=@value", username.Trim().ToUpperInvariant())
+        ?? (username.Contains('@') ? await ReadUser("NormalizedEmail=@value AND (SELECT COUNT(1) FROM dbo.Users d WHERE d.NormalizedEmail=@value AND d.IsDeleted=0)=1", username.Trim().ToUpperInvariant()) : null);
     public Task<CustomerUser?> FindUser(Guid id) => ReadUser("Id=@value", id);
     public async Task<IReadOnlyList<CustomerMembership>> Memberships(Guid userId)
     {
