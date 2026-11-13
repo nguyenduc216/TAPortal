@@ -4,7 +4,7 @@
 - Change ID: `ADMIN-ROLE-PERMISSIONS-CHG-20261113T041647Z-E7EEDF`
 - Created UTC: 2026-11-13T04:16:47.915368+00:00
 - Tiêu đề: Mat khau yeu, mat khau khoi tao va bat buoc doi mat khau (portal + hoa don); xoa tai khoan va viec thu
-- Trạng thái: IMPLEMENTED
+- Trạng thái: DEPLOYED
 
 ## Yêu cầu và phạm vi
 Operator (2026-11-13):
@@ -37,9 +37,9 @@ Operator (2026-11-13):
 
 ## Git
 - Branch: feature/tx-sync
-- Commit SHA: xem report
+- Commit SHA: 3fc1dab
 - PR:
-- Merge: xem report
+- Merge: fast-forward main
 - Merge SHA:
 
 ## Rủi ro, quyết định và việc còn lại

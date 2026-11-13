@@ -15,4 +15,4 @@
 | `ADMIN-ROLE-PERMISSIONS-CHG-20261107T020425Z-9C2068` | 2026-11-07 | Admin portal: role management with per-function permissions, permission-based access instead of SYS_ADMIN only | c16e082 | EXECUTED | DEPLOYED | MERGED |
 | `ADMIN-ROLE-PERMISSIONS-CHG-20261107T030206Z-6AC11F` | 2026-11-07 | TA Portal HR: employees, login accounts per employee, departments, teams, job titles | f5bcc82 | NOT_APPLICABLE | DEPLOYED | MERGED |
 | `ADMIN-ROLE-PERMISSIONS-CHG-20261107T041034Z-BA9E56` | 2026-11-07 | Only SYS_ADMIN manages roles and assigns roles to accounts | 9d2764d | NOT_APPLICABLE | DEPLOYED | MERGED |
-| `ADMIN-ROLE-PERMISSIONS-CHG-20261113T041647Z-E7EEDF` | 2026-11-13 | Mat khau yeu, mat khau khoi tao va bat buoc doi mat khau (portal + hoa don); xoa tai khoan va viec thu | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |
+| `ADMIN-ROLE-PERMISSIONS-CHG-20261113T041647Z-E7EEDF` | 2026-11-13 | Mat khau yeu, mat khau khoi tao va bat buoc doi mat khau (portal + hoa don); xoa tai khoan va viec thu | 3fc1dab | EXECUTED | DEPLOYED | MERGED |
