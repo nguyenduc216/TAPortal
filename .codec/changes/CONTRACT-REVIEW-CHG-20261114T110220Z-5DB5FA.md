@@ -44,6 +44,13 @@ chương/mục, báo các điều bị thiếu. PDF bỏ số trang và dòng "C
 - Chưa nạp được (cần file khác): 13 PDF là bản scan không có lớp chữ (123/2020/NĐ-CP, 38/2019, 45/2019, 59/2020 (2 phần), 91/2015 (2 bản),
   32-btc, 41-nd, 70/2025/NĐ-CP, 73-cp, 78/2021/TT-BTC, 84-cp-nq); 15224_l36qh.rtf (Luật Thương mại 36/2005) dùng phông TCVN3.
 
+- One-off data migration 049 (verify 087, rollback 088; KHÔNG commit, đã xóa): nạp 4 văn bản tải từ nguồn miễn phí theo yêu cầu operator –
+  91/2015/QH13 (689 điều, trích chữ từ .doc Sở Tư pháp Đắk Lắk), 36/2005/QH11 (VBHN 113/2025, 309 điều; Điều 102–116 đã bãi bỏ),
+  45/2019/QH14 (VBHN 18/2026, 220 điều), 59/2020/QH14 (VBHN 67/2025 ghép 2 phần Công báo, 218 điều); marker A0000049-…-000000000049.
+  11:39:20Z dry-run PASS→rollback NOT_APPLIED; 11:41:36Z gates PASS (760/760); 11:41:54Z real run VERIFY_STATUS=PASS → EXECUTED.
+- Bộ tách điều (e4bf00f): tách điều bị dính trong một đoạn, chấp nhận nhảy số qua điều đã bãi bỏ khi là tiêu đề "Điều N. Tên".
+- Tải không được: vbpl.moj.gov.vn và skhdt.daklak.gov.vn không phân giải tên miền; PDF Luật Quản lý thuế 2025 tại vmrcc.gov.vn trả 404.
+
 ## Publish
 - portal DEPLOYED 2026-11-14 11:08:51Z (giờ server 18:08:51) từ 817ae4e; artifact 4b806c4ea73f8fc7de31b03cb2d2554bd0e22b3915438942785c5783b2c36c58 (89 files);
   package 4CA9397914E99C9137E9B4AB42188BFE5823ECDFD58027CB3A8522B0D7490A6C; health 200. Audit WARN có sẵn: AngleSharp 0.17.1 (Moderate).
