@@ -6,6 +6,8 @@
 - Tiêu đề: In-place review: paper view, accept/edit/reject on highlights, direct paragraph edit, customer answers
 - portal DEPLOYED lần 2 (ghi chú gửi AI) 2026-11-14 15:44:16Z từ ebb4f89; artifact bc1281ff63ee299bf359c18bada898f1e92b6b8e37c07b158b345f29bc103e82;
   package 4E48EDAAD0B398DC8D9D88128A204B8C5018ED61D34CEECF360258D13FF3AA72; health 200; Safe tests 771/771; khóa API trong appsettings vẫn giữ sau deploy.
+- portal DEPLOYED lần 3 (tiến trình AI) 2026-11-14 16:01:54Z từ cda375f (đã kiểm tra 0 lượt AI đang chạy trước khi deploy);
+  artifact ab6f7b1d6d6e5d7eb4d6e157c08bc191ab7c96b99ff0f51456711f63b5cdd692; package BC3DB68A00F64BC3F79EC0872205C5759DAD60073A1283895868C9F5BD3C8C85; health 200.
 - Trạng thái: DEPLOYED
 
 ## Yêu cầu và phạm vi
