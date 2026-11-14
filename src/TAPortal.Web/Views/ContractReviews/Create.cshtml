@@ -51,6 +51,7 @@
                 <label for="Input_Note" class="form-label">Yêu cầu của khách hàng / ghi chú</label>
                 <div class="ta-input-icon ta-input-icon--top">@UiIcon.Render("pencil")<textarea id="Input_Note" name="Input.Note" class="form-control" rows="3" maxlength="2000" placeholder="Ví dụ: khách lo về điều khoản phạt chậm thanh toán và thời hạn bảo hành.">@i.Note</textarea></div>
                 <span asp-validation-for="Input.Note" class="invalid-feedback d-block"></span>
+                <div class="form-hint">AI sẽ ưu tiên rà soát kỹ các điểm ghi ở đây (số điện thoại, email, CCCD, số tài khoản được ẩn trước khi gửi). Để trống nếu khách không có yêu cầu riêng.</div>
             </div>
         </div>
     </div>

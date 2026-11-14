@@ -258,6 +258,12 @@ public sealed class SafeContractReviewTests
         var schema = System.Text.Json.JsonSerializer.Serialize(S.ContractReviewPrompt.Schema());
         Assert.Contains("\"additionalProperties\":false", schema);
         var user = S.ContractReviewPrompt.User(new("HĐ", "A", paragraphs, library, true), s => s);
+        Assert.DoesNotContain("YÊU CẦU RIÊNG CỦA KHÁCH HÀNG", user);                       // no note: nothing added
+        var mask = new S.PersonalDataMask();
+        var noted = S.ContractReviewPrompt.User(new("HĐ", "A", paragraphs, library, true, "Lo điều khoản phạt; liên hệ 0912 345 678"), mask.Mask);
+        Assert.Contains("YÊU CẦU RIÊNG CỦA KHÁCH HÀNG", noted);
+        Assert.Contains("Lo điều khoản phạt", noted);
+        Assert.DoesNotContain("0912 345 678", noted);                                        // the note is masked like the contract
         Assert.Contains("[P3] Bên B thanh toán", user);
         Assert.Contains("Điều 418. Thỏa thuận phạt vi phạm", user);
         Assert.Contains("BÊN A", user);

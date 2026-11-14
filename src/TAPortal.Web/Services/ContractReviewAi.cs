@@ -38,7 +38,8 @@ public sealed class ContractReviewAiOptions
 
 public sealed record LegalIndexArticle(string DocumentNo, string DocumentTitle, string ArticleNo, string? Title);
 
-public sealed record ReviewAiRequest(string ReviewTitle, string CustomerRole, IReadOnlyList<ReviewParagraph> Paragraphs, IReadOnlyList<LegalIndexArticle> Library, bool MaskPersonalData);
+// CustomerNote: "Yêu cầu của khách hàng / ghi chú" of the request (optional); the reviewer gives it priority.
+public sealed record ReviewAiRequest(string ReviewTitle, string CustomerRole, IReadOnlyList<ReviewParagraph> Paragraphs, IReadOnlyList<LegalIndexArticle> Library, bool MaskPersonalData, string? CustomerNote = null);
 
 public sealed record ReviewAiLegalRef(string DocumentNo, string Article, string? Clause, string? Note);
 
@@ -87,6 +88,8 @@ Quy tắc bắt buộc:
         var sb = new StringBuilder();
         sb.AppendLine("YÊU CẦU: " + ContractReviewPolicy.RoleInstruction(r.CustomerRole));
         sb.AppendLine("Tên hợp đồng: " + mask(r.ReviewTitle));
+        if (!string.IsNullOrWhiteSpace(r.CustomerNote))
+            sb.AppendLine("YÊU CẦU RIÊNG CỦA KHÁCH HÀNG (ưu tiên rà soát kỹ các điểm này, vẫn góp ý các vấn đề quan trọng khác): " + mask(r.CustomerNote.Trim()));
         sb.AppendLine();
         sb.AppendLine("KHO VĂN BẢN PHÁP LUẬT (chỉ danh mục điều):");
         if (r.Library.Count == 0) sb.AppendLine("(Kho đang trống: nếu trích dẫn luật, chỉ dùng văn bản còn hiệu lực mà bạn chắc chắn.)");

@@ -90,7 +90,7 @@ public enum ReviewOutcome { Saved, NotFound, Forbidden, Conflict, Invalid, Locke
 public sealed record ReviewResult(ReviewOutcome Outcome, Guid? Id = null, int? VersionNo = null, IReadOnlyList<string>? Errors = null, bool AuditPersisted = false);
 
 // Work item of the AI worker.
-public sealed record ReviewRunJob(Guid RunId, Guid ReviewId, int VersionNo, bool Mask, string Title, string Role, IReadOnlyList<ReviewParagraph> Paragraphs);
+public sealed record ReviewRunJob(Guid RunId, Guid ReviewId, int VersionNo, bool Mask, string Title, string Role, IReadOnlyList<ReviewParagraph> Paragraphs, string? Note = null);
 
 public interface IContractReviewStore
 {
@@ -237,7 +237,7 @@ OUTPUT inserted.Id,inserted.ReviewId,inserted.VersionNo,inserted.MaskPersonalDat
 FROM dbo.ContractReviewRuns x WITH (UPDLOCK, READPAST, ROWLOCK)
 WHERE x.Status='QUEUED' AND x.RequestedAt=(SELECT MIN(q.RequestedAt) FROM dbo.ContractReviewRuns q WITH (READPAST) WHERE q.Status='QUEUED');
 """;
-    public const string RunReview = "SELECT Title,CustomerRole FROM dbo.ContractReviews WHERE Id=@id;";
+    public const string RunReview = "SELECT Title,CustomerRole,Note FROM dbo.ContractReviews WHERE Id=@id;";
     public const string CompleteRun = """
 UPDATE dbo.ContractReviewRuns SET Status='DONE',Model=@model,InputTokens=@input,OutputTokens=@output,CostUsd=@cost,FindingCount=@count,Summary=@summary,
  Error=@error,ResponseJson=@json,FinishedAt=SYSUTCDATETIME() WHERE Id=@run AND Status='RUNNING';
@@ -580,14 +580,14 @@ public sealed class SqlContractReviewStore(IConfiguration configuration, AdminAu
             if (!await r.ReadAsync()) return null;
             run = r.GetGuid(0); review = r.GetGuid(1); no = r.GetInt32(2); mask = r.GetBoolean(3);
         }
-        string title, role;
+        string title, role; string? note;
         await using (var cmd = Cmd(cn, null, ContractReviewSql.RunReview, ("@id", review)))
         await using (var r = await cmd.ExecuteReaderAsync())
         {
             if (!await r.ReadAsync()) { await FailRunAsync(run, review, "Không tìm thấy yêu cầu chỉnh lý."); return null; }
-            title = r.GetString(0); role = r.GetString(1);
+            title = r.GetString(0); role = r.GetString(1); note = r.IsDBNull(2) ? null : r.GetString(2);
         }
-        return new(run, review, no, mask, title, role, await Paragraphs(cn, null, review, no));
+        return new(run, review, no, mask, title, role, await Paragraphs(cn, null, review, no), note);
     }
 
     public async Task CompleteRunAsync(ReviewRunJob job, ReviewAiResult result)

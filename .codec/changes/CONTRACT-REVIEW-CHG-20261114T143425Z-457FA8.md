@@ -17,6 +17,10 @@ với đề xuất thì đổi màu, các tương tác khác cũng làm ngay tr�
 - Chế độ "Thay đổi so với bản trước" khi chờ khách phản hồi: bấm chỗ sửa → Khách đồng ý / không đồng ý / đề xuất câu khác.
 - Không JS: danh sách góp ý và thay đổi bên dưới vẫn dùng được như trước.
 
+- Bổ sung (operator 2026-11-14 "Thêm ghi chú để AI hiểu nhé, không có ghi chú gì thì thôi"): ghi chú "Yêu cầu của khách hàng / ghi chú"
+  được gửi cho AI (đã ẩn dữ liệu cá nhân) như yêu cầu ưu tiên rà soát; trống thì không thêm gì. ReviewAiRequest.CustomerNote,
+  ReviewRunJob.Note, ContractReviewSql.RunReview đọc Note; gợi ý dưới ô ghi chú ở trang tạo yêu cầu.
+
 ## File thay đổi (relative path, thao tác ADD/MODIFY/DELETE)
 - MODIFY `src/TAPortal.Web/Models/ContractReviewModels.cs` (ReviewHtml: hiển thị quyết định tại chỗ, nút data-ta-pop)
 - MODIFY `src/TAPortal.Web/Views/ContractReviews/Details.cshtml` (trang giấy, template bảng quyết định)

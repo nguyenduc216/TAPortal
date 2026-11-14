@@ -46,7 +46,7 @@ public sealed class ContractReviewWorker(IServiceScopeFactory scopes, IContractR
             var library = await services.GetRequiredService<ILegalLibraryStore>().IndexAsync(DateTime.Today);
             using var timeout = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken);
             timeout.CancelAfter(RunTimeout);
-            var result = await ai.ReviewAsync(new(job.Title, job.Role, job.Paragraphs, library, job.Mask), timeout.Token);
+            var result = await ai.ReviewAsync(new(job.Title, job.Role, job.Paragraphs, library, job.Mask, job.Note), timeout.Token);
             await store.CompleteRunAsync(job, result);
             logger.LogInformation("Contract review run {RunId} done: {Findings} findings, {Input}+{Output} tokens, {Cost} USD.",
                 job.RunId, result.Findings.Count, result.InputTokens, result.OutputTokens, result.CostUsd);
