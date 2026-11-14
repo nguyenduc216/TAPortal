@@ -4,6 +4,8 @@
 - Change ID: `CONTRACT-REVIEW-CHG-20261114T143425Z-457FA8`
 - Created UTC: 2026-11-14T14:34:25.799393+00:00
 - Tiêu đề: In-place review: paper view, accept/edit/reject on highlights, direct paragraph edit, customer answers
+- portal DEPLOYED lần 2 (ghi chú gửi AI) 2026-11-14 15:44:16Z từ ebb4f89; artifact bc1281ff63ee299bf359c18bada898f1e92b6b8e37c07b158b345f29bc103e82;
+  package 4E48EDAAD0B398DC8D9D88128A204B8C5018ED61D34CEECF360258D13FF3AA72; health 200; Safe tests 771/771; khóa API trong appsettings vẫn giữ sau deploy.
 - Trạng thái: DEPLOYED
 
 ## Yêu cầu và phạm vi
