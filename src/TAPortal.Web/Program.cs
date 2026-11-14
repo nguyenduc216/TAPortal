@@ -41,6 +41,13 @@ builder.Services.AddScoped<IRoleAdminStore, SqlRoleAdminStore>();
 builder.Services.AddScoped<IEmployeeStore, SqlEmployeeStore>();
 builder.Services.AddScoped<IHrCatalogStore, SqlHrCatalogStore>();
 builder.Services.AddScoped<IContractStore, SqlContractStore>();
+// Hợp đồng dịch vụ: AI contract review (Claude API key in ContractReview:Anthropic:ApiKey, set by the operator on the server).
+builder.Services.AddScoped<IContractReviewStore, SqlContractReviewStore>();
+builder.Services.AddScoped<ILegalLibraryStore, SqlLegalLibraryStore>();
+builder.Services.AddSingleton(ContractReviewAiOptions.From(builder.Configuration));
+builder.Services.AddSingleton<IContractReviewAi, AnthropicContractReviewAi>();
+if (!string.IsNullOrWhiteSpace(builder.Configuration["Database:ConnectionString"]))
+    builder.Services.AddHostedService<ContractReviewWorker>();
 builder.Services.AddScoped<ICustomerStaffStore, SqlCustomerStaffStore>();
 builder.Services.AddScoped<IImpersonationStore, SqlImpersonationStore>(); // "Truy cập hộ" (operator 2026-11-14)
 builder.Services.AddScoped<IWebsiteAdminStore, SqlWebsiteAdminStore>(); // Website TA (WEBSITE-TA)

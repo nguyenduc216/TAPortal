@@ -1,0 +1,353 @@
+@model ContractReviewWorkspaceVm
+@{
+    var r = Model.Review;
+    var vi = System.Globalization.CultureInfo.GetCultureInfo("vi-VN");
+    string When(DateTime d) => d.ToLocalTime().ToString("dd/MM/yyyy HH:mm", vi);
+    ViewData["ParentTitle"] = "Hợp đồng dịch vụ";
+    ViewData["ParentController"] = "ContractReviews";
+    ViewData["Title"] = r.Code;
+    ViewData["Heading"] = r.Title;
+    ViewData["Subtitle"] = $"{r.Code} · {r.CustomerName} · rà soát cho {ContractReviewPolicy.Label(ContractReviewPolicy.Roles, r.Role)}";
+    ViewData["PageIcon"] = "file-text";
+    var canEdit = AdminPermissions.Has(User, AdminPermissions.ContractReviewEdit);
+    var canRun = AdminPermissions.Has(User, AdminPermissions.ContractReviewRunAi);
+    var canFinalize = AdminPermissions.Has(User, AdminPermissions.ContractReviewFinalize);
+    var locked = ContractReviewPolicy.IsLocked(r.Status);
+    var analyzing = r.Status == ContractReviewPolicy.Analyzing;
+    var editable = canEdit && Model.IsCurrent && !locked && !analyzing;
+    var findingsByKey = Model.Findings.GroupBy(f => f.ParagraphKey).ToDictionary(g => g.Key, g => (IReadOnlyList<ReviewFinding>)g.ToList());
+    var answering = Model.IsCurrent && r.Status is ContractReviewPolicy.DraftReady or ContractReviewPolicy.Sent or ContractReviewPolicy.CustomerReplied;
+}
+@section PageActions {
+    <a class="btn" asp-action="Details" asp-route-id="@r.Id" asp-route-v="@Model.VersionNo" asp-route-mode="@Model.Mode">@UiIcon.Render("refresh")<span>Tải lại</span></a>
+    <a class="btn" asp-action="Export" asp-route-id="@r.Id" asp-route-v="@Model.VersionNo" download data-ta-hard>@UiIcon.Render("file-text")<span>Tải Word v@(Model.VersionNo)</span></a>
+    @if (Model.VersionNo > 0) {<a class="btn btn-primary" asp-action="Export" asp-route-id="@r.Id" asp-route-v="@Model.VersionNo" asp-route-tracked="true" download data-ta-hard data-ta-review-export-tracked>@UiIcon.Render("file-text")<span>Word theo dõi thay đổi</span></a>}
+}
+<div class="row g-4" data-ta-review-workspace="@r.Code">
+<div class="col-xl-8 d-flex flex-column gap-4">
+    <section class="card" aria-labelledby="rvDocTitle">
+        <div class="card-header flex-wrap gap-2">
+            <h2 class="card-title" id="rvDocTitle">@UiIcon.Render("file-text")@(Model.Version?.Label ?? "Phiên bản " + Model.VersionNo)</h2>
+            <nav class="ms-auto d-flex flex-wrap gap-1" aria-label="Phiên bản">
+                @foreach (var v in r.Versions)
+                {
+                    <a class="btn btn-sm @(v.No == Model.VersionNo ? "btn-primary" : "")" asp-action="Details" asp-route-id="@r.Id" asp-route-v="@v.No" aria-current="@(v.No == Model.VersionNo ? "page" : null)">@(v.No == 0 ? "Bản gốc" : "v" + v.No)@(v.No == r.FinalVersionNo ? " ✓" : "")</a>
+                }
+            </nav>
+        </div>
+        @if (Model.VersionNo > 0)
+        {
+            <div class="card-body py-2 d-flex flex-wrap gap-2 align-items-center border-bottom">
+                <span class="text-secondary">Hiển thị:</span>
+                <a class="btn btn-sm @(Model.Mode == "findings" ? "btn-soft-primary" : "")" asp-action="Details" asp-route-id="@r.Id" asp-route-v="@Model.VersionNo" asp-route-mode="findings">Góp ý trên bản này (@Model.Findings.Count)</a>
+                <a class="btn btn-sm @(Model.Mode == "changes" ? "btn-soft-primary" : "")" asp-action="Details" asp-route-id="@r.Id" asp-route-v="@Model.VersionNo" asp-route-mode="changes">Thay đổi so với bản trước (@Model.Changes.Count)</a>
+            </div>
+        }
+        <div class="card-body">
+            <p class="ta-rv-legend">
+                @if (Model.Mode == "changes") {<span><ins class="ta-rv-ins">chữ thêm</ins></span><span><del class="ta-rv-del">chữ bỏ</del></span><span>Rê chuột lên chỗ sửa để xem lý do.</span>}
+                else {<span><span class="ta-rv-mark ta-rv-sev-high">nghiêm trọng</span></span><span><span class="ta-rv-mark ta-rv-sev-medium">cần lưu ý</span></span><span><span class="ta-rv-mark ta-rv-sev-low">góp ý nhỏ</span></span><span>Rê chuột hoặc bấm vào chỗ tô vàng để xem góp ý.</span>}
+            </p>
+            <div class="ta-rv-doc" data-ta-review-doc>
+                @if (Model.Mode == "changes")
+                {
+                    foreach (var row in Model.Rows())
+                    {
+                        <div class="ta-rv-p ta-rv-p--@row.Kind.ToLowerInvariant() @(row.Change is null ? "" : "is-changed") @(row.NewText is null ? "is-deleted" : "")" id="p-@row.Key">
+                            <span class="ta-rv-key">@row.Key</span>
+                            <div class="ta-rv-text">@if (row.Change is null) {@ReviewHtml.Changes(row.NewText, row.NewText, null)} else {@ReviewHtml.Changes(row.OldText, row.NewText, row.Change.Note)}</div>
+                        </div>
+                    }
+                }
+                else
+                {
+                    foreach (var p in Model.Paragraphs)
+                    {
+                        var list = findingsByKey.GetValueOrDefault(p.Key) ?? [];
+                        <div class="ta-rv-p ta-rv-p--@p.Kind.ToLowerInvariant() @(list.Count > 0 ? "is-flagged" : "")" id="p-@p.Key">
+                            <span class="ta-rv-key">@p.Key</span>
+                            <div class="ta-rv-text">@ReviewHtml.Findings(p, list)</div>
+                        </div>
+                    }
+                }
+            </div>
+        </div>
+    </section>
+
+    <section class="card" aria-labelledby="rvFindingsTitle" data-ta-review-findings>
+        <div class="card-header">
+            <h2 class="card-title" id="rvFindingsTitle">@UiIcon.Render("alert-triangle")Góp ý trên @(Model.VersionNo == 0 ? "bản gốc" : "phiên bản " + Model.VersionNo)</h2>
+            <span class="ms-auto d-inline-flex gap-2"><span class="ta-badge ta-badge--neutral ta-badge--plain">@Model.OpenCount chưa xử lý</span><span class="ta-badge ta-badge--success ta-badge--plain">@Model.DecidedCount chờ áp dụng</span></span>
+        </div>
+        @if (Model.Findings.Count == 0)
+        {
+            <div class="card-body"><p class="text-secondary mb-0">Chưa có góp ý. @(Model.IsCurrent ? "Bấm \"Chạy AI rà soát\" ở cột bên phải, hoặc thêm góp ý thủ công bên dưới." : "")</p></div>
+        }
+        else
+        {
+            <ul class="ta-list ta-rv-findings">
+                @foreach (var f in Model.Findings)
+                {
+                    var open = editable && f.AppliedInVersionNo is null;
+                    <li id="f-@f.Id" class="ta-rv-finding" data-ta-finding="@f.Status">
+                        <details open="@(f.Status == ContractReviewPolicy.Open)">
+                            <summary>
+                                <span class="ta-badge @ContractReviewPolicy.SeverityBadge(f.Severity)">@ContractReviewPolicy.Label(ContractReviewPolicy.Severities, f.Severity)</span>
+                                <a class="ta-code" href="#p-@f.ParagraphKey">@f.ParagraphKey</a>
+                                <span class="ta-cell-strong">@ReviewText.Short(f.Issue, 140)</span>
+                                <span class="ms-auto ta-badge ta-badge--plain @(f.IsDecided ? "ta-badge--success" : f.Status == ContractReviewPolicy.Rejected ? "ta-badge--danger" : "ta-badge--neutral")">@ContractReviewPolicy.Label(ContractReviewPolicy.FindingStatuses, f.Status)@(f.AppliedInVersionNo is int a ? " · đã áp dụng vào v" + a : "")</span>
+                            </summary>
+                            <dl class="ta-dl ta-rv-finding__body">
+                                <dt>Loại</dt><dd>@ContractReviewPolicy.Label(ContractReviewPolicy.Actions, f.Action) · có lợi cho @ContractReviewPolicy.Label(ContractReviewPolicy.Roles, f.Party) · @(f.Source == "AI" ? "AI đề xuất" : "Nhân viên thêm")</dd>
+                                @if (f.Quote is not null) {<dt>Câu trích</dt><dd><q>@f.Quote</q></dd>}
+                                <dt>Vấn đề</dt><dd style="white-space: pre-line">@f.Issue</dd>
+                                @if (f.LegalBasis is not null) {<dt>Căn cứ pháp lý</dt><dd style="white-space: pre-line">@f.LegalBasis @if (f.LegalVerified) {<span class="ta-badge ta-badge--success ta-badge--plain">Đã đối chiếu kho luật</span>} else {<span class="ta-badge ta-badge--warning ta-badge--plain" data-ta-unverified>Chưa đối chiếu kho luật – cần kiểm tra</span>}</dd>}
+                                @if (f.Suggestion is not null) {<dt>Khuyến nghị</dt><dd style="white-space: pre-line">@f.Suggestion</dd>}
+                                @if (f.RevisedText is not null) {<dt>Câu chữ đề xuất</dt><dd class="ta-rv-proposal">@f.RevisedText</dd>}
+                                @if (f.StaffText is not null) {<dt>Câu chữ sau khi sửa</dt><dd class="ta-rv-proposal">@f.StaffText</dd>}
+                                @if (f.StaffNote is not null) {<dt>Ghi chú nhân viên</dt><dd style="white-space: pre-line">@f.StaffNote</dd>}
+                                @if (f.DecidedAt is DateTime dd) {<dt>Quyết định</dt><dd>@(f.DecidedByName ?? "—") · @When(dd)</dd>}
+                            </dl>
+                            @if (open)
+                            {
+                                <form class="ta-rv-decide" asp-action="Decide" asp-route-id="@r.Id" method="post">
+                                    <input type="hidden" name="findingId" value="@f.Id" />
+                                    <div class="d-flex flex-wrap gap-3 mb-2" role="radiogroup" aria-label="Quyết định">
+                                        @foreach (var s in ContractReviewPolicy.FindingStatuses)
+                                        {
+                                            <label class="form-check mb-0"><input class="form-check-input" type="radio" name="status" value="@s.Code" checked="@(s.Code == f.Status)" /><span class="form-check-label">@s.Label</span></label>
+                                        }
+                                    </div>
+                                    @if (f.Action is ContractReviewPolicy.Replace or ContractReviewPolicy.Insert)
+                                    {
+                                        <label class="form-label" for="st-@f.Id">Câu chữ (chỉ dùng khi chọn "Chấp nhận có sửa")</label>
+                                        <div class="ta-input-icon ta-input-icon--top mb-2">@UiIcon.Render("pencil")<textarea class="form-control" id="st-@f.Id" name="staffText" rows="3">@(f.StaffText ?? f.RevisedText)</textarea></div>
+                                    }
+                                    <div class="ta-input-icon mb-2">@UiIcon.Render("pencil")<input class="form-control" name="staffNote" value="@f.StaffNote" maxlength="2000" placeholder="Ghi chú (không bắt buộc)" aria-label="Ghi chú" /></div>
+                                    <button type="submit" class="btn btn-sm btn-primary">@UiIcon.Render("device-floppy")<span>Lưu quyết định</span></button>
+                                </form>
+                            }
+                        </details>
+                    </li>
+                }
+            </ul>
+        }
+        @if (editable)
+        {
+            <details class="card-footer ta-rv-add" data-ta-review-add>
+                <summary class="fw-semibold">@UiIcon.Render("plus") Thêm góp ý thủ công</summary>
+                <form class="ta-form-grid ta-form-grid--3 mt-3" asp-action="AddFinding" asp-route-id="@r.Id" method="post">
+                    <div>
+                        <label class="form-label required" for="fKey">Đoạn</label>
+                        <select class="form-select" id="fKey" name="Finding.ParagraphKey" required>@foreach (var p in Model.Paragraphs) {<option value="@p.Key">@p.Key – @ReviewText.Short(p.Text, 60)</option>}</select>
+                    </div>
+                    <div>
+                        <label class="form-label required" for="fAction">Loại</label>
+                        <select class="form-select" id="fAction" name="Finding.Action">@foreach (var a in ContractReviewPolicy.Actions) {<option value="@a.Code">@a.Label</option>}</select>
+                    </div>
+                    <div>
+                        <label class="form-label" for="fSeverity">Mức độ</label>
+                        <select class="form-select" id="fSeverity" name="Finding.Severity">@foreach (var s in ContractReviewPolicy.Severities) {<option value="@s.Code" selected="@(s.Code == "MEDIUM")">@s.Label</option>}</select>
+                    </div>
+                    <div class="ta-ws-span-3">
+                        <label class="form-label" for="fQuote">Câu trích (chép nguyên văn phần cần sửa; để trống nếu sửa cả đoạn)</label>
+                        <div class="ta-input-icon">@UiIcon.Render("pencil")<input class="form-control" id="fQuote" name="Finding.Quote" /></div>
+                    </div>
+                    <div class="ta-ws-span-3">
+                        <label class="form-label required" for="fIssue">Vấn đề</label>
+                        <div class="ta-input-icon ta-input-icon--top">@UiIcon.Render("pencil")<textarea class="form-control" id="fIssue" name="Finding.Issue" rows="2" required></textarea></div>
+                    </div>
+                    <div class="ta-ws-span-2">
+                        <label class="form-label" for="fLegal">Căn cứ pháp lý</label>
+                        <div class="ta-input-icon">@UiIcon.Render("list-tree")<input class="form-control" id="fLegal" name="Finding.LegalBasis" placeholder="Ví dụ: Điều 418 – 91/2015/QH13" /></div>
+                    </div>
+                    <div>
+                        <label class="form-label" for="fParty">Có lợi cho</label>
+                        <select class="form-select" id="fParty" name="Finding.Party">@foreach (var p in ContractReviewPolicy.Roles) {<option value="@p.Code" selected="@(p.Code == r.Role)">@p.Label</option>}</select>
+                    </div>
+                    <div class="ta-ws-span-3">
+                        <label class="form-label" for="fRevised">Câu chữ đề xuất (thay cho câu trích, hoặc nội dung đoạn mới)</label>
+                        <div class="ta-input-icon ta-input-icon--top">@UiIcon.Render("pencil")<textarea class="form-control" id="fRevised" name="Finding.RevisedText" rows="3"></textarea></div>
+                    </div>
+                    <div class="ta-ws-span-3"><button type="submit" class="btn btn-primary">@UiIcon.Render("plus")<span>Thêm góp ý</span></button></div>
+                </form>
+            </details>
+        }
+    </section>
+
+    @if (Model.Changes.Count > 0)
+    {
+        <section class="card" aria-labelledby="rvChangesTitle" data-ta-review-changes>
+            <div class="card-header"><h2 class="card-title" id="rvChangesTitle">@UiIcon.Render("arrows-exchange")Thay đổi so với bản trước và ý kiến khách hàng</h2></div>
+            <ul class="ta-list">
+                @foreach (var c in Model.Changes)
+                {
+                    <li id="c-@c.Id" class="d-block" data-ta-change="@c.CustomerDecision">
+                        <div class="d-flex flex-wrap gap-2 align-items-center mb-1">
+                            <a class="ta-code" href="#p-@c.ParagraphKey">@c.ParagraphKey</a>
+                            <span class="ta-cell-sub">@(c.OldText is null ? "Thêm đoạn mới" : c.NewText is null ? "Bỏ đoạn" : "Sửa câu chữ")</span>
+                            <span class="ms-auto ta-badge ta-badge--plain @(c.CustomerDecision == ContractReviewPolicy.Agreed ? "ta-badge--success" : c.CustomerDecision == ContractReviewPolicy.Pending ? "ta-badge--neutral" : "ta-badge--warning")">@ContractReviewPolicy.Label(ContractReviewPolicy.CustomerDecisions, c.CustomerDecision)</span>
+                        </div>
+                        <div class="ta-rv-text ta-rv-change">@ReviewHtml.Changes(c.OldText, c.NewText, c.Note)</div>
+                        @if (c.Note is not null) {<div class="ta-cell-sub mt-1" style="white-space: pre-line">Lý do: @c.Note</div>}
+                        @if (c.CustomerText is not null) {<div class="mt-1"><span class="ta-cell-sub">Khách đề xuất:</span> <span class="ta-rv-proposal">@c.CustomerText</span></div>}
+                        @if (c.CustomerNote is not null) {<div class="ta-cell-sub mt-1">Ý kiến khách: @c.CustomerNote</div>}
+                        @if (answering && canEdit && Model.Version?.Source == "STAFF")
+                        {
+                            <form class="ta-rv-decide mt-2" asp-action="CustomerAnswer" asp-route-id="@r.Id" method="post">
+                                <input type="hidden" name="changeId" value="@c.Id" />
+                                <div class="d-flex flex-wrap gap-3 mb-2" role="radiogroup" aria-label="Ý kiến khách hàng">
+                                    @foreach (var d in ContractReviewPolicy.CustomerDecisions)
+                                    {
+                                        <label class="form-check mb-0"><input class="form-check-input" type="radio" name="decision" value="@d.Code" checked="@(d.Code == c.CustomerDecision)" /><span class="form-check-label">@d.Label</span></label>
+                                    }
+                                </div>
+                                <div class="ta-input-icon ta-input-icon--top mb-2">@UiIcon.Render("pencil")<textarea class="form-control" name="customerText" rows="2" placeholder="Câu chữ khách hàng đề xuất (khi chọn &quot;Khách đề xuất câu khác&quot;)" aria-label="Câu chữ khách hàng đề xuất">@c.CustomerText</textarea></div>
+                                <div class="ta-input-icon mb-2">@UiIcon.Render("pencil")<input class="form-control" name="customerNote" value="@c.CustomerNote" maxlength="2000" placeholder="Ý kiến của khách hàng (không bắt buộc)" aria-label="Ý kiến khách hàng" /></div>
+                                <button type="submit" class="btn btn-sm btn-primary">@UiIcon.Render("device-floppy")<span>Lưu ý kiến khách hàng</span></button>
+                            </form>
+                        }
+                    </li>
+                }
+            </ul>
+        </section>
+    }
+</div>
+
+<div class="col-xl-4 d-flex flex-column gap-4">
+    <section class="card" aria-labelledby="rvInfoTitle">
+        <div class="card-header"><h2 class="card-title" id="rvInfoTitle">@UiIcon.Render("info-circle")Yêu cầu chỉnh lý</h2><span class="ms-auto ta-badge @ContractReviewPolicy.StatusBadge(r.Status)" data-ta-review-status="@r.Status">@ContractReviewPolicy.Label(ContractReviewPolicy.Statuses, r.Status)</span></div>
+        <div class="card-body">
+            <dl class="ta-dl">
+                <dt>Mã</dt><dd><span class="ta-code">@r.Code</span></dd>
+                <dt>Khách hàng</dt><dd>@r.CustomerName@if (r.CustomerCode is not null) {<span class="ta-code ms-2">@r.CustomerCode</span>}</dd>
+                <dt>Rà soát cho</dt><dd>@ContractReviewPolicy.Label(ContractReviewPolicy.Roles, r.Role)</dd>
+                @if (r.ContractNo is not null) {<dt>Hợp đồng</dt><dd><a asp-controller="Contracts" asp-action="Details" asp-route-id="@r.ContractId">@r.ContractNo</a></dd>}
+                <dt>Phiên bản hiện tại</dt><dd>@(r.CurrentVersionNo == 0 ? "Bản gốc" : "v" + r.CurrentVersionNo)@if (r.FinalVersionNo is int fv) {<span class="ta-badge ta-badge--success ta-badge--plain ms-2">Bản cuối: v@(fv)</span>}</dd>
+                @if (r.Note is not null) {<dt>Yêu cầu của khách</dt><dd style="white-space: pre-line">@r.Note</dd>}
+                <dt>Tạo</dt><dd>@(r.CreatedByName ?? "—") · @When(r.CreatedAt)</dd>
+            </dl>
+        </div>
+    </section>
+
+    @if (!locked)
+    {
+        <section class="card" aria-labelledby="rvStepsTitle" data-ta-review-steps>
+            <div class="card-header"><h2 class="card-title" id="rvStepsTitle">@UiIcon.Render("checks")Các bước</h2></div>
+            <div class="card-body d-flex flex-column gap-3">
+                @if (!Model.IsCurrent)
+                {
+                    <p class="text-secondary mb-0">Đang xem phiên bản cũ. <a asp-action="Details" asp-route-id="@r.Id">Mở phiên bản hiện tại</a> để thao tác.</p>
+                }
+                else
+                {
+                    @if (Model.ActiveRun is { } run)
+                    {
+                        <div class="ta-alert ta-alert--info mb-0" role="status" data-ta-review-running>@UiIcon.Render("clock")<div class="ta-alert__body">AI đang rà soát (gửi lúc @When(run.RequestedAt)). Thường mất 1–5 phút; bấm "Tải lại" để xem kết quả.</div></div>
+                    }
+                    else if (canRun && ContractReviewPolicy.CanRunAi(r.Status))
+                    {
+                        <form asp-action="RunAi" asp-route-id="@r.Id" method="post" data-ta-review-run>
+                            @if (!Model.AiConfigured) {<div class="ta-alert ta-alert--warning mb-2" role="alert" data-ta-review-ai-missing>@UiIcon.Render("alert-triangle")<div class="ta-alert__body">Chưa cấu hình khóa Claude API trên máy chủ, nên chưa chạy được AI. Vẫn có thể thêm góp ý thủ công.</div></div>}
+                            <label class="form-check mb-2"><input class="form-check-input" type="checkbox" name="mask" value="true" checked /><span class="form-check-label">Ẩn số điện thoại, email, số CCCD, số tài khoản trước khi gửi AI</span></label>
+                            <input type="hidden" name="mask" value="false" />
+                            <button type="submit" class="btn btn-ta-gold w-100" disabled="@(!Model.AiConfigured)" data-ta-loading data-ta-loading-text="Đang gửi...">@UiIcon.Render("search")<span>Chạy AI rà soát @(Model.VersionNo == 0 ? "bản gốc" : "v" + Model.VersionNo)</span></button>
+                            <div class="form-hint">Mô hình @Model.AiModel. Chi phí ước tính 0,2–0,5 USD cho hợp đồng 20 trang; mỗi lần chạy được ghi lại bên dưới.</div>
+                        </form>
+                    }
+                    @if (editable && Model.DecidedCount > 0)
+                    {
+                        <form asp-action="CreateVersion" asp-route-id="@r.Id" method="post" data-ta-review-version data-ta-confirm="Tạo phiên bản mới từ @Model.DecidedCount góp ý đã chấp nhận? Phiên bản hiện tại được giữ nguyên.">
+                            <div class="ta-input-icon ta-input-icon--top mb-2">@UiIcon.Render("pencil")<textarea class="form-control" name="note" rows="2" maxlength="2000" placeholder="Ghi chú cho phiên bản mới (không bắt buộc)" aria-label="Ghi chú phiên bản"></textarea></div>
+                            <button type="submit" class="btn btn-primary w-100">@UiIcon.Render("plus")<span>Tạo phiên bản mới từ @Model.DecidedCount góp ý</span></button>
+                        </form>
+                    }
+                    @if (canEdit && r.Status == ContractReviewPolicy.DraftReady)
+                    {
+                        <form asp-action="MarkSent" asp-route-id="@r.Id" method="post">
+                            <button type="submit" class="btn w-100">@UiIcon.Render("send")<span>Đã gửi bản sửa cho khách hàng</span></button>
+                            <div class="form-hint">Tải "Word theo dõi thay đổi" ở trên để gửi khách. Khi khách phản hồi, ghi ý kiến cho từng thay đổi.</div>
+                        </form>
+                    }
+                    @if (canEdit && r.Status == ContractReviewPolicy.CustomerReplied)
+                    {
+                        <form asp-action="CustomerVersion" asp-route-id="@r.Id" method="post" data-ta-confirm="Tạo phiên bản mới theo ý kiến khách hàng? Thay đổi khách không đồng ý sẽ trở lại câu chữ cũ.">
+                            <div class="ta-input-icon ta-input-icon--top mb-2">@UiIcon.Render("pencil")<textarea class="form-control" name="note" rows="2" maxlength="2000" placeholder="Ghi chú (không bắt buộc)" aria-label="Ghi chú phiên bản"></textarea></div>
+                            <button type="submit" class="btn btn-primary w-100">@UiIcon.Render("arrows-exchange")<span>Tạo phiên bản theo phản hồi của khách</span></button>
+                        </form>
+                    }
+                }
+                @if (canFinalize && !analyzing)
+                {
+                    <form asp-action="Finalize" asp-route-id="@r.Id" method="post" class="border-top pt-3" data-ta-review-finalize data-ta-confirm="Chốt phiên bản đã chọn là bản cuối? Sau khi chốt không sửa được nữa.">
+                        <input type="hidden" name="stamp" value="@r.Stamp" />
+                        <label class="form-label" for="finalVersion">Chốt bản cuối</label>
+                        <div class="d-flex gap-2">
+                            <select class="form-select" id="finalVersion" name="versionNo">@foreach (var v in r.Versions.OrderByDescending(v => v.No)) {<option value="@v.No" selected="@(v.No == r.CurrentVersionNo)">@(v.No == 0 ? "Bản gốc" : "v" + v.No) – @v.Label</option>}</select>
+                            <button type="submit" class="btn btn-success">@UiIcon.Render("circle-check")<span>Chốt</span></button>
+                        </div>
+                    </form>
+                    <form asp-action="Cancel" asp-route-id="@r.Id" method="post" data-ta-confirm="Hủy yêu cầu chỉnh lý @r.Code? Dữ liệu được giữ lại nhưng không sửa được nữa.">
+                        <input type="hidden" name="stamp" value="@r.Stamp" />
+                        <button type="submit" class="btn btn-outline-danger w-100">@UiIcon.Render("ban")<span>Hủy yêu cầu</span></button>
+                    </form>
+                }
+            </div>
+        </section>
+    }
+
+    <section class="card" aria-labelledby="rvVersionsTitle">
+        <div class="card-header"><h2 class="card-title" id="rvVersionsTitle">@UiIcon.Render("history")Phiên bản</h2></div>
+        <ul class="ta-list">
+            @foreach (var v in r.Versions.OrderByDescending(v => v.No))
+            {
+                <li>
+                    <div>
+                        <a asp-action="Details" asp-route-id="@r.Id" asp-route-v="@v.No">@(v.No == 0 ? "Bản gốc" : "v" + v.No) – @v.Label</a>
+                        <div class="ta-cell-sub">@v.ParagraphCount đoạn · @(v.CreatedByName ?? "—") · @When(v.CreatedAt)</div>
+                        @if (v.Note is not null) {<div class="ta-cell-sub">@v.Note</div>}
+                    </div>
+                    @if (v.No == r.FinalVersionNo) {<span class="ta-badge ta-badge--success ta-badge--plain">Bản cuối</span>}
+                </li>
+            }
+        </ul>
+    </section>
+
+    <section class="card" aria-labelledby="rvFilesTitle">
+        <div class="card-header"><h2 class="card-title" id="rvFilesTitle">@UiIcon.Render("file-invoice")File</h2></div>
+        <ul class="ta-list">
+            @foreach (var file in r.Files)
+            {
+                <li>
+                    <div>
+                        <a asp-action="Download" asp-route-id="@r.Id" asp-route-fileId="@file.Id" download data-ta-hard>@UiIcon.Render("file-text")<span class="ms-1">@file.FileName</span></a>
+                        <div class="ta-cell-sub">@(file.Kind == "ORIGINAL" ? "File gốc khách gửi" : "Bản cuối v" + file.VersionNo) · @ContractPolicy.Size(file.SizeBytes) · @When(file.CreatedAt)</div>
+                    </div>
+                </li>
+            }
+        </ul>
+    </section>
+
+    @if (r.Runs.Count > 0)
+    {
+        <section class="card" aria-labelledby="rvRunsTitle" data-ta-review-runs>
+            <div class="card-header"><h2 class="card-title" id="rvRunsTitle">@UiIcon.Render("server")Lượt AI rà soát</h2></div>
+            <ul class="ta-list">
+                @foreach (var x in r.Runs)
+                {
+                    <li class="d-block">
+                        <div class="d-flex gap-2 align-items-center">
+                            <span class="ta-badge ta-badge--plain @(x.Status == "DONE" ? "ta-badge--success" : x.Status == "FAILED" ? "ta-badge--danger" : "ta-badge--warning")">@(x.Status switch { "DONE" => "Xong", "FAILED" => "Lỗi", "RUNNING" => "Đang chạy", _ => "Đang chờ" })</span>
+                            <span>@(x.VersionNo == 0 ? "Bản gốc" : "v" + x.VersionNo)</span>
+                            <span class="ms-auto ta-cell-sub">@When(x.RequestedAt)</span>
+                        </div>
+                        <div class="ta-cell-sub">@(x.RequestedByName ?? "—")@if (x.Model is not null) {<span> · @x.Model</span>}@if (x.FindingCount is int n) {<span> · @n góp ý</span>}@if (x.InputTokens is int it) {<span> · @it.ToString("N0", vi) + @((x.OutputTokens ?? 0).ToString("N0", vi)) token</span>}@if (x.CostUsd is decimal cost) {<span> · ~@cost.ToString("0.00", vi) USD</span>}</div>
+                        @if (x.Summary is not null) {<div class="mt-1" style="white-space: pre-line">@x.Summary</div>}
+                        @if (x.Error is not null) {<div class="mt-1 text-danger" style="white-space: pre-line">@x.Error</div>}
+                    </li>
+                }
+            </ul>
+        </section>
+    }
+</div>
+</div>

@@ -76,6 +76,15 @@ public static class AdminPermissions
     public const string ContractsUpdate = "CONTRACTS.UPDATE";
     public const string ContractsDelete = "CONTRACTS.DELETE";
 
+    // Hợp đồng dịch vụ: contract revision requests with AI review and the law library, inserted by migration 044.
+    public const string ContractReviewModuleKey = "CONTRACT_REVIEW";
+    public const string ContractReviewView = "CONTRACTS.REVIEW.VIEW";
+    public const string ContractReviewCreate = "CONTRACTS.REVIEW.CREATE";
+    public const string ContractReviewRunAi = "CONTRACTS.REVIEW.RUN_AI";
+    public const string ContractReviewEdit = "CONTRACTS.REVIEW.EDIT";
+    public const string ContractReviewFinalize = "CONTRACTS.REVIEW.FINALIZE";
+    public const string LegalLibraryManage = "LEGAL.LIBRARY.MANAGE";
+
     // Website TA (tuvangiaiphapta.vn content), inserted by migration 035.
     public const string WebsiteModuleKey = "WEBSITE";
     public const string WebsiteView = "WEBSITE.VIEW";
@@ -144,6 +153,12 @@ public static class AdminPermissions
         public const string ContractsCreate = PermissionPolicies.Prefix + AdminPermissions.ContractsCreate;
         public const string ContractsUpdate = PermissionPolicies.Prefix + AdminPermissions.ContractsUpdate;
         public const string ContractsDelete = PermissionPolicies.Prefix + AdminPermissions.ContractsDelete;
+        public const string ContractReviewView = PermissionPolicies.Prefix + AdminPermissions.ContractReviewView;
+        public const string ContractReviewCreate = PermissionPolicies.Prefix + AdminPermissions.ContractReviewCreate;
+        public const string ContractReviewRunAi = PermissionPolicies.Prefix + AdminPermissions.ContractReviewRunAi;
+        public const string ContractReviewEdit = PermissionPolicies.Prefix + AdminPermissions.ContractReviewEdit;
+        public const string ContractReviewFinalize = PermissionPolicies.Prefix + AdminPermissions.ContractReviewFinalize;
+        public const string LegalLibraryManage = PermissionPolicies.Prefix + AdminPermissions.LegalLibraryManage;
         public const string WebsiteView = PermissionPolicies.Prefix + AdminPermissions.WebsiteView;
         public const string WebsiteContentEdit = PermissionPolicies.Prefix + AdminPermissions.WebsiteContentEdit;
         public const string WebsitePostsEdit = PermissionPolicies.Prefix + AdminPermissions.WebsitePostsEdit;
@@ -206,6 +221,15 @@ public static class AdminPermissions
             new(ContractsUpdate, "Sửa hợp đồng, đính kèm hoặc gỡ file", "UPDATE"),
             new(ContractsDelete, "Xóa (mềm) hợp đồng", "DELETE")
         ]),
+        new(ContractReviewModuleKey, "Hợp đồng dịch vụ",
+        [
+            new(ContractReviewView, "Xem yêu cầu chỉnh lý hợp đồng, các phiên bản và góp ý", "VIEW"),
+            new(ContractReviewCreate, "Tạo yêu cầu chỉnh lý, tải file hợp đồng gốc", "CREATE"),
+            new(ContractReviewRunAi, "Chạy AI rà soát hợp đồng (có tính phí API)", "RUN_AI"),
+            new(ContractReviewEdit, "Xử lý góp ý, tạo phiên bản, ghi nhận phản hồi của khách hàng", "EDIT"),
+            new(ContractReviewFinalize, "Duyệt bản cuối hoặc hủy yêu cầu chỉnh lý", "FINALIZE"),
+            new(LegalLibraryManage, "Quản lý kho văn bản pháp luật dùng để trích dẫn", "MANAGE")
+        ]),
         new(HrModuleKey, "Nhân sự",
         [
             new(EmployeesView, "Xem danh sách và hồ sơ nhân viên", "VIEW"),
@@ -263,7 +287,7 @@ public static class AdminPermissions
 
     // Codes inserted by migration 028: every module except HR, whose rows come from the HR core bootstrap of TAPortalSys.
     // AUTH.ROLES.MANAGE is inserted too but is not grantable: role management is SYS_ADMIN only (operator 2026-11-07).
-    public static readonly IReadOnlyList<string> MigrationCodes = Modules.Where(m => m.Key is not (HrModuleKey or ContractsModuleKey or TasksModuleKey or WebsiteModuleKey or InvoiceAppModuleKey))
+    public static readonly IReadOnlyList<string> MigrationCodes = Modules.Where(m => m.Key is not (HrModuleKey or ContractsModuleKey or ContractReviewModuleKey or TasksModuleKey or WebsiteModuleKey or InvoiceAppModuleKey))
         .SelectMany(m => m.Permissions).Select(p => p.Code).Where(c => c != UsersImpersonate).Append(RolesManage).ToList();
 
     // Code inserted by migration 042 ("Truy cập hộ").
@@ -271,6 +295,10 @@ public static class AdminPermissions
 
     // Codes inserted by migration 031 (Công việc, Hợp đồng).
     public static readonly IReadOnlyList<string> Migration031Codes = Modules.Where(m => m.Key is ContractsModuleKey or TasksModuleKey)
+        .SelectMany(m => m.Permissions).Select(p => p.Code).ToList();
+
+    // Codes inserted by migration 044 (Hợp đồng dịch vụ).
+    public static readonly IReadOnlyList<string> Migration044Codes = Modules.Where(m => m.Key is ContractReviewModuleKey)
         .SelectMany(m => m.Permissions).Select(p => p.Code).ToList();
 
     // Codes inserted by migration 035 (Website TA).
@@ -303,6 +331,7 @@ public static class AdminNavigation
         new(AdminPermissions.CustomersView, "Customers", "Index"),
         new(AdminPermissions.ReconciliationView, "PaymentReconciliation", "Index"),
         new(AdminPermissions.ContractsView, "Contracts", "Index"),
+        new(AdminPermissions.ContractReviewView, "ContractReviews", "Index"),
         new(AdminPermissions.TaskReportView, "Work", "Report"),
         new(AdminPermissions.EmployeesView, "Employees", "Index"),
         new(AdminPermissions.DepartmentsView, "Departments", "Index"),

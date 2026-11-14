@@ -1,0 +1,53 @@
+@model LegalDocumentDetail
+@{
+    var d = Model.Document;
+    var vi = System.Globalization.CultureInfo.GetCultureInfo("vi-VN");
+    string Day(DateTime? x) => x?.ToString("dd/MM/yyyy", vi) ?? "—";
+    ViewData["ParentTitle"] = "Kho văn bản pháp luật";
+    ViewData["ParentController"] = "LegalLibrary";
+    ViewData["Title"] = d.DocumentNo;
+    ViewData["Heading"] = d.Title;
+    ViewData["Subtitle"] = $"{ContractReviewPolicy.Label(LegalLibraryPolicy.Types, d.DocType)} số {d.DocumentNo} · {Model.Articles.Count} điều";
+    ViewData["PageIcon"] = "list-tree";
+    var canManage = AdminPermissions.Has(User, AdminPermissions.LegalLibraryManage);
+}
+@section PageActions {
+    @if (canManage)
+    {
+        <a class="btn btn-primary" asp-action="Edit" asp-route-id="@d.Id">@UiIcon.Render("pencil")<span>Sửa / cập nhật toàn văn</span></a>
+        <form asp-action="Delete" asp-route-id="@d.Id" method="post" class="d-inline" data-ta-confirm="Xóa văn bản @d.DocumentNo khỏi kho? AI sẽ không trích dẫn văn bản này nữa.">
+            <button type="submit" class="btn btn-outline-danger">@UiIcon.Render("trash")<span>Xóa</span></button>
+        </form>
+    }
+}
+<div class="row g-4">
+    <div class="col-xl-4">
+        <section class="card">
+            <div class="card-body">
+                <dl class="ta-dl">
+                    <dt>Số hiệu</dt><dd><span class="ta-code">@d.DocumentNo</span></dd>
+                    <dt>Ngày ban hành</dt><dd>@Day(d.IssuedDate)</dd>
+                    <dt>Ngày hiệu lực</dt><dd>@Day(d.EffectiveDate)</dd>
+                    <dt>Hết hiệu lực</dt><dd>@Day(d.ExpiredDate)</dd>
+                    <dt>Tình trạng</dt><dd>@(d.IsInForce(DateTime.Today) ? "Còn hiệu lực – AI được trích dẫn" : "Chưa/hết hiệu lực – AI không dùng")</dd>
+                    @if (d.Note is not null) {<dt>Ghi chú</dt><dd>@d.Note</dd>}
+                </dl>
+            </div>
+        </section>
+    </div>
+    <div class="col-xl-8">
+        <section class="card" aria-label="Các điều">
+            <ul class="ta-list">
+                @foreach (var a in Model.Articles)
+                {
+                    <li class="d-block">
+                        <details>
+                            <summary><span class="ta-cell-strong">@a.ArticleNo</span>@if (a.Title is not null) {<span>. @a.Title</span>}</summary>
+                            <div class="mt-2" style="white-space: pre-line">@a.Content</div>
+                        </details>
+                    </li>
+                }
+            </ul>
+        </section>
+    </div>
+</div>
