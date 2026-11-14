@@ -42,8 +42,11 @@ public sealed record WorkLookupContract(Guid Id, Guid CustomerId, string Contrac
 // TASK (owner or co-worker of a task of that customer) or CONTRACT (owner of a contract of that customer).
 public sealed record WorkLookupLink(Guid EmployeeId, Guid CustomerId, string Source);
 
+// Catalog: the active entries of Danh mục công việc (empty = task names are free).
+public sealed record WorkCatalogEntry(string Name, string? Description);
+
 public sealed record WorkLookups(IReadOnlyList<WorkLookupEmployee> Employees, IReadOnlyList<WorkLookupCustomer> Customers, IReadOnlyList<WorkLookupContract> Contracts,
-    IReadOnlyList<WorkLookupLink>? Links = null)
+    IReadOnlyList<WorkLookupLink>? Links = null, IReadOnlyList<WorkCatalogEntry>? Catalog = null)
 {
     public static readonly WorkLookups Empty = new([], [], []);
 }
@@ -247,7 +250,9 @@ ELSE
  SELECT t.OwnerEmployeeId,t.CustomerId,'TASK' FROM dbo.WorkTasks t WHERE t.IsDeleted=0 AND t.CustomerId IS NOT NULL
  UNION SELECT m.EmployeeId,t.CustomerId,'TASK' FROM dbo.WorkTaskMembers m JOIN dbo.WorkTasks t ON t.Id=m.TaskId WHERE m.IsActive=1 AND t.IsDeleted=0 AND t.CustomerId IS NOT NULL
  UNION SELECT k.OwnerEmployeeId,k.CustomerId,'CONTRACT' FROM dbo.CustomerContracts k WHERE k.IsDeleted=0 AND k.OwnerEmployeeId IS NOT NULL;
-""";
+""" + WorkCatalogSql.Active;
+
+    public const string TemplateTitle = "SELECT Title FROM dbo.WorkTaskTemplates WHERE Id=@id AND IsDeleted=0;";
 
     public const string ForUpdate = """
 SELECT t.Status,t.OwnerEmployeeId,t.CreatedBy,t.RowVersion,
@@ -495,7 +500,10 @@ public sealed class SqlWorkTaskStore(IConfiguration configuration, ILogger<SqlWo
         var links = new List<WorkLookupLink>();
         if (await r.NextResultAsync())
             while (await r.ReadAsync()) links.Add(new(r.GetGuid(0), r.GetGuid(1), r.GetString(2)));
-        return new(employees, customers, contracts, links);
+        var catalog = new List<WorkCatalogEntry>();
+        if (await r.NextResultAsync())
+            while (await r.ReadAsync()) catalog.Add(new(r.GetString(0), S(r, 1)));
+        return new(employees, customers, contracts, links, catalog);
     }
 
     // ---- Writes -------------------------------------------------------------------------------------------------------
@@ -505,6 +513,8 @@ public sealed class SqlWorkTaskStore(IConfiguration configuration, ILogger<SqlWo
         if (!await ActorPermissionSql.HasPermissionAsync(cn, tx, actor, AdminPermissions.TasksView) || !a.CanCreateAny) return new(WorkOutcome.Forbidden);
         var check = await CheckInput(cn, tx, a, input);
         if (check is not null) return check;
+        if (await CatalogTitle(cn, tx, input.Title) is not string title) return new(WorkOutcome.Invalid, Message: WorkCatalogPolicy.NotInCatalog);
+        input.Title = title;
         var id = Guid.NewGuid();
         var no = await NextTaskNo(cn, tx);
         if (no is null) return new(WorkOutcome.Invalid, Message: "Chưa cấu hình dãy số mã công việc (TASK_CODE).");
@@ -531,6 +541,12 @@ public sealed class SqlWorkTaskStore(IConfiguration configuration, ILogger<SqlWo
         await using (var r = await cmd.ExecuteReaderAsync())
             while (await r.ReadAsync()) current.Add(r.GetGuid(0));
         var title = input.Title.Trim(); var desc = WorkTaskPolicy.Clean(input.Description, WorkTaskPolicy.DescriptionMax);
+        // A renamed task takes its new name from the catalogue; an unchanged older name is kept.
+        if (title != t.Title)
+        {
+            if (await CatalogTitle(cn, tx, title) is not string named) return new(WorkOutcome.Invalid, Message: WorkCatalogPolicy.NotInCatalog);
+            title = named;
+        }
         var start = input.StartDate is DateTime s ? DateOnly.FromDateTime(s) : (DateOnly?)null; var due = input.DueDate is DateTime d ? DateOnly.FromDateTime(d) : (DateOnly?)null;
         var changed = title != t.Title || desc != t.Description || input.CustomerId != t.CustomerId || input.ContractId != t.ContractId || input.OwnerEmployeeId != t.OwnerId
             || input.Priority != t.Priority || start != t.StartDate || due != t.DueDate;
@@ -646,6 +662,14 @@ public sealed class SqlWorkTaskStore(IConfiguration configuration, ILogger<SqlWo
     }
 
     // Owner rules: TASKS.ASSIGN may pick any active employee as owner and co-workers; TASKS.CREATE alone only oneself, no co-workers.
+    // The catalogue spelling of a task name; the name itself while the catalogue is empty; null when it is not in the catalogue.
+    private static async Task<string?> CatalogTitle(SqlConnection cn, SqlTransaction tx, string title)
+    {
+        var clean = WorkCatalogPolicy.Clean(title);
+        var value = await Scalar(cn, tx, WorkCatalogSql.Resolve, ("@title", clean));
+        return value is string named ? (named.Length == 0 ? title.Trim() : named) : null;
+    }
+
     private static async Task<WorkResult?> CheckInput(SqlConnection cn, SqlTransaction tx, WorkActor a, WorkTaskInput input)
     {
         input.Priority = WorkTaskPolicy.Priorities.Contains(input.Priority) ? input.Priority : "NORMAL";
@@ -729,6 +753,12 @@ public sealed class SqlWorkTaskStore(IConfiguration configuration, ILogger<SqlWo
     {
         if (!await ActorPermissionSql.HasPermissionAsync(cn, tx, actor, AdminPermissions.TaskTemplatesManage)) return new(WorkOutcome.Forbidden);
         if (WorkTemplatePolicy.Validate(input) is string error) return new(WorkOutcome.Invalid, Message: error);
+        var oldTitle = id is Guid tid ? await Scalar(cn, tx, WorkTaskSql.TemplateTitle, ("@id", tid)) as string : null;
+        if (!string.Equals(oldTitle, input.Title.Trim(), StringComparison.Ordinal))
+        {
+            if (await CatalogTitle(cn, tx, input.Title) is not string named) return new(WorkOutcome.Invalid, Message: WorkCatalogPolicy.NotInCatalog);
+            input.Title = named;
+        }
         if (Convert.ToInt32(await Scalar(cn, tx, WorkTaskSql.ActiveEmployee, ("@e", input.OwnerEmployeeId!.Value))) != 1) return new(WorkOutcome.Invalid, Message: "Nhân viên được chọn không còn hoạt động.");
         if (input.CustomerId is Guid c && Convert.ToInt32(await Scalar(cn, tx, WorkTaskSql.CustomerExists, ("@c", c))) != 1) return new(WorkOutcome.Invalid, Message: "Khách hàng không tồn tại.");
         if (input.ContractId is Guid k && Convert.ToInt32(await Scalar(cn, tx, WorkTaskSql.ContractOfCustomer, ("@k", k), ("@c", Db(input.CustomerId)))) != 1)

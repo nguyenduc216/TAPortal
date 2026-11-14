@@ -95,6 +95,7 @@ public static class AdminPermissions
     public const string TasksViewAll = "TASKS.VIEW_ALL";
     public const string TaskTemplatesManage = "TASKS.TEMPLATES.MANAGE";
     public const string TaskReportView = "TASKS.REPORT.VIEW";
+    public const string TaskCatalogManage = "TASKS.CATALOG.MANAGE";   // Danh mục công việc (migration 043)
 
     // Policy names for [Authorize(Policy = ...)] (PermissionPolicyProvider resolves "PERM:<code>").
     public static class Policy
@@ -156,6 +157,7 @@ public static class AdminPermissions
         public const string TasksView = PermissionPolicies.Prefix + AdminPermissions.TasksView;
         public const string TaskTemplatesManage = PermissionPolicies.Prefix + AdminPermissions.TaskTemplatesManage;
         public const string TaskReportView = PermissionPolicies.Prefix + AdminPermissions.TaskReportView;
+        public const string TaskCatalogManage = PermissionPolicies.Prefix + AdminPermissions.TaskCatalogManage;
     }
 
     public static readonly IReadOnlyList<AdminPermissionModule> Modules =
@@ -197,7 +199,8 @@ public static class AdminPermissions
             new(TasksAssign, "Giao việc cho nhân viên khác", "ASSIGN"),
             new(TasksViewAll, "Giám sát: xem và tương tác mọi công việc", "VIEW_ALL"),
             new(TaskTemplatesManage, "Quản lý việc lặp theo kỳ", "MANAGE"),
-            new(TaskReportView, "Xem báo cáo tiến độ từng nhân viên", "VIEW")
+            new(TaskReportView, "Xem báo cáo tiến độ từng nhân viên", "VIEW"),
+            new(TaskCatalogManage, "Quản lý danh mục công việc (tên các đầu việc được phép chọn)", "MANAGE")
         ]),
         new(ContractsModuleKey, "Hợp đồng",
         [
@@ -271,7 +274,10 @@ public static class AdminPermissions
 
     // Codes inserted by migration 031 (Công việc, Hợp đồng).
     public static readonly IReadOnlyList<string> Migration031Codes = Modules.Where(m => m.Key is ContractsModuleKey or TasksModuleKey)
-        .SelectMany(m => m.Permissions).Select(p => p.Code).ToList();
+        .SelectMany(m => m.Permissions).Select(p => p.Code).Where(c => c != TaskCatalogManage).ToList();
+
+    // Code inserted by migration 043 (Danh mục công việc).
+    public static readonly IReadOnlyList<string> Migration043Codes = [TaskCatalogManage];
 
     // Codes inserted by migration 035 (Website TA).
     public static readonly IReadOnlyList<string> Migration035Codes = Modules.Where(m => m.Key is WebsiteModuleKey)

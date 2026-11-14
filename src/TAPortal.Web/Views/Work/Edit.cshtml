@@ -18,7 +18,7 @@
         <div class="ta-form-grid">
             <div class="ta-span-2">
                 <label class="form-label" for="wTitle">Tên công việc <span class="text-danger">*</span></label>
-                <div class="ta-input-icon">@UiIcon.Render("pencil")<input class="form-control" id="wTitle" name="Input.Title" value="@i.Title" maxlength="@WorkTaskPolicy.TitleMax" required data-ta-voice /></div>
+                <partial name="_CatalogTitle" model="@(new CatalogTitleVm("wTitle", i.Title, WorkTaskPolicy.TitleMax, L.Catalog ?? []))" />
             </div>
             <div class="ta-span-2">
                 <label class="form-label" for="wDesc">Mô tả / ghi chú</label>

@@ -42,7 +42,8 @@ builder.Services.AddScoped<IEmployeeStore, SqlEmployeeStore>();
 builder.Services.AddScoped<IHrCatalogStore, SqlHrCatalogStore>();
 builder.Services.AddScoped<IContractStore, SqlContractStore>();
 builder.Services.AddScoped<ICustomerStaffStore, SqlCustomerStaffStore>();
-builder.Services.AddScoped<IImpersonationStore, SqlImpersonationStore>(); // "Truy cập hộ" (operator 2026-11-14)
+builder.Services.AddScoped<IImpersonationStore, SqlImpersonationStore>();
+builder.Services.AddScoped<IWorkCatalogStore, SqlWorkCatalogStore>(); // Danh mục công việc (operator 2026-11-14) // "Truy cập hộ" (operator 2026-11-14)
 builder.Services.AddScoped<IWebsiteAdminStore, SqlWebsiteAdminStore>(); // Website TA (WEBSITE-TA)
 builder.Services.AddSingleton<TAPortal.Shared.IPortalContentStore, TAPortal.Shared.SqlPortalContentStore>(); // Hóa đơn tự động emails and terms
 builder.Services.AddScoped<ICustomerAdminStore, SqlCustomerAdminStore>();

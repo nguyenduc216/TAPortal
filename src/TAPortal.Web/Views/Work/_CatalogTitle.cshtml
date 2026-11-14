@@ -1,0 +1,23 @@
+@model CatalogTitleVm
+@* Tên công việc from Danh mục công việc: typing filters the entries (accents optional), a click / Enter picks one, and the
+   form is not sent with a name outside the list (the server checks again). An older task keeps its current name. *@
+@if (Model.Catalog.Count == 0)
+{
+    <div class="ta-input-icon">@UiIcon.Render("pencil")<input class="form-control" id="@Model.Id" name="Input.Title" value="@Model.Value" maxlength="@Model.MaxLength" required data-ta-voice /></div>
+}
+else
+{
+    var listId = Model.Id + "List";
+    <div class="ta-combo" data-ta-combo>
+        <div class="ta-input-icon">@UiIcon.Render("list-tree")<input class="form-control" id="@Model.Id" name="Input.Title" value="@Model.Value" maxlength="@Model.MaxLength" required autocomplete="off"
+            role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="@listId" placeholder="Gõ để tìm đầu việc, ví dụ: hóa đơn" data-ta-combo-input data-ta-combo-original="@Model.Value" /></div>
+        <ul class="ta-combo__list" id="@listId" role="listbox" hidden>
+            @foreach (var c in Model.Catalog)
+            {
+                <li class="ta-combo__option" role="option" aria-selected="false" data-value="@c.Name"><span class="ta-combo__name">@c.Name</span>@if (!string.IsNullOrWhiteSpace(c.Description)) {<small class="ta-combo__desc">@c.Description</small>}</li>
+            }
+            <li class="ta-combo__empty" data-ta-combo-empty hidden>Không có đầu việc phù hợp. Cần đầu việc mới thì nhờ người quản lý danh mục thêm.</li>
+        </ul>
+        <div class="form-hint">Chọn tên trong danh mục công việc (gõ vài chữ để tìm); chi tiết của việc ghi ở phần Mô tả.</div>
+    </div>
+}

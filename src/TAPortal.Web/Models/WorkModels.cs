@@ -36,3 +36,7 @@ public sealed record PeoplePickerVm(string Name, bool Multiple, IReadOnlyList<Wo
     /// <summary>A stable avatar colour per person (same person, same colour on every page).</summary>
     public static int Tone(Guid id) => (int)((uint)id.GetHashCode() % (uint)Tones);
 }
+
+// Tên công việc chosen from Danh mục công việc (operator 2026-11-14): typing suggests entries; with an empty catalogue the
+// field is a plain text box.
+public sealed record CatalogTitleVm(string Id, string? Value, int MaxLength, IReadOnlyList<WorkCatalogEntry> Catalog);

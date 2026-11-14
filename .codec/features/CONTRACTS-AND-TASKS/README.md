@@ -19,3 +19,4 @@
 | `CONTRACTS-AND-TASKS-CHG-20261109T053119Z-035F79` | 2026-11-09 | Tra cuu MST va goi y ma khach hang (Admin) | 4ff7d08 | NOT_APPLICABLE | DEPLOYED | MERGED |
 | `CONTRACTS-AND-TASKS-CHG-20261113T113022Z-FE45B3` | 2026-11-13 | Repair garbled Vietnamese (sqlcmd UTF-8 input), compact task list on mobile | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |
 | `CONTRACTS-AND-TASKS-CHG-20261113T114748Z-364101` | 2026-11-13 | Customer staff assignment (manager/executors) and task filter popup | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |
+| `CONTRACTS-AND-TASKS-CHG-20261114T021052Z-F6F9C9` | 2026-11-14 | Danh muc cong viec: chon ten viec tu danh muc, goi y khi go, khong nhap tu do | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |
