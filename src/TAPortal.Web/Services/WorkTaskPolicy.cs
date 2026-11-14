@@ -19,6 +19,10 @@ public static class WorkTaskPolicy
     public const int TitleMax = 250, DescriptionMax = 4000, ChecklistMax = 500, CommentMax = 4000, ChecklistItemsMax = 50;
 
     public static readonly IReadOnlyList<string> Statuses = [New, InProgress, Done, Cancelled];
+
+    // An event made during "Truy cập hộ" names the person who acted and the account used.
+    public static string ActedUnder(string actor, string? account) =>
+        string.IsNullOrWhiteSpace(account) ? $"{actor} (truy cập hộ)" : $"{actor} (truy cập hộ {account})";
     public static readonly IReadOnlyList<string> Priorities = ["LOW", "NORMAL", "HIGH", "URGENT"];
 
     public static string StatusLabel(string? s) => s switch

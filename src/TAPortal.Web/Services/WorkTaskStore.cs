@@ -229,6 +229,9 @@ SELECT i.Id,i.Title,i.IsDone,i.DoneAt,du.DisplayName FROM dbo.WorkTaskChecklistI
 WHERE i.TaskId=@id AND i.IsDeleted=0 ORDER BY i.SortOrder,i.CreatedAt;
 SELECT a.Id,a.Kind,a.Body,a.StatusFrom,a.StatusTo,a.CreatedAt,u.DisplayName FROM dbo.WorkTaskActivities a LEFT JOIN dbo.Users u ON u.Id=a.CreatedBy
 WHERE a.TaskId=@id ORDER BY a.CreatedAt;
+IF COL_LENGTH(N'dbo.WorkTaskActivities', N'ImpersonatorUserId') IS NOT NULL
+ EXEC sp_executesql N'SELECT a.Id,iu.DisplayName FROM dbo.WorkTaskActivities a JOIN dbo.Users iu ON iu.Id=a.ImpersonatorUserId WHERE a.TaskId=@id', N'@id uniqueidentifier', @id=@id;
+ELSE SELECT TOP 0 CAST(NULL AS uniqueidentifier), CAST(NULL AS nvarchar(200));
 """;
 
     public const string Lookups = """
@@ -303,7 +306,14 @@ WHERE Id=@item AND TaskId=@id AND IsDeleted=0 AND IsDone<>@done;
     public const string RemoveChecklist = "UPDATE dbo.WorkTaskChecklistItems SET IsDeleted=1,DeletedAt=SYSUTCDATETIME(),DeletedBy=@by WHERE Id=@item AND TaskId=@id AND IsDeleted=0;";
     public const string Counts = "SELECT COUNT(1),SUM(CASE WHEN IsDone=1 THEN 1 ELSE 0 END) FROM dbo.WorkTaskChecklistItems WHERE TaskId=@id AND IsDeleted=0;";
 
-    public const string Activity = "INSERT dbo.WorkTaskActivities(TaskId,Kind,Body,StatusFrom,StatusTo,CreatedBy) VALUES(@id,@kind,@body,@from,@to,@by);";
+    // "Truy cập hộ" (042): @imp names the person who really acted under the account @by.
+    public const string Activity = """
+IF @imp IS NOT NULL AND COL_LENGTH(N'dbo.WorkTaskActivities', N'ImpersonatorUserId') IS NOT NULL
+ EXEC sp_executesql N'INSERT dbo.WorkTaskActivities(TaskId,Kind,Body,StatusFrom,StatusTo,CreatedBy,ImpersonatorUserId) VALUES(@id,@kind,@body,@from,@to,@by,@imp)',
+  N'@id uniqueidentifier,@kind varchar(20),@body nvarchar(4000),@from varchar(20),@to varchar(20),@by uniqueidentifier,@imp uniqueidentifier',
+  @id=@id,@kind=@kind,@body=@body,@from=@from,@to=@to,@by=@by,@imp=@imp;
+ELSE INSERT dbo.WorkTaskActivities(TaskId,Kind,Body,StatusFrom,StatusTo,CreatedBy) VALUES(@id,@kind,@body,@from,@to,@by);
+""";
 
     // ---- Templates --------------------------------------------------------------------------------------------------
     public const string Templates = """
@@ -460,6 +470,12 @@ public sealed class SqlWorkTaskStore(IConfiguration configuration, ILogger<SqlWo
         var activities = new List<WorkActivity>();
         await r.NextResultAsync();
         while (await r.ReadAsync()) activities.Add(new(r.GetGuid(0), r.GetString(1), S(r, 2), S(r, 3), S(r, 4), r.GetDateTime(5), S(r, 6)));
+        // Events made during "Truy cập hộ": "<actor> (truy cập hộ <account>)".
+        var actedBy = new Dictionary<Guid, string>();
+        if (await r.NextResultAsync())
+            while (await r.ReadAsync()) actedBy[r.GetGuid(0)] = r.GetString(1);
+        if (actedBy.Count > 0)
+            activities = activities.Select(x => actedBy.TryGetValue(x.Id, out var who) ? x with { ActorName = WorkTaskPolicy.ActedUnder(who, x.ActorName) } : x).ToList();
         return new(row, desc, customer, contract, contractLabel, createdBy, members, items, activities,
             WorkTaskPolicy.CanEdit(a.ViewAll, a.CanAssign, row.CreatedBy == a.UserId), row.OwnerId == a.EmployeeId, stamp, template);
     }
@@ -687,7 +703,8 @@ public sealed class SqlWorkTaskStore(IConfiguration configuration, ILogger<SqlWo
     }
 
     private static Task Log(SqlConnection cn, SqlTransaction tx, Guid id, string kind, string? body, string? from, string? to, Guid? actor) =>
-        Exec(cn, tx, WorkTaskSql.Activity, ("@id", id), ("@kind", kind), ("@body", Db(body)), ("@from", Db(from)), ("@to", Db(to)), ("@by", Db(actor)));
+        Exec(cn, tx, WorkTaskSql.Activity, ("@id", id), ("@kind", kind), ("@body", Db(body)), ("@from", Db(from)), ("@to", Db(to)), ("@by", Db(actor)),
+            ("@imp", Db(TAPortal.Shared.ImpersonationAmbient.Current?.ActorUserId)));
 
     // ---- Templates ------------------------------------------------------------------------------------------------------
     public async Task<IReadOnlyList<WorkTemplateRow>> TemplatesAsync() => await ReadTemplates(null);

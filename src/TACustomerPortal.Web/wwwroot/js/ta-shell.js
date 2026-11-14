@@ -264,6 +264,9 @@
     const swapIn = (doc, finalUrl, options) => {
         const ids = swapIds();
         if (ids.length === 0 || !ids.every((id) => doc.getElementById(id))) return false;
+        // Another account in this browser (sign-in, "Truy cập hộ" started or ended in another tab): load the whole page so the
+        // menu, the top bar and the "Truy cập hộ" bar match the account the server now answers for.
+        if ((doc.body?.dataset.taIdentity ?? '') !== (document.body.dataset.taIdentity ?? '')) return false;
         const apply = () => {
             document.dispatchEvent(new CustomEvent('ta:before-swap'));
             document.title = doc.title;
@@ -318,7 +321,8 @@
         window.history.replaceState({ ta: true }, '', window.location.href);
         const warm = (event) => {
             const link = event.target.closest?.('a[href]');
-            if (eligibleLink(link)) prefetch(new URL(link.href, window.location.href).href);
+            // No hover prefetch during "Truy cập hộ": every page in its history is one the person really opened.
+            if (eligibleLink(link) && !document.body.hasAttribute('data-ta-no-prefetch')) prefetch(new URL(link.href, window.location.href).href);
         };
         document.addEventListener('pointerover', warm, { passive: true });
         document.addEventListener('focusin', warm);

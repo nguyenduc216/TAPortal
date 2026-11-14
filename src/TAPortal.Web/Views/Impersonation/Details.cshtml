@@ -1,0 +1,70 @@
+@model ImpersonationSessionDetail
+@{
+    var s = Model.Session;
+    var status = Impersonation.EndReasonLabel(s.EndReason, s.ExpiresAt, DateTime.UtcNow);
+    ViewData["Title"] = "Chi tiết truy cập hộ";
+    ViewData["Heading"] = s.ActorName + " truy cập hộ " + s.TargetName;
+    ViewData["Subtitle"] = "Bắt đầu " + s.StartedAt.AddHours(7).ToString("HH:mm dd/MM/yyyy") + " · " + status;
+    ViewData["PageIcon"] = "user-shield";
+    ViewData["ParentTitle"] = "Lịch sử truy cập hộ";
+    ViewData["ParentController"] = "Impersonation";
+}
+@functions {
+    private static string Kind(string method) => method.Equals("GET", StringComparison.OrdinalIgnoreCase) ? "Xem" : "Gửi thao tác";
+}
+<div class="row g-3">
+    <div class="col-xl-5">
+        <section class="card">
+            <div class="card-header"><h2 class="card-title">@UiIcon.Render("info-circle")Phiên truy cập hộ</h2></div>
+            <div class="card-body">
+                <dl class="ta-dl">
+                    <dt>Người thao tác</dt><dd><strong>@s.ActorName</strong> (@s.ActorUsername)</dd>
+                    <dt>Dưới quyền tài khoản</dt><dd><strong>@s.TargetName</strong> (@s.TargetUsername)</dd>
+                    <dt>Lý do</dt><dd class="ta-imp-reason">@s.Reason</dd>
+                    <dt>Bắt đầu</dt><dd>@s.StartedAt.AddHours(7).ToString("HH:mm:ss dd/MM/yyyy")</dd>
+                    <dt>Kết thúc</dt><dd>@(s.EndedAt is { } e ? e.AddHours(7).ToString("HH:mm:ss dd/MM/yyyy") : "—") · @status</dd>
+                    <dt>Địa chỉ IP</dt><dd>@(s.IpAddress ?? "—")</dd>
+                </dl>
+            </div>
+        </section>
+        <section class="card mt-3">
+            <div class="card-header"><h2 class="card-title">@UiIcon.Render("pencil")Thay đổi dữ liệu (@Model.Changes.Count)</h2></div>
+            @if (Model.Changes.Count == 0) {<div class="card-body text-secondary">Không có thay đổi nào trong nhật ký audit.</div>}
+            else
+            {
+                <ul class="list-group list-group-flush">
+                    @foreach (var c in Model.Changes)
+                    {
+                        <li class="list-group-item"><div class="d-flex justify-content-between gap-2"><strong>@c.Action</strong><span class="text-secondary small ta-nowrap">@c.At.AddHours(7).ToString("HH:mm:ss")</span></div><div class="small text-secondary">@c.Entity @c.EntityId</div></li>
+                    }
+                </ul>
+            }
+        </section>
+    </div>
+    <div class="col-xl-7">
+        <section class="card ta-table-card">
+            <div class="card-header"><h2 class="card-title">@UiIcon.Render("history")Các trang đã mở và thao tác (@Model.Requests.Count)</h2></div>
+            @if (Model.Requests.Count == 0) {<div class="card-body text-secondary">Chưa có lượt nào.</div>}
+            else
+            {
+                <div class="ta-table-wrap">
+                    <table class="ta-table ta-table-stack" id="impRequests" data-ta-pager="50">
+                        <thead><tr><th scope="col">Giờ</th><th scope="col">Loại</th><th scope="col">Đường dẫn</th><th scope="col" class="text-end">Kết quả</th></tr></thead>
+                        <tbody>
+                        @foreach (var r in Model.Requests)
+                        {
+                            <tr data-ta-row>
+                                <td class="ta-nowrap" data-label="Giờ">@r.At.AddHours(7).ToString("HH:mm:ss")</td>
+                                <td data-label="Loại"><span class="ta-badge @(r.Method == "GET" ? "ta-badge--info ta-badge--plain" : "ta-badge--warning")">@Kind(r.Method)</span></td>
+                                <td data-label="Đường dẫn" class="ta-imp-path">@r.Path</td>
+                                <td class="text-end" data-label="Kết quả">@r.StatusCode</td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+                <div class="ta-table-footer" data-ta-pager-for="impRequests" data-ta-unit="lượt"></div>
+            }
+        </section>
+    </div>
+</div>

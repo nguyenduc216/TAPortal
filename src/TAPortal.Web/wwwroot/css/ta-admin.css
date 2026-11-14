@@ -235,3 +235,18 @@
     .ta-tl__progress { grid-area: progress; display: flex; align-items: center; justify-content: flex-end; gap: 6px; margin-top: 4px; }
     .ta-tl__progress .ta-progress { width: 56px; margin: 0; }
 }
+
+/* ---- "Truy cập hộ" (impersonation) bar: above the top bar on every page while signed in under another account ---- */
+.ta-imp-bar { position: sticky; top: 0; z-index: 1030; display: flex; align-items: center; gap: 10px; padding: 8px 16px; background: #b45309; color: #fff; font-size: .875rem; box-shadow: 0 2px 6px rgba(0, 0, 0, .15); }
+.ta-imp-bar > svg { flex: 0 0 auto; width: 20px; height: 20px; }
+.ta-imp-bar__text { flex: 1 1 auto; min-width: 0; line-height: 1.35; }
+.ta-imp-bar__meta { display: block; opacity: .9; font-size: .8125rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ta-imp-bar form { margin: 0; flex: 0 0 auto; }
+.ta-imp-bar__exit { background: #fff; color: #92400e; border-color: #fff; font-weight: 600; }
+.ta-imp-bar__exit:hover, .ta-imp-bar__exit:focus { background: #fef3c7; color: #78350f; }
+.ta-imp-reason { white-space: pre-line; overflow-wrap: anywhere; min-width: 180px; }
+.ta-imp-path { font-family: var(--tblr-font-monospace, monospace); font-size: .8125rem; overflow-wrap: anywhere; }
+@media (max-width: 575.98px) {
+    .ta-imp-bar { padding: 8px 12px; align-items: flex-start; }
+    .ta-imp-bar__exit span { display: none; }
+}

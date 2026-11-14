@@ -21,33 +21,8 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
     options.Cookie.Name = "TA.Portal.Auth";
     options.Cookie.HttpOnly = true;
     options.Cookie.SecurePolicy = builder.Environment.IsDevelopment() ? CookieSecurePolicy.SameAsRequest : CookieSecurePolicy.Always;
-    options.Events.OnValidatePrincipal = async context =>
-    {
-        var db = context.HttpContext.RequestServices.GetRequiredService<PortalDb>();
-        var user = await db.GetAuthUserAsync(context.Principal?.Identity?.Name ?? "");
-        var stamp = user is null ? null : Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(user.PasswordHash)));
-        if (user is null || context.Principal?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value != user.Id.ToString() || (user.Roles.Count == 0 && user.Permissions.Count == 0) || context.Principal?.FindFirst("password_stamp")?.Value != stamp)
-        {
-            context.RejectPrincipal();
-            await Microsoft.AspNetCore.Authentication.AuthenticationHttpContextExtensions.SignOutAsync(context.HttpContext);
-        }
-        else
-        {
-            var claims = new List<System.Security.Claims.Claim>
-            {
-                new(System.Security.Claims.ClaimTypes.NameIdentifier, user.Id.ToString()),
-                new(System.Security.Claims.ClaimTypes.Name, user.Username),
-                new("display_name", user.DisplayName),
-                new("password_stamp", stamp!)
-            };
-            if (!string.IsNullOrWhiteSpace(user.Email)) claims.Add(new(System.Security.Claims.ClaimTypes.Email, user.Email));
-            if (user.MustChangePassword) claims.Add(new(TAPortal.Web.Controllers.AccountController.MustChangePasswordClaim, "1"));
-            claims.AddRange(user.Roles.Select(r => new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.Role, r)));
-            claims.AddRange(user.Permissions.Select(p => new System.Security.Claims.Claim("permission", p)));
-            claims.AddRange((user.RoleNames ?? []).Select(n => new System.Security.Claims.Claim("role_name", n)));
-            context.ReplacePrincipal(new System.Security.Claims.ClaimsPrincipal(new System.Security.Claims.ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme)));
-        }
-    };
+    // Claims follow the database on every request; "Truy cập hộ" sessions are checked and ended here too.
+    options.Events.OnValidatePrincipal = AdminPrincipalValidator.ValidateAsync;
     options.Cookie.SameSite = SameSiteMode.Lax;
     options.SlidingExpiration = true;
     options.ExpireTimeSpan = TimeSpan.FromHours(8);
@@ -67,6 +42,7 @@ builder.Services.AddScoped<IEmployeeStore, SqlEmployeeStore>();
 builder.Services.AddScoped<IHrCatalogStore, SqlHrCatalogStore>();
 builder.Services.AddScoped<IContractStore, SqlContractStore>();
 builder.Services.AddScoped<ICustomerStaffStore, SqlCustomerStaffStore>();
+builder.Services.AddScoped<IImpersonationStore, SqlImpersonationStore>(); // "Truy cập hộ" (operator 2026-11-14)
 builder.Services.AddScoped<IWebsiteAdminStore, SqlWebsiteAdminStore>(); // Website TA (WEBSITE-TA)
 builder.Services.AddSingleton<TAPortal.Shared.IPortalContentStore, TAPortal.Shared.SqlPortalContentStore>(); // Hóa đơn tự động emails and terms
 builder.Services.AddScoped<ICustomerAdminStore, SqlCustomerAdminStore>();
@@ -164,6 +140,29 @@ app.Use((context, next) =>
 });
 app.UseRouting();
 app.UseAuthentication();
+// "Truy cập hộ" (operator 2026-11-14): while signed in under another account, every request is recorded in
+// dbo.ImpersonationActions and every audited change names the person who really acted (ImpersonationAmbient).
+// The account's own password, Zalo phone and a nested "Truy cập hộ" stay closed.
+app.Use(async (context, next) =>
+{
+    var impersonation = Impersonation.Read(context.User);
+    if (impersonation is null) { await next(); return; }
+    var path = context.Request.Path;
+    if (Impersonation.BlockedPaths.Any(p => path.StartsWithSegments(p, StringComparison.OrdinalIgnoreCase)))
+    {
+        context.Response.Redirect(context.Request.PathBase + "/account/accessdenied");
+        await LogImpersonatedRequest(context, impersonation, StatusCodes.Status403Forbidden);
+        return;
+    }
+    TAPortal.Shared.ImpersonationAmbient.Current = new(impersonation.ActorId, impersonation.SessionId);
+    try { await next(); }
+    finally
+    {
+        TAPortal.Shared.ImpersonationAmbient.Current = null;
+        if (!path.StartsWithSegments(TAPortal.Shared.BuildInfo.Path, StringComparison.OrdinalIgnoreCase))
+            await LogImpersonatedRequest(context, impersonation, context.Response.StatusCode);
+    }
+});
 // Operator 2026-11-13: an account signed in with an initial/weak password (or MustChangePassword=1) sees only "Đổi mật khẩu".
 string[] passwordChangeAllowed = ["/account/changepassword", "/account/logout", "/account/login", "/account/accessdenied", TAPortal.Shared.BuildInfo.Path];
 app.Use(async (context, next) =>
@@ -177,8 +176,9 @@ app.Use(async (context, next) =>
     await next();
 });
 // Operator 2026-11-13: once ZaloMiniApp:RequirePhoneVerification is on, an account must verify its phone (Zalo OTP) first.
-TAPortal.Integrations.ZaloMiniApp.PhoneVerificationGate.UsePhoneVerificationGate(app, TAPortal.Web.Controllers.AccountController.ZaloPath,
-    "/account/zalophone", "/account/zalosendotp", "/account/zaloconfirmotp", "/account/changepassword", "/account/logout", "/account/login", "/account/accessdenied", "/home/error", TAPortal.Shared.BuildInfo.Path);
+// Not while "Truy cập hộ": the account's phone is its owner's to verify.
+app.UseWhen(context => !Impersonation.IsActive(context.User), branch => TAPortal.Integrations.ZaloMiniApp.PhoneVerificationGate.UsePhoneVerificationGate(branch, TAPortal.Web.Controllers.AccountController.ZaloPath,
+    "/account/zalophone", "/account/zalosendotp", "/account/zaloconfirmotp", "/account/changepassword", "/account/logout", "/account/login", "/account/accessdenied", "/home/error", TAPortal.Shared.BuildInfo.Path));
 app.UseAuthorization();
 app.MapControllerRoute(name: "default", pattern: "{controller=Home}/{action=Index}/{id?}");
 TAPortal.Shared.BuildInfo.MapBuildInfo(app);
@@ -188,6 +188,21 @@ TAWebsite.Core.SiteAssets.MapSiteAssets(app).RequireAuthorization(); // default 
 TAPortal.Integrations.Tingee.TingeeWebhookEndpoints.MapTingeeWebhooks(app);
 TAPortal.Integrations.Tingee.TingeeWebhookEndpoints.MapTingeeWebhooks(app, "/hooks/tingee");
 app.Run();
+static async Task LogImpersonatedRequest(HttpContext context, ImpersonationInfo impersonation, int status)
+{
+    try
+    {
+        var path = context.Request.Path.Value ?? "/";
+        if (context.Request.QueryString.HasValue) path += context.Request.QueryString.Value;
+        await context.RequestServices.GetRequiredService<IImpersonationStore>().LogRequestAsync(impersonation.SessionId, context.Request.Method, path, status);
+    }
+    catch (Exception ex) when (ex is Microsoft.Data.SqlClient.SqlException or InvalidOperationException)
+    {
+        context.RequestServices.GetRequiredService<ILoggerFactory>().CreateLogger("TAPortal.Impersonation")
+            .LogWarning(ex, "IMPERSONATION_REQUEST_LOG_FAILED session {SessionId} {Method} {Path}", impersonation.SessionId, context.Request.Method, context.Request.Path.Value);
+    }
+}
+
 public partial class Program
 {
 }

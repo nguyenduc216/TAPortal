@@ -39,6 +39,7 @@ public static class AdminPermissions
     public const string UsersCreate = "AUTH.USERS.CREATE";
     public const string UsersUpdate = "AUTH.USERS.UPDATE";
     public const string UsersDelete = "AUTH.USERS.DELETE";
+    public const string UsersImpersonate = "AUTH.USERS.IMPERSONATE";   // "Truy cập hộ" (migration 042)
     public const string RolesView = "AUTH.ROLES.VIEW";
     public const string RolesManage = "AUTH.ROLES.MANAGE";
     public const string MenusManage = "SYSTEM.MENUS.MANAGE";
@@ -116,6 +117,7 @@ public static class AdminPermissions
         public const string UsersCreate = PermissionPolicies.Prefix + AdminPermissions.UsersCreate;
         public const string UsersUpdate = PermissionPolicies.Prefix + AdminPermissions.UsersUpdate;
         public const string UsersDelete = PermissionPolicies.Prefix + AdminPermissions.UsersDelete;
+        public const string UsersImpersonate = PermissionPolicies.Prefix + AdminPermissions.UsersImpersonate;
         public const string RolesView = PermissionPolicies.Prefix + AdminPermissions.RolesView;
         public const string RolesManage = PermissionPolicies.Prefix + AdminPermissions.RolesManage;
         public const string MenusManage = PermissionPolicies.Prefix + AdminPermissions.MenusManage;
@@ -249,6 +251,7 @@ public static class AdminPermissions
             new(UsersCreate, "Tạo người dùng", "CREATE"),
             new(UsersUpdate, "Sửa, khóa/mở người dùng", "UPDATE"),
             new(UsersDelete, "Xóa (mềm) người dùng", "DELETE"),
+            new(UsersImpersonate, "Truy cập hộ (đăng nhập dưới quyền) tài khoản người dùng, xem lịch sử truy cập hộ", "IMPERSONATE"),
             new(RolesView, "Xem vai trò và phân quyền", "VIEW"),
             new(MenusManage, "Xem cấu hình menu", "MANAGE")
         ])
@@ -261,7 +264,10 @@ public static class AdminPermissions
     // Codes inserted by migration 028: every module except HR, whose rows come from the HR core bootstrap of TAPortalSys.
     // AUTH.ROLES.MANAGE is inserted too but is not grantable: role management is SYS_ADMIN only (operator 2026-11-07).
     public static readonly IReadOnlyList<string> MigrationCodes = Modules.Where(m => m.Key is not (HrModuleKey or ContractsModuleKey or TasksModuleKey or WebsiteModuleKey or InvoiceAppModuleKey))
-        .SelectMany(m => m.Permissions).Select(p => p.Code).Append(RolesManage).ToList();
+        .SelectMany(m => m.Permissions).Select(p => p.Code).Where(c => c != UsersImpersonate).Append(RolesManage).ToList();
+
+    // Code inserted by migration 042 ("Truy cập hộ").
+    public static readonly IReadOnlyList<string> Migration042Codes = [UsersImpersonate];
 
     // Codes inserted by migration 031 (Công việc, Hợp đồng).
     public static readonly IReadOnlyList<string> Migration031Codes = Modules.Where(m => m.Key is ContractsModuleKey or TasksModuleKey)

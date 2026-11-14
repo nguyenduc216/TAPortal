@@ -1,0 +1,46 @@
+@model IReadOnlyList<ImpersonationSessionRow>
+@{
+    ViewData["Title"] = "Lịch sử truy cập hộ";
+    ViewData["Subtitle"] = "Ai đã đăng nhập dưới quyền tài khoản nào, lý do, thời gian và các thao tác đã làm.";
+    ViewData["PageIcon"] = "history";
+    var now = DateTime.UtcNow;
+}
+<section class="card ta-table-card" aria-label="Lịch sử truy cập hộ">
+    @if (ViewData["Unavailable"] is true)
+    {
+        <div class="ta-alert ta-alert--warning m-3" role="alert">@UiIcon.Render("alert-triangle")<div class="ta-alert__body">Chưa đọc được lịch sử truy cập hộ (bảng dbo.ImpersonationSessions chưa sẵn sàng).</div></div>
+    }
+    else if (Model.Count == 0)
+    {
+        <div class="ta-empty"><span class="ta-empty__icon">@UiIcon.Render("history")</span><p class="ta-empty__title">Chưa có lần truy cập hộ nào</p><p class="ta-empty__text">Bắt đầu từ Người dùng → ⋮ → Truy cập hộ.</p></div>
+    }
+    else
+    {
+        <div class="ta-table-toolbar">
+            <div class="ta-search">@UiIcon.Render("search")<input class="form-control" type="search" aria-label="Tìm trong lịch sử" placeholder="Tìm theo người thao tác, tài khoản, lý do..." oninput="taFilterRows(this.value,'impTable')" /></div>
+        </div>
+        <div class="ta-table-wrap">
+            <table class="ta-table ta-table-stack" id="impTable" data-ta-pager="20">
+                <thead><tr><th scope="col">Bắt đầu</th><th scope="col">Người thao tác</th><th scope="col">Dưới quyền tài khoản</th><th scope="col">Lý do</th><th scope="col">Trạng thái</th><th scope="col" class="text-end">Ghi nhận</th><th scope="col" class="ta-col-actions">Thao tác</th></tr></thead>
+                <tbody>
+                @foreach (var s in Model)
+                {
+                    var label = Impersonation.EndReasonLabel(s.EndReason, s.ExpiresAt, now);
+                    var live = s.EndReason is null && s.ExpiresAt > now;
+                    <tr data-ta-row>
+                        <td class="ta-nowrap" data-label="Bắt đầu">@s.StartedAt.AddHours(7).ToString("dd/MM/yyyy HH:mm")@if (s.EndedAt is { } e) {<div class="ta-cell-sub">đến @e.AddHours(7).ToString("HH:mm")</div>}</td>
+                        <td data-label="Người thao tác"><strong>@s.ActorName</strong><div class="ta-cell-sub">@s.ActorUsername</div></td>
+                        <td data-label="Dưới quyền">@s.TargetName<div class="ta-cell-sub">@s.TargetUsername</div></td>
+                        <td data-label="Lý do" class="ta-imp-reason">@s.Reason</td>
+                        <td data-label="Trạng thái"><span class="ta-badge @(live ? "ta-badge--warning" : "ta-badge--info ta-badge--plain")">@label</span></td>
+                        <td class="text-end ta-nowrap" data-label="Ghi nhận">@s.Changes thay đổi · @s.Requests lượt</td>
+                        <td class="ta-col-actions"><a class="btn btn-sm" asp-action="Details" asp-route-id="@s.Id">@UiIcon.Render("eye")<span>Chi tiết</span></a></td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+        <div class="ta-empty d-none" data-ta-no-results><span class="ta-empty__icon">@UiIcon.Render("search-off")</span><p class="ta-empty__title">Không tìm thấy kết quả phù hợp</p></div>
+        <div class="ta-table-footer" data-ta-pager-for="impTable" data-ta-unit="lần truy cập hộ"></div>
+    }
+</section>

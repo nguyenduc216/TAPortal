@@ -24,6 +24,8 @@
     var canUpdate = AdminPermissions.Has(User, AdminPermissions.UsersUpdate);
     var canDelete = AdminPermissions.Has(User, AdminPermissions.UsersDelete);
     var canRoles = AdminPermissions.Has(User, AdminPermissions.RolesManage);
+    // "Truy cập hộ": not from inside another "Truy cập hộ" session.
+    var canImpersonate = AdminPermissions.Has(User, AdminPermissions.UsersImpersonate) && !Impersonation.IsActive(User);
     // Only a SYS_ADMIN may grant SYS_ADMIN (re-checked on the server).
     var grantable = isSystemAdmin ? roles.Where(r => r.IsActive).ToList() : [];   // roles are given by a SYS_ADMIN only
 }
@@ -66,10 +68,11 @@
                             <div class="ta-actions">
                                 @if (canUpdate) {<a class="btn btn-sm btn-soft-primary" asp-action="Edit" asp-route-id="@x.Id" aria-label="Sửa @x.Username">@UiIcon.Render("pencil")<span>Sửa</span></a>}
                                 @if (canRoles) {<a class="btn btn-sm" asp-action="Roles" asp-route-id="@x.Id" aria-label="Phân quyền @x.Username">@UiIcon.Render("shield-lock")<span>Vai trò</span></a>}
-                                @if (canUpdate || canDelete) {
+                                @if (canUpdate || canDelete || canImpersonate) {
                                 <div class="dropdown">
                                     <button type="button" class="btn btn-sm ta-btn-icon" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Thao tác khác cho @x.Username" title="Thao tác khác">@UiIcon.Render("dots-vertical")</button>
                                     <div class="dropdown-menu dropdown-menu-end">
+                                        @if (canImpersonate && !isSelf && eligible) {<a class="dropdown-item" asp-controller="Impersonation" asp-action="Start" asp-route-id="@x.Id">@UiIcon.Render("user-shield")<span>Truy cập hộ</span></a>}
                                         @if (canUpdate) {<a class="dropdown-item" asp-action="Edit" asp-route-id="@x.Id" asp-fragment="IsActive">@UiIcon.Render("lock")<span>Khóa / mở đăng nhập</span></a>}
                                         @if (canDelete) {
                                             if (isSelf) {<span class="dropdown-item disabled" aria-disabled="true">@UiIcon.Render("trash")<span>Không thể tự xóa</span></span>}

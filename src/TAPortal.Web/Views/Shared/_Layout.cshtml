@@ -35,6 +35,8 @@
     var canWork = Can(AdminPermissions.TasksView);
     var canTaskTemplates = Can(AdminPermissions.TaskTemplatesManage);
     var canTaskReport = Can(AdminPermissions.TaskReportView);
+    var impersonation = Impersonation.Read(User);
+    var canImpersonationLog = impersonation is null && Can(AdminPermissions.UsersImpersonate);
     var displayName = User.FindFirst("display_name")?.Value ?? User.Identity?.Name;
     // Role names (never codes); "Người dùng TAPortal" only when no role name is known.
     var roleNames = User.FindAll("role_name").Select(c => c.Value).Where(v => !string.IsNullOrWhiteSpace(v)).Distinct().ToList();
@@ -62,7 +64,7 @@
     <link rel="stylesheet" href="~/css/ta-admin.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/ta-website.css" asp-append-version="true" />
 </head>
-<body>
+<body data-ta-identity="@(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value)@(impersonation is null ? "" : "/" + impersonation.SessionId)" data-ta-no-prefetch="@(impersonation is null ? null : "true")">
 @if (User.Identity?.IsAuthenticated == true)
 {
     <a class="ta-skip-link" href="#taMain">Bỏ qua đến nội dung chính</a>
@@ -169,6 +171,10 @@
                     {
                         <li><a class="ta-nav__link" asp-controller="Menus" asp-action="Index" title="Quản lý menu" aria-current="@(IsCurrent("Menus") ? "page" : null)"><span class="ta-nav__icon">@UiIcon.Render("list-tree")</span><span class="ta-nav__label">Quản lý menu</span></a></li>
                     }
+                    @if (canImpersonationLog)
+                    {
+                        <li><a class="ta-nav__link" asp-controller="Impersonation" asp-action="Index" title="Lịch sử truy cập hộ" aria-current="@(IsCurrent("Impersonation") ? "page" : null)"><span class="ta-nav__icon">@UiIcon.Render("user-shield")</span><span class="ta-nav__label">Lịch sử truy cập hộ</span></a></li>
+                    }
                     @if (TAPortal.Web.Controllers.SystemSettingsController.CanOpen(User))
                     {
                         <li><a class="ta-nav__link" asp-controller="SystemSettings" asp-action="Index" title="Cấu hình hệ thống" aria-current="@(IsCurrent("SystemSettings") || IsCurrent("InvoiceAppContent") || IsCurrent("PasswordSecurity") ? "page" : null)"><span class="ta-nav__icon">@UiIcon.Render("settings")</span><span class="ta-nav__label">Cấu hình hệ thống</span></a></li>
@@ -180,6 +186,18 @@
     </aside>
     <div class="ta-overlay" data-ta-drawer-close hidden></div>
     <div class="ta-main">
+        @if (impersonation is not null)
+        {
+            @* "Truy cập hộ": always visible, outside the swapped <main>; leaving reloads the whole page (data-ta-hard). *@
+            <div class="ta-imp-bar" role="status" aria-live="polite">
+                @UiIcon.Render("user-shield")
+                <div class="ta-imp-bar__text">
+                    <strong>@impersonation.ActorDisplayName</strong> đang truy cập hộ <strong>@displayName</strong> (@User.Identity?.Name)
+                    <span class="ta-imp-bar__meta">Lý do: @impersonation.Reason · Hết hạn lúc @impersonation.ExpiresAtUtc.AddHours(7).ToString("HH:mm")</span>
+                </div>
+                <form asp-controller="Account" asp-action="StopImpersonation" method="post" data-ta-hard><button class="btn btn-sm ta-imp-bar__exit" type="submit" aria-label="Thoát truy cập hộ">@UiIcon.Render("logout")<span>Thoát truy cập hộ</span></button></form>
+            </div>
+        }
         <header class="ta-topbar">
             <button type="button" class="ta-icon-btn" data-ta-sidebar-toggle aria-controls="taSidebar" aria-expanded="true" aria-label="Thu gọn/mở rộng menu">@UiIcon.Render("menu-2")</button>
             <nav class="ta-breadcrumb" aria-label="Breadcrumb" id="taCrumbs" data-ta-swap>

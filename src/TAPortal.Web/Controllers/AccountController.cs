@@ -105,6 +105,12 @@ public sealed partial class AccountController(PortalDb db, IAdminAuthStore auth,
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Logout()
     {
+        // Signing out during "Truy cập hộ" ends that session too.
+        if (Impersonation.Read(User) is { } impersonation)
+        {
+            try { await services.GetRequiredService<IImpersonationStore>().EndAsync(impersonation.SessionId, "LOGOUT"); }
+            catch (Microsoft.Data.SqlClient.SqlException ex) { logger.LogWarning(ex, "IMPERSONATION_END_FAILED session {SessionId}", impersonation.SessionId); }
+        }
         await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
         // Ask supporting browsers to drop any cached admin pages for this origin (no-store already prevents storing them).
         Response.Headers["Clear-Site-Data"] = "\"cache\"";

@@ -1,0 +1,12 @@
+[
+  {
+    "change_id": "USER-IMPERSONATION-CHG-20261114T011414Z-7AE972",
+    "created_at": "2026-11-14T01:14:14.357719+00:00",
+    "title": "Truy cap ho - dang nhap duoi quyen tai khoan nhan vien, ghi nhan nguoi thao tac",
+    "status": "IMPLEMENTED",
+    "commit_sha": null,
+    "migration_status": "NOT_EXECUTED",
+    "publish_status": "NOT_PUBLISHED",
+    "merge_status": "PENDING_APPROVAL"
+  }
+]

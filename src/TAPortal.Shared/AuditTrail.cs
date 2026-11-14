@@ -36,6 +36,21 @@ public static class AuditPolicy
         transactionDoomed || (requireDurable && !result.Written);
 }
 
+// "Truy cập hộ" (operator 2026-11-14): set by the Admin portal for every request made while signed in under another
+// account, so each audited change (dbo.AuditLogs) and task event also names the person who really acted.
+public sealed record ImpersonationContext(Guid ActorUserId, Guid SessionId);
+
+public static class ImpersonationAmbient
+{
+    private static readonly AsyncLocal<ImpersonationContext?> Value = new();
+
+    public static ImpersonationContext? Current
+    {
+        get => Value.Value;
+        set => Value.Value = value;
+    }
+}
+
 public static class AuditSql
 {
     // Distinguishes a missing/invisible table (-1) and a column mismatch (-2) from a written row (1).
@@ -44,6 +59,13 @@ IF OBJECT_ID(N'dbo.AuditLogs',N'U') IS NULL SELECT CAST(-1 AS int);
 ELSE IF COL_LENGTH(N'dbo.AuditLogs',N'UserId') IS NULL OR COL_LENGTH(N'dbo.AuditLogs',N'Action') IS NULL
  OR COL_LENGTH(N'dbo.AuditLogs',N'EntityName') IS NULL OR COL_LENGTH(N'dbo.AuditLogs',N'EntityId') IS NULL OR COL_LENGTH(N'dbo.AuditLogs',N'OldValues') IS NULL
  OR COL_LENGTH(N'dbo.AuditLogs',N'NewValues') IS NULL OR COL_LENGTH(N'dbo.AuditLogs',N'IpAddress') IS NULL SELECT CAST(-2 AS int);
+ELSE IF @impActor IS NOT NULL AND COL_LENGTH(N'dbo.AuditLogs',N'ImpersonatorUserId') IS NOT NULL
+BEGIN
+ EXEC sp_executesql N'INSERT dbo.AuditLogs(UserId,Action,EntityName,EntityId,OldValues,NewValues,IpAddress,ImpersonatorUserId,ImpersonationSessionId) VALUES(@actor,@action,@entity,@target,@old,@new,@ip,@impActor,@impSession)',
+  N'@actor uniqueidentifier,@action nvarchar(100),@entity nvarchar(200),@target nvarchar(200),@old nvarchar(max),@new nvarchar(max),@ip varchar(64),@impActor uniqueidentifier,@impSession uniqueidentifier',
+  @actor=@actor,@action=@action,@entity=@entity,@target=@target,@old=@old,@new=@new,@ip=@ip,@impActor=@impActor,@impSession=@impSession;
+ SELECT CAST(1 AS int);
+END
 ELSE
 BEGIN
  EXEC sp_executesql N'INSERT dbo.AuditLogs(UserId,Action,EntityName,EntityId,OldValues,NewValues,IpAddress) VALUES(@actor,@action,@entity,@target,@old,@new,@ip)',
@@ -72,6 +94,10 @@ END
             cmd.Parameters.AddWithValue("@old", oldValues);
             cmd.Parameters.AddWithValue("@new", newValues);
             cmd.Parameters.AddWithValue("@ip", (object?)ip ?? DBNull.Value);
+            // "Truy cập hộ": UserId stays the account used; the person who really acted is recorded next to it.
+            var impersonation = ImpersonationAmbient.Current;
+            cmd.Parameters.Add("@impActor", System.Data.SqlDbType.UniqueIdentifier).Value = (object?)impersonation?.ActorUserId ?? DBNull.Value;
+            cmd.Parameters.Add("@impSession", System.Data.SqlDbType.UniqueIdentifier).Value = (object?)impersonation?.SessionId ?? DBNull.Value;
             return Classify(Convert.ToInt32(await cmd.ExecuteScalarAsync()));
         }
         catch (SqlException ex)

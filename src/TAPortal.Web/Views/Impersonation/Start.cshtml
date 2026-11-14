@@ -1,0 +1,35 @@
+@model TAPortal.Web.Controllers.ImpersonationController.StartVm
+@{
+    ViewData["Title"] = "Truy cập hộ";
+    ViewData["Heading"] = "Truy cập hộ: " + Model.Target.DisplayName;
+    ViewData["Subtitle"] = "Đăng nhập dưới quyền tài khoản " + Model.Target.Username + ". Mọi thao tác đều được ghi nhận là của bạn.";
+    ViewData["PageIcon"] = "user-shield";
+    ViewData["ParentTitle"] = "Người dùng";
+    ViewData["ParentController"] = "Users";
+    var actorName = User.FindFirst("display_name")?.Value ?? User.Identity?.Name;
+    var blocked = Model.Error is not null && Model.Reason is null;   // the account itself cannot be used (GET)
+}
+<div class="row"><div class="col-xl-8">
+<form class="card" asp-action="Start" asp-route-id="@Model.Target.Id" method="post" data-ta-hard>
+    <div class="card-header"><h2 class="card-title">@UiIcon.Render("user-shield")Xác nhận truy cập hộ</h2></div>
+    <div class="card-body">
+        @if (Model.Error is not null) {<div class="ta-alert ta-alert--danger" role="alert">@UiIcon.Render("alert-circle")<div class="ta-alert__body">@Model.Error</div></div>}
+        <dl class="ta-dl">
+            <dt>Tài khoản dùng</dt><dd><strong>@Model.Target.DisplayName</strong> <span class="text-secondary">(@Model.Target.Username)</span></dd>
+            <dt>Người thao tác</dt><dd>@actorName</dd>
+            <dt>Thời hạn</dt><dd>Tối đa @((int)Impersonation.MaxDuration.TotalMinutes) phút, hoặc đến khi bấm "Thoát truy cập hộ" hay đăng xuất.</dd>
+        </dl>
+        <div class="ta-alert ta-alert--warning mt-3" role="note">@UiIcon.Render("alert-triangle")<div class="ta-alert__body">
+            Trong lúc truy cập hộ, bạn có đúng quyền của tài khoản @Model.Target.Username. Hệ thống ghi lại lý do, từng trang đã mở và từng thay đổi
+            dưới dạng <strong>@actorName truy cập hộ @Model.Target.DisplayName</strong>. Không thể đổi mật khẩu hay số điện thoại Zalo của tài khoản này.
+        </div></div>
+        <label class="form-label required mt-3" for="impReason">Lý do truy cập hộ</label>
+        <div class="ta-input-icon ta-input-icon--top">@UiIcon.Render("file-text")<textarea id="impReason" name="reason" class="form-control" rows="3" minlength="@Impersonation.ReasonMin" maxlength="@Impersonation.ReasonMax" required disabled="@blocked" placeholder="Ví dụ: Nhập báo cáo công việc ngày 14/11 giúp chị A theo yêu cầu qua Zalo" data-ta-voice>@Model.Reason</textarea></div>
+        <div class="form-hint">Từ @Impersonation.ReasonMin đến @Impersonation.ReasonMax ký tự. Lý do được lưu trong lịch sử truy cập hộ.</div>
+    </div>
+    <div class="card-footer ta-form-actions">
+        <a asp-controller="Users" asp-action="Index" class="btn">@UiIcon.Render("arrow-left")<span>Hủy</span></a>
+        <button type="submit" class="btn btn-ta-gold ms-auto" disabled="@blocked" data-ta-loading data-ta-loading-text="Đang chuyển tài khoản...">@UiIcon.Render("login-2")<span>Bắt đầu truy cập hộ</span></button>
+    </div>
+</form>
+</div></div>
