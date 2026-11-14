@@ -46,6 +46,12 @@ với đề xuất thì đổi màu, các tương tác khác cũng làm ngay tr�
   chưa bị bỏ qua (chưa xử lý + đã đồng ý; ContractReviewPolicy.Suggested bỏ từng gợi ý xung đột), dưới mỗi đoạn có lý do, căn cứ
   (link kho luật), nút Đồng ý / Bỏ qua / Đặt lại / Sửa câu đề xuất; mặc định chỉ hiện đoạn có gợi ý, nút Gợi ý trước/sau.
 
+- Bổ sung (operator qua phiên chính: link điều luật phải mở file luật, cuộn tới đoạn được trích và tô sáng, hoặc mở link trên mạng):
+  link trích dẫn mang ?k=<khoản>&d=<điểm>; trang kho luật hiển thị từng dòng (data-k/data-d), mở đúng điều, tô vàng khoản và tô đậm
+  điểm được trích; thêm link "Văn bản gốc trên vbpl.vn" (LegalDocuments.SourceUrl của migration 048, chỉ https) và "Tìm điều này
+  trên mạng" (Google). Prompt yêu cầu AI ghi clause dạng "khoản 2, điểm a". Việc "đã đối chiếu kho luật" vẫn chỉ kiểm tra văn bản
+  và số điều có trong kho, chưa kiểm tra nội dung khoản có nói đúng như AI viết.
+
 ## File thay đổi (relative path, thao tác ADD/MODIFY/DELETE)
 - MODIFY `src/TAPortal.Web/Models/ContractReviewModels.cs` (ReviewHtml: hiển thị quyết định tại chỗ, nút data-ta-pop)
 - MODIFY `src/TAPortal.Web/Views/ContractReviews/Details.cshtml` (trang giấy, template bảng quyết định)

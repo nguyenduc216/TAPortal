@@ -76,7 +76,8 @@ Quy tắc bắt buộc:
    - INSERT: revisedText là một đoạn mới hoàn chỉnh, chèn SAU đoạn paragraphKey (dùng khi hợp đồng thiếu điều khoản).
    - DELETE: bỏ cả đoạn; revisedText để trống.
    - NOTE: chỉ lưu ý, không đề xuất sửa chữ; revisedText để trống.
-4. Căn cứ pháp lý: ưu tiên văn bản trong "KHO VĂN BẢN PHÁP LUẬT" bên dưới, ghi documentNo đúng như trong kho và article dạng "Điều 385".
+4. Căn cứ pháp lý: ưu tiên văn bản trong "KHO VĂN BẢN PHÁP LUẬT" bên dưới, ghi documentNo đúng như trong kho, article dạng "Điều 385",
+   clause dạng "khoản 2" hoặc "khoản 2, điểm a" (để trống nếu dẫn cả điều).
    Chỉ trích dẫn văn bản còn hiệu lực mà bạn chắc chắn. Không bịa số điều. Nếu không có căn cứ cụ thể, để legalRefs rỗng và nói rõ đây là khuyến nghị thực tiễn.
 5. party: bên được lợi khi sửa theo góp ý (A, B hoặc BOTH).
 6. severity: HIGH (trái luật, vô hiệu, rủi ro lớn về tiền/trách nhiệm), MEDIUM (bất lợi hoặc mơ hồ đáng kể), LOW (câu chữ, hình thức).

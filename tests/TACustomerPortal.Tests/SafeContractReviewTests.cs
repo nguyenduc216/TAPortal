@@ -366,6 +366,9 @@ Nội dung điều 5.
         Assert.DoesNotContain("data-ta-legal-upload", page);
         Assert.DoesNotContain("name=\"content\"", page);
         Assert.Contains("Điều 418", page);
+        Assert.Contains("class=\"ta-law-line\" data-k=\"1\"", page);
+        var lawPreview = Environment.GetEnvironmentVariable("TA_REVIEW_PREVIEW");
+        if (!string.IsNullOrEmpty(lawPreview)) File.WriteAllText(lawPreview.Replace("review.html", "law.html"), await v.GetStringAsync($"/legallibrary/details/{MemoryLibrary.Doc}"));                          // clause lines can be highlighted from a citation
         Assert.Equal(HttpStatusCode.Forbidden, (await v.GetAsync("/legallibrary/create")).StatusCode);
     }
 
@@ -443,6 +446,18 @@ Nội dung điều 5.
         Assert.Contains("data-ta-compare-step", compare);
         Assert.Contains("3 gợi ý", compare);
         Assert.Contains("<del class=\"ta-rv-del\">30</del>", compare);              // original side: the word that was changed
+        var cited = S.LegalCitation.Parse("Điều 418, khoản 2, điểm a – 91/2015/QH13")[0];
+        Assert.Equal(("2", "a"), (cited.Khoan, cited.Diem));
+        Assert.Equal("3", S.LegalCitation.Parse("Điều 418, 3 – 91/2015/QH13")[0].Khoan);
+        var linkHtml = admin::TAPortal.Web.Models.ReviewHtml.Legal("Điều 418, khoản 2, điểm a – 91/2015/QH13",
+            new Dictionary<string, S.LegalArticleLink> { ["91/2015/QH13|điều 418"] = new(MemoryLibrary.Doc, 7, "91/2015/QH13", "Bộ luật Dân sự", "Điều 418", null, null, "https://vbpl.vn/van-ban/chi-tiet/bo-luat-dan-su--95942") },
+            "/LegalLibrary/Details/").ToString()!;
+        Assert.Contains($"/LegalLibrary/Details/{MemoryLibrary.Doc}?k=2&amp;d=a#a-7", linkHtml);   // opens the article and highlights khoản 2, điểm a
+        Assert.Contains("href=\"https://vbpl.vn/van-ban/chi-tiet/bo-luat-dan-su--95942\"", linkHtml);
+        Assert.Contains("https://www.google.com/search?q=", linkHtml);
+        Assert.DoesNotContain("vbpl.vn", admin::TAPortal.Web.Models.ReviewHtml.Legal("Điều 418 – 91/2015/QH13",
+            new Dictionary<string, S.LegalArticleLink> { ["91/2015/QH13|điều 418"] = new(MemoryLibrary.Doc, 7, "91/2015/QH13", "Bộ luật Dân sự", "Điều 418", null, null, "javascript:alert(1)") },
+            "/LegalLibrary/Details/").ToString());                                                // only https source links
         var citations = S.LegalCitation.Parse("Điều 418, khoản 2 – 91/2015/QH13: phạt vi phạm\nKhuyến nghị thực tiễn");
         Assert.Equal(("91/2015/QH13|điều 418", "khoản 2"), (citations[0].Key, citations[0].Clause));
         Assert.Null(citations[1].Key);

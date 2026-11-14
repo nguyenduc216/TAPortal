@@ -84,7 +84,14 @@
                     <li class="d-block" id="a-@a.Id">
                         <details>
                             <summary><span class="ta-cell-strong">@a.ArticleNo</span>@if (a.Title is not null) {<span>. @a.Title</span>}@if (a.UpdatedAt is DateTime u) {<span class="ta-badge ta-badge--info ta-badge--plain ms-2">Đã sửa tay @When(u)</span>}</summary>
-                            <div class="mt-2" style="white-space: pre-line">@a.Content</div>
+                            <div class="mt-2 ta-law-text">
+                                @foreach (var line in a.Content.Split('\n'))
+                                {
+                                    var km = System.Text.RegularExpressions.Regex.Match(line, @"^\s*(\d+)\.\s");
+                                    var dm = System.Text.RegularExpressions.Regex.Match(line, @"^\s*([a-zđ])\)\s");
+                                    <span class="ta-law-line" data-k="@(km.Success ? km.Groups[1].Value : null)" data-d="@(dm.Success ? dm.Groups[1].Value : null)">@line</span>
+                                }
+                            </div>
                             @if (canManage)
                             {
                                 <details class="mt-2">
