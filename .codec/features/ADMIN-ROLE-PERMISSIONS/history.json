@@ -58,5 +58,15 @@
     "migration_status": "NOT_APPLICABLE",
     "publish_status": "DEPLOYED",
     "merge_status": "PENDING_APPROVAL"
+  },
+  {
+    "change_id": "ADMIN-ROLE-PERMISSIONS-CHG-20261114T165108Z-184086",
+    "created_at": "2026-11-14T16:51:08.251583+00:00",
+    "title": "Anh dai dien (avatar) nhan vien: tai anh, hien thi tren moi danh sach",
+    "status": "IMPLEMENTED",
+    "commit_sha": null,
+    "migration_status": "NOT_EXECUTED",
+    "publish_status": "NOT_PUBLISHED",
+    "merge_status": "PENDING_APPROVAL"
   }
 ]

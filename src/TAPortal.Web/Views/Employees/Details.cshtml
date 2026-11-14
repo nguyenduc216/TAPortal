@@ -1,3 +1,4 @@
+@inject IEmployeePhotoStore AvatarPhotos
 @model EmployeeDetailsVm
 @{
     var e = Model.Employee;
@@ -28,6 +29,13 @@
 @if (Model.Errors.Count > 0) {<div class="ta-alert ta-alert--danger" role="alert">@UiIcon.Render("alert-circle")<div class="ta-alert__body">@foreach (var err in Model.Errors) {<div>@err</div>}</div></div>}
 <div class="row g-4">
 <div class="col-xl-8 d-flex flex-column gap-4">
+    @{ var avatarIndex = await AvatarPhotos.IndexAsync(); var photoAvatar = Avatar.Render(avatarIndex, e.FullName, employeeId: e.Id, cssClass: "ta-avatar--xl"); }
+    <section class="card" aria-label="Ảnh đại diện">
+        <div class="card-body">
+            @if (canUpdate) {<partial name="_PhotoForm" model="@(new PhotoFormVm(Url.Action("SetEmployee", "Avatar", new { id = e.Id })!, Avatar.Url(avatarIndex, e.Id, null) is not null, photoAvatar))" />}
+            else {<div class="d-flex align-items-center gap-3">@photoAvatar<div class="text-secondary small">Ảnh đại diện</div></div>}
+        </div>
+    </section>
     <section class="card" aria-labelledby="empInfoTitle">
         <div class="card-header"><h2 class="card-title" id="empInfoTitle">@UiIcon.Render("user")Thông tin chung</h2><span class="ta-badge @EmployeePolicy.StatusBadge(e.StatusCode) ms-auto">@(e.StatusName ?? "Chưa đặt trạng thái")</span></div>
         <div class="card-body">

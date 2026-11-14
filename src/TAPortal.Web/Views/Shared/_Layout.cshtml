@@ -1,3 +1,4 @@
+@inject IEmployeePhotoStore AvatarPhotos
 @functions {
     // SYS_ADMIN sees everything; other accounts see only the items their permissions open (same rule as the policies).
     private bool Can(string code) => AdminPermissions.Has(User, code);
@@ -39,6 +40,8 @@
     var impersonation = Impersonation.Read(User);
     var canImpersonationLog = impersonation is null && Can(AdminPermissions.UsersImpersonate);
     var displayName = User.FindFirst("display_name")?.Value ?? User.Identity?.Name;
+    var avatarIndex = await AvatarPhotos.IndexAsync();
+    Guid? currentUserId = Guid.TryParse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value, out var cuid) ? cuid : null;
     // Role names (never codes); "Người dùng TAPortal" only when no role name is known.
     var roleNames = User.FindAll("role_name").Select(c => c.Value).Where(v => !string.IsNullOrWhiteSpace(v)).Distinct().ToList();
     var roleLabel = isAdmin ? "Quản trị hệ thống" : roleNames.Count > 0 ? string.Join(", ", roleNames) : "Người dùng TAPortal";
@@ -213,7 +216,7 @@
             </nav>
             <div class="dropdown ms-auto">
                 <a href="#" class="ta-user" data-bs-toggle="dropdown" role="button" aria-expanded="false" aria-label="Tài khoản: @displayName">
-                    <span class="ta-avatar" aria-hidden="true">@Initials(displayName)</span>
+                    @Avatar.Render(avatarIndex, displayName, userId: currentUserId, initials: Initials(displayName))
                     <span class="ta-user__text"><span class="ta-user__name d-block">@displayName</span><span class="ta-user__role d-block">@roleLabel</span></span>
                     @UiIcon.Render("chevron-down", "text-secondary")
                 </a>

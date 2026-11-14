@@ -519,3 +519,9 @@ ul.ta-stat-list { display: grid; gap: 4px; }
     .ta-kpi-grid .ta-stat-card { padding: var(--ta-sp-4); }
     .ta-kpi-grid .ta-stat-card:hover { box-shadow: none; }
 }
+
+/* Ảnh đại diện nhân viên: the photo fills the round avatar. */
+.ta-avatar--photo { overflow: hidden; background: var(--ta-surface-2); padding: 0; }
+.ta-avatar--photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.ta-avatar--xl { width: 96px; height: 96px; flex-basis: 96px; font-size: 2.25rem; }
+.ta-photo-form { display: flex; flex-wrap: wrap; align-items: center; gap: var(--ta-sp-3); }

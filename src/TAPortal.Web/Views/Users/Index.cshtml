@@ -1,3 +1,5 @@
+@inject IEmployeePhotoStore AvatarPhotos
+@{ var avatarIndex = await AvatarPhotos.IndexAsync(); }
 @model IReadOnlyList<PortalUser>
 @functions {
     private static string Initial(string? name)
@@ -55,7 +57,7 @@
                     <tr data-ta-row>
                         <td class="ta-cell-strong">
                             <div class="d-flex align-items-center gap-3">
-                                <span class="ta-avatar" aria-hidden="true">@Initial(x.DisplayName)</span>
+                                @Avatar.Render(avatarIndex, x.DisplayName, userId: x.Id, initials: Initial(x.DisplayName))
                                 <div class="min-w-0"><div>@x.DisplayName @if (isSelf) {<span class="ta-badge ta-badge--info ta-badge--plain ms-1">Bạn</span>}</div><div class="ta-cell-sub">@x.Username</div></div>
                             </div>
                         </td>
