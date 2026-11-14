@@ -4,7 +4,7 @@
 - Change ID: `CONTRACTS-AND-TASKS-CHG-20261114T021052Z-F6F9C9`
 - Created UTC: 2026-11-14T02:10:52.069333+00:00
 - Tiêu đề: Danh muc cong viec: chon ten viec tu danh muc, goi y khi go, khong nhap tu do
-- Trạng thái: IMPLEMENTED
+- Trạng thái: DEPLOYED
 
 ## Yêu cầu và phạm vi
 Operator (2026-11-14): đầu việc giống nhau (ví dụ "Kéo hóa đơn") phải thành danh mục công việc; người dùng gõ chữ thì gợi ý, không cho nhập linh tinh. Operator chọn: chỉ người quản lý thêm danh mục; gom tên các việc cũ về danh mục.
@@ -24,7 +24,7 @@ Operator (2026-11-14): đầu việc giống nhau (ví dụ "Kéo hóa đơn") p
 - Database: TAPortalSys
 - Script: `database/migrations/043-work-task-catalog.sql` (sau 042)
 - Verify 075, Rollback 076.
-- Execution: xem report.
+- Execution: EXECUTED (Invoke-TAMigrations 043:075:076).
 - 045: migration dữ liệu một lần (danh mục ban đầu, gom tên việc cũ, khách mới, việc của Hà ngày 14/11), chạy rồi xóa.
 
 ## Test và kết quả
@@ -36,8 +36,8 @@ Operator (2026-11-14): đầu việc giống nhau (ví dụ "Kéo hóa đơn") p
 
 ## Git
 - Branch: feature/tx-sync
-- Commit SHA: xem report
-- Merge: xem report
+- Commit SHA: f3932f4
+- Merge: main
 
 ## Rủi ro, quyết định và việc còn lại
 - Chưa thử combobox trên trình duyệt/điện thoại thật.

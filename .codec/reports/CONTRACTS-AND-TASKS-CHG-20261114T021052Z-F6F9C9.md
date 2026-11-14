@@ -3,11 +3,11 @@
 Feature ID: `CONTRACTS-AND-TASKS`
 Change ID: `CONTRACTS-AND-TASKS-CHG-20261114T021052Z-F6F9C9`
 
-1. Mục tiêu và kết quả thực tế:
-2. Danh sách file cập nhật (relative + nếu cần absolute):
-3. Database `TAPortalSys`: migration path + thứ tự + trạng thái NOT_EXECUTED/OPERATOR_CONFIRMED:
-4. Build/test: lệnh, pass/fail/not run:
-5. Publish: project, destination đã duyệt, artifact SHA256, status:
-6. Git: branch, commit SHA, PR, merge SHA hoặc PENDING_APPROVAL:
-7. Rủi ro/rollback/việc operator cần làm:
-8. Bằng chứng kiểm tra (URL/log, không có secrets):
+1. Kết quả: Danh mục công việc; tên việc chọn từ danh mục có gợi ý khi gõ, không nhập tự do.
+2. File: xem `.codec/changes/CONTRACTS-AND-TASKS-CHG-20261114T021052Z-F6F9C9.md`.
+3. Database: migration 043 EXECUTED; verify 075; rollback 076. Migration dữ liệu một lần 045: EXECUTED (19 danh muc, gom ten 10 viec cu, 1 khach moi, 10 viec cua NV000002) (không lưu Git).
+4. Build/test: Release build 0 lỗi; Safe tests 743/743.
+5. Publish: portal b871f5f6f67b DEPLOYED. Source commit f3932f4.
+6. Git: branch `feature/tx-sync`, merge main.
+7. Rủi ro: chưa thử combobox trên trình duyệt thật.
+8. Bằng chứng: log migration, log deploy, Safe tests.
