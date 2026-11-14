@@ -4,7 +4,7 @@
 - Change ID: `ADMIN-ROLE-PERMISSIONS-CHG-20261114T013654Z-1EEB49`
 - Created UTC: 2026-11-14T01:36:54.394790+00:00
 - Tiêu đề: Quan ly nguoi dung chi hien tai khoan nhan vien T.A, an tai khoan khach hang
-- Trạng thái: IMPLEMENTED
+- Trạng thái: DEPLOYED
 
 ## Yêu cầu và phạm vi
 Operator (2026-11-14): Quản lý người dùng trên TAPortal chỉ có tài khoản nhân viên T.A; tài khoản khách hàng nằm trong từng khách hàng.
@@ -28,8 +28,8 @@ Nguyên nhân: `PortalDb.GetUsersAsync` lấy mọi dòng dbo.Users. Production:
 
 ## Git
 - Branch: feature/tx-sync
-- Commit SHA: xem report
-- Merge: xem report
+- Commit SHA: 005d430
+- Merge: main
 
 ## Rủi ro, quyết định và việc còn lại
 - Trang Sửa/Xóa/Vai trò theo id vẫn mở được tài khoản khách nếu biết đường dẫn (không còn link từ danh sách).

@@ -53,10 +53,10 @@
     "change_id": "ADMIN-ROLE-PERMISSIONS-CHG-20261114T013654Z-1EEB49",
     "created_at": "2026-11-14T01:36:54.394790+00:00",
     "title": "Quan ly nguoi dung chi hien tai khoan nhan vien T.A, an tai khoan khach hang",
-    "status": "IMPLEMENTED",
-    "commit_sha": null,
-    "migration_status": "NOT_EXECUTED",
-    "publish_status": "NOT_PUBLISHED",
+    "status": "DEPLOYED",
+    "commit_sha": "005d430",
+    "migration_status": "NOT_APPLICABLE",
+    "publish_status": "DEPLOYED",
     "merge_status": "PENDING_APPROVAL"
   }
 ]
