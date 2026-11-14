@@ -40,6 +40,10 @@ với đề xuất thì đổi màu, các tương tác khác cũng làm ngay tr�
   (4) góp ý nghiêm trọng (HIGH) tô đỏ; (5) bấm P54/#f-… cuộn đúng chỗ (không đổi location.hash vì popstate làm shell tải lại trang về đầu).
   ILegalLibraryStore.ResolveAsync có cài đặt mặc định để fake của SafeLegalWatchTests không phải sửa.
 
+- Bổ sung (operator qua phiên chính: "phiên bản so sánh không thấy cái gợi ý..."): chế độ So sánh giờ là bản gốc | bản theo MỌI gợi ý
+  chưa bị bỏ qua (chưa xử lý + đã đồng ý; ContractReviewPolicy.Suggested bỏ từng gợi ý xung đột), dưới mỗi đoạn có lý do, căn cứ
+  (link kho luật), nút Đồng ý / Bỏ qua / Đặt lại / Sửa câu đề xuất; mặc định chỉ hiện đoạn có gợi ý, nút Gợi ý trước/sau.
+
 ## File thay đổi (relative path, thao tác ADD/MODIFY/DELETE)
 - MODIFY `src/TAPortal.Web/Models/ContractReviewModels.cs` (ReviewHtml: hiển thị quyết định tại chỗ, nút data-ta-pop)
 - MODIFY `src/TAPortal.Web/Views/ContractReviews/Details.cshtml` (trang giấy, template bảng quyết định)
