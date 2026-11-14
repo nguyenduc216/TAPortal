@@ -4,7 +4,7 @@
 - Change ID: `CONTRACT-REVIEW-CHG-20261114T143425Z-457FA8`
 - Created UTC: 2026-11-14T14:34:25.799393+00:00
 - Tiêu đề: In-place review: paper view, accept/edit/reject on highlights, direct paragraph edit, customer answers
-- Trạng thái: IMPLEMENTED
+- Trạng thái: DEPLOYED
 
 ## Yêu cầu và phạm vi
 Operator 2026-11-14: trên giao diện web hiển thị nội dung hợp đồng và các chỗ sửa tô vàng ngay trên văn bản, người dùng bấm OK đồng ý
@@ -38,7 +38,10 @@ với đề xuất thì đổi màu, các tương tác khác cũng làm ngay tr�
 ## Publish
 - Project:
 - Destination (chỉ từ config):
-- Trạng thái: NOT_PUBLISHED
+- portal DEPLOYED 2026-11-14 14:42:20Z (giờ server 21:42:20) từ 234fa94 (gồm merge origin/main 2316d7d có LEGAL-WATCH 048);
+  artifact 17693dd4b0f2df5227f732599ad4b82a75942a6de0cbdf9a8f5a792871aaae8e (90 files); package 62E7E6A62E40C0385657B06779C00532989EBE15B876F36049EA0D814C2B4D14;
+  health 200; /js/ta-review.js 200. Safe tests 771/771.
+- Trạng thái: DEPLOYED
 - Artifact SHA256:
 - Smoke test:
 
