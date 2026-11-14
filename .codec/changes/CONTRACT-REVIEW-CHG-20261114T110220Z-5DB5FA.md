@@ -53,7 +53,9 @@ chương/mục, báo các điều bị thiếu. PDF bỏ số trang và dòng "C
 
 ## Publish
 - portal DEPLOYED 2026-11-14 11:08:51Z (giờ server 18:08:51) từ 817ae4e; artifact 4b806c4ea73f8fc7de31b03cb2d2554bd0e22b3915438942785c5783b2c36c58 (89 files);
-  package 4CA9397914E99C9137E9B4AB42188BFE5823ECDFD58027CB3A8522B0D7490A6C; health 200. Audit WARN có sẵn: AngleSharp 0.17.1 (Moderate).
+  package 4CA9397914E99C9137E9B4AB42188BFE5823ECDFD58027CB3A8522B0D7490A6C; health 200.
+- portal DEPLOYED lần 2 (bộ tách điều) 2026-11-14 11:45:41Z từ 0613b03; artifact 81318879d44ddcd750dbfb5d027475fec6d8e3dd10fecf52b060b07d9451344b;
+  package 444ACD6392A4EFA788BC782ADD6B58540AC76F311D3071C8E1CD84987F0624E6; health 200. Audit WARN có sẵn: AngleSharp 0.17.1 (Moderate).
 - Project:
 - Destination (chỉ từ config):
 - Trạng thái: NOT_PUBLISHED
