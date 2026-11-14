@@ -4,7 +4,7 @@
 - Change ID: `LEGAL-WATCH-CHG-20261114T113930Z-7A55AD`
 - Created UTC: 2026-11-14T11:39:30.748593+00:00
 - Tiêu đề: Monthly tax-law watch: Cong bao + vbpl queue for the law library
-- Trạng thái: IMPLEMENTED (deploy recorded in the report)
+- Trạng thái: DEPLOYED (portal 5871b46; details in the report)
 
 ## Yêu cầu và phạm vi
 Operator 2026-11-14 (relayed by the main session, verbatim): "tôi chấp nhận luôn, bạn báo phiên nó chạy cho chúng tôi cái" —

@@ -17,4 +17,4 @@
 
 | Change ID | Ngày UTC | Nội dung | Commit SHA | Migration | Publish | Merge |
 |---|---|---|---|---|---|---|
-| `LEGAL-WATCH-CHG-20261114T113930Z-7A55AD` | 2026-11-14 | Công báo weekly + vbpl.vn monthly watch, review queue, monthly email | see report | 048 EXECUTED | see report | see report |
+| `LEGAL-WATCH-CHG-20261114T113930Z-7A55AD` | 2026-11-14 | Công báo weekly + vbpl.vn monthly watch, review queue, monthly email | aeb8a91 | 048 EXECUTED | DEPLOYED portal 5871b46 | MERGED |
