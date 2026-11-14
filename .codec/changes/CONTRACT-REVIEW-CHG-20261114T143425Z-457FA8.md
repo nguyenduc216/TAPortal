@@ -8,6 +8,8 @@
   package 4E48EDAAD0B398DC8D9D88128A204B8C5018ED61D34CEECF360258D13FF3AA72; health 200; Safe tests 771/771; khóa API trong appsettings vẫn giữ sau deploy.
 - portal DEPLOYED lần 3 (tiến trình AI) 2026-11-14 16:01:54Z từ cda375f (đã kiểm tra 0 lượt AI đang chạy trước khi deploy);
   artifact ab6f7b1d6d6e5d7eb4d6e157c08bc191ab7c96b99ff0f51456711f63b5cdd692; package BC3DB68A00F64BC3F79EC0872205C5759DAD60073A1283895868C9F5BD3C8C85; health 200.
+- portal DEPLOYED lần 4 (link luật, so sánh, token, đỏ, cuộn đúng chỗ) 2026-11-14 16:28:33Z từ bafd8b0 (0 lượt AI đang chạy trước khi deploy);
+  artifact 46cc1ecb946d55ad1ecff9947e2179843dca157efbb96d9f112479434cd75eaf; package ABFE41EE85A25BA0CA8C9D19B4CFCF7FBB2593BB201233869FC1735D71F24478; health 200.
 - Trạng thái: DEPLOYED
 
 ## Yêu cầu và phạm vi
