@@ -44,6 +44,15 @@ builder.Services.AddScoped<IContractStore, SqlContractStore>();
 // Hợp đồng dịch vụ: AI contract review (Claude API key in ContractReview:Anthropic:ApiKey, set by the operator on the server).
 builder.Services.AddScoped<IContractReviewStore, SqlContractReviewStore>();
 builder.Services.AddScoped<ILegalLibraryStore, SqlLegalLibraryStore>();
+// Kho văn bản pháp luật → Văn bản mới cần duyệt (LEGAL-WATCH): weekly Công báo read, monthly vbpl.vn status check.
+builder.Services.AddScoped<ILegalWatchStore, SqlLegalWatchStore>();
+builder.Services.AddScoped<LegalWatchService>();
+builder.Services.AddSingleton<LegalWatchTrigger>();
+builder.Services.AddSingleton<ILegalWatchWeb, HttpLegalWatchWeb>();
+builder.Services.AddHttpClient(HttpLegalWatchWeb.ClientName, c => c.Timeout = TimeSpan.FromSeconds(60))
+    .ConfigurePrimaryHttpMessageHandler(() => new System.Net.Http.SocketsHttpHandler { AllowAutoRedirect = false, AutomaticDecompression = System.Net.DecompressionMethods.All });
+if (!string.IsNullOrWhiteSpace(builder.Configuration["Database:ConnectionString"]))
+    builder.Services.AddHostedService<LegalWatchScheduler>();
 builder.Services.AddSingleton(ContractReviewAiOptions.From(builder.Configuration));
 builder.Services.AddSingleton<IContractReviewAi, AnthropicContractReviewAi>();
 if (!string.IsNullOrWhiteSpace(builder.Configuration["Database:ConnectionString"]))

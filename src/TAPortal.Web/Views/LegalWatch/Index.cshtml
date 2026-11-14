@@ -1,0 +1,154 @@
+@model LegalWatchIndexVm
+@{
+    ViewData["ParentTitle"] = "Kho văn bản pháp luật";
+    ViewData["ParentController"] = "LegalLibrary";
+    ViewData["Title"] = "Văn bản mới cần duyệt";
+    ViewData["Heading"] = "Văn bản mới cần duyệt";
+    ViewData["Subtitle"] = "Hằng tuần hệ thống đọc Công báo (văn bản mới về thuế); hằng tháng đối chiếu hiệu lực các văn bản trong kho với vbpl.vn. Chỉ văn bản đã được duyệt mới vào kho.";
+    ViewData["PageIcon"] = "inbox";
+    var vi = System.Globalization.CultureInfo.GetCultureInfo("vi-VN");
+    string Day(DateTime? d) => d?.ToString("dd/MM/yyyy", vi) ?? "—";
+    string When(DateTime? x) => x is DateTime t ? WorkClock.Local(t).ToString("dd/MM/yyyy HH:mm", vi) : "—";
+    var canManage = AdminPermissions.Has(User, AdminPermissions.LegalLibraryManage);
+    string RunKind(string k) => k switch { "WEEKLY" => "Hằng tuần", "MONTHLY" => "Hằng tháng", _ => "Kiểm tra ngay" };
+    string ItemStatus(string s) => s switch { "IMPORTED" => "Đã nạp vào kho", "APPLIED" => "Đã cập nhật hiệu lực", "DISMISSED" => "Đã bỏ qua", _ => "Chờ duyệt" };
+}
+@section PageActions {
+    @if (canManage)
+    {
+        <form asp-action="Check" method="post" class="d-inline" data-ta-watch-check>
+            <button type="submit" class="btn btn-primary">@UiIcon.Render("refresh")<span>Kiểm tra ngay</span></button>
+        </form>
+    }
+}
+<nav aria-label="Hàng chờ văn bản">
+    <ul class="ta-tabs">
+        <li><a class="ta-tabs__link" asp-action="Index" aria-current="@(Model.Pending ? "page" : null)">@UiIcon.Render("inbox")<span>Chờ duyệt@(Model.Data is { } d0 ? $" ({d0.Pending})" : "")</span></a></li>
+        <li><a class="ta-tabs__link" asp-action="Index" asp-route-view="done" aria-current="@(Model.Pending ? null : "page")">@UiIcon.Render("history")<span>Đã xử lý</span></a></li>
+    </ul>
+</nav>
+@if (Model.Error is not null) {<div class="ta-alert ta-alert--danger" role="alert">@UiIcon.Render("alert-circle")<div class="ta-alert__body">@Model.Error</div></div>}
+@if (Model.Data is { } data)
+{
+    <section class="card ta-table-card" aria-label="Danh sách văn bản">
+        @if (data.Items.Count == 0)
+        {
+            <div class="ta-empty"><span class="ta-empty__icon">@UiIcon.Render("inbox")</span><p class="ta-empty__title">@(Model.Pending ? "Không có văn bản nào chờ duyệt" : "Chưa có mục nào được xử lý")</p></div>
+        }
+        else
+        {
+            <div class="ta-table-wrap">
+                <table class="ta-table ta-table-stack">
+                    <thead><tr><th scope="col">Số hiệu</th><th scope="col">Nội dung</th><th scope="col">Ban hành / hiệu lực</th><th scope="col">Liên quan</th><th scope="col">@(Model.Pending ? "Xử lý" : "Kết quả")</th></tr></thead>
+                    <tbody>
+                    @foreach (var i in data.Items)
+                    {
+                        <tr data-ta-watch-item="@i.Kind" data-ta-watch-no="@i.DocumentNo">
+                            <td data-label="Số hiệu">
+                                <span class="ta-code">@i.DocumentNo</span>
+                                <div class="ta-cell-sub">@(i.Kind == "NEW" ? (i.TypeName ?? "Văn bản mới") : "Thay đổi hiệu lực")</div>
+                            </td>
+                            <td>
+                                <div class="ta-cell-strong">@i.Summary</div>
+                                <div class="ta-cell-sub">
+                                    @if (i.Agency is not null) {<span>@i.Agency · </span>}
+                                    <a href="@i.SourceUrl" target="_blank" rel="noopener noreferrer">@(i.Source == "CONGBAO" ? "Công báo" : "vbpl.vn")@UiIcon.Render("external-link")</a>
+                                    @if (i.Keywords is not null) {<span> · Từ khóa: @i.Keywords</span>}
+                                </div>
+                                @if (i.Kind == "STATUS")
+                                {
+                                    <div class="ta-cell-sub">Trong kho: @(i.LibraryStatus ?? "chưa ghi tình trạng"), hết hiệu lực @Day(i.LibraryExpired) → vbpl.vn: @(i.EffectStatus ?? "không rõ"), hết hiệu lực @Day(i.ExpiredDate)</div>
+                                }
+                            </td>
+                            <td class="ta-nowrap" data-label="Ban hành / hiệu lực">@Day(i.IssuedDate)<div class="ta-cell-sub">Hiệu lực @Day(i.EffectiveDate)</div></td>
+                            <td data-label="Liên quan">
+                                @foreach (var r in i.RelationList)
+                                {
+                                    <div><span class="ta-badge ta-badge--neutral ta-badge--plain">@r.Label</span> <span class="ta-code">@r.DocumentNo</span></div>
+                                }
+                                @if (i.LibraryId is Guid lib)
+                                {
+                                    <div><a asp-controller="LegalLibrary" asp-action="Details" asp-route-id="@lib">@(i.Kind == "NEW" ? "Đã có trong kho" : "Văn bản trong kho")</a></div>
+                                }
+                            </td>
+                            <td data-label="@(Model.Pending ? "Xử lý" : "Kết quả")">
+                                @if (!i.IsPending)
+                                {
+                                    <span class="ta-badge @(i.Status == "DISMISSED" ? "ta-badge--neutral" : "ta-badge--success")">@ItemStatus(i.Status)</span>
+                                    <div class="ta-cell-sub">@(i.DecidedByName ?? "—") · @When(i.DecidedAt)</div>
+                                    @if (i.DecisionNote is not null) {<div class="ta-cell-sub">@i.DecisionNote</div>}
+                                }
+                                else if (canManage)
+                                {
+                                    <div class="d-flex flex-wrap gap-2">
+                                        @if (i.Kind == "NEW")
+                                        {
+                                            <form asp-action="Import" asp-route-id="@i.Id" method="post" data-ta-confirm="Nạp @i.DocumentNo vào kho? Hệ thống tải file Word từ Công báo và tách thành từng điều.">
+                                                <button type="submit" class="btn btn-sm btn-ta-gold">@UiIcon.Render("plus")<span>@(i.LibraryId is null ? "Nạp vào kho" : "Đánh dấu đã có")</span></button>
+                                            </form>
+                                            @if (i.LibraryId is null)
+                                            {
+                                                var input = i.Input();
+                                                <a class="btn btn-sm" asp-controller="LegalLibrary" asp-action="Create"
+                                                   asp-route-Input.DocumentNo="@input.DocumentNo" asp-route-Input.Title="@input.Title" asp-route-Input.DocType="@input.DocType"
+                                                   asp-route-Input.IssuedDate="@input.IssuedDate?.ToString("yyyy-MM-dd")" asp-route-Input.EffectiveDate="@input.EffectiveDate?.ToString("yyyy-MM-dd")"
+                                                   asp-route-Input.Note="@input.Note">@UiIcon.Render("pencil")<span>Nhập tay</span></a>
+                                            }
+                                        }
+                                        else
+                                        {
+                                            <form asp-action="Apply" asp-route-id="@i.Id" method="post" data-ta-confirm="Cập nhật tình trạng hiệu lực của @i.DocumentNo trong kho theo vbpl.vn? Văn bản hết hiệu lực sẽ không còn được AI trích dẫn.">
+                                                <button type="submit" class="btn btn-sm btn-ta-gold">@UiIcon.Render("check")<span>Cập nhật hiệu lực</span></button>
+                                            </form>
+                                        }
+                                        <form asp-action="Dismiss" asp-route-id="@i.Id" method="post" class="d-flex gap-1">
+                                            <div class="ta-input-icon">@UiIcon.Render("pencil")
+                                            <input type="text" name="note" class="form-control form-control-sm" maxlength="500" placeholder="Lý do (không bắt buộc)" aria-label="Lý do bỏ qua @i.DocumentNo" /></div>
+                                            <button type="submit" class="btn btn-sm btn-outline-secondary">@UiIcon.Render("x")<span>Bỏ qua</span></button>
+                                        </form>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <span class="ta-badge ta-badge--warning">Chờ duyệt</span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </section>
+
+    <section class="card mt-4" aria-labelledby="watchRunsTitle">
+        <div class="card-header"><h2 class="card-title" id="watchRunsTitle">@UiIcon.Render("history")Các lượt kiểm tra gần đây</h2></div>
+        @if (data.Runs.Count == 0)
+        {
+            <div class="card-body"><p class="text-secondary mb-0">Chưa có lượt kiểm tra nào. Lượt đầu tiên chạy vài phút sau khi hệ thống khởi động.</p></div>
+        }
+        else
+        {
+            <div class="ta-table-wrap">
+                <table class="ta-table ta-table-stack">
+                    <thead><tr><th scope="col">Lượt</th><th scope="col">Bắt đầu</th><th scope="col">Kết quả</th></tr></thead>
+                    <tbody>
+                    @foreach (var r in data.Runs)
+                    {
+                        <tr data-ta-watch-run="@r.Status">
+                            <td data-label="Lượt">@RunKind(r.Kind) <span class="ta-cell-sub">@r.Period</span>@if (r.RequestedByName is not null) {<div class="ta-cell-sub">@r.RequestedByName</div>}</td>
+                            <td class="ta-nowrap" data-label="Bắt đầu">@When(r.StartedAt)</td>
+                            <td data-label="Kết quả">
+                                @if (r.Status == "RUNNING") {<span class="ta-badge ta-badge--warning">Đang chạy</span>}
+                                else if (r.Status == "FAILED") {<span class="ta-badge ta-badge--danger">Lỗi</span> <span class="ta-cell-sub">@r.Error</span>}
+                                else {<span>@(r.NewItems ?? 0) văn bản mới, @(r.StatusItems ?? 0) thay đổi hiệu lực (đã đọc @(r.Scanned ?? 0) mục)</span>}
+                                @if (r.NotifiedAt is not null) {<div class="ta-cell-sub">Đã gửi email thông báo @When(r.NotifiedAt)</div>}
+                            </td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </section>
+}

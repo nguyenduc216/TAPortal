@@ -1,0 +1,12 @@
+[
+  {
+    "change_id": "LEGAL-WATCH-CHG-20261114T113930Z-7A55AD",
+    "created_at": "2026-11-14T11:39:30.748593+00:00",
+    "title": "Monthly tax-law watch: Cong bao + vbpl queue for the law library",
+    "status": "DEPLOYED",
+    "commit_sha": "aeb8a91",
+    "migration_status": "EXECUTED",
+    "publish_status": "DEPLOYED portal 5871b46",
+    "merge_status": "MERGED (see hand-off)"
+  }
+]

@@ -47,6 +47,8 @@ public sealed record LegalLibraryIndexVm(IReadOnlyList<LegalDocumentItem>? Items
 
 public sealed record LegalDocumentEditVm(Guid? Id, LegalDocumentInput Input, int ArticleCount);
 
+public sealed record LegalWatchIndexVm(LegalWatchOverview? Data, bool Pending, string? Error);
+
 // HTML of one contract paragraph, like Word's review view. Open findings are yellow; a decided finding shows its effect in
 // place (accepted: old words struck through, new words underlined green; rejected: plain with a dotted line). Every mark is a
 // button (data-ta-pop) that opens the decision panel of ta-review.js; the hover note stays for a quick look. All text is
