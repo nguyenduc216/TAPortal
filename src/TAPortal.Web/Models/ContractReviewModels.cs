@@ -10,9 +10,37 @@ public sealed record ContractReviewsIndexVm(IReadOnlyList<ReviewListItem>? Items
 public sealed record ContractReviewCreateVm(ReviewInput Input, ReviewLookups Lookups);
 
 // Mode "findings" highlights the clauses flagged on this version; "changes" shows the track changes from the version before.
+// Mode "compare": Original (v0) beside Draft = the current version with every accepted, not yet applied finding applied.
 public sealed record ContractReviewWorkspaceVm(ReviewDetail Review, int VersionNo, string Mode, IReadOnlyList<ReviewParagraph> Paragraphs,
-    IReadOnlyList<ReviewParagraph>? Previous, IReadOnlyList<ReviewFinding> Findings, IReadOnlyList<ReviewChange> Changes, bool AiConfigured, string AiModel)
+    IReadOnlyList<ReviewParagraph>? Previous, IReadOnlyList<ReviewFinding> Findings, IReadOnlyList<ReviewChange> Changes, bool AiConfigured, string AiModel,
+    IReadOnlyDictionary<string, LegalArticleLink>? Legal = null, IReadOnlyList<ReviewParagraph>? Original = null, IReadOnlyList<ReviewParagraph>? Draft = null,
+    int DraftDecided = 0)
 {
+    public IReadOnlyDictionary<string, LegalArticleLink> LegalLinks => Legal ?? new Dictionary<string, LegalArticleLink>();
+
+    // Rows of the side-by-side view, aligned by paragraph key (paragraphs removed in the draft stay where they stood).
+    public IEnumerable<(string Key, string Kind, string? Left, string? Right)> CompareRows()
+    {
+        var left = Original ?? [];
+        var right = Draft ?? [];
+        var leftByKey = left.ToDictionary(p => p.Key);
+        var rightKeys = right.Select(p => p.Key).ToHashSet();
+        var leftIndex = left.Select((p, i) => (p.Key, i)).ToDictionary(x => x.Key, x => x.i);
+        var shown = new HashSet<string>();
+        IEnumerable<(string, string, string?, string?)> RemovedBefore(int limit)
+        {
+            for (var i = 0; i < limit; i++)
+                if (!rightKeys.Contains(left[i].Key) && shown.Add(left[i].Key)) yield return (left[i].Key, left[i].Kind, left[i].Text, null);
+        }
+        foreach (var p in right)
+        {
+            if (leftIndex.TryGetValue(p.Key, out var at)) foreach (var r in RemovedBefore(at)) yield return r;
+            shown.Add(p.Key);
+            yield return (p.Key, p.Kind, leftByKey.GetValueOrDefault(p.Key)?.Text, p.Text);
+        }
+        foreach (var r in RemovedBefore(left.Count)) yield return r;
+    }
+
     public bool IsCurrent => VersionNo == Review.CurrentVersionNo;
     public ReviewVersionInfo? Version => Review.Versions.FirstOrDefault(v => v.No == VersionNo);
     public int OpenCount => Findings.Count(f => f.Status == ContractReviewPolicy.Open);
@@ -166,6 +194,39 @@ public static class ReviewHtml
         if (f.Replacement is not null) Line(sb, "Đề xuất: " + f.Replacement);
         Line(sb, "Bấm để xem chi tiết và quyết định.");
         sb.Append("</span>");
+    }
+
+    // Citations of a finding: an article found in the law library links to it (opened and expanded on the library page);
+    // anything else is shown as text marked "chưa có trong kho".
+    public static IHtmlContent Legal(string? legalBasis, IReadOnlyDictionary<string, LegalArticleLink> links, string detailsUrl)
+    {
+        var sb = new StringBuilder();
+        foreach (var c in LegalCitation.Parse(legalBasis))
+        {
+            if (c.Key is not null && links.TryGetValue(c.Key, out var l))
+            {
+                var label = $"{l.ArticleNo}{(c.Clause is null ? "" : ", " + c.Clause)}{(l.ArticleTitle is null ? "" : ". " + l.ArticleTitle)} — {l.DocumentTitle} ({l.DocumentNo})";
+                sb.Append("<a class=\"ta-rv-legal-link\" target=\"_blank\" rel=\"noopener\" href=\"").Append(E.Encode(detailsUrl.TrimEnd('/') + "/" + l.DocumentId + "#a-" + l.ArticleId))
+                  .Append("\" title=\"").Append(E.Encode("Mở " + l.ArticleNo + " trong kho văn bản pháp luật" + (l.SourceFile is null ? "" : " (nguồn: " + l.SourceFile + ")"))).Append("\">")
+                  .Append(E.Encode(label)).Append(" ↗</a>");
+            }
+            else sb.Append("<span class=\"ta-rv-legal-link text-secondary\">").Append(E.Encode(c.Text)).Append(" <em>(chưa có trong kho luật)</em></span>");
+        }
+        return new HtmlString(sb.ToString());
+    }
+
+    // One side of the side-by-side view: the original keeps deleted words (struck), the draft keeps inserted words.
+    public static IHtmlContent Side(string? left, string? right, bool original)
+    {
+        var sb = new StringBuilder();
+        if (left == right) { Text(sb, (original ? left : right) ?? ""); return new HtmlString(sb.ToString()); }
+        foreach (var part in WordDiff.Compute(left, right))
+        {
+            if (part.Op == DiffOp.Same) Text(sb, part.Text);
+            else if (original && part.Op == DiffOp.Delete) { sb.Append("<del class=\"ta-rv-del\">"); Text(sb, part.Text); sb.Append("</del>"); }
+            else if (!original && part.Op == DiffOp.Insert) { sb.Append("<ins class=\"ta-rv-ins\">"); Text(sb, part.Text); sb.Append("</ins>"); }
+        }
+        return new HtmlString(sb.ToString());
     }
 
     private static void NoteTip(StringBuilder sb, string? note)

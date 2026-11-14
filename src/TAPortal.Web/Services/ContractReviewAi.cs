@@ -55,7 +55,8 @@ public interface IContractReviewAi
 {
     bool IsConfigured { get; }
     string Model { get; }
-    Task<ReviewAiResult> ReviewAsync(ReviewAiRequest request, CancellationToken cancellationToken);
+    // progress: tokens read (exact, once the answer starts) and tokens written so far (estimated from the streamed text).
+    Task<ReviewAiResult> ReviewAsync(ReviewAiRequest request, CancellationToken cancellationToken, IProgress<(long Input, long Output)>? progress = null);
 }
 
 // Prompt, JSON schema and answer validation for the AI contract review. The answer is never trusted as-is: every finding
@@ -203,7 +204,7 @@ public sealed class AnthropicContractReviewAi(ContractReviewAiOptions options, I
     public bool IsConfigured => options.IsConfigured;
     public string Model => options.Model;
 
-    public async Task<ReviewAiResult> ReviewAsync(ReviewAiRequest request, CancellationToken cancellationToken)
+    public async Task<ReviewAiResult> ReviewAsync(ReviewAiRequest request, CancellationToken cancellationToken, IProgress<(long Input, long Output)>? progress = null)
     {
         if (!options.IsConfigured) throw new ReviewAiException("Chưa cấu hình khóa Claude API (ContractReview:Anthropic:ApiKey).");
         var mask = new PersonalDataMask();
@@ -223,15 +224,24 @@ public sealed class AnthropicContractReviewAi(ContractReviewAiOptions options, I
             Messages = [new UserMessageParam { Content = user }]
         };
         var text = new StringBuilder();
-        long input = 0, output = 0;
+        long input = 0, output = 0, chars = 0;
         string? stop = null;
+        var lastReport = DateTime.MinValue;
         try
         {
             await foreach (var e in client.Messages.CreateStreaming(parameters, cancellationToken))
             {
                 if (e.TryPickStart(out var start))
+                {
                     input = start.Message.Usage.InputTokens + (start.Message.Usage.CacheReadInputTokens ?? 0) + (start.Message.Usage.CacheCreationInputTokens ?? 0);
-                else if (e.TryPickContentBlockDelta(out var delta) && delta.Delta.TryPickText(out var t)) text.Append(t.Text);
+                    progress?.Report((input, 0));
+                }
+                else if (e.TryPickContentBlockDelta(out var delta) && delta.Delta.TryPickText(out var t))
+                {
+                    text.Append(t.Text);
+                    chars += t.Text.Length;
+                    if (DateTime.UtcNow - lastReport > TimeSpan.FromSeconds(2)) { lastReport = DateTime.UtcNow; progress?.Report((input, chars / 3)); }
+                }
                 else if (e.TryPickDelta(out var md))
                 {
                     output = md.Usage.OutputTokens;

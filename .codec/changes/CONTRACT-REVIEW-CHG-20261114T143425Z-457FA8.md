@@ -31,6 +31,13 @@ với đề xuất thì đổi màu, các tương tác khác cũng làm ngay tr�
 - Lượt AI thật đầu tiên (đọc DB, không ghi): DONE, claude-opus-5-5, 15:50:46→15:53:27Z, 20 góp ý, 52.217/19.880 token, ~0,61 USD;
   15/20 góp ý có căn cứ khớp kho luật.
 
+- Bổ sung (operator 2026-11-14 sau lượt chạy thật đầu tiên): (1) căn cứ pháp lý có link mở đúng điều trong Kho văn bản pháp luật
+  (LegalCitation.Parse + ILegalLibraryStore.ResolveAsync; trang kho tự mở điều #a-<id>); số trang không có vì kho lưu theo điều;
+  (2) chế độ "So sánh với bản gốc": hai cột bản gốc (v0) | bản đang chỉnh sửa (bản hiện tại + góp ý đã đồng ý), canh theo đoạn;
+  (3) số token khi AI đang chạy (đọc chính xác, viết ước tính từ chữ đang nhận, ghi mỗi 5 giây) và tổng token/chi phí các lượt;
+  (4) góp ý nghiêm trọng (HIGH) tô đỏ; (5) bấm P54/#f-… cuộn đúng chỗ (không đổi location.hash vì popstate làm shell tải lại trang về đầu).
+  ILegalLibraryStore.ResolveAsync có cài đặt mặc định để fake của SafeLegalWatchTests không phải sửa.
+
 ## File thay đổi (relative path, thao tác ADD/MODIFY/DELETE)
 - MODIFY `src/TAPortal.Web/Models/ContractReviewModels.cs` (ReviewHtml: hiển thị quyết định tại chỗ, nút data-ta-pop)
 - MODIFY `src/TAPortal.Web/Views/ContractReviews/Details.cshtml` (trang giấy, template bảng quyết định)

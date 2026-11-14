@@ -47,6 +47,31 @@
         (pop.querySelector('[data-ta-review-accept]') || pop.querySelector('button:not(.ta-rv-pop__close)'))?.focus({ preventScroll: true });
     };
 
+    // In-page links (#p-P54, #f-…, #c-…) scroll to their target here: changing location.hash would fire popstate, which
+    // the shell answers with a reload scrolled to the top.
+    const jump = (id) => {
+        const target = document.getElementById(id);
+        if (!target) return false;
+        const details = target.matches('details') ? target : target.querySelector(':scope > details');
+        if (details) details.open = true;
+        target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        target.classList.remove('is-jump');
+        void target.offsetWidth;
+        target.classList.add('is-jump');
+        return true;
+    };
+    document.addEventListener('click', (event) => {
+        const link = event.target.closest?.('[data-ta-review-workspace] a[href^="#"], [data-ta-legal-articles] a[href^="#"]');
+        if (!link || link.getAttribute('href').length < 2) return;
+        if (jump(link.getAttribute('href').slice(1))) { event.preventDefault(); event.stopPropagation(); close(); }
+    }, true);
+    // A law article opened from a citation link (…/LegalLibrary/Details/<doc>#a-<article>) is expanded and shown.
+    const openHash = () => {
+        if (window.location.hash.startsWith('#a-')) window.setTimeout(() => jump(window.location.hash.slice(1)), 50);
+    };
+    document.addEventListener('ta:load', openHash);
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', openHash); else openHash();
+
     document.addEventListener('click', (event) => {
         const anchor = event.target.closest?.('[data-ta-review-workspace] [data-ta-pop]');
         if (anchor) { event.preventDefault(); open(anchor); return; }
@@ -145,6 +170,9 @@
                 const text = box.querySelector('[data-ta-running-text]');
                 if (text && status.runStatus === 'RUNNING') text.textContent = 'AI đang đọc và rà soát hợp đồng…';
                 if (status.since) box.dataset.taSince = status.since;
+                const tokens = box.querySelector('[data-ta-tokens]');
+                const n = (v) => Number(v).toLocaleString('vi-VN');
+                if (tokens && status.inputTokens) tokens.textContent = `đã đọc ${n(status.inputTokens)} token` + (status.outputTokens ? ` · đã viết ~${n(status.outputTokens)} token` : ' · AI đang suy nghĩ');
                 return;
             }
             await refresh({ ok: status.runStatus === 'DONE', findings: status.findings, error: status.error });

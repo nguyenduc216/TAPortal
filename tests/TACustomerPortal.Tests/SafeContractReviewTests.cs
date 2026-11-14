@@ -426,8 +426,21 @@ Nội dung điều 5.
         Assert.Contains("\"reviewStatus\":\"IN_REVIEW\"", await status.Content.ReadAsStringAsync());
         Assert.Equal(HttpStatusCode.NotFound, (await c.GetAsync($"/contractreviews/runstatus/{Guid.NewGuid()}")).StatusCode);
         Assert.Equal("2026-11-14T15:50:46.0000000Z", admin::TAPortal.Web.Controllers.ContractReviewsController.Utc(new DateTime(2026, 11, 14, 15, 50, 46)));
+        // Citation links open the article in the law library; side-by-side compare shows the original beside the draft.
+        Assert.Contains($"href=\"/LegalLibrary/Details/{MemoryLibrary.Doc}#a-7\"", html);
+        Assert.Contains("Điều 418. Thỏa thuận phạt vi phạm — Bộ luật Dân sự (91/2015/QH13)", html);
+        Assert.Contains("data-ta-review-compare", html);
+        var compare = WebUtility.HtmlDecode(await c.GetStringAsync($"/contractreviews/details/{R1}?v=1&mode=compare"));
+        Assert.Contains("data-ta-review-side-by-side", compare);
+        Assert.Contains("Bản gốc của khách hàng", compare);
+        Assert.Contains("ta-rv-compare__row is-changed", compare);
+        Assert.Contains("hai bên ký", compare);                                         // accepted finding (P5) already in the draft
+        Assert.Contains("<del class=\"ta-rv-del\">30</del>", compare);              // original side: the word that was changed
+        var citations = S.LegalCitation.Parse("Điều 418, khoản 2 – 91/2015/QH13: phạt vi phạm\nKhuyến nghị thực tiễn");
+        Assert.Equal(("91/2015/QH13|điều 418", "khoản 2"), (citations[0].Key, citations[0].Clause));
+        Assert.Null(citations[1].Key);
         var preview = Environment.GetEnvironmentVariable("TA_REVIEW_PREVIEW");
-        if (!string.IsNullOrEmpty(preview)) File.WriteAllText(preview, page);
+        if (!string.IsNullOrEmpty(preview)) { File.WriteAllText(preview, page); File.WriteAllText(preview.Replace(".html", "-compare.html"), await c.GetStringAsync($"/contractreviews/details/{R1}?v=1&mode=compare")); }
     }
 
     [Fact]
@@ -580,6 +593,7 @@ Nội dung điều 5.
         public Task CompleteRunAsync(S.ReviewRunJob job, S.ReviewAiResult result) => Task.CompletedTask;
         public Task FailRunAsync(Guid runId, Guid reviewId, string error) => Task.CompletedTask;
         public Task<int> RecoverStaleRunsAsync(TimeSpan olderThan) => Task.FromResult(0);
+        public Task ProgressAsync(Guid runId, long inputTokens, long outputTokens) => Task.CompletedTask;
         private static Task<S.ReviewResult> Saved() => Task.FromResult(new S.ReviewResult(S.ReviewOutcome.Saved, R1, 1, AuditPersisted: true));
     }
 
@@ -606,6 +620,10 @@ Nội dung điều 5.
         public Task<S.LegalOutcome> DeleteArticleAsync(Guid actor, Guid id, long articleId, string? ip) => Task.FromResult(S.LegalOutcome.Saved);
         public Task<S.LegalOutcome> DeleteAsync(Guid actor, Guid id, string? ip) => Task.FromResult(S.LegalOutcome.Saved);
         public Task<S.ReviewFileContent?> DownloadAsync(Guid id, Guid fileId) => Task.FromResult<S.ReviewFileContent?>(null);
+        public Task<IReadOnlyDictionary<string, S.LegalArticleLink>> ResolveAsync(IEnumerable<S.LegalCitation> citations) =>
+            Task.FromResult<IReadOnlyDictionary<string, S.LegalArticleLink>>(citations.Any(c => c.Key == "91/2015/QH13|điều 418")
+                ? new Dictionary<string, S.LegalArticleLink> { ["91/2015/QH13|điều 418"] = new(Doc, 7, "91/2015/QH13", "Bộ luật Dân sự", "Điều 418", "Thỏa thuận phạt vi phạm", "blds.docx") }
+                : new Dictionary<string, S.LegalArticleLink>());
     }
 
     private sealed record TestPrincipal(string[] Permissions);

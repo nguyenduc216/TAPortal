@@ -17,6 +17,7 @@
     var editable = canEdit && Model.IsCurrent && !locked && !analyzing;
     var findingsByKey = Model.Findings.GroupBy(f => f.ParagraphKey).ToDictionary(g => g.Key, g => (IReadOnlyList<ReviewFinding>)g.ToList());
     var answering = Model.IsCurrent && r.Status is ContractReviewPolicy.DraftReady or ContractReviewPolicy.Sent or ContractReviewPolicy.CustomerReplied;
+    var legalUrl = Url.Content("~/LegalLibrary/Details/");
     var answeringHere = answering && canEdit && Model.Version?.Source == "STAFF" && Model.Mode == "changes";
 }
 @section PageActions {
@@ -25,7 +26,7 @@
     @if (Model.VersionNo > 0) {<a class="btn btn-primary" asp-action="Export" asp-route-id="@r.Id" asp-route-v="@Model.VersionNo" asp-route-tracked="true" download data-ta-hard data-ta-review-export-tracked>@UiIcon.Render("file-text")<span>Word theo dõi thay đổi</span></a>}
 }
 <div class="row g-4" data-ta-review-workspace="@r.Code">
-<div class="col-xl-8 d-flex flex-column gap-4">
+<div class="@(Model.Mode == "compare" ? "col-12" : "col-xl-8") d-flex flex-column gap-4">
     <section class="card" aria-labelledby="rvDocTitle">
         <div class="card-header flex-wrap gap-2">
             <h2 class="card-title" id="rvDocTitle">@UiIcon.Render("file-text")@(Model.Version?.Label ?? "Phiên bản " + Model.VersionNo)</h2>
@@ -36,19 +37,37 @@
                 }
             </nav>
         </div>
-        @if (Model.VersionNo > 0)
-        {
-            <div class="card-body py-2 d-flex flex-wrap gap-2 align-items-center border-bottom">
-                <span class="text-secondary">Hiển thị:</span>
-                <a class="btn btn-sm @(Model.Mode == "findings" ? "btn-soft-primary" : "")" asp-action="Details" asp-route-id="@r.Id" asp-route-v="@Model.VersionNo" asp-route-mode="findings">Góp ý trên bản này (@Model.Findings.Count)</a>
-                <a class="btn btn-sm @(Model.Mode == "changes" ? "btn-soft-primary" : "")" asp-action="Details" asp-route-id="@r.Id" asp-route-v="@Model.VersionNo" asp-route-mode="changes">Thay đổi so với bản trước (@Model.Changes.Count)</a>
-            </div>
-        }
+        <div class="card-body py-2 d-flex flex-wrap gap-2 align-items-center border-bottom" data-ta-review-modes>
+            <span class="text-secondary">Hiển thị:</span>
+            <a class="btn btn-sm @(Model.Mode == "findings" ? "btn-soft-primary" : "")" asp-action="Details" asp-route-id="@r.Id" asp-route-v="@Model.VersionNo" asp-route-mode="findings">Góp ý trên bản này (@Model.Findings.Count)</a>
+            @if (Model.VersionNo > 0) {<a class="btn btn-sm @(Model.Mode == "changes" ? "btn-soft-primary" : "")" asp-action="Details" asp-route-id="@r.Id" asp-route-v="@Model.VersionNo" asp-route-mode="changes">Thay đổi so với bản trước (@Model.Changes.Count)</a>}
+            <a class="btn btn-sm @(Model.Mode == "compare" ? "btn-soft-primary" : "")" asp-action="Details" asp-route-id="@r.Id" asp-route-v="@Model.VersionNo" asp-route-mode="compare" data-ta-review-compare>@UiIcon.Render("arrows-exchange")<span>So sánh với bản gốc</span></a>
+        </div>
         <div class="card-body ta-rv-desk">
             <p class="ta-rv-legend">
-                @if (Model.Mode == "changes") {<span><ins class="ta-rv-ins">chữ thêm</ins></span><span><del class="ta-rv-del">chữ bỏ</del></span><span>@(answeringHere ? "Bấm vào chỗ sửa để ghi ý kiến của khách hàng." : "Rê chuột lên chỗ sửa để xem lý do.")</span>}
-                else {<span><span class="ta-rv-mark ta-rv-sev-high">cần sửa gấp</span></span><span><span class="ta-rv-mark ta-rv-sev-medium">cần lưu ý</span></span><span><span class="ta-rv-mark is-accepted"><del class="ta-rv-del">đã</del> <ins class="ta-rv-ins">chấp nhận</ins></span></span><span>@(editable ? "Bấm vào chỗ tô vàng để đồng ý, sửa hoặc bỏ qua; bấm ✎ để tự sửa một đoạn." : "Bấm vào chỗ tô vàng để xem góp ý.")</span>}
+                @if (Model.Mode == "compare") {<span><del class="ta-rv-del">chữ bị bỏ</del> (bên trái)</span><span><ins class="ta-rv-ins">chữ mới</ins> (bên phải)</span><span>Dòng có viền vàng là đoạn đã sửa.</span>}
+                else if (Model.Mode == "changes") {<span><ins class="ta-rv-ins">chữ thêm</ins></span><span><del class="ta-rv-del">chữ bỏ</del></span><span>@(answeringHere ? "Bấm vào chỗ sửa để ghi ý kiến của khách hàng." : "Rê chuột lên chỗ sửa để xem lý do.")</span>}
+                else {<span><span class="ta-rv-mark ta-rv-sev-high">sai nặng / thiếu quan trọng</span></span><span><span class="ta-rv-mark ta-rv-sev-medium">cần lưu ý</span></span><span><span class="ta-rv-mark is-accepted"><del class="ta-rv-del">đã</del> <ins class="ta-rv-ins">chấp nhận</ins></span></span><span>@(editable ? "Bấm vào chỗ tô vàng để đồng ý, sửa hoặc bỏ qua; bấm ✎ để tự sửa một đoạn." : "Bấm vào chỗ tô vàng để xem góp ý.")</span>}
             </p>
+            @if (Model.Mode == "compare")
+            {
+                <div class="ta-rv-compare" data-ta-review-side-by-side>
+                    <div class="ta-rv-compare__head">
+                        <div>Bản gốc của khách hàng</div>
+                        <div>Bản đang chỉnh sửa (@(r.CurrentVersionNo == 0 ? "bản gốc" : "v" + r.CurrentVersionNo)@(Model.DraftDecided > 0 ? $" + {Model.DraftDecided} góp ý đã đồng ý" : ""))</div>
+                    </div>
+                    @foreach (var row in Model.CompareRows())
+                    {
+                        var changed = row.Left != row.Right;
+                        <div class="ta-rv-compare__row @(changed ? "is-changed" : "") ta-rv-p--@row.Kind.ToLowerInvariant()" id="cmp-@row.Key">
+                            <div class="ta-rv-compare__cell">@if (row.Left is null) {<span class="ta-rv-compare__empty">(chưa có – đoạn thêm mới)</span>} else {<span class="ta-rv-key">@row.Key</span>@ReviewHtml.Side(row.Left, row.Right, true)}</div>
+                            <div class="ta-rv-compare__cell">@if (row.Right is null) {<span class="ta-rv-compare__empty">(đã bỏ đoạn này)</span>} else {<span class="ta-rv-key">@row.Key</span>@ReviewHtml.Side(row.Left, row.Right, false)}</div>
+                        </div>
+                    }
+                </div>
+            }
+            else
+            {
             <article class="ta-rv-doc ta-rv-paper" data-ta-review-doc aria-label="Nội dung hợp đồng">
                 @if (Model.Mode == "changes")
                 {
@@ -65,7 +84,7 @@
                     foreach (var p in Model.Paragraphs)
                     {
                         var list = findingsByKey.GetValueOrDefault(p.Key) ?? [];
-                        <div class="ta-rv-p ta-rv-p--@p.Kind.ToLowerInvariant() @(list.Count > 0 ? "is-flagged" : "")" id="p-@p.Key">
+                        <div class="ta-rv-p ta-rv-p--@p.Kind.ToLowerInvariant() @(list.Count > 0 ? "is-flagged" : "") @(list.Any(f => f.Severity == "HIGH" && f.Status == ContractReviewPolicy.Open) ? "is-flagged-high" : "")" id="p-@p.Key">
                             <span class="ta-rv-key">@p.Key</span>
                             <div class="ta-rv-text">@ReviewHtml.Findings(p, list)</div>
                             @if (editable) {<button type="button" class="ta-rv-edit" data-ta-pop="e-@p.Key" title="Sửa trực tiếp đoạn @p.Key" aria-label="Sửa trực tiếp đoạn @p.Key">✎</button>}
@@ -80,6 +99,7 @@
                     }
                 }
             </article>
+            }
         </div>
 
         @* Decision panels opened in place by ta-review.js (data-ta-pop="<id>" → template#pop-<id>). Without JS the lists below work. *@
@@ -94,7 +114,7 @@
                     <span class="ta-cell-sub">@f.ParagraphKey · @ContractReviewPolicy.Label(ContractReviewPolicy.Actions, f.Action) · có lợi cho @ContractReviewPolicy.Label(ContractReviewPolicy.Roles, f.Party)</span>
                 </div>
                 <p class="ta-rv-pop__issue">@f.Issue</p>
-                @if (f.LegalBasis is not null) {<p class="ta-rv-pop__legal">@f.LegalBasis @if (f.LegalVerified) {<span class="ta-badge ta-badge--success ta-badge--plain">Đã đối chiếu kho luật</span>} else {<span class="ta-badge ta-badge--warning ta-badge--plain">Chưa đối chiếu – cần kiểm tra</span>}</p>}
+                @if (f.LegalBasis is not null) {<div class="ta-rv-pop__legal">@ReviewHtml.Legal(f.LegalBasis, Model.LegalLinks, legalUrl) @if (f.LegalVerified) {<span class="ta-badge ta-badge--success ta-badge--plain">Đã đối chiếu kho luật</span>} else {<span class="ta-badge ta-badge--warning ta-badge--plain">Chưa đối chiếu – cần kiểm tra</span>}</div>}
                 @if (f.Suggestion is not null) {<p class="ta-cell-sub">@f.Suggestion</p>}
                 @if (f.Action == ContractReviewPolicy.Replace && proposal is not null)
                 {
@@ -204,7 +224,7 @@
                                 <dt>Loại</dt><dd>@ContractReviewPolicy.Label(ContractReviewPolicy.Actions, f.Action) · có lợi cho @ContractReviewPolicy.Label(ContractReviewPolicy.Roles, f.Party) · @(f.Source == "AI" ? "AI đề xuất" : "Nhân viên thêm")</dd>
                                 @if (f.Quote is not null) {<dt>Câu trích</dt><dd><q>@f.Quote</q></dd>}
                                 <dt>Vấn đề</dt><dd style="white-space: pre-line">@f.Issue</dd>
-                                @if (f.LegalBasis is not null) {<dt>Căn cứ pháp lý</dt><dd style="white-space: pre-line">@f.LegalBasis @if (f.LegalVerified) {<span class="ta-badge ta-badge--success ta-badge--plain">Đã đối chiếu kho luật</span>} else {<span class="ta-badge ta-badge--warning ta-badge--plain" data-ta-unverified>Chưa đối chiếu kho luật – cần kiểm tra</span>}</dd>}
+                                @if (f.LegalBasis is not null) {<dt>Căn cứ pháp lý</dt><dd>@ReviewHtml.Legal(f.LegalBasis, Model.LegalLinks, legalUrl) @if (f.LegalVerified) {<span class="ta-badge ta-badge--success ta-badge--plain">Đã đối chiếu kho luật</span>} else {<span class="ta-badge ta-badge--warning ta-badge--plain" data-ta-unverified>Chưa đối chiếu kho luật – cần kiểm tra</span>}</dd>}
                                 @if (f.Suggestion is not null) {<dt>Khuyến nghị</dt><dd style="white-space: pre-line">@f.Suggestion</dd>}
                                 @if (f.RevisedText is not null) {<dt>Câu chữ đề xuất</dt><dd class="ta-rv-proposal">@f.RevisedText</dd>}
                                 @if (f.StaffText is not null) {<dt>Câu chữ sau khi sửa</dt><dd class="ta-rv-proposal">@f.StaffText</dd>}
@@ -317,7 +337,7 @@
     }
 </div>
 
-<div class="col-xl-4 d-flex flex-column gap-4">
+<div class="@(Model.Mode == "compare" ? "col-12 ta-rv-side--wide" : "col-xl-4") d-flex flex-column gap-4">
     <section class="card" aria-labelledby="rvInfoTitle">
         <div class="card-header"><h2 class="card-title" id="rvInfoTitle">@UiIcon.Render("info-circle")Yêu cầu chỉnh lý</h2><span class="ms-auto ta-badge @ContractReviewPolicy.StatusBadge(r.Status)" data-ta-review-status="@r.Status">@ContractReviewPolicy.Label(ContractReviewPolicy.Statuses, r.Status)</span></div>
         <div class="card-body">
@@ -351,7 +371,8 @@
                             <span class="ta-rv-spinner" aria-hidden="true"></span>
                             <div>
                                 <div class="ta-cell-strong" data-ta-running-text>@(run.Status == "QUEUED" ? "Đang chờ AI nhận việc…" : "AI đang đọc và rà soát hợp đồng…")</div>
-                                <div class="ta-cell-sub">Đã chạy <span data-ta-elapsed>—</span> · thường 2–8 phút. Trang tự cập nhật khi xong; có thể đóng trang, AI vẫn chạy trên máy chủ.</div>
+                                <div class="ta-cell-sub">Đã chạy <span data-ta-elapsed>—</span> · <span data-ta-tokens>@(run.InputTokens is int ri ? $"đã đọc {ri.ToString("N0", vi)} token" : "đang gửi hợp đồng")@(run.OutputTokens is int ro && ro > 0 ? $" · đã viết ~{ro.ToString("N0", vi)} token" : "")</span></div>
+                                <div class="ta-cell-sub">Thường 2–8 phút. Trang tự cập nhật khi xong; có thể đóng trang, AI vẫn chạy trên máy chủ.</div>
                             </div>
                         </div>
                     }
@@ -442,6 +463,9 @@
     {
         <section class="card" aria-labelledby="rvRunsTitle" data-ta-review-runs>
             <div class="card-header"><h2 class="card-title" id="rvRunsTitle">@UiIcon.Render("server")Lượt AI rà soát</h2></div>
+            <div class="card-body py-2 border-bottom ta-cell-sub" data-ta-review-run-totals>
+                Tổng @r.Runs.Count lượt · đọc @r.Runs.Sum(x => (long)(x.InputTokens ?? 0)).ToString("N0", vi) token · viết @r.Runs.Sum(x => (long)(x.OutputTokens ?? 0)).ToString("N0", vi) token · ~@r.Runs.Sum(x => x.CostUsd ?? 0m).ToString("0.00", vi) USD
+            </div>
             <ul class="ta-list">
                 @foreach (var x in r.Runs)
                 {
@@ -451,7 +475,7 @@
                             <span>@(x.VersionNo == 0 ? "Bản gốc" : "v" + x.VersionNo)</span>
                             <span class="ms-auto ta-cell-sub">@When(x.RequestedAt)</span>
                         </div>
-                        <div class="ta-cell-sub">@(x.RequestedByName ?? "—")@if (x.Model is not null) {<span> · @x.Model</span>}@if (x.FindingCount is int n) {<span> · @n góp ý</span>}@if (x.InputTokens is int it) {<span> · @it.ToString("N0", vi) + @((x.OutputTokens ?? 0).ToString("N0", vi)) token</span>}@if (x.CostUsd is decimal cost) {<span> · ~@cost.ToString("0.00", vi) USD</span>}</div>
+                        <div class="ta-cell-sub">@(x.RequestedByName ?? "—")@if (x.Model is not null) {<span> · @x.Model</span>}@if (x.FindingCount is int n) {<span> · @n góp ý</span>}@if (x.InputTokens is int it) {<span> · đọc @it.ToString("N0", vi) / viết @((x.OutputTokens ?? 0).ToString("N0", vi)) token</span>}@if (x.FinishedAt is DateTime fin && (x.StartedAt ?? x.RequestedAt) is DateTime st) {<span> · @((int)(fin - st).TotalMinutes) phút @((fin - st).Seconds) giây</span>}@if (x.CostUsd is decimal cost) {<span> · ~@cost.ToString("0.00", vi) USD</span>}</div>
                         @if (x.Summary is not null) {<div class="mt-1" style="white-space: pre-line">@x.Summary</div>}
                         @if (x.Error is not null) {<div class="mt-1 text-danger" style="white-space: pre-line">@x.Error</div>}
                     </li>

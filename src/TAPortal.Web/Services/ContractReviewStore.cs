@@ -118,6 +118,8 @@ public interface IContractReviewStore
     Task CompleteRunAsync(ReviewRunJob job, ReviewAiResult result);
     Task FailRunAsync(Guid runId, Guid reviewId, string error);
     Task<int> RecoverStaleRunsAsync(TimeSpan olderThan);
+    // Live token counts of a running review (shown on the page while the AI works).
+    Task ProgressAsync(Guid runId, long inputTokens, long outputTokens);
 }
 
 public static class ContractReviewSql
@@ -622,6 +624,15 @@ public sealed class SqlContractReviewStore(IConfiguration configuration, AdminAu
         await Exec(cn, tx, ContractReviewSql.FailRun, ("@error", ReviewText.Short(error, 1000)), ("@run", runId));
         await Exec(cn, tx, ContractReviewSql.AfterRun, ("@id", reviewId));
         await tx.CommitAsync();
+    }
+
+    public async Task ProgressAsync(Guid runId, long inputTokens, long outputTokens)
+    {
+        await using var cn = Connection();
+        await cn.OpenAsync();
+        await using var cmd = Cmd(cn, null, "UPDATE dbo.ContractReviewRuns SET InputTokens=@input,OutputTokens=@output WHERE Id=@run AND Status='RUNNING';",
+            ("@input", (int)Math.Min(inputTokens, int.MaxValue)), ("@output", (int)Math.Min(outputTokens, int.MaxValue)), ("@run", runId));
+        await cmd.ExecuteNonQueryAsync();
     }
 
     public async Task<int> RecoverStaleRunsAsync(TimeSpan olderThan)

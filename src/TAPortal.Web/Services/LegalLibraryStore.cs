@@ -19,6 +19,25 @@ public sealed record LegalFileInfo(Guid Id, string FileName, string ContentType,
 
 public sealed record LegalDocumentDetail(LegalDocumentItem Document, IReadOnlyList<LegalArticleItem> Articles, IReadOnlyList<LegalFileInfo> Files);
 
+// Where a cited article lives in the law library (for the citation links on the review page).
+public sealed record LegalArticleLink(Guid DocumentId, long ArticleId, string DocumentNo, string DocumentTitle, string ArticleNo, string? ArticleTitle, string? SourceFile);
+
+// One citation of a finding ("Điều 418, khoản 2 – 91/2015/QH13: note"), parsed back from ReviewFinding.LegalBasis.
+public sealed record LegalCitation(string Text, string? DocumentNo, string? ArticleNo, string? Clause)
+{
+    private static readonly Regex Line = new(@"^(?<art>Điều\s+\d+[a-zđ]?)(?:,\s*(?<clause>[^–]+?))?\s+–\s+(?<doc>\S+)(?::\s*.*)?$", RegexOptions.Compiled);
+
+    public string? Key => DocumentNo is null || ArticleNo is null ? null : LegalTextParser.NormalizeDocumentNo(DocumentNo) + "|" + ArticleNo.ToLowerInvariant();
+
+    public static IReadOnlyList<LegalCitation> Parse(string? legalBasis) =>
+        (legalBasis ?? "").Replace("\r\n", "\n").Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Select(line =>
+        {
+            var m = Line.Match(line);
+            return m.Success ? new LegalCitation(line, m.Groups["doc"].Value, LegalTextParser.NormalizeArticle(m.Groups["art"].Value), m.Groups["clause"].Success ? m.Groups["clause"].Value.Trim() : null)
+                             : new LegalCitation(line, null, null, null);
+        }).ToList();
+}
+
 // An uploaded law file with the text read from it.
 public sealed record LegalUpload(string FileName, string ContentType, byte[] Data, string Text);
 
@@ -183,6 +202,10 @@ public interface ILegalLibraryStore
     Task<LegalOutcome> DeleteArticleAsync(Guid actor, Guid id, long articleId, string? ip);
     Task<LegalOutcome> DeleteAsync(Guid actor, Guid id, string? ip);
     Task<ReviewFileContent?> DownloadAsync(Guid id, Guid fileId);
+    // Library entries of the cited articles, keyed by LegalCitation.Key (citations not in the library are absent).
+    // Default (no links) keeps other implementations of this interface (test fakes) compiling.
+    Task<IReadOnlyDictionary<string, LegalArticleLink>> ResolveAsync(IEnumerable<LegalCitation> citations) =>
+        Task.FromResult<IReadOnlyDictionary<string, LegalArticleLink>>(new Dictionary<string, LegalArticleLink>());
 }
 
 // Law library (dbo.LegalDocuments, dbo.LegalArticles of migration 044; dbo.LegalDocumentFiles of 046). Writes need
@@ -345,6 +368,30 @@ WHERE f.Id=@file AND f.DocumentId=@id AND d.IsDeleted=0;
         if (!await r.ReadAsync()) return null;
         var name = r.GetString(0); var type = r.GetString(1); var data = (byte[])r.GetValue(2);
         return new(name, type, data);
+    }
+
+    public async Task<IReadOnlyDictionary<string, LegalArticleLink>> ResolveAsync(IEnumerable<LegalCitation> citations)
+    {
+        var docs = citations.Where(c => c.Key is not null).Select(c => LegalTextParser.NormalizeDocumentNo(c.DocumentNo)).Distinct().Take(50).ToList();
+        var result = new Dictionary<string, LegalArticleLink>(StringComparer.Ordinal);
+        if (docs.Count == 0) return result;
+        await using var cn = Connection();
+        await cn.OpenAsync();
+        var names = docs.Select((_, i) => "@d" + i).ToList();
+        await using var cmd = new SqlCommand($"""
+SELECT d.Id,d.DocumentNo,d.Title,a.Id,a.ArticleNo,a.Title,
+ (SELECT TOP 1 f.FileName FROM dbo.LegalDocumentFiles f WHERE f.DocumentId=d.Id AND f.IsCurrent=1)
+FROM dbo.LegalArticles a JOIN dbo.LegalDocuments d ON d.Id=a.DocumentId
+WHERE d.IsDeleted=0 AND UPPER(REPLACE(d.DocumentNo,' ','')) IN ({string.Join(",", names)});
+""", cn);
+        for (var i = 0; i < docs.Count; i++) cmd.Parameters.Add(names[i], SqlDbType.NVarChar, 50).Value = docs[i];
+        await using var r = await cmd.ExecuteReaderAsync();
+        while (await r.ReadAsync())
+        {
+            var link = new LegalArticleLink(r.GetGuid(0), r.GetInt64(3), r.GetString(1), r.GetString(2), r.GetString(4), r.IsDBNull(5) ? null : r.GetString(5), r.IsDBNull(6) ? null : r.GetString(6));
+            result[LegalTextParser.NormalizeDocumentNo(link.DocumentNo) + "|" + link.ArticleNo.ToLowerInvariant()] = link;
+        }
+        return result;
     }
 
     // ---- helpers --------------------------------------------------------------------------------------------

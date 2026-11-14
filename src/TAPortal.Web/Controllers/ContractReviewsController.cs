@@ -9,7 +9,7 @@ namespace TAPortal.Web.Controllers;
 // Quản lý khách hàng → Hợp đồng dịch vụ: contract revision requests ("yêu cầu chỉnh lý hợp đồng"). Viewing needs
 // CONTRACTS.REVIEW.VIEW; every change declares its own CONTRACTS.REVIEW.* permission, re-checked in SQL by the store.
 [Authorize(Policy = AdminPermissions.Policy.ContractReviewView)]
-public sealed class ContractReviewsController(IContractReviewStore reviews, IContractReviewAi ai, ILogger<ContractReviewsController> logger) : Controller
+public sealed class ContractReviewsController(IContractReviewStore reviews, IContractReviewAi ai, ILegalLibraryStore library, ILogger<ContractReviewsController> logger) : Controller
 {
     private const long UploadLimit = ContractReviewPolicy.MaxFileBytes + 1024 * 1024;
     internal const string StoreUnavailable = "Không đọc được dữ liệu Hợp đồng dịch vụ (migration 044 đã chạy chưa?). Chi tiết đã ghi vào nhật ký ứng dụng.";
@@ -79,8 +79,23 @@ public sealed class ContractReviewsController(IContractReviewStore reviews, ICon
         var previous = no > 0 ? await reviews.ParagraphsAsync(id, no - 1) : null;
         var findings = (await reviews.FindingsAsync(id)).Where(f => f.VersionNo == no).ToList();
         var changes = (await reviews.ChangesAsync(id)).Where(c => c.ToVersionNo == no).ToList();
-        var view = mode is "changes" or "findings" ? mode : findings.Count > 0 || no == 0 ? "findings" : "changes";
-        return View(new ContractReviewWorkspaceVm(review, no, view, paragraphs, previous, findings, changes, ai.IsConfigured, ai.Model));
+        var view = mode is "changes" or "findings" or "compare" ? mode : findings.Count > 0 || no == 0 ? "findings" : "changes";
+        IReadOnlyDictionary<string, LegalArticleLink>? legal = null;
+        try { legal = await library.ResolveAsync(findings.SelectMany(f => LegalCitation.Parse(f.LegalBasis))); }
+        catch (SqlException ex) { logger.LogWarning(ex, "LEGAL_LINKS_UNAVAILABLE"); }
+        IReadOnlyList<ReviewParagraph>? original = null, draft = null;
+        var decided = 0;
+        if (view == "compare")
+        {
+            // Original (v0) beside the version being edited: the current version with the accepted findings applied.
+            original = await reviews.ParagraphsAsync(id, 0);
+            var current = review.CurrentVersionNo == no ? paragraphs : await reviews.ParagraphsAsync(id, review.CurrentVersionNo);
+            var pending = (await reviews.FindingsAsync(id)).Where(f => f.VersionNo == review.CurrentVersionNo && f.IsDecided && f.AppliedInVersionNo is null).ToList();
+            decided = pending.Count;
+            var applied = ContractReviewPolicy.Apply(current, pending.Select(f => new ReviewEdit(f.Id, f.ParagraphKey, f.Action, f.Quote, f.Replacement, f.Issue)).ToList(), 9000);
+            draft = applied.Errors.Count == 0 ? applied.Paragraphs : current;
+        }
+        return View(new ContractReviewWorkspaceVm(review, no, view, paragraphs, previous, findings, changes, ai.IsConfigured, ai.Model, legal, original, draft, decided));
     }
 
     [HttpPost]
@@ -204,6 +219,8 @@ public sealed class ContractReviewsController(IContractReviewStore reviews, ICon
             runStatus = run?.Status,
             active = run?.Status is "QUEUED" or "RUNNING",
             findings = run?.FindingCount,
+            inputTokens = run?.InputTokens,
+            outputTokens = run?.OutputTokens,
             error = run?.Status == "FAILED" ? run.Error : null,
             since = Utc(run?.StartedAt ?? run?.RequestedAt)
         });

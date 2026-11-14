@@ -46,7 +46,27 @@ public sealed class ContractReviewWorker(IServiceScopeFactory scopes, IContractR
             var library = await services.GetRequiredService<ILegalLibraryStore>().IndexAsync(DateTime.Today);
             using var timeout = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken);
             timeout.CancelAfter(RunTimeout);
-            var result = await ai.ReviewAsync(new(job.Title, job.Role, job.Paragraphs, library, job.Mask, job.Note), timeout.Token);
+            // Token counts are written to the run every 5 seconds while the answer streams in.
+            long input = 0, output = 0, written = -1;
+            var progress = new Progress<(long Input, long Output)>(p => { Interlocked.Exchange(ref input, p.Input); Interlocked.Exchange(ref output, p.Output); });
+            using var stopReporting = CancellationTokenSource.CreateLinkedTokenSource(timeout.Token);
+            var reporter = Task.Run(async () =>
+            {
+                while (!stopReporting.IsCancellationRequested)
+                {
+                    try { await Task.Delay(TimeSpan.FromSeconds(5), stopReporting.Token); } catch (OperationCanceledException) { return; }
+                    var o = Interlocked.Read(ref output);
+                    if (o == written && Interlocked.Read(ref input) == 0) continue;
+                    if (o != written || written < 0)
+                    {
+                        written = o;
+                        try { await store.ProgressAsync(job.RunId, Interlocked.Read(ref input), o); } catch (Exception ex) { logger.LogDebug(ex, "CONTRACT_REVIEW_PROGRESS_SKIPPED"); }
+                    }
+                }
+            });
+            ReviewAiResult result;
+            try { result = await ai.ReviewAsync(new(job.Title, job.Role, job.Paragraphs, library, job.Mask, job.Note), timeout.Token, progress); }
+            finally { stopReporting.Cancel(); await reporter; }
             await store.CompleteRunAsync(job, result);
             logger.LogInformation("Contract review run {RunId} done: {Findings} findings, {Input}+{Output} tokens, {Cost} USD.",
                 job.RunId, result.Findings.Count, result.InputTokens, result.OutputTokens, result.CostUsd);
