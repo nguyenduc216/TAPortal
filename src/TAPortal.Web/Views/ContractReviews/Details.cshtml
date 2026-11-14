@@ -45,24 +45,72 @@
         </div>
         <div class="card-body ta-rv-desk">
             <p class="ta-rv-legend">
-                @if (Model.Mode == "compare") {<span><del class="ta-rv-del">chữ bị bỏ</del> (bên trái)</span><span><ins class="ta-rv-ins">chữ mới</ins> (bên phải)</span><span>Dòng có viền vàng là đoạn đã sửa.</span>}
+                @if (Model.Mode == "compare") {<span>Trái: bản gốc, <del class="ta-rv-del">chữ bị đề xuất bỏ</del></span><span>Phải: bản theo gợi ý, <ins class="ta-rv-ins">chữ đề xuất mới</ins></span><span>Dưới mỗi đoạn là lý do và căn cứ; bấm Đồng ý / Bỏ qua ngay tại đây.</span>}
                 else if (Model.Mode == "changes") {<span><ins class="ta-rv-ins">chữ thêm</ins></span><span><del class="ta-rv-del">chữ bỏ</del></span><span>@(answeringHere ? "Bấm vào chỗ sửa để ghi ý kiến của khách hàng." : "Rê chuột lên chỗ sửa để xem lý do.")</span>}
                 else {<span><span class="ta-rv-mark ta-rv-sev-high">sai nặng / thiếu quan trọng</span></span><span><span class="ta-rv-mark ta-rv-sev-medium">cần lưu ý</span></span><span><span class="ta-rv-mark is-accepted"><del class="ta-rv-del">đã</del> <ins class="ta-rv-ins">chấp nhận</ins></span></span><span>@(editable ? "Bấm vào chỗ tô vàng để đồng ý, sửa hoặc bỏ qua; bấm ✎ để tự sửa một đoạn." : "Bấm vào chỗ tô vàng để xem góp ý.")</span>}
             </p>
             @if (Model.Mode == "compare")
             {
-                <div class="ta-rv-compare" data-ta-review-side-by-side>
+                var rowsAll = Model.CompareRows().ToList();
+                <div class="ta-rv-compare is-only-changed" data-ta-review-side-by-side>
+                    <div class="ta-rv-compare__bar">
+                        <strong>@Model.SuggestionCount gợi ý</strong>
+                        <span class="ta-cell-sub">(@Model.DraftDecided đã đồng ý, còn lại chưa xử lý)</span>
+                        <label class="form-check mb-0 ms-auto"><input class="form-check-input" type="checkbox" checked data-ta-compare-only /><span class="form-check-label">Chỉ hiện đoạn có gợi ý</span></label>
+                        <button type="button" class="btn btn-sm" data-ta-compare-step="-1">◀ Gợi ý trước</button>
+                        <span class="ta-cell-sub" data-ta-compare-pos>—</span>
+                        <button type="button" class="btn btn-sm" data-ta-compare-step="1">Gợi ý sau ▶</button>
+                    </div>
                     <div class="ta-rv-compare__head">
                         <div>Bản gốc của khách hàng</div>
-                        <div>Bản đang chỉnh sửa (@(r.CurrentVersionNo == 0 ? "bản gốc" : "v" + r.CurrentVersionNo)@(Model.DraftDecided > 0 ? $" + {Model.DraftDecided} góp ý đã đồng ý" : ""))</div>
+                        <div>Bản theo gợi ý của AI / T.A (@(r.CurrentVersionNo == 0 ? "trên bản gốc" : "trên v" + r.CurrentVersionNo))</div>
                     </div>
-                    @foreach (var row in Model.CompareRows())
+                    @foreach (var row in rowsAll)
                     {
-                        var changed = row.Left != row.Right;
-                        <div class="ta-rv-compare__row @(changed ? "is-changed" : "") ta-rv-p--@row.Kind.ToLowerInvariant()" id="cmp-@row.Key">
-                            <div class="ta-rv-compare__cell">@if (row.Left is null) {<span class="ta-rv-compare__empty">(chưa có – đoạn thêm mới)</span>} else {<span class="ta-rv-key">@row.Key</span>@ReviewHtml.Side(row.Left, row.Right, true)}</div>
-                            <div class="ta-rv-compare__cell">@if (row.Right is null) {<span class="ta-rv-compare__empty">(đã bỏ đoạn này)</span>} else {<span class="ta-rv-key">@row.Key</span>@ReviewHtml.Side(row.Left, row.Right, false)}</div>
+                        var why = Model.FindingsOf(row.Key);
+                        var changed = row.Left != row.Right || why.Count > 0;
+                        var high = why.Any(f => f.Severity == "HIGH" && f.Status == ContractReviewPolicy.Open);
+                        <div class="ta-rv-compare__row @(changed ? "is-changed" : "") @(high ? "is-high" : "") ta-rv-p--@row.Kind.ToLowerInvariant()" id="cmp-@row.Key" data-ta-sugg="@(changed ? "true" : null)">
+                            <div class="ta-rv-compare__cell">@if (row.Left is null) {<span class="ta-rv-compare__empty">(chưa có – gợi ý thêm đoạn mới)</span>} else {<span class="ta-rv-key">@row.Key</span>@ReviewHtml.Side(row.Left, row.Right, true)}</div>
+                            <div class="ta-rv-compare__cell">@if (row.Right is null) {<span class="ta-rv-compare__empty">(gợi ý bỏ đoạn này)</span>} else {<span class="ta-rv-key">@(row.Key.StartsWith("N") ? "mới" : row.Key)</span>@ReviewHtml.Side(row.Left, row.Right, false)}</div>
+                            @if (why.Count > 0)
+                            {
+                                <div class="ta-rv-compare__why">
+                                    @foreach (var f in why)
+                                    {
+                                        <div class="ta-rv-why" id="cw-@f.Id">
+                                            <div class="ta-rv-why__head">
+                                                <span class="ta-badge @ContractReviewPolicy.SeverityBadge(f.Severity)">@ContractReviewPolicy.Label(ContractReviewPolicy.Severities, f.Severity)</span>
+                                                <span class="ta-badge ta-badge--plain @(f.IsDecided ? "ta-badge--success" : "ta-badge--neutral")">@ContractReviewPolicy.Label(ContractReviewPolicy.FindingStatuses, f.Status)</span>
+                                                <span class="ta-cell-sub">@ContractReviewPolicy.Label(ContractReviewPolicy.Actions, f.Action) · có lợi cho @ContractReviewPolicy.Label(ContractReviewPolicy.Roles, f.Party) · @(f.Source == "AI" ? "AI đề xuất" : "Nhân viên")</span>
+                                            </div>
+                                            <div class="ta-rv-why__issue"><strong>Lý do:</strong> @f.Issue</div>
+                                            @if (f.LegalBasis is not null) {<div class="ta-rv-why__legal"><strong>Căn cứ:</strong> @ReviewHtml.Legal(f.LegalBasis, Model.LegalLinks, legalUrl)</div>}
+                                            @if (f.Suggestion is not null) {<div class="ta-cell-sub">@f.Suggestion</div>}
+                                            @if (editable && f.AppliedInVersionNo is null)
+                                            {
+                                                <div class="ta-rv-pop__actions mt-2">
+                                                    @if (f.Action != ContractReviewPolicy.NoteOnly && !f.IsDecided)
+                                                    {
+                                                        <form asp-action="Decide" asp-route-id="@r.Id" method="post" data-ta-review-form><input type="hidden" name="findingId" value="@f.Id" /><input type="hidden" name="status" value="@ContractReviewPolicy.Accepted" /><button type="submit" class="btn btn-sm btn-success">@UiIcon.Render("check")<span>Đồng ý</span></button></form>
+                                                    }
+                                                    <form asp-action="Decide" asp-route-id="@r.Id" method="post" data-ta-review-form><input type="hidden" name="findingId" value="@f.Id" /><input type="hidden" name="status" value="@ContractReviewPolicy.Rejected" /><button type="submit" class="btn btn-sm btn-outline-danger">@UiIcon.Render("x")<span>Bỏ qua</span></button></form>
+                                                    @if (f.Status != ContractReviewPolicy.Open)
+                                                    {
+                                                        <form asp-action="Decide" asp-route-id="@r.Id" method="post" data-ta-review-form><input type="hidden" name="findingId" value="@f.Id" /><input type="hidden" name="status" value="@ContractReviewPolicy.Open" /><button type="submit" class="btn btn-sm">@UiIcon.Render("refresh")<span>Đặt lại</span></button></form>
+                                                    }
+                                                    @if (f.Action is ContractReviewPolicy.Replace or ContractReviewPolicy.Insert) {<button type="button" class="btn btn-sm" data-ta-pop="f-@f.Id">@UiIcon.Render("pencil")<span>Sửa câu đề xuất</span></button>}
+                                                </div>
+                                            }
+                                        </div>
+                                    }
+                                </div>
+                            }
                         </div>
+                    }
+                    @if (!rowsAll.Any(x => x.Left != x.Right || Model.FindingsOf(x.Key).Count > 0))
+                    {
+                        <div class="ta-rv-compare__none">Chưa có gợi ý nào trên @(r.CurrentVersionNo == 0 ? "bản gốc" : "phiên bản hiện tại"). Bấm "Chạy AI rà soát" hoặc thêm góp ý thủ công.</div>
                     }
                 </div>
             }

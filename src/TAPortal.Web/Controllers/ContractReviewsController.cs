@@ -84,18 +84,28 @@ public sealed class ContractReviewsController(IContractReviewStore reviews, ICon
         try { legal = await library.ResolveAsync(findings.SelectMany(f => LegalCitation.Parse(f.LegalBasis))); }
         catch (SqlException ex) { logger.LogWarning(ex, "LEGAL_LINKS_UNAVAILABLE"); }
         IReadOnlyList<ReviewParagraph>? original = null, draft = null;
+        Dictionary<string, List<ReviewFinding>>? rowFindings = null;
         var decided = 0;
         if (view == "compare")
         {
-            // Original (v0) beside the version being edited: the current version with the accepted findings applied.
+            // Original (v0) beside the suggested text: the current version with every suggestion that is not rejected
+            // (open, accepted or edited) applied, so each proposal can be read next to the clause it changes, with its reason.
             original = await reviews.ParagraphsAsync(id, 0);
             var current = review.CurrentVersionNo == no ? paragraphs : await reviews.ParagraphsAsync(id, review.CurrentVersionNo);
-            var pending = (await reviews.FindingsAsync(id)).Where(f => f.VersionNo == review.CurrentVersionNo && f.IsDecided && f.AppliedInVersionNo is null).ToList();
-            decided = pending.Count;
-            var applied = ContractReviewPolicy.Apply(current, pending.Select(f => new ReviewEdit(f.Id, f.ParagraphKey, f.Action, f.Quote, f.Replacement, f.Issue)).ToList(), 9000);
-            draft = applied.Errors.Count == 0 ? applied.Paragraphs : current;
+            var all = (await reviews.FindingsAsync(id)).Where(f => f.VersionNo == review.CurrentVersionNo && f.AppliedInVersionNo is null && f.Status != ContractReviewPolicy.Rejected).ToList();
+            decided = all.Count(f => f.IsDecided);
+            var (suggested, keys) = ContractReviewPolicy.Suggested(current, all.Select(f => new ReviewEdit(f.Id, f.ParagraphKey, f.Action, f.Quote, f.Replacement, f.Issue)).ToList());
+            draft = suggested;
+            var byId = all.ToDictionary(f => f.Id);
+            rowFindings = new();
+            foreach (var (key, ids) in keys)
+                rowFindings[key] = ids.Where(byId.ContainsKey).Select(i => byId[i]).ToList();
+            foreach (var f in all.Where(f => !keys.Values.Any(v => v.Contains(f.Id))))   // notes and suggestions that could not be applied
+                (rowFindings.TryGetValue(f.ParagraphKey, out var l) ? l : rowFindings[f.ParagraphKey] = []).Add(f);
+            if (legal is null || all.Any(f => f.LegalBasis is not null))
+                try { legal = await library.ResolveAsync(all.SelectMany(f => LegalCitation.Parse(f.LegalBasis))); } catch (SqlException ex) { logger.LogWarning(ex, "LEGAL_LINKS_UNAVAILABLE"); }
         }
-        return View(new ContractReviewWorkspaceVm(review, no, view, paragraphs, previous, findings, changes, ai.IsConfigured, ai.Model, legal, original, draft, decided));
+        return View(new ContractReviewWorkspaceVm(review, no, view, paragraphs, previous, findings, changes, ai.IsConfigured, ai.Model, legal, original, draft, decided, rowFindings));
     }
 
     [HttpPost]

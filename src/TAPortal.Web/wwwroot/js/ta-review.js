@@ -128,6 +128,34 @@
         window.setTimeout(() => alert.remove(), ms);
     };
 
+    // ---- Compare view: show only suggested paragraphs, step between them ------------------------------------------------
+    let cmpIndex = -1;
+    const suggestions = () => [...document.querySelectorAll('[data-ta-review-side-by-side] [data-ta-sugg="true"]')];
+    const showPos = () => {
+        const pos = document.querySelector('[data-ta-compare-pos]');
+        const all = suggestions();
+        if (pos) pos.textContent = all.length ? `${Math.max(cmpIndex, 0) + 1}/${all.length}` : '0/0';
+    };
+    document.addEventListener('change', (event) => {
+        if (!event.target.matches?.('[data-ta-compare-only]')) return;
+        event.target.closest('[data-ta-review-side-by-side]')?.classList.toggle('is-only-changed', event.target.checked);
+    });
+    document.addEventListener('click', (event) => {
+        const step = event.target.closest?.('[data-ta-compare-step]');
+        if (!step) return;
+        const all = suggestions();
+        if (all.length === 0) return;
+        all[cmpIndex]?.classList.remove('is-current');
+        cmpIndex = (cmpIndex + Number(step.dataset.taCompareStep) + all.length) % all.length;
+        all[cmpIndex].classList.add('is-current');
+        all[cmpIndex].scrollIntoView({ behavior: 'smooth', block: 'center' });
+        showPos();
+    });
+    document.addEventListener('ta:load', () => { cmpIndex = -1; showPos(); });
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', showPos); else showPos();
+    new MutationObserver(() => { if (document.querySelector('[data-ta-compare-pos]')?.textContent === '—') showPos(); })
+        .observe(document.documentElement, { childList: true, subtree: true });
+
     // ---- AI run in progress: elapsed time every second, status every 10 seconds, page refreshed in place when done ----
     // One timer for the whole app; it only acts while a [data-ta-review-running] block is on the page (soft navigation
     // keeps scripts alive, so it simply goes idle elsewhere).

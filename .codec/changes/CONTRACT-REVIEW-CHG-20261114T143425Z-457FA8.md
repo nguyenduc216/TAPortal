@@ -10,6 +10,8 @@
   artifact ab6f7b1d6d6e5d7eb4d6e157c08bc191ab7c96b99ff0f51456711f63b5cdd692; package BC3DB68A00F64BC3F79EC0872205C5759DAD60073A1283895868C9F5BD3C8C85; health 200.
 - portal DEPLOYED lần 4 (link luật, so sánh, token, đỏ, cuộn đúng chỗ) 2026-11-14 16:28:33Z từ bafd8b0 (0 lượt AI đang chạy trước khi deploy);
   artifact 46cc1ecb946d55ad1ecff9947e2179843dca157efbb96d9f112479434cd75eaf; package ABFE41EE85A25BA0CA8C9D19B4CFCF7FBB2593BB201233869FC1735D71F24478; health 200.
+- portal DEPLOYED lần 5 (so sánh kèm gợi ý) 2026-11-14 17:03:10Z từ f04fbcc (gồm origin/main ad73524; 0 lượt AI đang chạy);
+  artifact 9c59ff941ac69de3ed56f664996ff366f1f7ccb4365544ebd4bf4b50f19cf281; package 0A8F52334A7A568C96E042A1C6E72C236DEC35A63499C60696F485B2DDECB69E; health 200.
 - Trạng thái: DEPLOYED
 
 ## Yêu cầu và phạm vi
@@ -39,6 +41,10 @@ với đề xuất thì đổi màu, các tương tác khác cũng làm ngay tr�
   (3) số token khi AI đang chạy (đọc chính xác, viết ước tính từ chữ đang nhận, ghi mỗi 5 giây) và tổng token/chi phí các lượt;
   (4) góp ý nghiêm trọng (HIGH) tô đỏ; (5) bấm P54/#f-… cuộn đúng chỗ (không đổi location.hash vì popstate làm shell tải lại trang về đầu).
   ILegalLibraryStore.ResolveAsync có cài đặt mặc định để fake của SafeLegalWatchTests không phải sửa.
+
+- Bổ sung (operator qua phiên chính: "phiên bản so sánh không thấy cái gợi ý..."): chế độ So sánh giờ là bản gốc | bản theo MỌI gợi ý
+  chưa bị bỏ qua (chưa xử lý + đã đồng ý; ContractReviewPolicy.Suggested bỏ từng gợi ý xung đột), dưới mỗi đoạn có lý do, căn cứ
+  (link kho luật), nút Đồng ý / Bỏ qua / Đặt lại / Sửa câu đề xuất; mặc định chỉ hiện đoạn có gợi ý, nút Gợi ý trước/sau.
 
 ## File thay đổi (relative path, thao tác ADD/MODIFY/DELETE)
 - MODIFY `src/TAPortal.Web/Models/ContractReviewModels.cs` (ReviewHtml: hiển thị quyết định tại chỗ, nút data-ta-pop)

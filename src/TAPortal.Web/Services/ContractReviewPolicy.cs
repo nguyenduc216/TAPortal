@@ -193,6 +193,23 @@ public static class ContractReviewPolicy
         return new(list, changes, errors);
     }
 
+    // Text with every given suggestion applied, for reading proposals side by side with the original. Suggestions that
+    // conflict (overlapping quotes, a paragraph both removed and rewritten) are left out one by one instead of failing all.
+    // Returns the paragraphs and, per paragraph key of the result, the suggestions that changed it.
+    public static (IReadOnlyList<ReviewParagraph> Paragraphs, Dictionary<string, List<Guid>> Keys) Suggested(IReadOnlyList<ReviewParagraph> current, IReadOnlyList<ReviewEdit> edits)
+    {
+        var kept = new List<ReviewEdit>();
+        foreach (var e in edits.Where(e => e.Action != NoteOnly))
+        {
+            kept.Add(e);
+            if (Apply(current, kept, 9000).Errors.Count > 0) kept.RemoveAt(kept.Count - 1);
+        }
+        var result = Apply(current, kept, 9000);
+        var keys = new Dictionary<string, List<Guid>>();
+        foreach (var c in result.Changes) keys[c.Key] = c.FindingIds.ToList();
+        return (result.Paragraphs, keys);
+    }
+
     private static string Join(Dictionary<string, List<string>> notes, string key) =>
         notes.TryGetValue(key, out var n) ? string.Join("\n", n.Where(s => !string.IsNullOrWhiteSpace(s)).Distinct()) : "";
 

@@ -14,8 +14,10 @@ public sealed record ContractReviewCreateVm(ReviewInput Input, ReviewLookups Loo
 public sealed record ContractReviewWorkspaceVm(ReviewDetail Review, int VersionNo, string Mode, IReadOnlyList<ReviewParagraph> Paragraphs,
     IReadOnlyList<ReviewParagraph>? Previous, IReadOnlyList<ReviewFinding> Findings, IReadOnlyList<ReviewChange> Changes, bool AiConfigured, string AiModel,
     IReadOnlyDictionary<string, LegalArticleLink>? Legal = null, IReadOnlyList<ReviewParagraph>? Original = null, IReadOnlyList<ReviewParagraph>? Draft = null,
-    int DraftDecided = 0)
+    int DraftDecided = 0, IReadOnlyDictionary<string, List<ReviewFinding>>? RowFindings = null)
 {
+    public IReadOnlyList<ReviewFinding> FindingsOf(string key) => RowFindings?.GetValueOrDefault(key) ?? (IReadOnlyList<ReviewFinding>)[];
+    public int SuggestionCount => RowFindings?.Values.SelectMany(v => v).Select(f => f.Id).Distinct().Count() ?? 0;
     public IReadOnlyDictionary<string, LegalArticleLink> LegalLinks => Legal ?? new Dictionary<string, LegalArticleLink>();
 
     // Rows of the side-by-side view, aligned by paragraph key (paragraphs removed in the draft stay where they stood).
