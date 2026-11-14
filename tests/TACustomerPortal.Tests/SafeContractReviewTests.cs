@@ -435,6 +435,13 @@ Nội dung điều 5.
         Assert.Contains("Bản gốc của khách hàng", compare);
         Assert.Contains("ta-rv-compare__row is-changed", compare);
         Assert.Contains("hai bên ký", compare);                                         // accepted finding (P5) already in the draft
+        // Open suggestions are shown too, with their reason and Đồng ý / Bỏ qua right there.
+        Assert.Contains("<ins class=\"ta-rv-ins\">10</ins>", compare);                      // F1 (open) proposes 10 ngày
+        Assert.Contains("(gợi ý bỏ đoạn này)", compare);                                     // F2 (open) removes P4
+        Assert.Contains("Lý do:", compare);
+        Assert.Contains("Mức phạt vượt 8%", compare);
+        Assert.Contains("data-ta-compare-step", compare);
+        Assert.Contains("3 gợi ý", compare);
         Assert.Contains("<del class=\"ta-rv-del\">30</del>", compare);              // original side: the word that was changed
         var citations = S.LegalCitation.Parse("Điều 418, khoản 2 – 91/2015/QH13: phạt vi phạm\nKhuyến nghị thực tiễn");
         Assert.Equal(("91/2015/QH13|điều 418", "khoản 2"), (citations[0].Key, citations[0].Clause));
