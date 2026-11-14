@@ -13,7 +13,7 @@ Operator (2026-11-14): đầu việc giống nhau (ví dụ "Kéo hóa đơn") p
 - Migration 043 `dbo.WorkTaskCatalog` (tên duy nhất, mô tả, thứ tự, đang dùng) + quyền `TASKS.CATALOG.MANAGE` (SYS_ADMIN).
 - Công việc > Danh mục công việc (`WorkCatalogController`): thêm, sửa tên/mô tả/thứ tự, ẩn, xóa mềm; đổi tên thì các việc và việc lặp mang tên cũ đổi theo; audit.
 - Tạo/sửa việc và việc lặp: ô "Tên công việc" thành combobox gợi ý (gõ không dấu, nhiều từ, ↑/↓/Enter, click); không gửi được tên ngoài danh mục; server kiểm tra lại (`WorkCatalogSql.Resolve`) và lưu đúng chính tả danh mục. Việc cũ giữ tên nếu không đổi. Danh mục trống thì nhập tự do như trước.
-- Dữ liệu danh mục ban đầu, gom tên việc cũ và nhập việc của Hà: migration dữ liệu một lần 044 (không lưu Git, theo quy tắc AGENTS.md).
+- Dữ liệu danh mục ban đầu, gom tên việc cũ và nhập việc của Hà: migration dữ liệu một lần 045 (không lưu Git, theo quy tắc AGENTS.md).
 
 ## File thay đổi (relative path, thao tác ADD/MODIFY/DELETE)
 - ADD `database/migrations/043-work-task-catalog.sql`, `database/scripts/075-verify-work-task-catalog.sql`, `database/scripts/076-rollback-work-task-catalog.sql`
@@ -25,7 +25,7 @@ Operator (2026-11-14): đầu việc giống nhau (ví dụ "Kéo hóa đơn") p
 - Script: `database/migrations/043-work-task-catalog.sql` (sau 042)
 - Verify 075, Rollback 076.
 - Execution: xem report.
-- 044: migration dữ liệu một lần (danh mục ban đầu, gom tên việc cũ, khách mới, việc của Hà ngày 14/11), chạy rồi xóa.
+- 045: migration dữ liệu một lần (danh mục ban đầu, gom tên việc cũ, khách mới, việc của Hà ngày 14/11), chạy rồi xóa.
 
 ## Test và kết quả
 - Safe tests 743/743 (thêm SafeWorkCatalogTests 5, TheTaskNameIsPickedFromTheCatalogueWhenOneExists).
