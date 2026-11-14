@@ -4,7 +4,7 @@
 - Change ID: `CONTRACT-REVIEW-CHG-20261114T110220Z-5DB5FA`
 - Created UTC: 2026-11-14T11:02:20.186935+00:00
 - Tiêu đề: Law library: upload Word/PDF/TXT, keep files, re-import, edit articles
-- Trạng thái: IMPLEMENTED
+- Trạng thái: MIGRATED
 
 ## Yêu cầu và phạm vi
 Operator 2026-11-14: "thêm cái nút tải file đi để tôi có thể nạp tri thức và quản lý các file ... lần sau có thể update một file khác
@@ -28,7 +28,10 @@ chương/mục, báo các điều bị thiếu. PDF bỏ số trang và dòng "C
 - Script / absolute path:
 - Thứ tự chạy:
 - Preflight / Verify / Rollback:
-- Execution: NOT_EXECUTED
+- Script: `database/migrations/046-legal-library-files.sql` (verify 081, rollback 082 – từ chối khi đã có file luật).
+- Execution: EXECUTED qua Invoke-TAMigrations -Plan 046:081:082 (UTC 2026-11-14): 11:02:58 pre-check NOT_APPLIED; 11:02:59 dry-run
+  PASS→rollback NOT_APPLIED, @@TRANCOUNT=0; backup full gần nhất 241 phút (không cần backup mới); 11:04:56 gates PASS (760/760);
+  11:04:57 real run VERIFY_STATUS=PASS → EXECUTED
 
 ## Test và kết quả
 - Release build 0 lỗi; Safe tests 760/760 PASS (17 test CONTRACT-REVIEW).

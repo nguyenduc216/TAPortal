@@ -13,9 +13,9 @@
     "change_id": "CONTRACT-REVIEW-CHG-20261114T110220Z-5DB5FA",
     "created_at": "2026-11-14T11:02:20.186935+00:00",
     "title": "Law library: upload Word/PDF/TXT, keep files, re-import, edit articles",
-    "status": "IMPLEMENTED",
-    "commit_sha": null,
-    "migration_status": "NOT_EXECUTED",
+    "status": "MIGRATED",
+    "commit_sha": "dbd577a",
+    "migration_status": "EXECUTED",
     "publish_status": "NOT_PUBLISHED",
     "merge_status": "PENDING_APPROVAL"
   }
