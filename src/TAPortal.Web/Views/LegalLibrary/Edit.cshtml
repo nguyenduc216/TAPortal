@@ -1,0 +1,60 @@
+@model LegalDocumentEditVm
+@{
+    var isNew = Model.Id is null;
+    var i = Model.Input;
+    ViewData["ParentTitle"] = "Kho văn bản pháp luật";
+    ViewData["ParentController"] = "LegalLibrary";
+    ViewData["Title"] = isNew ? "Thêm văn bản" : "Sửa văn bản";
+    ViewData["Heading"] = isNew ? "Thêm văn bản pháp luật" : "Sửa văn bản: " + i.DocumentNo;
+    ViewData["Subtitle"] = "Dán toàn văn, hệ thống tách thành từng điều theo các dòng \"Điều 1.\", \"Điều 2.\"...";
+    ViewData["PageIcon"] = isNew ? "plus" : "pencil";
+}
+<form class="card" asp-action="@(isNew ? "Create" : "Edit")" asp-route-id="@Model.Id" method="post" novalidate data-ta-legal-form>
+    <div class="card-body">
+        <div asp-validation-summary="ModelOnly" class="ta-alert ta-alert--danger" role="alert"></div>
+        <div class="ta-form-grid ta-form-grid--3">
+            <div>
+                <label class="form-label required" for="Input_DocumentNo">Số hiệu</label>
+                <div class="ta-input-icon">@UiIcon.Render("hash")<input class="form-control" id="Input_DocumentNo" name="Input.DocumentNo" value="@i.DocumentNo" maxlength="50" required placeholder="91/2015/QH13" /></div>
+                <span asp-validation-for="Input.DocumentNo" class="invalid-feedback d-block"></span>
+            </div>
+            <div class="ta-ws-span-2">
+                <label class="form-label required" for="Input_Title">Tên văn bản</label>
+                <div class="ta-input-icon">@UiIcon.Render("file-text")<input class="form-control" id="Input_Title" name="Input.Title" value="@i.Title" maxlength="300" required placeholder="Bộ luật Dân sự 2015" /></div>
+                <span asp-validation-for="Input.Title" class="invalid-feedback d-block"></span>
+            </div>
+            <div>
+                <label class="form-label required" for="Input_DocType">Loại</label>
+                <select class="form-select" id="Input_DocType" name="Input.DocType">@foreach (var t in LegalLibraryPolicy.Types) {<option value="@t.Code" selected="@(t.Code == i.DocType)">@t.Label</option>}</select>
+                <span asp-validation-for="Input.DocType" class="invalid-feedback d-block"></span>
+            </div>
+            <div>
+                <label class="form-label" for="Input_IssuedDate">Ngày ban hành</label>
+                <div class="ta-input-icon">@UiIcon.Render("calendar")<input class="form-control" type="date" id="Input_IssuedDate" name="Input.IssuedDate" value="@i.IssuedDate?.ToString("yyyy-MM-dd")" /></div>
+            </div>
+            <div>
+                <label class="form-label" for="Input_EffectiveDate">Ngày có hiệu lực</label>
+                <div class="ta-input-icon">@UiIcon.Render("calendar")<input class="form-control" type="date" id="Input_EffectiveDate" name="Input.EffectiveDate" value="@i.EffectiveDate?.ToString("yyyy-MM-dd")" /></div>
+            </div>
+            <div>
+                <label class="form-label" for="Input_ExpiredDate">Ngày hết hiệu lực</label>
+                <div class="ta-input-icon">@UiIcon.Render("calendar")<input class="form-control" type="date" id="Input_ExpiredDate" name="Input.ExpiredDate" value="@i.ExpiredDate?.ToString("yyyy-MM-dd")" /></div>
+                <span asp-validation-for="Input.ExpiredDate" class="invalid-feedback d-block"></span>
+            </div>
+            <div class="ta-ws-span-2">
+                <label class="form-label" for="Input_Note">Ghi chú</label>
+                <div class="ta-input-icon">@UiIcon.Render("pencil")<input class="form-control" id="Input_Note" name="Input.Note" value="@i.Note" maxlength="1000" placeholder="Ví dụ: đã được sửa đổi bởi ..." /></div>
+            </div>
+            <div class="ta-ws-span-3">
+                <label class="form-label @(isNew ? "required" : "")" for="Input_FullText">Toàn văn</label>
+                <div class="ta-input-icon ta-input-icon--top">@UiIcon.Render("file-text")<textarea class="form-control font-monospace" id="Input_FullText" name="Input.FullText" rows="16">@i.FullText</textarea></div>
+                <span asp-validation-for="Input.FullText" class="invalid-feedback d-block"></span>
+                <div class="form-hint">@(isNew ? "Bắt buộc." : $"Đang có {Model.ArticleCount} điều. Để trống nếu chỉ sửa thông tin; dán toàn văn mới sẽ thay toàn bộ các điều.")</div>
+            </div>
+        </div>
+    </div>
+    <div class="card-footer d-flex gap-2 justify-content-end">
+        <a class="btn" asp-action="@(isNew ? "Index" : "Details")" asp-route-id="@Model.Id">Hủy</a>
+        <button type="submit" class="btn btn-primary" data-ta-loading data-ta-loading-text="Đang lưu...">@UiIcon.Render("device-floppy")<span>Lưu văn bản</span></button>
+    </div>
+</form>

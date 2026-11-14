@@ -1,0 +1,61 @@
+@model ContractReviewCreateVm
+@{
+    var i = Model.Input;
+    ViewData["ParentTitle"] = "Hợp đồng dịch vụ";
+    ViewData["ParentController"] = "ContractReviews";
+    ViewData["Title"] = "Tạo yêu cầu chỉnh lý";
+    ViewData["Heading"] = "Tạo yêu cầu chỉnh lý hợp đồng";
+    ViewData["Subtitle"] = "Tải file Word hợp đồng của khách hàng. Bản gốc được lưu nguyên, mọi chỉnh sửa tạo thành phiên bản mới.";
+    ViewData["PageIcon"] = "plus";
+}
+<form class="card" asp-action="Create" method="post" enctype="multipart/form-data" novalidate data-ta-hard data-ta-review-form>
+    <div class="card-header"><h2 class="card-title">@UiIcon.Render("file-text")Thông tin yêu cầu</h2></div>
+    <div class="card-body">
+        <div asp-validation-summary="ModelOnly" class="ta-alert ta-alert--danger" role="alert"></div>
+        <div class="ta-form-grid ta-form-grid--3">
+            <div class="ta-ws-span-2">
+                <label for="Input_CustomerId" class="form-label required">Khách hàng</label>
+                <select id="Input_CustomerId" name="Input.CustomerId" class="form-select" required>
+                    <option value="">-- Chọn khách hàng --</option>
+                    @foreach (var c in Model.Lookups.Customers) {<option value="@c.Id" selected="@(c.Id == i.CustomerId)">@c.Name@(c.Code is null ? "" : " (" + c.Code + ")")</option>}
+                </select>
+                <span asp-validation-for="Input.CustomerId" class="invalid-feedback d-block"></span>
+            </div>
+            <div>
+                <label for="Input_ContractId" class="form-label">Hợp đồng liên quan (nếu có)</label>
+                <select id="Input_ContractId" name="Input.ContractId" class="form-select">
+                    <option value="">-- Không gắn --</option>
+                    @foreach (var c in Model.Lookups.Contracts) {<option value="@c.Id" selected="@(c.Id == i.ContractId)" data-customer="@c.CustomerId">@c.ContractNo – @c.Title</option>}
+                </select>
+                <div class="form-hint">Hợp đồng phải thuộc khách hàng đã chọn.</div>
+            </div>
+            <div class="ta-ws-span-2">
+                <label for="Input_Title" class="form-label required">Tên hợp đồng cần chỉnh lý</label>
+                <div class="ta-input-icon">@UiIcon.Render("file-text")<input id="Input_Title" name="Input.Title" value="@i.Title" class="form-control" maxlength="250" required placeholder="Ví dụ: Hợp đồng cung cấp dịch vụ kế toán 2027" /></div>
+                <span asp-validation-for="Input.Title" class="invalid-feedback d-block"></span>
+            </div>
+            <div>
+                <label for="Input_Role" class="form-label required">Khách hàng của T.A là</label>
+                <select id="Input_Role" name="Input.Role" class="form-select" required>
+                    @foreach (var r in ContractReviewPolicy.Roles) {<option value="@r.Code" selected="@(r.Code == i.Role)">@r.Label</option>}
+                </select>
+                <span asp-validation-for="Input.Role" class="invalid-feedback d-block"></span>
+            </div>
+            <div class="ta-ws-span-3">
+                <label for="reviewFile" class="form-label required">File hợp đồng (Word .docx)</label>
+                <div class="ta-input-icon">@UiIcon.Render("upload")<input id="reviewFile" class="form-control" type="file" name="file" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" required /></div>
+                @Html.ValidationMessage("file", null, new { @class = "invalid-feedback d-block" })
+                <div class="form-hint">Chỉ nhận .docx, tối đa 10 MB. File PDF hoặc .doc: mở bằng Word rồi "Lưu thành" .docx.</div>
+            </div>
+            <div class="ta-ws-span-3">
+                <label for="Input_Note" class="form-label">Yêu cầu của khách hàng / ghi chú</label>
+                <div class="ta-input-icon ta-input-icon--top">@UiIcon.Render("pencil")<textarea id="Input_Note" name="Input.Note" class="form-control" rows="3" maxlength="2000" placeholder="Ví dụ: khách lo về điều khoản phạt chậm thanh toán và thời hạn bảo hành.">@i.Note</textarea></div>
+                <span asp-validation-for="Input.Note" class="invalid-feedback d-block"></span>
+            </div>
+        </div>
+    </div>
+    <div class="card-footer d-flex gap-2 justify-content-end">
+        <a class="btn" asp-action="Index">Hủy</a>
+        <button type="submit" class="btn btn-primary" data-ta-loading data-ta-loading-text="Đang đọc file...">@UiIcon.Render("upload")<span>Tạo yêu cầu</span></button>
+    </div>
+</form>

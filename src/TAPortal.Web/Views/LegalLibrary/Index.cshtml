@@ -1,0 +1,50 @@
+@model LegalLibraryIndexVm
+@{
+    ViewData["ParentTitle"] = "Hợp đồng dịch vụ";
+    ViewData["ParentController"] = "ContractReviews";
+    ViewData["Title"] = "Kho văn bản pháp luật";
+    ViewData["Heading"] = "Kho văn bản pháp luật";
+    ViewData["Subtitle"] = "Văn bản AI được trích dẫn khi rà soát hợp đồng. Căn cứ ngoài kho được đánh dấu \"chưa đối chiếu\" để nhân viên kiểm tra.";
+    ViewData["PageIcon"] = "list-tree";
+    var vi = System.Globalization.CultureInfo.GetCultureInfo("vi-VN");
+    string Day(DateTime? d) => d?.ToString("dd/MM/yyyy", vi) ?? "—";
+    var canManage = AdminPermissions.Has(User, AdminPermissions.LegalLibraryManage);
+}
+@section PageActions {
+    @if (canManage) {<a class="btn btn-ta-gold" asp-action="Create" data-ta-legal-create>@UiIcon.Render("plus")<span>Thêm văn bản</span></a>}
+}
+@if (Model.Error is not null) {<div class="ta-alert ta-alert--danger" role="alert">@UiIcon.Render("alert-circle")<div class="ta-alert__body">@Model.Error</div></div>}
+@if (Model.Items is { Count: 0 })
+{
+    <div class="ta-alert ta-alert--info" role="status">@UiIcon.Render("info-circle")<div class="ta-alert__body">
+        Kho đang trống. Gợi ý bộ văn bản ban đầu cho rà soát hợp đồng: @string.Join("; ", LegalLibraryPolicy.Suggested).
+        Lấy toàn văn từ Cơ sở dữ liệu quốc gia về văn bản pháp luật (vbpl.vn), dán vào ô "Toàn văn" – hệ thống tự tách thành từng điều.
+    </div></div>
+}
+<section class="card ta-table-card" aria-label="Danh sách văn bản">
+    @if (Model.Items is { Count: > 0 } items)
+    {
+        <div class="ta-table-wrap">
+            <table class="ta-table ta-table-stack">
+                <thead><tr><th scope="col">Số hiệu</th><th scope="col">Tên văn bản</th><th scope="col">Loại</th><th scope="col">Hiệu lực</th><th scope="col" class="text-end">Số điều</th><th scope="col">Tình trạng</th></tr></thead>
+                <tbody>
+                @foreach (var d in items)
+                {
+                    <tr data-ta-legal="@d.DocumentNo">
+                        <td data-label="Số hiệu"><span class="ta-code">@d.DocumentNo</span></td>
+                        <td class="ta-cell-strong"><a class="text-reset" asp-action="Details" asp-route-id="@d.Id">@d.Title</a></td>
+                        <td data-label="Loại">@ContractReviewPolicy.Label(LegalLibraryPolicy.Types, d.DocType)</td>
+                        <td class="ta-nowrap" data-label="Hiệu lực">@Day(d.EffectiveDate)@if (d.ExpiredDate is not null) {<span> – @Day(d.ExpiredDate)</span>}</td>
+                        <td class="text-end" data-label="Số điều">@d.ArticleCount</td>
+                        <td data-label="Tình trạng">@if (d.IsInForce(DateTime.Today)) {<span class="ta-badge ta-badge--success">Còn hiệu lực</span>} else {<span class="ta-badge ta-badge--neutral">Chưa/hết hiệu lực</span>}</td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    }
+    else if (Model.Items is not null)
+    {
+        <div class="ta-empty"><span class="ta-empty__icon">@UiIcon.Render("list-tree")</span><p class="ta-empty__title">Chưa có văn bản</p></div>
+    }
+</section>

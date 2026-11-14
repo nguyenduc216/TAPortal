@@ -1,0 +1,12 @@
+[
+  {
+    "change_id": "CONTRACT-REVIEW-CHG-20261114T070011Z-272162",
+    "created_at": "2026-11-14T07:00:11.638792+00:00",
+    "title": "Hop dong dich vu phase 1: AI contract review on TAPortal",
+    "status": "DEPLOYED",
+    "commit_sha": "a71a655",
+    "migration_status": "EXECUTED",
+    "publish_status": "DEPLOYED",
+    "merge_status": "MERGED 5e0653c"
+  }
+]

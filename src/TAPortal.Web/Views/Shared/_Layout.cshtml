@@ -64,6 +64,7 @@
     <link rel="stylesheet" href="~/css/ta-design.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/ta-admin.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/ta-website.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/ta-review.css" asp-append-version="true" />
 </head>
 <body data-ta-identity="@(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value)@(impersonation is null ? "" : "/" + impersonation.SessionId)" data-ta-no-prefetch="@(impersonation is null ? null : "true")">
 @if (User.Identity?.IsAuthenticated == true)
@@ -99,7 +100,7 @@
                     </ul>
                 </div>
             }
-            @if (canCustomers || canReconciliation || Can(AdminPermissions.ContractsView))
+            @if (canCustomers || canReconciliation || Can(AdminPermissions.ContractsView) || Can(AdminPermissions.ContractReviewView))
             {
                 <div class="ta-nav__group">
                     <p class="ta-nav__section">Quản lý khách hàng</p>
@@ -108,6 +109,7 @@
                         @if (canCustomers) {<li><a class="ta-nav__link" asp-controller="Customers" asp-action="Index" title="Khách hàng" aria-current="@(IsCurrent("Customers") || IsCurrent("CustomerPortalAccounts") ? "page" : null)"><span class="ta-nav__icon">@UiIcon.Render("building")</span><span class="ta-nav__label">Khách hàng</span></a></li>}
                         @if (canReconciliation) {<li><a class="ta-nav__link" asp-controller="PaymentReconciliation" asp-action="Index" title="Đối soát giao dịch" aria-current="@(IsCurrent("PaymentReconciliation") ? "page" : null)"><span class="ta-nav__icon">@UiIcon.Render("report-money")</span><span class="ta-nav__label">Đối soát giao dịch</span></a></li>}
                         @if (Can(AdminPermissions.ContractsView)) {<li><a class="ta-nav__link" asp-controller="Contracts" asp-action="Index" title="Hợp đồng" aria-current="@(IsCurrent("Contracts") ? "page" : null)"><span class="ta-nav__icon">@UiIcon.Render("file-text")</span><span class="ta-nav__label">Hợp đồng</span></a></li>}
+                        @if (Can(AdminPermissions.ContractReviewView)) {<li><a class="ta-nav__link" asp-controller="ContractReviews" asp-action="Index" title="Hợp đồng dịch vụ" aria-current="@(IsCurrent("ContractReviews") || IsCurrent("LegalLibrary") ? "page" : null)"><span class="ta-nav__icon">@UiIcon.Render("checks")</span><span class="ta-nav__label">Hợp đồng dịch vụ</span></a></li>}
                     </ul>
                 </div>
             }
