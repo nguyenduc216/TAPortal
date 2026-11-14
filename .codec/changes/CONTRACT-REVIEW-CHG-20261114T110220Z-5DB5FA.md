@@ -51,6 +51,10 @@ chương/mục, báo các điều bị thiếu. PDF bỏ số trang và dòng "C
 - Bộ tách điều (e4bf00f): tách điều bị dính trong một đoạn, chấp nhận nhảy số qua điều đã bãi bỏ khi là tiêu đề "Điều N. Tên".
 - Tải không được: vbpl.moj.gov.vn và skhdt.daklak.gov.vn không phân giải tên miền; PDF Luật Quản lý thuế 2025 tại vmrcc.gov.vn trả 404.
 
+- One-off data migration 050 (verify 089, rollback 090; KHÔNG commit, đã xóa): 108/2025/QH15 Luật Quản lý thuế 2025 (53 điều,
+  Công báo số 38 ngày 22-01-2026, nguồn legalzone.vn), marker A0000050-…-000000000050. 11:48:17Z dry-run PASS→rollback NOT_APPLIED;
+  -SkipGates vì mã nguồn không đổi kể từ lần gates PASS 11:41:36Z (chỉ thêm hồ sơ Codec); 11:48:22Z real run PASS → EXECUTED.
+
 ## Publish
 - portal DEPLOYED 2026-11-14 11:08:51Z (giờ server 18:08:51) từ 817ae4e; artifact 4b806c4ea73f8fc7de31b03cb2d2554bd0e22b3915438942785c5783b2c36c58 (89 files);
   package 4CA9397914E99C9137E9B4AB42188BFE5823ECDFD58027CB3A8522B0D7490A6C; health 200.
