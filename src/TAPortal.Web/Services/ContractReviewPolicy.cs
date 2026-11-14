@@ -290,7 +290,10 @@ public static class LegalTextParser
             var content = string.Join("\n", body).Trim();
             if (result.All(a => a.ArticleNo != no)) result.Add(new(no, string.IsNullOrWhiteSpace(title) ? null : title.Trim().TrimEnd('.'), content.Length == 0 ? (title ?? no) : content));
         }
-        foreach (var raw in (text ?? "").Replace("\r\n", "\n").Split('\n'))
+        // Converted files sometimes glue articles into one paragraph ("...Luật này.Điều 2. Đối tượng"): a heading right after
+        // the end of a sentence starts a new line (the numbering rule below still rejects cross-references).
+        var normalized = Regex.Replace((text ?? "").Replace("\r\n", "\n"), @"(?<=[\.;:…])[ \t]*(?=(Điều|ĐIỀU)\s+\d+[a-zđ]?\.\s)", "\n");
+        foreach (var raw in normalized.Split('\n'))
         {
             var line = raw.Trim();
             if (Section.IsMatch(line)) { afterSection = true; continue; }
@@ -299,7 +302,10 @@ public static class LegalTextParser
             var m = Head.Match(line);
             var n = m.Success ? int.Parse(m.Groups[2].Value) : 0;
             var suffix = m.Success ? m.Groups[3].Value : "";
-            if (m.Success && (no is null || n == last + 1 || (n == last && suffix.Length > 0)))
+            // A jump forward (articles repealed and left out of a consolidated text, e.g. Luật Thương mại 101 → 117) is accepted
+            // only for a real heading: "Điều 117. Title" with the dot right after the number and a capitalised title.
+            var heading = m.Success && Regex.IsMatch(line, @"^\s*(Điều|ĐIỀU)\s+\d+[a-zđ]?[\.:]\s+\p{Lu}");
+            if (m.Success && (no is null || n == last + 1 || (n == last && suffix.Length > 0) || (heading && n > last && n - last <= 60)))
             {
                 Flush();
                 no = "Điều " + n + suffix;

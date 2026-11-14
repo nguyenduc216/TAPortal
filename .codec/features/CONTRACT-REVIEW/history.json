@@ -14,7 +14,7 @@
     "created_at": "2026-11-14T11:02:20.186935+00:00",
     "title": "Law library: upload Word/PDF/TXT, keep files, re-import, edit articles",
     "status": "DEPLOYED",
-    "commit_sha": "817ae4e",
+    "commit_sha": "0613b03",
     "migration_status": "EXECUTED",
     "publish_status": "DEPLOYED",
     "merge_status": "PENDING_APPROVAL"

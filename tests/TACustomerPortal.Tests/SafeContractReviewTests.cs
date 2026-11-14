@@ -293,13 +293,18 @@ Nội dung theo quy định tại
 Điều 5 của Luật này.
 Điều 2. Đối tượng
 Điều 2a. Đối tượng bổ sung
+Điều 12 của Luật này áp dụng.
 Chương II
 QUYỀN VÀ NGHĨA VỤ
 Điều 4. Quyền
-Nội dung điều 4.
+Nội dung điều 4.Điều 5. Nghĩa vụ
+Nội dung điều 5.
 """);
-        Assert.Equal(["Điều 1", "Điều 2", "Điều 2a"], articles.Select(a => a.ArticleNo));   // "Điều 4" skips 3: kept as body text
+        // "Điều 12 của ..." is a cross-reference (no heading dot): body text; "Điều 4. Quyền" is a heading after repealed
+        // numbers; "...điều 4.Điều 5." glued in one paragraph is split.
+        Assert.Equal(["Điều 1", "Điều 2", "Điều 2a", "Điều 4", "Điều 5"], articles.Select(a => a.ArticleNo));
         Assert.Contains("Điều 5 của Luật này.", articles[0].Content);
+        Assert.Contains("Điều 12 của Luật này áp dụng.", articles[2].Content);
         Assert.DoesNotContain("NHỮNG QUY ĐỊNH CHUNG", string.Join("\n", articles.Select(a => a.Content)));
         Assert.DoesNotContain("QUYỀN VÀ NGHĨA VỤ", string.Join("\n", articles.Select(a => a.Content)));
         Assert.Equal(["Điều 2", "Điều 3"], S.LegalTextParser.Missing([new("Điều 1", null, "x"), new("Điều 4", null, "y")]));
