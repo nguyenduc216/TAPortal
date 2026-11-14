@@ -113,6 +113,25 @@ public sealed class ContractReviewsController(IContractReviewStore reviews, ICon
         return Done(id, result, "Đã lưu quyết định cho góp ý.", "f-" + findingId);
     }
 
+    // "✎ Sửa trực tiếp" on a paragraph: recorded as a staff finding (whole paragraph rewritten) that is accepted at once, so
+    // the current version stays unchanged and the edit goes into the next version like any other accepted finding.
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [Authorize(Policy = AdminPermissions.Policy.ContractReviewEdit)]
+    public async Task<IActionResult> EditParagraph(Guid id, [FromForm] string? paragraphKey, [FromForm] string? text, [FromForm] string? note)
+    {
+        if (UsersController.ActorId(User) is not Guid actor) return Forbid();
+        var input = new ReviewFindingInput
+        {
+            ParagraphKey = paragraphKey, Action = ContractReviewPolicy.Replace, Issue = string.IsNullOrWhiteSpace(note) ? "Nhân viên sửa trực tiếp đoạn này." : note,
+            Severity = "LOW", Party = "BOTH", RevisedText = text
+        };
+        var added = await reviews.AddFindingAsync(actor, id, input, Ip);
+        if (added.Outcome != ReviewOutcome.Saved || added.Id is not Guid findingId) return Done(id, added, "");
+        var result = await reviews.DecideFindingAsync(actor, id, findingId, ContractReviewPolicy.Accepted, null, null, Ip);
+        return Done(id, result, $"Đã ghi thay đổi đoạn {paragraphKey}; thay đổi sẽ vào phiên bản mới khi bấm \"Tạo phiên bản mới\".", "p-" + paragraphKey);
+    }
+
     [HttpPost]
     [ValidateAntiForgeryToken]
     [Authorize(Policy = AdminPermissions.Policy.ContractReviewEdit)]

@@ -17,6 +17,7 @@
     var editable = canEdit && Model.IsCurrent && !locked && !analyzing;
     var findingsByKey = Model.Findings.GroupBy(f => f.ParagraphKey).ToDictionary(g => g.Key, g => (IReadOnlyList<ReviewFinding>)g.ToList());
     var answering = Model.IsCurrent && r.Status is ContractReviewPolicy.DraftReady or ContractReviewPolicy.Sent or ContractReviewPolicy.CustomerReplied;
+    var answeringHere = answering && canEdit && Model.Version?.Source == "STAFF" && Model.Mode == "changes";
 }
 @section PageActions {
     <a class="btn" asp-action="Details" asp-route-id="@r.Id" asp-route-v="@Model.VersionNo" asp-route-mode="@Model.Mode">@UiIcon.Render("refresh")<span>Tải lại</span></a>
@@ -43,19 +44,19 @@
                 <a class="btn btn-sm @(Model.Mode == "changes" ? "btn-soft-primary" : "")" asp-action="Details" asp-route-id="@r.Id" asp-route-v="@Model.VersionNo" asp-route-mode="changes">Thay đổi so với bản trước (@Model.Changes.Count)</a>
             </div>
         }
-        <div class="card-body">
+        <div class="card-body ta-rv-desk">
             <p class="ta-rv-legend">
-                @if (Model.Mode == "changes") {<span><ins class="ta-rv-ins">chữ thêm</ins></span><span><del class="ta-rv-del">chữ bỏ</del></span><span>Rê chuột lên chỗ sửa để xem lý do.</span>}
-                else {<span><span class="ta-rv-mark ta-rv-sev-high">nghiêm trọng</span></span><span><span class="ta-rv-mark ta-rv-sev-medium">cần lưu ý</span></span><span><span class="ta-rv-mark ta-rv-sev-low">góp ý nhỏ</span></span><span>Rê chuột hoặc bấm vào chỗ tô vàng để xem góp ý.</span>}
+                @if (Model.Mode == "changes") {<span><ins class="ta-rv-ins">chữ thêm</ins></span><span><del class="ta-rv-del">chữ bỏ</del></span><span>@(answeringHere ? "Bấm vào chỗ sửa để ghi ý kiến của khách hàng." : "Rê chuột lên chỗ sửa để xem lý do.")</span>}
+                else {<span><span class="ta-rv-mark ta-rv-sev-high">cần sửa gấp</span></span><span><span class="ta-rv-mark ta-rv-sev-medium">cần lưu ý</span></span><span><span class="ta-rv-mark is-accepted"><del class="ta-rv-del">đã</del> <ins class="ta-rv-ins">chấp nhận</ins></span></span><span>@(editable ? "Bấm vào chỗ tô vàng để đồng ý, sửa hoặc bỏ qua; bấm ✎ để tự sửa một đoạn." : "Bấm vào chỗ tô vàng để xem góp ý.")</span>}
             </p>
-            <div class="ta-rv-doc" data-ta-review-doc>
+            <article class="ta-rv-doc ta-rv-paper" data-ta-review-doc aria-label="Nội dung hợp đồng">
                 @if (Model.Mode == "changes")
                 {
                     foreach (var row in Model.Rows())
                     {
                         <div class="ta-rv-p ta-rv-p--@row.Kind.ToLowerInvariant() @(row.Change is null ? "" : "is-changed") @(row.NewText is null ? "is-deleted" : "")" id="p-@row.Key">
                             <span class="ta-rv-key">@row.Key</span>
-                            <div class="ta-rv-text">@if (row.Change is null) {@ReviewHtml.Changes(row.NewText, row.NewText, null)} else {@ReviewHtml.Changes(row.OldText, row.NewText, row.Change.Note)}</div>
+                            <div class="ta-rv-text">@if (row.Change is null) {@ReviewHtml.Changes(row.NewText, row.NewText, null)} else {@ReviewHtml.Changes(row.OldText, row.NewText, row.Change.Note, answeringHere ? "c-" + row.Change.Id : null, row.Change.CustomerDecision)}</div>
                         </div>
                     }
                 }
@@ -67,11 +68,113 @@
                         <div class="ta-rv-p ta-rv-p--@p.Kind.ToLowerInvariant() @(list.Count > 0 ? "is-flagged" : "")" id="p-@p.Key">
                             <span class="ta-rv-key">@p.Key</span>
                             <div class="ta-rv-text">@ReviewHtml.Findings(p, list)</div>
+                            @if (editable) {<button type="button" class="ta-rv-edit" data-ta-pop="e-@p.Key" title="Sửa trực tiếp đoạn @p.Key" aria-label="Sửa trực tiếp đoạn @p.Key">✎</button>}
                         </div>
+                        foreach (var ins in list.Where(f => f.Action == ContractReviewPolicy.Insert && f.Status != ContractReviewPolicy.Rejected && f.Replacement is not null))
+                        {
+                            <div class="ta-rv-p ta-rv-p--inserted @(ins.IsDecided ? "is-accepted" : "")">
+                                <span class="ta-rv-key">mới</span>
+                                <div class="ta-rv-text"><span class="ta-rv-mark ta-rv-whole ta-rv-sev-@ins.Severity.ToLowerInvariant() @(ins.IsDecided ? "is-accepted" : "")" data-ta-pop="f-@ins.Id" role="button" tabindex="0"><ins class="ta-rv-ins">@ReviewHtml.Plain(ins.Replacement)</ins></span></div>
+                            </div>
+                        }
                     }
                 }
-            </div>
+            </article>
         </div>
+
+        @* Decision panels opened in place by ta-review.js (data-ta-pop="<id>" → template#pop-<id>). Without JS the lists below work. *@
+        @foreach (var f in Model.Findings)
+        {
+            var canDecide = editable && f.AppliedInVersionNo is null;
+            var proposal = f.Replacement ?? f.RevisedText;
+            <template id="pop-f-@f.Id">
+                <div class="ta-rv-pop__head">
+                    <span class="ta-badge @ContractReviewPolicy.SeverityBadge(f.Severity)">@ContractReviewPolicy.Label(ContractReviewPolicy.Severities, f.Severity)</span>
+                    <span class="ta-badge ta-badge--plain @(f.IsDecided ? "ta-badge--success" : f.Status == ContractReviewPolicy.Rejected ? "ta-badge--danger" : "ta-badge--neutral")">@ContractReviewPolicy.Label(ContractReviewPolicy.FindingStatuses, f.Status)</span>
+                    <span class="ta-cell-sub">@f.ParagraphKey · @ContractReviewPolicy.Label(ContractReviewPolicy.Actions, f.Action) · có lợi cho @ContractReviewPolicy.Label(ContractReviewPolicy.Roles, f.Party)</span>
+                </div>
+                <p class="ta-rv-pop__issue">@f.Issue</p>
+                @if (f.LegalBasis is not null) {<p class="ta-rv-pop__legal">@f.LegalBasis @if (f.LegalVerified) {<span class="ta-badge ta-badge--success ta-badge--plain">Đã đối chiếu kho luật</span>} else {<span class="ta-badge ta-badge--warning ta-badge--plain">Chưa đối chiếu – cần kiểm tra</span>}</p>}
+                @if (f.Suggestion is not null) {<p class="ta-cell-sub">@f.Suggestion</p>}
+                @if (f.Action == ContractReviewPolicy.Replace && proposal is not null)
+                {
+                    <div class="ta-rv-pop__diff">@ReviewHtml.Changes(f.Quote ?? Model.Paragraphs.FirstOrDefault(x => x.Key == f.ParagraphKey)?.Text, proposal, null)</div>
+                }
+                else if (f.Action == ContractReviewPolicy.Insert && proposal is not null)
+                {
+                    <div class="ta-rv-pop__diff"><ins class="ta-rv-ins">@ReviewHtml.Plain(proposal)</ins></div>
+                }
+                else if (f.Action == ContractReviewPolicy.Delete)
+                {
+                    <div class="ta-rv-pop__diff">Đề xuất bỏ đoạn @f.ParagraphKey.</div>
+                }
+                @if (canDecide)
+                {
+                    <div class="ta-rv-pop__actions">
+                        @if (f.Action != ContractReviewPolicy.NoteOnly)
+                        {
+                            <form asp-action="Decide" asp-route-id="@r.Id" method="post" data-ta-review-form><input type="hidden" name="findingId" value="@f.Id" /><input type="hidden" name="status" value="@ContractReviewPolicy.Accepted" /><button type="submit" class="btn btn-sm btn-success" data-ta-review-accept>@UiIcon.Render("check")<span>Đồng ý</span></button></form>
+                        }
+                        <form asp-action="Decide" asp-route-id="@r.Id" method="post" data-ta-review-form><input type="hidden" name="findingId" value="@f.Id" /><input type="hidden" name="status" value="@ContractReviewPolicy.Rejected" /><button type="submit" class="btn btn-sm btn-outline-danger">@UiIcon.Render("x")<span>Bỏ qua</span></button></form>
+                        @if (f.Status != ContractReviewPolicy.Open)
+                        {
+                            <form asp-action="Decide" asp-route-id="@r.Id" method="post" data-ta-review-form><input type="hidden" name="findingId" value="@f.Id" /><input type="hidden" name="status" value="@ContractReviewPolicy.Open" /><button type="submit" class="btn btn-sm">@UiIcon.Render("refresh")<span>Đặt lại</span></button></form>
+                        }
+                    </div>
+                    @if (f.Action is ContractReviewPolicy.Replace or ContractReviewPolicy.Insert)
+                    {
+                        <form class="ta-rv-pop__edit" asp-action="Decide" asp-route-id="@r.Id" method="post" data-ta-review-form>
+                            <input type="hidden" name="findingId" value="@f.Id" /><input type="hidden" name="status" value="@ContractReviewPolicy.Edited" />
+                            <label class="form-label mb-1" for="pe-@f.Id">Sửa lại câu đề xuất rồi đồng ý</label>
+                            <div class="ta-input-icon ta-input-icon--top">@UiIcon.Render("pencil")<textarea class="form-control" id="pe-@f.Id" name="staffText" rows="3">@(f.StaffText ?? f.RevisedText)</textarea></div>
+                            <div class="ta-input-icon mt-2">@UiIcon.Render("pencil")<input class="form-control" name="staffNote" value="@f.StaffNote" maxlength="2000" placeholder="Ghi chú (không bắt buộc)" aria-label="Ghi chú" /></div>
+                            <button type="submit" class="btn btn-sm btn-primary mt-2">@UiIcon.Render("device-floppy")<span>Lưu câu đã sửa</span></button>
+                        </form>
+                    }
+                }
+                else if (f.AppliedInVersionNo is int applied)
+                {
+                    <p class="ta-cell-sub mb-0">Đã áp dụng vào phiên bản v@(applied).</p>
+                }
+            </template>
+        }
+        @if (editable)
+        {
+            foreach (var p in Model.Paragraphs)
+            {
+                <template id="pop-e-@p.Key">
+                    <div class="ta-rv-pop__head"><strong>Sửa trực tiếp đoạn @p.Key</strong></div>
+                    <form class="ta-rv-pop__edit" asp-action="EditParagraph" asp-route-id="@r.Id" method="post" data-ta-review-form>
+                        <input type="hidden" name="paragraphKey" value="@p.Key" />
+                        <div class="ta-input-icon ta-input-icon--top">@UiIcon.Render("pencil")<textarea class="form-control" name="text" rows="6" required aria-label="Nội dung đoạn @p.Key">@p.Text</textarea></div>
+                        <div class="ta-input-icon mt-2">@UiIcon.Render("pencil")<input class="form-control" name="note" maxlength="2000" placeholder="Lý do sửa (khách thấy khi rê chuột)" aria-label="Lý do sửa" /></div>
+                        <button type="submit" class="btn btn-sm btn-primary mt-2">@UiIcon.Render("device-floppy")<span>Lưu thay đổi</span></button>
+                        <div class="form-hint mt-1">Ghi thành góp ý "nhân viên sửa" đã chấp nhận; bản hiện tại không bị ghi đè, thay đổi vào phiên bản mới.</div>
+                    </form>
+                </template>
+            }
+        }
+        @if (answeringHere)
+        {
+            foreach (var c in Model.Changes)
+            {
+                <template id="pop-c-@c.Id">
+                    <div class="ta-rv-pop__head"><strong>Ý kiến khách hàng – đoạn @c.ParagraphKey</strong><span class="ta-badge ta-badge--plain ms-auto">@ContractReviewPolicy.Label(ContractReviewPolicy.CustomerDecisions, c.CustomerDecision)</span></div>
+                    @if (c.Note is not null) {<p class="ta-cell-sub">Lý do sửa: @c.Note</p>}
+                    <div class="ta-rv-pop__actions">
+                        <form asp-action="CustomerAnswer" asp-route-id="@r.Id" method="post" data-ta-review-form><input type="hidden" name="changeId" value="@c.Id" /><input type="hidden" name="decision" value="@ContractReviewPolicy.Agreed" /><button type="submit" class="btn btn-sm btn-success">@UiIcon.Render("check")<span>Khách đồng ý</span></button></form>
+                        <form asp-action="CustomerAnswer" asp-route-id="@r.Id" method="post" data-ta-review-form><input type="hidden" name="changeId" value="@c.Id" /><input type="hidden" name="decision" value="@ContractReviewPolicy.Declined" /><button type="submit" class="btn btn-sm btn-outline-danger">@UiIcon.Render("x")<span>Khách không đồng ý</span></button></form>
+                    </div>
+                    <form class="ta-rv-pop__edit" asp-action="CustomerAnswer" asp-route-id="@r.Id" method="post" data-ta-review-form>
+                        <input type="hidden" name="changeId" value="@c.Id" /><input type="hidden" name="decision" value="@ContractReviewPolicy.Counter" />
+                        <label class="form-label mb-1" for="cc-@c.Id">Khách đề xuất câu khác</label>
+                        <div class="ta-input-icon ta-input-icon--top">@UiIcon.Render("pencil")<textarea class="form-control" id="cc-@c.Id" name="customerText" rows="3">@(c.CustomerText ?? c.NewText)</textarea></div>
+                        <div class="ta-input-icon mt-2">@UiIcon.Render("pencil")<input class="form-control" name="customerNote" value="@c.CustomerNote" maxlength="2000" placeholder="Ý kiến của khách (không bắt buộc)" aria-label="Ý kiến khách hàng" /></div>
+                        <button type="submit" class="btn btn-sm btn-primary mt-2">@UiIcon.Render("device-floppy")<span>Lưu câu khách đề xuất</span></button>
+                    </form>
+                </template>
+            }
+        }
     </section>
 
     <section class="card" aria-labelledby="rvFindingsTitle" data-ta-review-findings>

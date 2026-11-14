@@ -403,6 +403,20 @@ Nội dung điều 5.
         var run = await c.PostAsync($"/contractreviews/runai/{R1}", Form(token, ("mask", "true")));
         Assert.Equal(HttpStatusCode.Redirect, run.StatusCode);
         Assert.False(store.Queued);
+
+        // In-place review: each mark opens its panel (template#pop-f-<id>) with Đồng ý / Bỏ qua / edit forms posted by fetch.
+        Assert.Contains($"data-ta-pop=\"f-{store.F1}\"", html);
+        Assert.Contains($"<template id=\"pop-f-{store.F1}\">", html);
+        Assert.Contains("data-ta-review-accept", html);
+        Assert.Contains("data-ta-pop=\"e-P3\"", html);                            // ✎ direct edit of a paragraph
+        Assert.Contains("class=\"ta-rv-doc ta-rv-paper\"", html);
+        Assert.Contains("/js/ta-review.js", html);
+        var edited = await c.PostAsync($"/contractreviews/editparagraph/{R1}", Form(token, ("paragraphKey", "P3"), ("text", "Bên B thanh toán trong 10 ngày."), ("note", "Rút ngắn")));
+        Assert.Equal(HttpStatusCode.Redirect, edited.StatusCode);
+        Assert.Equal(("ACCEPTED", Actor), store.LastDecision);
+        Assert.Equal(("REPLACE", "Bên B thanh toán trong 10 ngày."), (store.LastAdded?.Action, store.LastAdded?.RevisedText));
+        var preview = Environment.GetEnvironmentVariable("TA_REVIEW_PREVIEW");
+        if (!string.IsNullOrEmpty(preview)) File.WriteAllText(preview, page);
     }
 
     [Fact]
@@ -521,7 +535,8 @@ Nội dung điều 5.
         public Task<IReadOnlyList<S.ReviewFinding>> FindingsAsync(Guid id) => Task.FromResult<IReadOnlyList<S.ReviewFinding>>(
         [
             new(F1, 1, "P3", "REPLACE", "15 ngày", "Thời hạn thanh toán quá dài <script>alert(1)</script>", "HIGH", "A", "Điều 418 – 91/2015/QH13", false, null, "10 ngày", "OPEN", null, null, "AI", null, DateTime.UtcNow, null, null),
-            new(F2, 1, "P4", "DELETE", null, "Mức phạt vượt 8%", "MEDIUM", "A", null, false, null, null, "OPEN", null, null, "AI", null, DateTime.UtcNow, null, null)
+            new(F2, 1, "P4", "DELETE", null, "Mức phạt vượt 8%", "MEDIUM", "A", null, false, null, null, "OPEN", null, null, "AI", null, DateTime.UtcNow, null, null),
+            new(Guid.NewGuid(), 1, "P5", "REPLACE", "từ ngày ký", "Ghi rõ thời điểm", "LOW", "BOTH", null, false, null, "từ ngày hai bên ký và Bên B nhận đủ tạm ứng", "ACCEPTED", null, null, "AI", null, DateTime.UtcNow, DateTime.UtcNow, "Nhân viên")
         ]);
         public Task<IReadOnlyList<S.ReviewChange>> ChangesAsync(Guid id) => Task.FromResult<IReadOnlyList<S.ReviewChange>>(
             [new(Guid.NewGuid(), 0, 1, "P3", F1, V0[2].Text, V1[2].Text, "Thời hạn thanh toán quá dài", "PENDING", null, null, null)]);
@@ -533,7 +548,12 @@ Nội dung điều 5.
             return Task.FromResult(new S.ReviewResult(S.ReviewOutcome.Saved, R1, 0));
         }
         public Task<S.ReviewResult> QueueRunAsync(Guid actor, Guid id, bool mask, string? ip) { Queued = true; return Saved(); }
-        public Task<S.ReviewResult> AddFindingAsync(Guid actor, Guid id, S.ReviewFindingInput input, string? ip) => Saved();
+        public S.ReviewFindingInput? LastAdded;
+        public Task<S.ReviewResult> AddFindingAsync(Guid actor, Guid id, S.ReviewFindingInput input, string? ip)
+        {
+            LastAdded = input;
+            return Task.FromResult(new S.ReviewResult(S.ReviewOutcome.Saved, Guid.NewGuid(), 1, AuditPersisted: true));
+        }
         public Task<S.ReviewResult> DecideFindingAsync(Guid actor, Guid id, Guid findingId, string status, string? staffText, string? staffNote, string? ip)
         {
             LastDecision = (status, actor);
