@@ -190,6 +190,25 @@ public sealed class ContractReviewsController(IContractReviewStore reviews, ICon
         return Done(id, await reviews.CancelAsync(actor, id, stamp, Ip), "Đã hủy yêu cầu chỉnh lý.");
     }
 
+    // Polled every 10 seconds by ta-review.js while an AI run is queued or running (no-store; small JSON).
+    [HttpGet]
+    public async Task<IActionResult> RunStatus(Guid id)
+    {
+        var review = await reviews.GetAsync(id);
+        if (review is null) return NotFound();
+        var run = review.Runs.FirstOrDefault();
+        Response.Headers.CacheControl = "no-store";
+        return Json(new
+        {
+            reviewStatus = review.Status,
+            runStatus = run?.Status,
+            active = run?.Status is "QUEUED" or "RUNNING",
+            findings = run?.FindingCount,
+            error = run?.Status == "FAILED" ? run.Error : null,
+            since = Utc(run?.StartedAt ?? run?.RequestedAt)
+        });
+    }
+
     // Word file of a version: clean, or with real Word track changes and comments against the version before.
     [HttpGet]
     public async Task<IActionResult> Export(Guid id, int v, bool tracked = false)
@@ -223,6 +242,9 @@ public sealed class ContractReviewsController(IContractReviewStore reviews, ICon
     }
 
     // ---- helpers --------------------------------------------------------------------------------------------
+    // Times are stored as UTC (SYSUTCDATETIME) and read back without a kind.
+    public static string? Utc(DateTime? value) => value is DateTime d ? DateTime.SpecifyKind(d, DateTimeKind.Utc).ToString("o") : null;
+
     private string? Ip => HttpContext.Connection.RemoteIpAddress?.ToString();
 
     private async Task<byte[]> Read(IFormFile file)

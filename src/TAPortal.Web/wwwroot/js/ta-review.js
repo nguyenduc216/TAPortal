@@ -96,10 +96,58 @@
         }
     }, true);
 
-    const flash = (workspace, alert) => {
+    const flash = (workspace, alert, ms = 4000) => {
         alert.classList.add('ta-rv-flash');
         alert.removeAttribute('data-ta-toast');
         workspace.before(alert);
-        window.setTimeout(() => alert.remove(), 4000);
+        window.setTimeout(() => alert.remove(), ms);
     };
+
+    // ---- AI run in progress: elapsed time every second, status every 10 seconds, page refreshed in place when done ----
+    // One timer for the whole app; it only acts while a [data-ta-review-running] block is on the page (soft navigation
+    // keeps scripts alive, so it simply goes idle elsewhere).
+    let lastPoll = 0, polling = false;
+    const two = (n) => String(n).padStart(2, '0');
+    const refresh = async (done) => {
+        const fresh = await fetch(window.location.href, { credentials: 'same-origin', headers: { 'X-TA-Soft': '1' } });
+        const doc = new DOMParser().parseFromString(await fresh.text(), 'text/html');
+        const next = doc.querySelector('[data-ta-review-workspace]');
+        const current = document.querySelector('[data-ta-review-workspace]');
+        if (!next || !current) { window.location.reload(); return; }
+        close();
+        const y = window.scrollY;
+        const imported = document.importNode(next, true);
+        current.replaceWith(imported);
+        window.scrollTo(0, y);
+        const alert = document.createElement('div');
+        alert.className = 'ta-alert ' + (done.ok ? 'ta-alert--success' : 'ta-alert--danger');
+        alert.setAttribute('role', 'status');
+        alert.textContent = done.ok ? `AI đã rà soát xong: ${done.findings ?? 0} góp ý. Bấm vào chỗ tô vàng để xử lý.` : `AI rà soát không thành công: ${done.error || 'xem mục "Lượt AI rà soát".'}`;
+        flash(imported, alert, 8000);
+    };
+    window.setInterval(async () => {
+        const box = document.querySelector('[data-ta-review-running]');
+        if (!box) return;
+        const since = Date.parse(box.dataset.taSince || '');
+        const elapsed = box.querySelector('[data-ta-elapsed]');
+        if (elapsed && !Number.isNaN(since)) {
+            const s = Math.max(0, Math.floor((Date.now() - since) / 1000));
+            elapsed.textContent = s >= 60 ? `${Math.floor(s / 60)} phút ${two(s % 60)} giây` : `${s} giây`;
+        }
+        if (polling || Date.now() - lastPoll < 10000 || document.hidden || !window.fetch) return;
+        polling = true;
+        lastPoll = Date.now();
+        try {
+            const response = await fetch(box.dataset.taStatusUrl, { credentials: 'same-origin', headers: { Accept: 'application/json' } });
+            if (!response.ok) return;
+            const status = await response.json();
+            if (status.active) {
+                const text = box.querySelector('[data-ta-running-text]');
+                if (text && status.runStatus === 'RUNNING') text.textContent = 'AI đang đọc và rà soát hợp đồng…';
+                if (status.since) box.dataset.taSince = status.since;
+                return;
+            }
+            await refresh({ ok: status.runStatus === 'DONE', findings: status.findings, error: status.error });
+        } catch { /* network hiccup: try again at the next poll */ } finally { polling = false; }
+    }, 1000);
 })();

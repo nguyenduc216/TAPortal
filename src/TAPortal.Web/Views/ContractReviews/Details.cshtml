@@ -346,7 +346,14 @@
                 {
                     @if (Model.ActiveRun is { } run)
                     {
-                        <div class="ta-alert ta-alert--info mb-0" role="status" data-ta-review-running>@UiIcon.Render("clock")<div class="ta-alert__body">AI đang rà soát (gửi lúc @When(run.RequestedAt)). Thường mất 1–5 phút; bấm "Tải lại" để xem kết quả.</div></div>
+                        <div class="ta-rv-running" role="status" aria-live="polite" data-ta-review-running data-ta-status-url="@Url.Action("RunStatus", new { id = r.Id })"
+                             data-ta-since="@TAPortal.Web.Controllers.ContractReviewsController.Utc(run.StartedAt ?? run.RequestedAt)" data-ta-queued="@(run.Status == "QUEUED" ? "true" : "false")">
+                            <span class="ta-rv-spinner" aria-hidden="true"></span>
+                            <div>
+                                <div class="ta-cell-strong" data-ta-running-text>@(run.Status == "QUEUED" ? "Đang chờ AI nhận việc…" : "AI đang đọc và rà soát hợp đồng…")</div>
+                                <div class="ta-cell-sub">Đã chạy <span data-ta-elapsed>—</span> · thường 2–8 phút. Trang tự cập nhật khi xong; có thể đóng trang, AI vẫn chạy trên máy chủ.</div>
+                            </div>
+                        </div>
                     }
                     else if (canRun && ContractReviewPolicy.CanRunAi(r.Status))
                     {

@@ -13,7 +13,7 @@ public sealed record ReviewVersionInfo(int No, string Source, string Label, stri
 public sealed record ReviewFileInfo(Guid Id, int VersionNo, string Kind, string FileName, int SizeBytes, DateTime CreatedAt);
 
 public sealed record ReviewRunInfo(Guid Id, int VersionNo, string Status, string? Model, int? InputTokens, int? OutputTokens, decimal? CostUsd,
-    int? FindingCount, string? Summary, string? Error, DateTime RequestedAt, DateTime? FinishedAt, string? RequestedByName);
+    int? FindingCount, string? Summary, string? Error, DateTime RequestedAt, DateTime? FinishedAt, string? RequestedByName, DateTime? StartedAt = null);
 
 public sealed record ReviewFinding(Guid Id, int VersionNo, string ParagraphKey, string Action, string? Quote, string Issue, string Severity, string Party,
     string? LegalBasis, bool LegalVerified, string? Suggestion, string? RevisedText, string Status, string? StaffText, string? StaffNote, string Source,
@@ -149,7 +149,7 @@ FROM dbo.ContractReviewVersions v LEFT JOIN dbo.Users u ON u.Id=v.CreatedBy WHER
     public const string Files = "SELECT Id,VersionNo,Kind,FileName,SizeBytes,CreatedAt FROM dbo.ContractReviewFiles WHERE ReviewId=@id ORDER BY CreatedAt DESC;";
 
     public const string Runs = """
-SELECT x.Id,x.VersionNo,x.Status,x.Model,x.InputTokens,x.OutputTokens,x.CostUsd,x.FindingCount,x.Summary,x.Error,x.RequestedAt,x.FinishedAt,COALESCE(u.DisplayName,u.Username)
+SELECT x.Id,x.VersionNo,x.Status,x.Model,x.InputTokens,x.OutputTokens,x.CostUsd,x.FindingCount,x.Summary,x.Error,x.RequestedAt,x.FinishedAt,COALESCE(u.DisplayName,u.Username),x.StartedAt
 FROM dbo.ContractReviewRuns x LEFT JOIN dbo.Users u ON u.Id=x.RequestedBy WHERE x.ReviewId=@id ORDER BY x.RequestedAt DESC;
 """;
 
@@ -315,7 +315,7 @@ public sealed class SqlContractReviewStore(IConfiguration configuration, AdminAu
         await using (var r = await cmd.ExecuteReaderAsync())
             while (await r.ReadAsync())
                 runs.Add(new(r.GetGuid(0), r.GetInt32(1), r.GetString(2), S(r, 3), I(r, 4), I(r, 5), r.IsDBNull(6) ? null : r.GetDecimal(6), I(r, 7), S(r, 8), S(r, 9),
-                    r.GetDateTime(10), r.IsDBNull(11) ? null : r.GetDateTime(11), S(r, 12)));
+                    r.GetDateTime(10), r.IsDBNull(11) ? null : r.GetDateTime(11), S(r, 12), r.IsDBNull(13) ? null : r.GetDateTime(13)));
         return d with { Versions = versions, Files = files, Runs = runs };
     }
 

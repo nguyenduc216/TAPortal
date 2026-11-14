@@ -421,6 +421,11 @@ Nội dung điều 5.
         Assert.Equal(HttpStatusCode.Redirect, edited.StatusCode);
         Assert.Equal(("ACCEPTED", Actor), store.LastDecision);
         Assert.Equal(("REPLACE", "Bên B thanh toán trong 10 ngày."), (store.LastAdded?.Action, store.LastAdded?.RevisedText));
+        var status = await c.GetAsync($"/contractreviews/runstatus/{R1}");
+        Assert.Equal(HttpStatusCode.OK, status.StatusCode);
+        Assert.Contains("\"reviewStatus\":\"IN_REVIEW\"", await status.Content.ReadAsStringAsync());
+        Assert.Equal(HttpStatusCode.NotFound, (await c.GetAsync($"/contractreviews/runstatus/{Guid.NewGuid()}")).StatusCode);
+        Assert.Equal("2026-11-14T15:50:46.0000000Z", admin::TAPortal.Web.Controllers.ContractReviewsController.Utc(new DateTime(2026, 11, 14, 15, 50, 46)));
         var preview = Environment.GetEnvironmentVariable("TA_REVIEW_PREVIEW");
         if (!string.IsNullOrEmpty(preview)) File.WriteAllText(preview, page);
     }

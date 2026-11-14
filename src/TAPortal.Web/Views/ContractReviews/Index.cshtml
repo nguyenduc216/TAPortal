@@ -47,7 +47,7 @@
                         <td data-label="Khách hàng">@x.CustomerName@if (x.CustomerCode is not null) {<div class="ta-cell-sub">@x.CustomerCode</div>}</td>
                         <td data-label="Rà soát cho">@ContractReviewPolicy.Label(ContractReviewPolicy.Roles, x.Role)</td>
                         <td data-label="Phiên bản">@(x.CurrentVersionNo == 0 ? "Bản gốc" : "v" + x.CurrentVersionNo)</td>
-                        <td data-label="Trạng thái"><span class="ta-badge @ContractReviewPolicy.StatusBadge(x.Status)">@ContractReviewPolicy.Label(ContractReviewPolicy.Statuses, x.Status)</span></td>
+                        <td data-label="Trạng thái"><span class="ta-badge @ContractReviewPolicy.StatusBadge(x.Status)">@if (x.Status == ContractReviewPolicy.Analyzing) {<span class="ta-rv-spinner ta-rv-spinner--sm" aria-hidden="true"></span>}@ContractReviewPolicy.Label(ContractReviewPolicy.Statuses, x.Status)</span></td>
                         <td class="ta-nowrap" data-label="Tạo lúc">@x.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm", vi)@if (x.CreatedByName is not null) {<div class="ta-cell-sub">@x.CreatedByName</div>}</td>
                         <td class="ta-col-actions"><div class="ta-actions"><a class="btn btn-sm btn-soft-primary" asp-action="Details" asp-route-id="@x.Id" aria-label="Mở yêu cầu @x.Code">@UiIcon.Render("eye")<span>Mở</span></a></div></td>
                     </tr>

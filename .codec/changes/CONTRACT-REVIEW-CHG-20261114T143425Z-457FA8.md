@@ -23,6 +23,12 @@ với đề xuất thì đổi màu, các tương tác khác cũng làm ngay tr�
   được gửi cho AI (đã ẩn dữ liệu cá nhân) như yêu cầu ưu tiên rà soát; trống thì không thêm gì. ReviewAiRequest.CustomerNote,
   ReviewRunJob.Note, ContractReviewSql.RunReview đọc Note; gợi ý dưới ô ghi chú ở trang tạo yêu cầu.
 
+- Bổ sung (operator 2026-11-14 "Có, thêm luôn"): khi AI đang chạy, trang hiện vòng xoay + thời gian đã chạy, tự hỏi
+  GET ContractReviews/RunStatus/{id} mỗi 10 giây và tự cập nhật vùng làm việc khi xong (báo số góp ý hoặc lỗi); danh sách có
+  vòng xoay cho yêu cầu "AI đang rà soát". Thời gian chạy đọc dạng UTC (ContractReviewsController.Utc).
+- Lượt AI thật đầu tiên (đọc DB, không ghi): DONE, claude-opus-5-5, 15:50:46→15:53:27Z, 20 góp ý, 52.217/19.880 token, ~0,61 USD;
+  15/20 góp ý có căn cứ khớp kho luật.
+
 ## File thay đổi (relative path, thao tác ADD/MODIFY/DELETE)
 - MODIFY `src/TAPortal.Web/Models/ContractReviewModels.cs` (ReviewHtml: hiển thị quyết định tại chỗ, nút data-ta-pop)
 - MODIFY `src/TAPortal.Web/Views/ContractReviews/Details.cshtml` (trang giấy, template bảng quyết định)
