@@ -276,4 +276,98 @@
         if (form instanceof HTMLFormElement && form.hasAttribute('data-ta-task-filter')) form.querySelector('[data-ta-filter-dialog]')?.close?.();
     }, true);
     document.addEventListener('ta:before-swap', () => document.querySelectorAll('[data-ta-filter-dialog][open]').forEach((d) => d.close?.()));
+    // ---- Tên công việc from Danh mục công việc (operator 2026-11-14) -------------------------------------------------
+    // Typing shows the catalogue entries containing every typed word (accents optional); ↑/↓ + Enter or a click picks one.
+    // A name outside the catalogue is refused before sending (the server checks too); an older task keeps its own name.
+    const comboOf = (el) => el?.closest?.('[data-ta-combo]');
+    const comboInput = (combo) => combo.querySelector('[data-ta-combo-input]');
+    const comboOptions = (combo) => [...combo.querySelectorAll('.ta-combo__option')];
+    const comboMatch = (combo, value) => comboOptions(combo).find((o) => fold(o.dataset.value) === fold((value || '').trim()));
+
+    const comboShow = (combo, open) => {
+        const list = combo.querySelector('.ta-combo__list');
+        list.hidden = !open;
+        comboInput(combo).setAttribute('aria-expanded', open ? 'true' : 'false');
+    };
+
+    const comboFilter = (combo) => {
+        const words = fold(comboInput(combo).value).split(/\s+/).filter(Boolean);
+        let shown = 0;
+        comboOptions(combo).forEach((o) => {
+            const text = fold(o.textContent);
+            o.hidden = !words.every((w) => text.includes(w));
+            o.classList.remove('is-active');
+            o.setAttribute('aria-selected', 'false');
+            if (!o.hidden) shown++;
+        });
+        combo.querySelector('[data-ta-combo-empty]').hidden = shown > 0;
+        comboShow(combo, true);
+    };
+
+    const comboPick = (combo, option) => {
+        const input = comboInput(combo);
+        input.value = option.dataset.value;
+        input.setCustomValidity('');
+        comboShow(combo, false);
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+    };
+
+    const comboMove = (combo, step) => {
+        const visible = comboOptions(combo).filter((o) => !o.hidden);
+        if (visible.length === 0) return;
+        const index = visible.findIndex((o) => o.classList.contains('is-active'));
+        const next = visible[(index + step + visible.length) % visible.length];
+        visible.forEach((o) => { o.classList.toggle('is-active', o === next); o.setAttribute('aria-selected', o === next ? 'true' : 'false'); });
+        next.scrollIntoView({ block: 'nearest' });
+    };
+
+    // Accepted: an entry of the catalogue (written with its catalogue spelling) or the task's unchanged older name.
+    const comboValid = (combo) => {
+        const input = comboInput(combo);
+        const match = comboMatch(combo, input.value);
+        if (match) { input.value = match.dataset.value; input.setCustomValidity(''); return true; }
+        if (input.value.trim() !== '' && input.value.trim() === (input.dataset.taComboOriginal || '').trim()) { input.setCustomValidity(''); return true; }
+        input.setCustomValidity('Chọn tên công việc trong danh mục (gõ vài chữ rồi chọn đầu việc được gợi ý).');
+        return false;
+    };
+
+    document.addEventListener('input', (event) => {
+        const combo = comboOf(event.target);
+        if (combo && event.target.matches('[data-ta-combo-input]')) { event.target.setCustomValidity(''); comboFilter(combo); }
+    });
+    document.addEventListener('focusin', (event) => {
+        const combo = comboOf(event.target);
+        if (combo && event.target.matches('[data-ta-combo-input]')) comboFilter(combo);
+    });
+    document.addEventListener('focusout', (event) => {
+        const combo = comboOf(event.target);
+        if (!combo || combo.contains(event.relatedTarget)) return;
+        comboShow(combo, false);
+        if (comboInput(combo).value.trim() !== '') comboValid(combo);
+    });
+    // pointerdown, not click: the option is picked before the input loses focus and the list closes.
+    document.addEventListener('pointerdown', (event) => {
+        const option = event.target.closest?.('.ta-combo__option');
+        const combo = comboOf(option);
+        if (option && combo) { event.preventDefault(); comboPick(combo, option); }
+    });
+    document.addEventListener('keydown', (event) => {
+        if (!event.target.matches?.('[data-ta-combo-input]')) return;
+        const combo = comboOf(event.target);
+        const open = !combo.querySelector('.ta-combo__list').hidden;
+        if (event.key === 'ArrowDown' || event.key === 'ArrowUp') { event.preventDefault(); if (!open) comboFilter(combo); comboMove(combo, event.key === 'ArrowDown' ? 1 : -1); }
+        else if (event.key === 'Enter' && open) {
+            const active = combo.querySelector('.ta-combo__option.is-active') || comboOptions(combo).filter((o) => !o.hidden).at(0);
+            if (active && !active.hidden) { event.preventDefault(); comboPick(combo, active); }
+        }
+        else if (event.key === 'Escape' && open) { event.preventDefault(); comboShow(combo, false); }
+    });
+    // Capture phase: runs before the shell's own submit handler, which skips a prevented submit.
+    document.addEventListener('submit', (event) => {
+        const form = event.target;
+        if (!(form instanceof HTMLFormElement)) return;
+        for (const combo of form.querySelectorAll('[data-ta-combo]')) {
+            if (!comboValid(combo)) { event.preventDefault(); event.stopImmediatePropagation(); comboInput(combo).reportValidity(); comboInput(combo).focus(); return; }
+        }
+    }, true);
 })();

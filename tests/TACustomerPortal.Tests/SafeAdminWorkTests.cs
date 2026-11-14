@@ -222,6 +222,30 @@ public sealed class SafeAdminWorkTests
     }
 
     [Fact]
+    public async Task TheTaskNameIsPickedFromTheCatalogueWhenOneExists()
+    {
+        // Operator 2026-11-14: typing suggests catalogue entries; free text is refused. An empty catalogue keeps a plain box.
+        var store = new MemoryWork();
+        using (var f = Factory("STAFF", store, "TASKS.VIEW", "TASKS.CREATE"))
+        {
+            var plain = WebUtility.HtmlDecode(await (await Client(f).GetAsync("/work/create")).Content.ReadAsStringAsync());
+            Assert.DoesNotContain("data-ta-combo", plain);
+            Assert.Contains("name=\"Input.Title\"", plain);
+        }
+        store.Catalog.Add(new("Kéo hóa đơn", "Kéo hóa đơn đầu ra, đầu vào"));
+        store.Catalog.Add(new("Nhập sao kê ngân hàng", null));
+        using (var f = Factory("STAFF", store, "TASKS.VIEW", "TASKS.CREATE"))
+        {
+            var html = WebUtility.HtmlDecode(await (await Client(f).GetAsync("/work/create")).Content.ReadAsStringAsync());
+            Assert.Contains("data-ta-combo-input", html);
+            Assert.Contains("role=\"combobox\"", html);
+            Assert.Contains("data-value=\"Kéo hóa đơn\"", html);
+            Assert.Contains("data-value=\"Nhập sao kê ngân hàng\"", html);
+            Assert.Contains("Chọn tên trong danh mục công việc", html);
+        }
+    }
+
+    [Fact]
     public async Task TheTaskListHasASearchBarAndAFilterPopup()
     {
         // Operator 2026-11-13: search box + search button + "Bộ lọc" beside it; the popup holds several statuses, employees
@@ -363,7 +387,8 @@ public sealed class SafeAdminWorkTests
                 return Task.FromResult<S.WorkTaskDetail?>(new(c.Task, null, null, null, null, "An", [], c.Checklist, c.Recent, c.CanEdit, c.IsOwner, "00", null));
             }
         }
-        public Task<S.WorkLookups> LookupsAsync() => Task.FromResult(new S.WorkLookups([new(E1, "NV000001", "Nguyễn Văn An", true), new(E2, "NV000002", "Trần Thị Bình", false)], [], []));
+        public List<S.WorkCatalogEntry> Catalog { get; } = [];
+        public Task<S.WorkLookups> LookupsAsync() => Task.FromResult(new S.WorkLookups([new(E1, "NV000001", "Nguyễn Văn An", true), new(E2, "NV000002", "Trần Thị Bình", false)], [], [], null, Catalog));
         public Task<S.WorkResult> CreateAsync(Guid actor, S.WorkTaskInput input) => Task.FromResult(new S.WorkResult(S.WorkOutcome.Forbidden));
         public Task<S.WorkResult> UpdateAsync(Guid actor, Guid id, S.WorkTaskInput input, string stamp) => Task.FromResult(new S.WorkResult(S.WorkOutcome.Forbidden));
         public Task<S.WorkResult> DeleteAsync(Guid actor, Guid id) => Task.FromResult(new S.WorkResult(S.WorkOutcome.Forbidden));

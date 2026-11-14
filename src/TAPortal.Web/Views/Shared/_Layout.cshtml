@@ -35,6 +35,7 @@
     var canWork = Can(AdminPermissions.TasksView);
     var canTaskTemplates = Can(AdminPermissions.TaskTemplatesManage);
     var canTaskReport = Can(AdminPermissions.TaskReportView);
+    var canTaskCatalog = Can(AdminPermissions.TaskCatalogManage);
     var impersonation = Impersonation.Read(User);
     var canImpersonationLog = impersonation is null && Can(AdminPermissions.UsersImpersonate);
     var displayName = User.FindFirst("display_name")?.Value ?? User.Identity?.Name;
@@ -86,7 +87,7 @@
                     </ul>
                 </div>
             }
-            @if (canWork || canTaskTemplates || canTaskReport)
+            @if (canWork || canTaskTemplates || canTaskReport || canTaskCatalog)
             {
                 <div class="ta-nav__group">
                     <p class="ta-nav__section">Công việc</p>
@@ -94,6 +95,7 @@
                         @if (canWork) {<li><a class="ta-nav__link" asp-controller="Work" asp-action="Index" title="Việc của tôi" aria-current="@(IsCurrent("Work", "Index") ? "page" : null)"><span class="ta-nav__icon">@UiIcon.Render("checks")</span><span class="ta-nav__label">Việc của tôi</span></a></li>
                         <li><a class="ta-nav__link" asp-controller="Work" asp-action="Tasks" title="Danh sách công việc" aria-current="@(IsCurrent("Work", "Tasks") || IsCurrent("Work", "Details") || IsCurrent("Work", "Create") || IsCurrent("Work", "Edit") ? "page" : null)"><span class="ta-nav__icon">@UiIcon.Render("list-tree")</span><span class="ta-nav__label">Danh sách công việc</span></a></li>}
                         @if (canTaskTemplates) {<li><a class="ta-nav__link" asp-controller="Work" asp-action="Templates" title="Việc lặp theo kỳ" aria-current="@(IsCurrent("Work", "Templates") || IsCurrent("Work", "TemplateCreate") || IsCurrent("Work", "TemplateEdit") ? "page" : null)"><span class="ta-nav__icon">@UiIcon.Render("refresh")</span><span class="ta-nav__label">Việc lặp theo kỳ</span></a></li>}
+                        @if (canTaskCatalog) {<li><a class="ta-nav__link" asp-controller="WorkCatalog" asp-action="Index" title="Danh mục công việc" aria-current="@(IsCurrent("WorkCatalog") ? "page" : null)"><span class="ta-nav__icon">@UiIcon.Render("list-tree")</span><span class="ta-nav__label">Danh mục công việc</span></a></li>}
                         @if (canTaskReport) {<li><a class="ta-nav__link" asp-controller="Work" asp-action="Report" title="Báo cáo tiến độ" aria-current="@(IsCurrent("Work", "Report") ? "page" : null)"><span class="ta-nav__icon">@UiIcon.Render("chart-bar")</span><span class="ta-nav__label">Báo cáo tiến độ</span></a></li>}
                     </ul>
                 </div>

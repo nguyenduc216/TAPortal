@@ -250,3 +250,20 @@
     .ta-imp-bar { padding: 8px 12px; align-items: flex-start; }
     .ta-imp-bar__exit span { display: none; }
 }
+
+/* ---- Danh mục công việc: task name picker (combobox) and the catalogue page ---- */
+.ta-combo { position: relative; }
+.ta-combo__list { position: absolute; z-index: 1050; left: 0; right: 0; top: calc(100% + 4px); max-height: 280px; overflow-y: auto; margin: 0; padding: 4px; list-style: none;
+    background: var(--tblr-bg-surface, #fff); border: 1px solid var(--tblr-border-color, #dce1e7); border-radius: 8px; box-shadow: 0 8px 24px rgba(8, 39, 70, .14); }
+.ta-combo__list + .form-hint { margin-top: 4px; }
+.ta-combo__option { display: flex; flex-direction: column; gap: 1px; padding: 8px 10px; border-radius: 6px; cursor: pointer; }
+.ta-combo__option:hover, .ta-combo__option.is-active { background: var(--ta-gold-soft, #fff4dc); }
+.ta-combo__name { font-weight: 600; }
+.ta-combo__desc { color: var(--tblr-secondary, #667382); }
+.ta-combo__empty { padding: 8px 10px; color: var(--tblr-secondary, #667382); font-size: .8125rem; }
+.ta-catalog-add { display: grid; grid-template-columns: minmax(200px, 2fr) minmax(180px, 2fr) 110px auto; gap: 8px; align-items: center; }
+.ta-catalog-sort .ta-input-icon { width: 110px; }
+@media (max-width: 767.98px) {
+    .ta-catalog-add { grid-template-columns: 1fr; }
+    .ta-catalog-sort .ta-input-icon { width: 100%; }
+}

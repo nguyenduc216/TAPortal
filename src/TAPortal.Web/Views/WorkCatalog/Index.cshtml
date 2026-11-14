@@ -1,0 +1,59 @@
+@model IReadOnlyList<WorkCatalogItem>
+@{
+    ViewData["Title"] = "Danh mục công việc";
+    ViewData["Subtitle"] = "Tên các đầu việc nhân viên được chọn khi tạo việc. Gõ vài chữ là gợi ý; không nhập tên tự do được. Chi tiết từng việc ghi ở phần Mô tả.";
+    ViewData["PageIcon"] = "list-tree";
+    var active = Model.Count(x => x.IsActive);
+}
+@if (ViewData["Unavailable"] is true)
+{
+    <div class="ta-alert ta-alert--warning" role="alert">@UiIcon.Render("alert-triangle")<div class="ta-alert__body">Chưa đọc được danh mục công việc (bảng dbo.WorkTaskCatalog chưa sẵn sàng).</div></div>
+}
+<section class="card mb-3" aria-label="Thêm đầu việc">
+    <form method="post" asp-action="Save" class="card-body ta-catalog-add">
+        <div class="ta-input-icon">@UiIcon.Render("pencil")<input class="form-control" name="Input.Name" maxlength="@WorkCatalogPolicy.NameMax" required placeholder="Tên đầu việc mới, ví dụ: Kéo hóa đơn" aria-label="Tên đầu việc mới" /></div>
+        <div class="ta-input-icon">@UiIcon.Render("file-text")<input class="form-control" name="Input.Description" maxlength="@WorkCatalogPolicy.DescriptionMax" placeholder="Mô tả ngắn (không bắt buộc)" aria-label="Mô tả" /></div>
+        <div class="ta-input-icon ta-catalog-add__sort">@UiIcon.Render("hash")<input class="form-control" type="number" name="Input.SortOrder" value="@((Model.Count == 0 ? 0 : Model.Max(x => x.SortOrder)) + 10)" min="0" max="100000" aria-label="Thứ tự" title="Thứ tự hiển thị" /></div>
+        <input type="hidden" name="Input.IsActive" value="true" />
+        <button class="btn btn-ta-gold" type="submit">@UiIcon.Render("plus")<span>Thêm</span></button>
+    </form>
+</section>
+<section class="card ta-table-card" aria-label="Danh sách đầu việc">
+    <div class="ta-table-toolbar">
+        <div class="ta-search">@UiIcon.Render("search")<input class="form-control" type="search" aria-label="Tìm đầu việc" placeholder="Tìm đầu việc..." oninput="taFilterRows(this.value,'catalogTable')" /></div>
+        <span class="small text-secondary ms-auto">@active đang dùng · @(Model.Count - active) đã ẩn</span>
+    </div>
+    @if (Model.Count == 0)
+    {
+        <div class="ta-empty"><span class="ta-empty__icon">@UiIcon.Render("list-tree")</span><p class="ta-empty__title">Chưa có đầu việc nào</p><p class="ta-empty__text">Khi danh mục còn trống, nhân viên vẫn nhập tên việc tự do.</p></div>
+    }
+    else
+    {
+        <div class="ta-table-wrap">
+            <table class="ta-table ta-table-stack" id="catalogTable">
+                <thead><tr><th scope="col">Đầu việc</th><th scope="col">Mô tả</th><th scope="col">Thứ tự</th><th scope="col">Đang dùng</th><th scope="col" class="text-end">Số việc</th><th scope="col" class="ta-col-actions">Thao tác</th></tr></thead>
+                <tbody>
+                @foreach (var x in Model)
+                {
+                    var formId = "cat" + x.Id.ToString("N");
+                    <tr data-ta-row class="@(x.IsActive ? null : "text-secondary")">
+                        <td data-label="Đầu việc"><div class="ta-input-icon">@UiIcon.Render("pencil")<input form="@formId" class="form-control form-control-sm" name="Input.Name" value="@x.Name" maxlength="@WorkCatalogPolicy.NameMax" required aria-label="Tên đầu việc" /></div><span class="d-none">@x.Name</span></td>
+                        <td data-label="Mô tả"><div class="ta-input-icon">@UiIcon.Render("file-text")<input form="@formId" class="form-control form-control-sm" name="Input.Description" value="@x.Description" maxlength="@WorkCatalogPolicy.DescriptionMax" aria-label="Mô tả" /></div></td>
+                        <td data-label="Thứ tự" class="ta-catalog-sort"><div class="ta-input-icon">@UiIcon.Render("hash")<input form="@formId" class="form-control form-control-sm" type="number" name="Input.SortOrder" value="@x.SortOrder" min="0" max="100000" aria-label="Thứ tự" /></div></td>
+                        <td data-label="Đang dùng"><label class="form-check form-switch m-0"><input form="@formId" class="form-check-input" type="checkbox" name="Input.IsActive" value="true" checked="@x.IsActive" aria-label="Đang dùng" /><input form="@formId" type="hidden" name="Input.IsActive" value="false" /></label></td>
+                        <td class="text-end" data-label="Số việc">@x.TaskCount</td>
+                        <td class="ta-col-actions">
+                            <div class="ta-actions">
+                                <form id="@formId" method="post" asp-action="Save" asp-route-id="@x.Id"><button class="btn btn-sm btn-soft-primary" type="submit">@UiIcon.Render("device-floppy")<span>Lưu</span></button></form>
+                                <form method="post" asp-action="Delete" asp-route-id="@x.Id" onsubmit="return confirm('Xóa đầu việc này khỏi danh mục? Các công việc đã tạo vẫn giữ tên.');"><button class="ta-icon-btn" type="submit" aria-label="Xóa @x.Name" title="Xóa">@UiIcon.Render("trash")</button></form>
+                            </div>
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+        <div class="ta-empty d-none" data-ta-no-results><span class="ta-empty__icon">@UiIcon.Render("search-off")</span><p class="ta-empty__title">Không tìm thấy đầu việc</p></div>
+        <div class="card-footer text-secondary small">Đổi tên một đầu việc thì các công việc và việc lặp đang mang tên cũ cũng đổi theo. Tắt "Đang dùng" để ẩn khỏi gợi ý mà vẫn giữ lịch sử.</div>
+    }
+</section>
