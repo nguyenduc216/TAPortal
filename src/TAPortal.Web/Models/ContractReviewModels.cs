@@ -47,6 +47,8 @@ public sealed record LegalLibraryIndexVm(IReadOnlyList<LegalDocumentItem>? Items
 
 public sealed record LegalDocumentEditVm(Guid? Id, LegalDocumentInput Input, int ArticleCount);
 
+public sealed record LegalWatchIndexVm(LegalWatchOverview? Data, bool Pending, string? Error);
+
 // HTML of one contract paragraph: flagged quotes in yellow with the note on hover/focus, or word-level track changes
 // (inserted words yellow, deleted words struck through) against the previous version. Everything is HTML-encoded here.
 public static class ReviewHtml

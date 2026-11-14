@@ -34,7 +34,12 @@ public sealed class LegalLibraryController(ILegalLibraryStore library, ILogger<L
 
     [HttpGet]
     [Authorize(Policy = AdminPermissions.Policy.LegalLibraryManage)]
-    public IActionResult Create() => View("Edit", new LegalDocumentEditVm(null, new LegalDocumentInput(), 0));
+    public IActionResult Create([FromQuery(Name = "Input")] LegalDocumentInput? input)
+    {
+        // "Nhập tay" from the review queue (LegalWatch) pre-fills the form from the query string; nothing is saved here.
+        ModelState.Clear();
+        return View("Edit", new LegalDocumentEditVm(null, input ?? new LegalDocumentInput(), 0));
+    }
 
     [HttpPost]
     [ValidateAntiForgeryToken]

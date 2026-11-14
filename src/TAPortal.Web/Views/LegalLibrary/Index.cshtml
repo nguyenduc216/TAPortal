@@ -11,6 +11,7 @@
     var canManage = AdminPermissions.Has(User, AdminPermissions.LegalLibraryManage);
 }
 @section PageActions {
+    <a class="btn btn-primary" asp-controller="LegalWatch" asp-action="Index" data-ta-legal-watch>@UiIcon.Render("inbox")<span>Văn bản mới cần duyệt</span></a>
     @if (canManage) {<a class="btn btn-ta-gold" asp-action="Create" data-ta-legal-create>@UiIcon.Render("plus")<span>Thêm văn bản</span></a>}
 }
 @if (Model.Error is not null) {<div class="ta-alert ta-alert--danger" role="alert">@UiIcon.Render("alert-circle")<div class="ta-alert__body">@Model.Error</div></div>}
