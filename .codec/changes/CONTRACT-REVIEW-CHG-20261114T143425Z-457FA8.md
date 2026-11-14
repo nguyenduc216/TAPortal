@@ -12,6 +12,8 @@
   artifact 46cc1ecb946d55ad1ecff9947e2179843dca157efbb96d9f112479434cd75eaf; package ABFE41EE85A25BA0CA8C9D19B4CFCF7FBB2593BB201233869FC1735D71F24478; health 200.
 - portal DEPLOYED lần 5 (so sánh kèm gợi ý) 2026-11-14 17:03:10Z từ f04fbcc (gồm origin/main ad73524; 0 lượt AI đang chạy);
   artifact 9c59ff941ac69de3ed56f664996ff366f1f7ccb4365544ebd4bf4b50f19cf281; package 0A8F52334A7A568C96E042A1C6E72C236DEC35A63499C60696F485B2DDECB69E; health 200.
+- portal DEPLOYED lần 6 (tô sáng khoản luật, link vbpl) 2026-11-14 17:16:25Z từ c8a33f6 (0 lượt AI đang chạy);
+  artifact bd9e5906c4b2049464c6398f45bcdd4a94e1c3f130ec41c568344a406041892a; package F43854C90B0C7068F71E2C1AE25738568308BD0EE0BE76BA34FDBEDC39E6B1BE; health 200.
 - Trạng thái: DEPLOYED
 
 ## Yêu cầu và phạm vi
@@ -45,6 +47,12 @@ với đề xuất thì đổi màu, các tương tác khác cũng làm ngay tr�
 - Bổ sung (operator qua phiên chính: "phiên bản so sánh không thấy cái gợi ý..."): chế độ So sánh giờ là bản gốc | bản theo MỌI gợi ý
   chưa bị bỏ qua (chưa xử lý + đã đồng ý; ContractReviewPolicy.Suggested bỏ từng gợi ý xung đột), dưới mỗi đoạn có lý do, căn cứ
   (link kho luật), nút Đồng ý / Bỏ qua / Đặt lại / Sửa câu đề xuất; mặc định chỉ hiện đoạn có gợi ý, nút Gợi ý trước/sau.
+
+- Bổ sung (operator qua phiên chính: link điều luật phải mở file luật, cuộn tới đoạn được trích và tô sáng, hoặc mở link trên mạng):
+  link trích dẫn mang ?k=<khoản>&d=<điểm>; trang kho luật hiển thị từng dòng (data-k/data-d), mở đúng điều, tô vàng khoản và tô đậm
+  điểm được trích; thêm link "Văn bản gốc trên vbpl.vn" (LegalDocuments.SourceUrl của migration 048, chỉ https) và "Tìm điều này
+  trên mạng" (Google). Prompt yêu cầu AI ghi clause dạng "khoản 2, điểm a". Việc "đã đối chiếu kho luật" vẫn chỉ kiểm tra văn bản
+  và số điều có trong kho, chưa kiểm tra nội dung khoản có nói đúng như AI viết.
 
 ## File thay đổi (relative path, thao tác ADD/MODIFY/DELETE)
 - MODIFY `src/TAPortal.Web/Models/ContractReviewModels.cs` (ReviewHtml: hiển thị quyết định tại chỗ, nút data-ta-pop)

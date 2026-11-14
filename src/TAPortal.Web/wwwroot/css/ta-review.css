@@ -139,3 +139,12 @@
 .ta-rv-why__issue { white-space: pre-line; }
 .ta-rv-why__legal .ta-rv-legal-link { display: inline; margin-right: .5rem; }
 .ta-rv-compare__none { padding: 1.5rem 1rem; text-align: center; color: #667085; font-family: var(--tblr-font-sans-serif, sans-serif); }
+
+/* Citation links and the cited passage on the law page */
+.ta-rv-legal { display: block; margin-bottom: .2rem; }
+.ta-rv-legal-web { display: inline-block; margin-right: .75rem; font-size: .75rem; color: #475467; text-decoration: underline; text-underline-offset: 2px; }
+.ta-rv-legal-web:hover { color: #1849a9; }
+.ta-law-line { display: block; padding: .05rem .35rem; border-radius: 3px; }
+.ta-law-line.is-cited { background: #fff1a8; box-shadow: inset 3px 0 0 var(--ta-gold, #E5A900); }
+.ta-law-line.is-cited-point { background: #ffe08a; }
+.ta-law-cited-note { font-size: .8125rem; color: #0B2E52; background: #eef4ff; border-radius: 6px; padding: .35rem .6rem; margin-top: .5rem; display: inline-block; }

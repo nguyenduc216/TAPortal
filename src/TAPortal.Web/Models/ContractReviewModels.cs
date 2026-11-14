@@ -208,9 +208,16 @@ public static class ReviewHtml
             if (c.Key is not null && links.TryGetValue(c.Key, out var l))
             {
                 var label = $"{l.ArticleNo}{(c.Clause is null ? "" : ", " + c.Clause)}{(l.ArticleTitle is null ? "" : ". " + l.ArticleTitle)} — {l.DocumentTitle} ({l.DocumentNo})";
-                sb.Append("<a class=\"ta-rv-legal-link\" target=\"_blank\" rel=\"noopener\" href=\"").Append(E.Encode(detailsUrl.TrimEnd('/') + "/" + l.DocumentId + "#a-" + l.ArticleId))
-                  .Append("\" title=\"").Append(E.Encode("Mở " + l.ArticleNo + " trong kho văn bản pháp luật" + (l.SourceFile is null ? "" : " (nguồn: " + l.SourceFile + ")"))).Append("\">")
+                // ?k / ?d: the law page scrolls to the article and highlights that clause (khoản) and point (điểm).
+                var query = string.Join("&", new[] { c.Khoan is null ? null : "k=" + Uri.EscapeDataString(c.Khoan), c.Diem is null ? null : "d=" + Uri.EscapeDataString(c.Diem) }.Where(x => x is not null));
+                var href = detailsUrl.TrimEnd('/') + "/" + l.DocumentId + (query.Length == 0 ? "" : "?" + query) + "#a-" + l.ArticleId;
+                sb.Append("<span class=\"ta-rv-legal\"><a class=\"ta-rv-legal-link\" target=\"_blank\" rel=\"noopener\" href=\"").Append(E.Encode(href))
+                  .Append("\" title=\"").Append(E.Encode("Mở " + l.ArticleNo + " trong kho văn bản pháp luật và tô sáng phần được trích" + (l.SourceFile is null ? "" : " (file nguồn: " + l.SourceFile + ")"))).Append("\">")
                   .Append(E.Encode(label)).Append(" ↗</a>");
+                if (!string.IsNullOrWhiteSpace(l.SourceUrl) && Uri.TryCreate(l.SourceUrl, UriKind.Absolute, out var src) && src.Scheme == Uri.UriSchemeHttps)
+                    sb.Append("<a class=\"ta-rv-legal-web\" target=\"_blank\" rel=\"noopener noreferrer\" href=\"").Append(E.Encode(src.AbsoluteUri)).Append("\">Văn bản gốc trên vbpl.vn ↗</a>");
+                sb.Append("<a class=\"ta-rv-legal-web\" target=\"_blank\" rel=\"noopener noreferrer\" href=\"")
+                  .Append(E.Encode("https://www.google.com/search?q=" + Uri.EscapeDataString($"\"{l.ArticleNo}\" \"{l.DocumentNo}\""))).Append("\">Tìm điều này trên mạng ↗</a></span>");
             }
             else sb.Append("<span class=\"ta-rv-legal-link text-secondary\">").Append(E.Encode(c.Text)).Append(" <em>(chưa có trong kho luật)</em></span>");
         }

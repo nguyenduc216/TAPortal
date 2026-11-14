@@ -66,8 +66,46 @@
         if (jump(link.getAttribute('href').slice(1))) { event.preventDefault(); event.stopPropagation(); close(); }
     }, true);
     // A law article opened from a citation link (…/LegalLibrary/Details/<doc>#a-<article>) is expanded and shown.
+    // ?k=<khoản>&d=<điểm> highlights the cited clause / point inside that article (whole article when not given).
+    const markCited = (article) => {
+        const params = new URLSearchParams(window.location.search);
+        const k = params.get('k'), d = params.get('d');
+        const lines = [...article.querySelectorAll('.ta-law-line')];
+        if (lines.length === 0) return;
+        let from = 0, to = lines.length;
+        if (k) {
+            const start = lines.findIndex((l) => l.dataset.k === k);
+            if (start >= 0) {
+                from = start;
+                const next = lines.findIndex((l, i) => i > start && l.dataset.k);
+                to = next < 0 ? lines.length : next;
+            }
+        }
+        lines.slice(from, to).forEach((l) => l.classList.add('is-cited'));
+        if (d) {
+            const scope = lines.slice(from, to);
+            const p = scope.findIndex((l) => l.dataset.d === d);
+            if (p >= 0) {
+                const end = scope.findIndex((l, i) => i > p && (l.dataset.d || l.dataset.k));
+                scope.slice(p, end < 0 ? scope.length : end).forEach((l) => l.classList.add('is-cited-point'));
+            }
+        }
+        if (!article.querySelector('.ta-law-cited-note')) {
+            const note = document.createElement('div');
+            note.className = 'ta-law-cited-note';
+            note.textContent = 'Phần được trích dẫn trong góp ý' + (k ? ` (khoản ${k}${d ? ', điểm ' + d : ''})` : '') + ' được tô vàng.';
+            article.querySelector('summary')?.after(note);
+        }
+        const first = article.querySelector('.is-cited-point') || article.querySelector('.is-cited');
+        first?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    };
     const openHash = () => {
-        if (window.location.hash.startsWith('#a-')) window.setTimeout(() => jump(window.location.hash.slice(1)), 50);
+        if (!window.location.hash.startsWith('#a-')) return;
+        window.setTimeout(() => {
+            if (!jump(window.location.hash.slice(1))) return;
+            const article = document.getElementById(window.location.hash.slice(1));
+            if (article) window.setTimeout(() => markCited(article), 350);
+        }, 50);
     };
     document.addEventListener('ta:load', openHash);
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', openHash); else openHash();

@@ -20,11 +20,15 @@ public sealed record LegalFileInfo(Guid Id, string FileName, string ContentType,
 public sealed record LegalDocumentDetail(LegalDocumentItem Document, IReadOnlyList<LegalArticleItem> Articles, IReadOnlyList<LegalFileInfo> Files);
 
 // Where a cited article lives in the law library (for the citation links on the review page).
-public sealed record LegalArticleLink(Guid DocumentId, long ArticleId, string DocumentNo, string DocumentTitle, string ArticleNo, string? ArticleTitle, string? SourceFile);
+public sealed record LegalArticleLink(Guid DocumentId, long ArticleId, string DocumentNo, string DocumentTitle, string ArticleNo, string? ArticleTitle, string? SourceFile, string? SourceUrl = null);
 
 // One citation of a finding ("Điều 418, khoản 2 – 91/2015/QH13: note"), parsed back from ReviewFinding.LegalBasis.
 public sealed record LegalCitation(string Text, string? DocumentNo, string? ArticleNo, string? Clause)
 {
+    // "khoản 2, điểm a" → ("2", "a"), used to highlight the cited passage on the law page.
+    public string? Khoan => Clause is null ? null : Regex.Match(Clause, @"^(?:khoản\s+)?(\d+)|khoản\s+(\d+)", RegexOptions.IgnoreCase) is { Success: true } m ? (m.Groups[1].Success ? m.Groups[1].Value : m.Groups[2].Value) : null;
+    public string? Diem => Clause is null ? null : Regex.Match(Clause, @"điểm\s+([a-zđ])\b", RegexOptions.IgnoreCase) is { Success: true } m ? m.Groups[1].Value.ToLowerInvariant() : null;
+
     private static readonly Regex Line = new(@"^(?<art>Điều\s+\d+[a-zđ]?)(?:,\s*(?<clause>[^–]+?))?\s+–\s+(?<doc>\S+)(?::\s*.*)?$", RegexOptions.Compiled);
 
     public string? Key => DocumentNo is null || ArticleNo is null ? null : LegalTextParser.NormalizeDocumentNo(DocumentNo) + "|" + ArticleNo.ToLowerInvariant();
@@ -380,7 +384,8 @@ WHERE f.Id=@file AND f.DocumentId=@id AND d.IsDeleted=0;
         var names = docs.Select((_, i) => "@d" + i).ToList();
         await using var cmd = new SqlCommand($"""
 SELECT d.Id,d.DocumentNo,d.Title,a.Id,a.ArticleNo,a.Title,
- (SELECT TOP 1 f.FileName FROM dbo.LegalDocumentFiles f WHERE f.DocumentId=d.Id AND f.IsCurrent=1)
+ (SELECT TOP 1 f.FileName FROM dbo.LegalDocumentFiles f WHERE f.DocumentId=d.Id AND f.IsCurrent=1),
+ CASE WHEN COL_LENGTH(N'dbo.LegalDocuments', N'SourceUrl') IS NULL THEN NULL ELSE d.SourceUrl END
 FROM dbo.LegalArticles a JOIN dbo.LegalDocuments d ON d.Id=a.DocumentId
 WHERE d.IsDeleted=0 AND UPPER(REPLACE(d.DocumentNo,' ','')) IN ({string.Join(",", names)});
 """, cn);
@@ -388,7 +393,8 @@ WHERE d.IsDeleted=0 AND UPPER(REPLACE(d.DocumentNo,' ','')) IN ({string.Join(","
         await using var r = await cmd.ExecuteReaderAsync();
         while (await r.ReadAsync())
         {
-            var link = new LegalArticleLink(r.GetGuid(0), r.GetInt64(3), r.GetString(1), r.GetString(2), r.GetString(4), r.IsDBNull(5) ? null : r.GetString(5), r.IsDBNull(6) ? null : r.GetString(6));
+            var link = new LegalArticleLink(r.GetGuid(0), r.GetInt64(3), r.GetString(1), r.GetString(2), r.GetString(4), r.IsDBNull(5) ? null : r.GetString(5), r.IsDBNull(6) ? null : r.GetString(6),
+                r.IsDBNull(7) ? null : Convert.ToString(r.GetValue(7)));
             result[LegalTextParser.NormalizeDocumentNo(link.DocumentNo) + "|" + link.ArticleNo.ToLowerInvariant()] = link;
         }
         return result;
