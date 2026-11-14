@@ -4,7 +4,7 @@
 - Change ID: `CONTRACT-REVIEW-CHG-20261114T110220Z-5DB5FA`
 - Created UTC: 2026-11-14T11:02:20.186935+00:00
 - Tiêu đề: Law library: upload Word/PDF/TXT, keep files, re-import, edit articles
-- Trạng thái: MIGRATED
+- Trạng thái: DEPLOYED
 
 ## Yêu cầu và phạm vi
 Operator 2026-11-14: "thêm cái nút tải file đi để tôi có thể nạp tri thức và quản lý các file ... lần sau có thể update một file khác
@@ -37,7 +37,16 @@ chương/mục, báo các điều bị thiếu. PDF bỏ số trang và dòng "C
 - Release build 0 lỗi; Safe tests 760/760 PASS (17 test CONTRACT-REVIEW).
 - Đọc thử bằng chính LegalFileText trên thư mục operator `documents/laws`: luat29.pdf (Luật KDBĐS 29/2023/QH15) tách 83/83 điều; 43-2024-qh15.pdf 5/5 điều; 13 PDF còn lại là bản scan (không có lớp chữ); 15224_l36qh.rtf dùng phông TCVN3 (.VnTime).
 
+- One-off data migration 047 (verify 083, rollback 084; KHÔNG commit, đã xóa khỏi working tree theo quy định): nạp kho luật từ file operator
+  `documents/laws` – 29/2023/QH15 (83 điều, hiệu lực 01/08/2024 theo Luật 43/2024) và 43/2024/QH15 (5 điều), kèm file nguồn,
+  CreatedBy marker A0000047-…-000000000047. 11:09:53Z dry-run PASS→rollback NOT_APPLIED; 11:11:47Z gates PASS (760/760);
+  11:11:50Z real run VERIFY_STATUS=PASS → EXECUTED. Số 047/083/084 đã dùng, giữ chỗ.
+- Chưa nạp được (cần file khác): 13 PDF là bản scan không có lớp chữ (123/2020/NĐ-CP, 38/2019, 45/2019, 59/2020 (2 phần), 91/2015 (2 bản),
+  32-btc, 41-nd, 70/2025/NĐ-CP, 73-cp, 78/2021/TT-BTC, 84-cp-nq); 15224_l36qh.rtf (Luật Thương mại 36/2005) dùng phông TCVN3.
+
 ## Publish
+- portal DEPLOYED 2026-11-14 11:08:51Z (giờ server 18:08:51) từ 817ae4e; artifact 4b806c4ea73f8fc7de31b03cb2d2554bd0e22b3915438942785c5783b2c36c58 (89 files);
+  package 4CA9397914E99C9137E9B4AB42188BFE5823ECDFD58027CB3A8522B0D7490A6C; health 200. Audit WARN có sẵn: AngleSharp 0.17.1 (Moderate).
 - Project:
 - Destination (chỉ từ config):
 - Trạng thái: NOT_PUBLISHED
