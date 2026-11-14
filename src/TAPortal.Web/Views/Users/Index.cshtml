@@ -9,7 +9,7 @@
 @{
     ViewData["Title"] = "Người dùng";
     ViewData["Heading"] = "Quản lý người dùng";
-    ViewData["Subtitle"] = "Tài khoản, trạng thái và quyền truy cập hệ thống.";
+    ViewData["Subtitle"] = "Tài khoản nhân viên T.A: trạng thái và quyền truy cập hệ thống.";
     ViewData["PageIcon"] = "users";
     var roles = ViewData["Roles"] as List<PortalRole> ?? [];
     var draft = ViewData["CreateUser"] as UserCreateVm;
@@ -90,7 +90,8 @@
         </div>
         <div class="ta-empty d-none" data-ta-no-results><span class="ta-empty__icon">@UiIcon.Render("search-off")</span><p class="ta-empty__title">Không tìm thấy kết quả phù hợp</p></div>
         <div class="ta-table-footer" data-ta-pager-for="usersTable" data-ta-unit="người dùng"></div>
-        <div class="card-footer text-secondary small">Khóa/mở đăng nhập thực hiện trong màn hình Sửa (mục "Cho phép đăng nhập").</div>
+        <div class="card-footer text-secondary small">Khóa/mở đăng nhập thực hiện trong màn hình Sửa (mục "Cho phép đăng nhập").
+            Tài khoản của khách hàng (Hóa đơn tự động) không nằm ở đây: xem trong từng khách hàng@if (AdminPermissions.Has(User, AdminPermissions.CustomerPortalManage)) {<text> hoặc <a asp-controller="Customers" asp-action="Accounts">Khách hàng &gt; Tài khoản Portal</a></text>}.</div>
     }
 </section>
 <div class="modal modal-blur fade" id="createUser" tabindex="-1" aria-labelledby="createUserTitle" aria-hidden="true" data-ta-open="@(draft is null ? "false" : "true")">

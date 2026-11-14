@@ -17,3 +17,4 @@
 | `ADMIN-ROLE-PERMISSIONS-CHG-20261107T041034Z-BA9E56` | 2026-11-07 | Only SYS_ADMIN manages roles and assigns roles to accounts | 9d2764d | NOT_APPLICABLE | DEPLOYED | MERGED |
 | `ADMIN-ROLE-PERMISSIONS-CHG-20261113T041647Z-E7EEDF` | 2026-11-13 | Mat khau yeu, mat khau khoi tao va bat buoc doi mat khau (portal + hoa don); xoa tai khoan va viec thu | 3fc1dab | EXECUTED | DEPLOYED | MERGED |
 | `ADMIN-ROLE-PERMISSIONS-CHG-20261113T062558Z-482FBB` | 2026-11-13 | Cau hinh he thong gom Mau email, Dieu khoan, Bao mat mat khau | 6e50bf9 | NOT_APPLICABLE | DEPLOYED | MERGED |
+| `ADMIN-ROLE-PERMISSIONS-CHG-20261114T013654Z-1EEB49` | 2026-11-14 | Quan ly nguoi dung chi hien tai khoan nhan vien T.A, an tai khoan khach hang | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |
