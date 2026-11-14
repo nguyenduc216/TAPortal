@@ -375,3 +375,10 @@ document.addEventListener('submit', (event) => {
         event.stopImmediatePropagation();
     }
 }, true);
+
+// ⋮ menus in the sticky actions column: lift the open cell above the next rows (fallback for browsers without :has).
+(() => {
+    const cell = (event) => event.target?.closest?.('td.ta-col-actions');
+    document.addEventListener('show.bs.dropdown', (event) => cell(event)?.classList.add('ta-menu-open'));
+    document.addEventListener('hidden.bs.dropdown', (event) => cell(event)?.classList.remove('ta-menu-open'));
+})();
