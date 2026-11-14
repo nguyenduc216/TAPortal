@@ -264,6 +264,8 @@ button.ta-nav__link { width: 100%; border: 0; background: transparent; font: inh
 @media (min-width: 768px) {
     .ta-table .ta-col-actions { position: sticky; right: 0; background: var(--ta-surface); box-shadow: -8px 0 12px -10px rgba(15, 23, 42, .25); }
     .ta-table th.ta-col-actions { background: var(--ta-surface-2); z-index: 1; }
+    /* Each sticky cell is its own layer, so the cells of later rows painted over an open ⋮ menu: lift the cell holding it. */
+    .ta-table td.ta-col-actions:has(.dropdown-menu.show), .ta-table td.ta-col-actions.ta-menu-open { z-index: 5; }
 }
 /* Mobile: every row becomes a card; labels come from data-label; actions wrap below the data instead of being cut off. */
 @media (max-width: 767.98px) {

@@ -13,3 +13,4 @@
 | Change ID | Ngày UTC | Nội dung | Commit SHA | Migration | Publish | Merge |
 |---|---|---|---|---|---|---|
 | `USER-IMPERSONATION-CHG-20261114T011414Z-7AE972` | 2026-11-14 | Truy cap ho - dang nhap duoi quyen tai khoan nhan vien, ghi nhan nguoi thao tac | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |
+| `USER-IMPERSONATION-CHG-20261114T164158Z-0972C7` | 2026-11-14 | Trang Nguoi dung: menu 3 cham bi che va dong Razor lo ra o chan trang | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |
