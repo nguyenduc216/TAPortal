@@ -34,3 +34,4 @@ khách; ý kiến khách cho từng thay đổi tạo phiên bản tiếp theo; 
 - Danh sách luật ban đầu trong kho (gợi ý hiển thị trên trang Kho văn bản pháp luật).
 - PDF: giai đoạn 1 chỉ nhận DOCX (để giữ khóa đoạn và xuất track changes chính xác).
 - Tên hiển thị trợ lý trên trang khách hàng (giai đoạn 2).
+| `CONTRACT-REVIEW-CHG-20261114T110220Z-5DB5FA` | 2026-11-14 | Law library: upload Word/PDF/TXT, keep files, re-import, edit articles | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |

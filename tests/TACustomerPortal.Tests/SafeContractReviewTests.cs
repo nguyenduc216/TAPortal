@@ -73,6 +73,26 @@ public sealed class SafeContractReviewTests
     }
 
     [Fact]
+    public void Migration046AddsLawFilesWithAGuardedRollback()
+    {
+        var root = RepoRoot();
+        var migration = File.ReadAllText(Path.Combine(root, "database", "migrations", "046-legal-library-files.sql"));
+        var verify = File.ReadAllText(Path.Combine(root, "database", "scripts", "081-verify-legal-library-files.sql"));
+        var rollback = File.ReadAllText(Path.Combine(root, "database", "scripts", "082-rollback-legal-library-files.sql"));
+        Assert.All(new[] { migration, verify, rollback }, sql => Assert.Contains("IF DB_NAME() <> N'TAPortalSys'", sql));
+        Assert.Contains("CREATE TABLE dbo.LegalDocumentFiles", migration);
+        Assert.Contains("CK_LegalDocumentFiles_Size CHECK (SizeBytes > 0 AND SizeBytes <= 20971520)", migration);
+        Assert.Equal(20971520, S.LegalFileText.MaxBytes);
+        Assert.DoesNotMatch(@"(?im)^\s*(UPDATE|DELETE)\b", migration);
+        Assert.Contains("VERIFY_STATUS=NOT_APPLIED", verify);
+        Assert.Contains("THROW 51002", rollback);
+        Assert.DoesNotContain("STRING_AGG", migration + verify + rollback);
+        Assert.Single(Directory.GetFiles(Path.Combine(root, "database", "migrations"), "046-*.sql"));
+        Assert.Single(Directory.GetFiles(Path.Combine(root, "database", "scripts"), "081-*.sql"));
+        Assert.Single(Directory.GetFiles(Path.Combine(root, "database", "scripts"), "082-*.sql"));
+    }
+
+    [Fact]
     public void TheApiKeyIsNeverCommitted()
     {
         var root = RepoRoot();
@@ -262,6 +282,82 @@ Bộ luật này quy định địa vị pháp lý...
         Assert.Equal("Điều 385", S.LegalTextParser.NormalizeArticle("điều 385, khoản 2"));
     }
 
+    [Fact]
+    public void ArticlesFollowEachOtherAndCrossReferencesStayInTheBody()
+    {
+        var articles = S.LegalTextParser.Split("""
+Chương I
+NHỮNG QUY ĐỊNH CHUNG
+Điều 1. Phạm vi
+Nội dung theo quy định tại
+Điều 5 của Luật này.
+Điều 2. Đối tượng
+Điều 2a. Đối tượng bổ sung
+Chương II
+QUYỀN VÀ NGHĨA VỤ
+Điều 4. Quyền
+Nội dung điều 4.
+""");
+        Assert.Equal(["Điều 1", "Điều 2", "Điều 2a"], articles.Select(a => a.ArticleNo));   // "Điều 4" skips 3: kept as body text
+        Assert.Contains("Điều 5 của Luật này.", articles[0].Content);
+        Assert.DoesNotContain("NHỮNG QUY ĐỊNH CHUNG", string.Join("\n", articles.Select(a => a.Content)));
+        Assert.DoesNotContain("QUYỀN VÀ NGHĨA VỤ", string.Join("\n", articles.Select(a => a.Content)));
+        Assert.Equal(["Điều 2", "Điều 3"], S.LegalTextParser.Missing([new("Điều 1", null, "x"), new("Điều 4", null, "y")]));
+        Assert.Contains("thiếu 2 điều (Điều 2, Điều 3)", S.LegalLibraryPolicy.Summary([new("Điều 1", null, "x"), new("Điều 4", null, "y")]));
+    }
+
+    [Fact]
+    public void LawFilesAreReadOnTheServerWithoutAi()
+    {
+        const string law = "Điều 1. Phạm vi\nNội dung một.\nĐiều 2. Hiệu lực\nNội dung hai.";
+        var docx = S.DocxWriter.Write("LUẬT MẪU", law.Split('\n').Select((t, i) => new S.ReviewParagraph("P" + (i + 1), "TEXT", t)).ToList());
+        var (fromDocx, e1) = S.LegalFileText.Read("luat.docx", docx);
+        Assert.Null(e1);
+        Assert.Equal(2, S.LegalTextParser.Split(fromDocx!.Text).Count);
+        var (fromTxt, e2) = S.LegalFileText.Read("luat.txt", Encoding.UTF8.GetPreamble().Concat(Encoding.UTF8.GetBytes(law)).ToArray());
+        Assert.Null(e2);
+        Assert.Equal(("text/plain", 2), (fromTxt!.ContentType, S.LegalTextParser.Split(fromTxt.Text).Count));
+        Assert.Contains(".docx", S.LegalFileText.Read("luat.doc", [1, 2, 3]).Error);
+        Assert.NotNull(S.LegalFileText.Read("luat.pdf", Encoding.ASCII.GetBytes("%PDF-1.7 broken")).Error);
+        Assert.NotNull(S.LegalFileText.Read("luat.txt", Encoding.UTF8.GetBytes("Không có điều nào.")).Error);
+        Assert.NotNull(S.LegalFileText.Read("luat.exe", [1]).Error);
+        // PDF lines wrapped mid-sentence are joined; items and headings keep their own line.
+        Assert.Equal("Điều 1. Phạm vi\n1. Bên A thanh toán đúng hạn cho Bên B.\na) Trường hợp chậm\nTHỜI HẠN",
+            S.LegalFileText.JoinWrapped(["Điều 1. Phạm vi", "1. Bên A thanh toán đúng hạn", "cho Bên B.", "a) Trường hợp chậm", "THỜI HẠN"]));
+    }
+
+    [Fact]
+    public async Task TheLawPageOffersUploadReimportAndArticleEditsOnlyToManagers()
+    {
+        var store = new MemoryReviews();
+        using (var manager = Factory(store, "CONTRACTS.REVIEW.VIEW", "LEGAL.LIBRARY.MANAGE"))
+        {
+            var c = Client(manager);
+            var html = WebUtility.HtmlDecode(await c.GetStringAsync($"/legallibrary/details/{MemoryLibrary.Doc}"));
+            Assert.Contains("data-ta-legal-upload", html);
+            Assert.Contains("Dùng lại file này", html);                         // the older file
+            Assert.Contains("Đang dùng", html);                                 // the current file
+            Assert.Contains("name=\"content\"", html);                          // article edit form
+            var create = WebUtility.HtmlDecode(await c.GetStringAsync("/legallibrary/create"));
+            Assert.Contains("enctype=\"multipart/form-data\"", create);
+            Assert.Contains("type=\"file\" name=\"file\"", create);
+            var upload = await c.PostAsync($"/legallibrary/upload/{MemoryLibrary.Doc}", Upload(Token(html), "luat-moi.txt",
+                Encoding.UTF8.GetBytes("Điều 1. A\nnội dung\nĐiều 2. B\nnội dung")));
+            Assert.Equal(HttpStatusCode.Redirect, upload.StatusCode);
+            Assert.Equal(("luat-moi.txt", 2), store.Library.LastUpload);
+            var bad = await c.PostAsync($"/legallibrary/upload/{MemoryLibrary.Doc}", Upload(Token(html), "scan.pdf", Encoding.ASCII.GetBytes("%PDF-1.4 x")));
+            Assert.Equal(HttpStatusCode.Redirect, bad.StatusCode);
+            Assert.Equal(("luat-moi.txt", 2), store.Library.LastUpload);         // unreadable file never reaches the store
+        }
+        using var viewer = Factory(store, "CONTRACTS.REVIEW.VIEW");
+        var v = Client(viewer);
+        var page = WebUtility.HtmlDecode(await v.GetStringAsync($"/legallibrary/details/{MemoryLibrary.Doc}"));
+        Assert.DoesNotContain("data-ta-legal-upload", page);
+        Assert.DoesNotContain("name=\"content\"", page);
+        Assert.Contains("Điều 418", page);
+        Assert.Equal(HttpStatusCode.Forbidden, (await v.GetAsync("/legallibrary/create")).StatusCode);
+    }
+
     // ---- Pages ---------------------------------------------------------------------------------------------
     [Fact]
     public async Task TheWorkspaceShowsHighlightsTrackChangesAndOnlyPermittedSteps()
@@ -389,6 +485,8 @@ Bộ luật này quy định địa vị pháp lý...
                 s.AddDataProtection().UseEphemeralDataProtectionProvider();
                 s.RemoveAll<S.IContractReviewStore>();
                 s.AddSingleton<S.IContractReviewStore>(store);
+                s.RemoveAll<S.ILegalLibraryStore>();
+                s.AddSingleton<S.ILegalLibraryStore>(store.Library);
                 s.RemoveAll<Microsoft.Extensions.Hosting.IHostedService>();
                 s.AddSingleton(new TestPrincipal(permissions));
                 s.AddAuthentication().AddScheme<AuthenticationSchemeOptions, TestAuthHandler>(TestScheme, _ => { });
@@ -398,6 +496,7 @@ Bộ luật này quy định địa vị pháp lý...
     // One review (CL000001) with the original (v0) and one staff version (v1, current); findings on v1.
     private sealed class MemoryReviews : S.IContractReviewStore
     {
+        public readonly MemoryLibrary Library = new();
         public readonly Guid F1 = Guid.NewGuid(), F2 = Guid.NewGuid();
         public (string? Status, Guid Actor) LastDecision;
         public bool Queued;
@@ -446,6 +545,31 @@ Bộ luật này quy định địa vị pháp lý...
         public Task FailRunAsync(Guid runId, Guid reviewId, string error) => Task.CompletedTask;
         public Task<int> RecoverStaleRunsAsync(TimeSpan olderThan) => Task.FromResult(0);
         private static Task<S.ReviewResult> Saved() => Task.FromResult(new S.ReviewResult(S.ReviewOutcome.Saved, R1, 1, AuditPersisted: true));
+    }
+
+    // One law (91/2015/QH13) with two articles and two uploaded files (current + older).
+    private sealed class MemoryLibrary : S.ILegalLibraryStore
+    {
+        public static readonly Guid Doc = Guid.Parse("d7000000-0000-0000-0000-0000000000d7");
+        public (string? FileName, int Articles) LastUpload;
+        private static readonly S.LegalDocumentItem Item = new(Doc, "91/2015/QH13", "Bộ luật Dân sự", "CODE", null, new(2017, 1, 1), null, null, 2, DateTime.UtcNow);
+
+        public Task<IReadOnlyList<S.LegalDocumentItem>> ListAsync() => Task.FromResult<IReadOnlyList<S.LegalDocumentItem>>([Item]);
+        public Task<S.LegalDocumentDetail?> GetAsync(Guid id) => Task.FromResult<S.LegalDocumentDetail?>(id != Doc ? null : new(Item,
+            [new(1, "Điều 418", "Thỏa thuận phạt vi phạm", "1. Phạt vi phạm là ...", null), new(2, "Điều 419", "Thiệt hại", "Nội dung", DateTime.UtcNow)],
+            [new(Guid.NewGuid(), "blds-2015-v2.docx", "application/pdf", 1000, 689, true, null, DateTime.UtcNow, "Nhân viên"),
+             new(Guid.NewGuid(), "blds-2015.pdf", "application/pdf", 900, 689, false, null, DateTime.UtcNow.AddDays(-1), "Nhân viên")]));
+        public Task<IReadOnlyList<S.LegalIndexArticle>> IndexAsync(DateTime today) => Task.FromResult<IReadOnlyList<S.LegalIndexArticle>>([]);
+        public Task<(S.LegalOutcome Outcome, Guid? Id, string? Summary)> SaveAsync(Guid actor, Guid? id, S.LegalDocumentInput input, S.LegalUpload? upload, string? ip)
+        {
+            LastUpload = (upload?.FileName, upload is null ? 0 : S.LegalTextParser.Split(upload.Text).Count);
+            return Task.FromResult<(S.LegalOutcome, Guid?, string?)>((S.LegalOutcome.Saved, Doc, "tách được 2 điều"));
+        }
+        public Task<(S.LegalOutcome Outcome, string? Summary)> ReimportAsync(Guid actor, Guid id, Guid fileId, string? ip) => Task.FromResult<(S.LegalOutcome, string?)>((S.LegalOutcome.Saved, ""));
+        public Task<S.LegalOutcome> UpdateArticleAsync(Guid actor, Guid id, long articleId, string? title, string? content, string? ip) => Task.FromResult(S.LegalOutcome.Saved);
+        public Task<S.LegalOutcome> DeleteArticleAsync(Guid actor, Guid id, long articleId, string? ip) => Task.FromResult(S.LegalOutcome.Saved);
+        public Task<S.LegalOutcome> DeleteAsync(Guid actor, Guid id, string? ip) => Task.FromResult(S.LegalOutcome.Saved);
+        public Task<S.ReviewFileContent?> DownloadAsync(Guid id, Guid fileId) => Task.FromResult<S.ReviewFileContent?>(null);
     }
 
     private sealed record TestPrincipal(string[] Permissions);

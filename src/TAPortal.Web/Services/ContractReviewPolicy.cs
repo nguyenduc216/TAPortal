@@ -271,13 +271,19 @@ public sealed record LegalArticleDraft(string ArticleNo, string? Title, string C
 // an article; text before the first article is ignored. Article numbers are kept as "Điều <n>".
 public static class LegalTextParser
 {
-    private static readonly Regex Head = new(@"^\s*(Điều|ĐIỀU)\s+(\d+[a-zđ]?)\s*[\.:]?\s*(.*)$", RegexOptions.Compiled);
+    private static readonly Regex Head = new(@"^\s*(Điều|ĐIỀU)\s+(\d+)([a-zđ]?)\s*[\.:]?\s*(.*)$", RegexOptions.Compiled);
+    private static readonly Regex Section = new(@"^(Chương|CHƯƠNG|Mục|MỤC|Phần|PHẦN)\s+([0-9IVXLC]+)\b", RegexOptions.Compiled);
 
+    // Articles must follow each other (Điều 5, Điều 6, Điều 6a ...): a line that starts with "Điều 12" out of order is a
+    // cross-reference wrapped onto a new line (common in PDFs) and stays in the current article. Chapter and section
+    // headings ("Chương II", "Mục 1" and the upper-case title line after them) are dropped from article bodies.
     public static IReadOnlyList<LegalArticleDraft> Split(string? text)
     {
         var result = new List<LegalArticleDraft>();
         string? no = null, title = null;
+        var last = 0;
         var body = new List<string>();
+        var afterSection = false;
         void Flush()
         {
             if (no is null) return;
@@ -287,18 +293,32 @@ public static class LegalTextParser
         foreach (var raw in (text ?? "").Replace("\r\n", "\n").Split('\n'))
         {
             var line = raw.Trim();
+            if (Section.IsMatch(line)) { afterSection = true; continue; }
+            if (afterSection && line.Length > 0 && line.Where(char.IsLetter).All(char.IsUpper)) { afterSection = false; continue; }
+            afterSection = false;
             var m = Head.Match(line);
-            if (m.Success)
+            var n = m.Success ? int.Parse(m.Groups[2].Value) : 0;
+            var suffix = m.Success ? m.Groups[3].Value : "";
+            if (m.Success && (no is null || n == last + 1 || (n == last && suffix.Length > 0)))
             {
                 Flush();
-                no = "Điều " + m.Groups[2].Value;
-                title = m.Groups[3].Value;
+                no = "Điều " + n + suffix;
+                title = m.Groups[4].Value;
+                last = n;
                 body = [];
             }
             else if (no is not null && line.Length > 0) body.Add(line);
         }
         Flush();
         return result;
+    }
+
+    // Article numbers missing between the first and the last article (e.g. ["Điều 12", "Điều 13"]).
+    public static IReadOnlyList<string> Missing(IReadOnlyList<LegalArticleDraft> articles)
+    {
+        var numbers = articles.Select(a => Regex.Match(a.ArticleNo, @"\d+")).Where(m => m.Success).Select(m => int.Parse(m.Value)).ToHashSet();
+        if (numbers.Count == 0) return [];
+        return Enumerable.Range(numbers.Min(), numbers.Max() - numbers.Min() + 1).Where(n => !numbers.Contains(n)).Select(n => "Điều " + n).ToList();
     }
 
     // "Điều 385", "điều 385", "Đ.385", "385" all become "Điều 385" so citations can be matched to the library.

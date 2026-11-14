@@ -8,5 +8,6 @@
   <ItemGroup>
     <PackageReference Include="Anthropic" Version="13.8.0" />
     <PackageReference Include="Microsoft.Data.SqlClient" Version="7.0.2" />
+    <PackageReference Include="PdfPig" Version="0.1.16" />
   </ItemGroup>
 <ItemGroup><ProjectReference Include="../TAPortal.Shared/TAPortal.Shared.csproj" /><ProjectReference Include="..\TAPortal.Integrations\TAPortal.Integrations.csproj" /><ProjectReference Include="..\TAWebsite.Core\TAWebsite.Core.csproj" /></ItemGroup></Project>

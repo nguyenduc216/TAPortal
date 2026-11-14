@@ -6,10 +6,10 @@
     ViewData["ParentController"] = "LegalLibrary";
     ViewData["Title"] = isNew ? "Thêm văn bản" : "Sửa văn bản";
     ViewData["Heading"] = isNew ? "Thêm văn bản pháp luật" : "Sửa văn bản: " + i.DocumentNo;
-    ViewData["Subtitle"] = "Dán toàn văn, hệ thống tách thành từng điều theo các dòng \"Điều 1.\", \"Điều 2.\"...";
+    ViewData["Subtitle"] = "Tải file Word/PDF/TXT của văn bản (hoặc dán toàn văn); hệ thống tự tách thành từng điều theo các dòng \"Điều 1.\", \"Điều 2.\"...";
     ViewData["PageIcon"] = isNew ? "plus" : "pencil";
 }
-<form class="card" asp-action="@(isNew ? "Create" : "Edit")" asp-route-id="@Model.Id" method="post" novalidate data-ta-legal-form>
+<form class="card" asp-action="@(isNew ? "Create" : "Edit")" asp-route-id="@Model.Id" method="post" enctype="multipart/form-data" novalidate data-ta-hard data-ta-legal-form>
     <div class="card-body">
         <div asp-validation-summary="ModelOnly" class="ta-alert ta-alert--danger" role="alert"></div>
         <div class="ta-form-grid ta-form-grid--3">
@@ -46,10 +46,16 @@
                 <div class="ta-input-icon">@UiIcon.Render("pencil")<input class="form-control" id="Input_Note" name="Input.Note" value="@i.Note" maxlength="1000" placeholder="Ví dụ: đã được sửa đổi bởi ..." /></div>
             </div>
             <div class="ta-ws-span-3">
-                <label class="form-label @(isNew ? "required" : "")" for="Input_FullText">Toàn văn</label>
+                <label class="form-label @(isNew ? "required" : "")" for="lawFile">Tải file văn bản (Word .docx, PDF có chữ, .txt)</label>
+                <div class="ta-input-icon">@UiIcon.Render("upload")<input id="lawFile" class="form-control" type="file" name="file" accept="@LegalFileText.Accept" /></div>
+                @Html.ValidationMessage("file", null, new { @class = "invalid-feedback d-block" })
+                <div class="form-hint">Tối đa 20 MB. File được đọc ngay trên máy chủ (không dùng AI) và lưu lại để tải về hoặc dùng lại sau. PDF bản scan (chỉ có ảnh) không đọc được: hãy dùng bản Word.</div>
+            </div>
+            <div class="ta-ws-span-3">
+                <label class="form-label" for="Input_FullText">Hoặc dán toàn văn</label>
                 <div class="ta-input-icon ta-input-icon--top">@UiIcon.Render("file-text")<textarea class="form-control font-monospace" id="Input_FullText" name="Input.FullText" rows="16">@i.FullText</textarea></div>
                 <span asp-validation-for="Input.FullText" class="invalid-feedback d-block"></span>
-                <div class="form-hint">@(isNew ? "Bắt buộc." : $"Đang có {Model.ArticleCount} điều. Để trống nếu chỉ sửa thông tin; dán toàn văn mới sẽ thay toàn bộ các điều.")</div>
+                <div class="form-hint">@(isNew ? "Tải file hoặc dán toàn văn (một trong hai)." : $"Đang có {Model.ArticleCount} điều. Để trống cả file và ô này nếu chỉ sửa thông tin; file hoặc toàn văn mới sẽ thay toàn bộ các điều.")</div>
             </div>
         </div>
     </div>

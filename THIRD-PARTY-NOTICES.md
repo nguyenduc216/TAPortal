@@ -7,6 +7,8 @@ Assets bundled locally so TAPortal Admin and Customer Portal render without a CD
 | Tabler core (CSS, JS bundle incl. Bootstrap 5) | 1.0.0-beta21 | MIT | `src/TAPortal.Web/wwwroot/lib/tabler/` (css + js); the Customer Portal has its own stylesheet and does not ship Tabler | `@tabler/core@1.0.0-beta21` |
 | Tabler Icons (outline path data) | 3.19.0 | MIT | `src/TAPortal.Shared/UiIcon.cs` | `@tabler/icons@3.19.0` |
 | QRCoder (NuGet package, QR rendering to SVG) | 1.6.0 | MIT | `src/TAPortal.Integrations/QrImage.cs` | NuGet `QRCoder@1.6.0` (Raffael Herrmann and contributors) |
+| Anthropic (NuGet package, official Claude API SDK) | 13.8.0 | Apache-2.0 | `src/TAPortal.Web/Services/ContractReviewAi.cs` | NuGet `Anthropic@13.8.0` (Anthropic) |
+| PdfPig (NuGet package, PDF text extraction) | 0.1.16 | Apache-2.0 | `src/TAPortal.Web/Services/LegalLibraryStore.cs` (law library upload) | NuGet `PdfPig@0.1.16` (UglyToad / PdfPig contributors) |
 
 ## Tabler core
 
