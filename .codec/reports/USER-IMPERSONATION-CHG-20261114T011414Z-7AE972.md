@@ -3,11 +3,11 @@
 Feature ID: `USER-IMPERSONATION`
 Change ID: `USER-IMPERSONATION-CHG-20261114T011414Z-7AE972`
 
-1. Mục tiêu và kết quả thực tế:
-2. Danh sách file cập nhật (relative + nếu cần absolute):
-3. Database `TAPortalSys`: migration path + thứ tự + trạng thái NOT_EXECUTED/OPERATOR_CONFIRMED:
-4. Build/test: lệnh, pass/fail/not run:
-5. Publish: project, destination đã duyệt, artifact SHA256, status:
-6. Git: branch, commit SHA, PR, merge SHA hoặc PENDING_APPROVAL:
-7. Rủi ro/rollback/việc operator cần làm:
-8. Bằng chứng kiểm tra (URL/log, không có secrets):
+1. Kết quả: "Truy cập hộ" (user impersonation) có lý do, thanh cảnh báo, thoát, hạn 60 phút, lịch sử phiên và mọi thao tác ghi tên người thao tác thật.
+2. File: xem `.codec/changes/USER-IMPERSONATION-CHG-20261114T011414Z-7AE972.md`.
+3. Database: migration 042 EXECUTED; verify 073; rollback 074.
+4. Build/test: Release build 0 lỗi; Safe tests 735/735.
+5. Publish: portal 0e02c48f8050, invoice bb7938ea7fab, webhooks 1bdadc36533b, all DEPLOYED health 200. Source commit aaa87e6.
+6. Git: branch `feature/tx-sync`, source commit aaa87e6; merge main.
+7. Rủi ro: chưa thử phiên thật trên production.
+8. Bằng chứng: log migration, log deploy, Safe tests.

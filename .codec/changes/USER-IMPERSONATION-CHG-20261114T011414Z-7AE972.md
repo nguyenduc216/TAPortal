@@ -4,7 +4,7 @@
 - Change ID: `USER-IMPERSONATION-CHG-20261114T011414Z-7AE972`
 - Created UTC: 2026-11-14T01:14:14.357719+00:00
 - Tiêu đề: Truy cap ho - dang nhap duoi quyen tai khoan nhan vien, ghi nhan nguoi thao tac
-- Trạng thái: IMPLEMENTED
+- Trạng thái: DEPLOYED
 
 ## Yêu cầu và phạm vi
 Operator (2026-11-14): trên TAPortal thêm "truy cập hộ" (đăng nhập dưới quyền tài khoản nhân viên): bấm nút, nhập lý do, rồi làm việc dưới quyền tài khoản đó. Hệ thống ghi lại lịch sử và mọi thao tác, ghi nhận là "<người thao tác> đăng nhập dưới quyền <tài khoản>". Tên chuẩn: User Impersonation ("Login as").
@@ -28,7 +28,7 @@ Operator (2026-11-14): trên TAPortal thêm "truy cập hộ" (đăng nhập dư
 - Database: TAPortalSys
 - Script: `database/migrations/042-user-impersonation.sql` (sau 041)
 - Verify 073, Rollback 074.
-- Execution: xem report.
+- Execution: EXECUTED (Invoke-TAMigrations 042:073:074).
 
 ## Test và kết quả
 - Safe tests 735/735 (thêm SafeImpersonationTests 11).
@@ -38,8 +38,8 @@ Operator (2026-11-14): trên TAPortal thêm "truy cập hộ" (đăng nhập dư
 
 ## Git
 - Branch: feature/tx-sync
-- Commit SHA: xem report
-- Merge: xem report
+- Commit SHA: aaa87e6
+- Merge: main
 
 ## Rủi ro, quyết định và việc còn lại
 - Chưa thử truy cập hộ thật trên production (không đăng nhập được).
