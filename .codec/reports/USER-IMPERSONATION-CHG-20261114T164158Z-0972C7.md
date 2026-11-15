@@ -3,11 +3,9 @@
 Feature ID: `USER-IMPERSONATION`
 Change ID: `USER-IMPERSONATION-CHG-20261114T164158Z-0972C7`
 
-1. Mục tiêu và kết quả thực tế:
-2. Danh sách file cập nhật (relative + nếu cần absolute):
-3. Database `TAPortalSys`: migration path + thứ tự + trạng thái NOT_EXECUTED/OPERATOR_CONFIRMED:
-4. Build/test: lệnh, pass/fail/not run:
-5. Publish: project, destination đã duyệt, artifact SHA256, status:
-6. Git: branch, commit SHA, PR, merge SHA hoặc PENDING_APPROVAL:
-7. Rủi ro/rollback/việc operator cần làm:
-8. Bằng chứng kiểm tra (URL/log, không có secrets):
+1. Kết quả: xem `.codec/changes/USER-IMPERSONATION-CHG-20261114T164158Z-0972C7.md`.
+2. Database: migration none.
+3. Build/test: Release build 0 lỗi; Safe tests 775/775 (bản deploy cuối).
+4. Publish: portal DEPLOYED, source commit ad73524, artifact 8fa0cd47f4d8…, health HTTP 200.
+5. Git: branch `feature/tx-sync`, merge main.
+6. Rủi ro: chưa thử trên portal thật sau đăng nhập.

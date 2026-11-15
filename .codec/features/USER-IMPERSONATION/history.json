@@ -13,10 +13,10 @@
     "change_id": "USER-IMPERSONATION-CHG-20261114T164158Z-0972C7",
     "created_at": "2026-11-14T16:41:58.099176+00:00",
     "title": "Trang Nguoi dung: menu 3 cham bi che va dong Razor lo ra o chan trang",
-    "status": "IMPLEMENTED",
-    "commit_sha": null,
-    "migration_status": "NOT_EXECUTED",
-    "publish_status": "NOT_PUBLISHED",
+    "status": "DEPLOYED",
+    "commit_sha": "ad73524",
+    "migration_status": "none",
+    "publish_status": "DEPLOYED",
     "merge_status": "PENDING_APPROVAL"
   }
 ]

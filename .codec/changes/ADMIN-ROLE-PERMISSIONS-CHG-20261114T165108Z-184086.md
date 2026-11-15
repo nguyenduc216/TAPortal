@@ -4,7 +4,7 @@
 - Change ID: `ADMIN-ROLE-PERMISSIONS-CHG-20261114T165108Z-184086`
 - Created UTC: 2026-11-14T16:51:08.251583+00:00
 - Tiêu đề: Anh dai dien (avatar) nhan vien: tai anh, hien thi tren moi danh sach
-- Trạng thái: IMPLEMENTED
+- Trạng thái: DEPLOYED
 
 ## Yêu cầu và phạm vi
 Operator (2026-11-14): "BỔ SUNG PHẦN CẬP NHẬT ẢNH AVATAR CỦA NHÂN VIÊN".
@@ -21,7 +21,7 @@ Operator (2026-11-14): "BỔ SUNG PHẦN CẬP NHẬT ẢNH AVATAR CỦA NHÂN V
 
 ## Migration SQL
 - Database: TAPortalSys; Script: `database/migrations/051-employee-photos.sql`; Verify 091; Rollback 092.
-- Execution: xem report.
+- Execution: 051 EXECUTED (Invoke-TAMigrations).
 
 ## Test và kết quả
 - Release build 0 lỗi; Safe tests 775/775 (thêm SafeEmployeePhotoTests 4).
@@ -31,7 +31,7 @@ Operator (2026-11-14): "BỔ SUNG PHẦN CẬP NHẬT ẢNH AVATAR CỦA NHÂN V
 
 ## Git
 - Branch: feature/tx-sync
-- Commit SHA: xem report
+- Commit SHA: 6aec8c6
 - Merge: main
 
 ## Rủi ro, quyết định và việc còn lại

@@ -4,7 +4,7 @@
 - Change ID: `USER-IMPERSONATION-CHG-20261114T164158Z-0972C7`
 - Created UTC: 2026-11-14T16:41:58.099176+00:00
 - Tiêu đề: Trang Nguoi dung: menu 3 cham bi che va dong Razor lo ra o chan trang
-- Trạng thái: IMPLEMENTED
+- Trạng thái: DEPLOYED
 
 ## Yêu cầu và phạm vi
 Operator (2026-11-14, ảnh chụp "ĐANG LỖI"): trên Quản lý người dùng, bấm ⋮ thì menu bị các dòng dưới che (ô cột Thao tác được ghim, mỗi ô là một lớp riêng); chân trang in nguyên đoạn code `@if (AdminPermissions.Has(...)) {` vì Razor đọc `hàng@if` thành địa chỉ email.
@@ -25,7 +25,7 @@ Operator (2026-11-14, ảnh chụp "ĐANG LỖI"): trên Quản lý người dù
 
 ## Git
 - Branch: feature/tx-sync
-- Commit SHA: xem report
+- Commit SHA: ad73524
 - Merge: main
 
 ## Rủi ro, quyết định và việc còn lại
