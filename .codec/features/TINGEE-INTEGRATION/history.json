@@ -469,7 +469,7 @@
     "title": "Cai dat thong bao: tab Hoa don tu dong va Portal, kenh email rieng cho Portal",
     "status": "IMPLEMENTED",
     "commit_sha": null,
-    "migration_status": "NOT_EXECUTED",
+    "migration_status": "EXECUTED",
     "publish_status": "NOT_PUBLISHED",
     "merge_status": "PENDING_APPROVAL"
   }

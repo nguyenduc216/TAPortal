@@ -21,6 +21,7 @@ Operator (2026-11-15, ảnh trang "Cài đặt thông báo"): "Phân chia rõ c�
 - MODIFY `tests/TACustomerPortal.Tests/{SafeCustomerWorkspaceTests.cs,SafeNotificationTests.cs}`
 
 ## Migration SQL (KHÔNG tự chạy)
+- 055: EXECUTED (pre-check NOT_APPLIED, dry-run có rollback PASS, gates PASS, chạy thật VERIFY PASS). Log: `.codec/reports/TINGEE-INTEGRATION-CHG-20261115T011455Z-BC9386-migrations-20261115T011535Z.log`.
 - 055 (verify 097, rollback 098), chạy bằng `Invoke-TAMigrations.ps1 -Plan "055:097:098"`.
 
 ## Test và kết quả
