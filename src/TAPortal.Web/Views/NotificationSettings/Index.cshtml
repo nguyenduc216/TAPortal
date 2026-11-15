@@ -1,10 +1,19 @@
 @model TAPortal.Web.Controllers.NotificationSettingsVm
 @using TAPortal.Integrations.Notifications
 @{
-    ViewData["Subtitle"] = "Kênh của T.A gửi thông báo cho doanh nghiệp dùng hóa đơn điện tử (tại địa chỉ doanh nghiệp tự khai báo trên Customer Portal) và cho nhóm nhân viên T.A.";
+    var portal = Model.Tab == TAPortal.Web.Controllers.NotificationSettingsController.PortalTab;
+    ViewData["Subtitle"] = portal
+        ? "Kênh của T.A Portal gửi cho nhân viên T.A: email tài khoản, bản tin pháp luật và nhóm Telegram xử lý giao dịch."
+        : "Kênh của Hóa đơn tự động gửi thông báo cho doanh nghiệp dùng hóa đơn điện tử, tại địa chỉ doanh nghiệp tự khai báo.";
     ViewData["PageIcon"] = "bell";
     string Local(DateTime? utc) => utc is { } v ? v.AddHours(7).ToString("dd/MM/yyyy HH:mm") : "—";
 }
+<nav aria-label="Cài đặt thông báo">
+    <ul class="ta-tabs">
+        <li><a class="ta-tabs__link" asp-action="Index" asp-route-tab="invoice" data-ta-tab="invoice" aria-current="@(portal ? null : "page")">@UiIcon.Render("file-invoice")<span>Hóa đơn tự động</span></a></li>
+        <li><a class="ta-tabs__link" asp-action="Index" asp-route-tab="portal" data-ta-tab="portal" aria-current="@(portal ? "page" : null)">@UiIcon.Render("building")<span>Portal</span></a></li>
+    </ul>
+</nav>
 @if (Model.StoreError is not null)
 {
     <div class="ta-alert ta-alert--danger mb-3" role="alert">@UiIcon.Render("database-off")<div class="ta-alert__body">@Model.StoreError</div></div>
@@ -14,18 +23,21 @@
     <div class="ta-alert ta-alert--danger mb-3" role="alert" data-ns-errors>@UiIcon.Render("alert-circle")<div class="ta-alert__body">@foreach (var e in Model.Errors) {<div>@e</div>}</div></div>
 }
 <div class="row g-3">
-@foreach (var c in Model.Channels)
+@foreach (var sc in Model.Channels)
 {
+    var c = sc.View;
+    var staffEmail = sc.Scope == NotificationScope.Portal;
     <div class="col-12 col-xl-6">
-        <section class="card h-100" data-ns-channel="@c.Channel">
-            <div class="card-header d-flex align-items-center gap-2">@UiIcon.Render("send")<strong>@c.Label</strong>
+        <section class="card h-100" data-ns-channel="@c.Channel" data-ns-scope="@sc.Scope">
+            <div class="card-header d-flex align-items-center gap-2">@UiIcon.Render("send")<strong>@(staffEmail ? "Email T.A Portal (SMTP)" : c.Label)</strong>
                 <span class="ta-badge @(c.IsEnabled ? "ta-badge--success" : "ta-badge--neutral") ms-auto">@(c.IsEnabled ? "Đang bật" : "Đang tắt")</span></div>
             <form method="post" asp-action="Save" class="card-body">
                 <input type="hidden" name="channel" value="@c.Channel" />
+                <input type="hidden" name="scope" value="@sc.Scope" />
                 <p class="text-secondary small">@c.Audience</p>
                 @foreach (var f in c.Fields)
                 {
-                    var id = c.Channel + "_" + f.Key;
+                    var id = sc.Scope + "_" + c.Channel + "_" + f.Key;
                     var saved = f.Secret && c.SecretKeys.Contains(f.Key);
                     <div class="mb-2">
                         <label class="form-label" for="@id">@f.Label@(f.Required ? " *" : "")</label>
@@ -45,15 +57,19 @@
                         @if (saved) {<div class="form-check"><input class="form-check-input" type="checkbox" id="@(id)_clear" name="clear" value="@f.Key" /><label class="form-check-label" for="@(id)_clear">Xóa giá trị đã lưu</label></div>}
                     </div>
                 }
-                @foreach (var (code, label) in NotificationEvent.All)
+                @if (!staffEmail)
                 {
-                    <div class="form-check"><input class="form-check-input" type="checkbox" id="@(c.Channel)_@code" name="events" value="@code" checked="@c.Events.Contains(code)" /><label class="form-check-label" for="@(c.Channel)_@code">Gửi khi: @label</label></div>
+                    foreach (var (code, label) in NotificationEvent.All)
+                    {
+                        <div class="form-check"><input class="form-check-input" type="checkbox" id="@(sc.Scope)_@(c.Channel)_@code" name="events" value="@code" checked="@c.Events.Contains(code)" /><label class="form-check-label" for="@(sc.Scope)_@(c.Channel)_@code">Gửi khi: @label</label></div>
+                    }
                 }
-                <div class="form-check mt-2"><input class="form-check-input" type="checkbox" id="@(c.Channel)_enabled" name="enabled" value="true" checked="@c.IsEnabled" /><label class="form-check-label" for="@(c.Channel)_enabled"><strong>Bật kênh này</strong></label></div>
+                <div class="form-check mt-2"><input class="form-check-input" type="checkbox" id="@(sc.Scope)_@(c.Channel)_enabled" name="enabled" value="true" checked="@c.IsEnabled" /><label class="form-check-label" for="@(sc.Scope)_@(c.Channel)_enabled"><strong>Bật kênh này</strong></label></div>
                 <button class="btn btn-primary mt-2" type="submit">@UiIcon.Render("device-floppy")<span>Lưu kênh</span></button>
             </form>
             <form method="post" asp-action="Test" class="card-footer d-flex flex-wrap gap-2 align-items-center">
                 <input type="hidden" name="channel" value="@c.Channel" />
+                <input type="hidden" name="scope" value="@sc.Scope" />
                 @if (c.Channel == NotificationChannelKind.Smtp)
                 {
                     <div class="ta-input-icon">@UiIcon.Render("mail")<input class="form-control form-control-sm" name="recipient" maxlength="256" aria-label="Email nhận thử" placeholder="Email nhận thử" /></div>
@@ -87,7 +103,7 @@
                 <tbody>
                 @foreach (var o in Model.Recent)
                 {
-                    <tr><td data-label="Lúc">@Local(o.CreatedAtUtc)</td><td data-label="Phạm vi">@(o.Scope == NotificationScope.System ? "T.A" : "Doanh nghiệp")</td><td data-label="Kênh">@NotificationCatalog.Label(o.Channel)</td>
+                    <tr><td data-label="Lúc">@Local(o.CreatedAtUtc)</td><td data-label="Phạm vi">@(o.Scope == NotificationScope.Portal ? "Portal" : o.Scope == NotificationScope.System ? "T.A" : "Doanh nghiệp")</td><td data-label="Kênh">@NotificationCatalog.Label(o.Channel)</td>
                         <td data-label="Người nhận">@o.Recipient</td><td data-label="Tiêu đề">@o.Subject</td>
                         <td data-label="Trạng thái"><span class="ta-badge @(o.Status == "SENT" ? "ta-badge--success" : o.Status == "FAILED" ? "ta-badge--danger" : "ta-badge--warning")">@o.Status</span>
                             @if (o.LastError is string e) {<div class="text-secondary small">@e (@o.Attempts lần)</div>}</td></tr>

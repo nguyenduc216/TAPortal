@@ -87,7 +87,7 @@ public sealed class NotificationSettings(INotificationStore store, ISecretProtec
         var sample = new NotifiableTransaction(0, Tingee.PaymentTxStatus.Matched, null, null, 10_000, "DH000000-0000", "0000000000", now, customerId, "Doanh nghiệp mẫu",
             Guid.Empty, "DH000000-0000", 10_000, 10_000, Tingee.TingeeOrderStatus.Paid, "Khách hàng mẫu", null, null);
         var data = c.Settings.TryGetValue("templateData", out var tpl) && NotificationCatalog.TemplateData(tpl) is { } map ? NotificationPlanner.Fill(map, NotificationPlanner.Values(sample)) : null;
-        var message = new OutboxMessage($"test:{Guid.NewGuid():N}", scope, customerId, channel, to, "Tin thử từ hệ thống hóa đơn điện tử",
+        var message = new OutboxMessage($"test:{Guid.NewGuid():N}", scope, customerId, channel, to, scope == NotificationScope.Portal ? "Tin thử từ T.A Portal" : "Tin thử từ hệ thống hóa đơn điện tử",
             "Đây là tin nhắn thử. Kênh thông báo đã được cấu hình đúng.", data, null);
         var (result, _) = await Dispatch.SendAsync(store, protector, transport, c, message, ct);
         var text = result.Ok ? $"Gửi thử thành công tới {to}." : $"Gửi thử thất bại: {result.Error}";
@@ -101,9 +101,11 @@ public sealed class NotificationSettings(INotificationStore store, ISecretProtec
     /// </summary>
     public async Task<string?> SendSystemEmailAsync(string to, string subject, string body, CancellationToken ct = default)
     {
-        var c = (await store.ChannelsAsync(NotificationScope.System, null, ct)).FirstOrDefault(x => x.Channel == NotificationChannelKind.Smtp);
-        if (c is null || !c.IsEnabled) return "Chưa bật kênh email hệ thống.";
-        var message = new OutboxMessage($"account:{Guid.NewGuid():N}", NotificationScope.System, null, NotificationChannelKind.Smtp, to.Trim(), subject, body, null, null);
+        // Operator 2026-11-15: the Portal email channel (tab "Portal") first; until it is on, the SYSTEM email channel.
+        var c = (await store.ChannelsAsync(NotificationScope.Portal, null, ct)).FirstOrDefault(x => x.Channel == NotificationChannelKind.Smtp && x.IsEnabled)
+            ?? (await store.ChannelsAsync(NotificationScope.System, null, ct)).FirstOrDefault(x => x.Channel == NotificationChannelKind.Smtp && x.IsEnabled);
+        if (c is null) return "Chưa bật kênh email của Portal hay của Hóa đơn tự động.";
+        var message = new OutboxMessage($"account:{Guid.NewGuid():N}", c.Scope, null, NotificationChannelKind.Smtp, to.Trim(), subject, body, null, null);
         var (result, _) = await Dispatch.SendAsync(store, protector, transport, c, message, ct);
         return result.Ok ? null : result.Error ?? "Gửi email thất bại.";
     }
@@ -141,8 +143,8 @@ public sealed class NotificationSettings(INotificationStore store, ISecretProtec
 
     private static void Owner(string scope, Guid? customerId)
     {
-        if (scope == NotificationScope.System ? customerId is not null : scope != NotificationScope.Customer || customerId is null)
-            throw new ArgumentException("A channel owner is SYSTEM without a customer, or CUSTOMER with one.");
+        if (scope is NotificationScope.System or NotificationScope.Portal ? customerId is not null : scope != NotificationScope.Customer || customerId is null)
+            throw new ArgumentException("A channel owner is SYSTEM or PORTAL without a customer, or CUSTOMER with one.");
     }
 }
 

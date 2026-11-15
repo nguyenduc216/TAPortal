@@ -377,8 +377,16 @@ public sealed class SafeCustomerWorkspaceTests
     public async Task TAConfiguresItsOwnFourNotificationChannels()
     {
         using var f = Factory("SYS_ADMIN", out _);
-        var page = WebUtility.HtmlDecode(await Client(f).GetStringAsync("/notificationsettings"));
-        foreach (var channel in new[] { "ZALO_OA", "TELEGRAM_BOT", "TELEGRAM_GROUP", "SMTP" }) Assert.Contains($"data-ns-channel=\"{channel}\"", page);
+        // Operator 2026-11-15: tab "Hóa đơn tự động" = channels to customers; tab "Portal" = channels to T.A staff.
+        var invoice = WebUtility.HtmlDecode(await Client(f).GetStringAsync("/notificationsettings"));
+        foreach (var channel in new[] { "ZALO_OA", "TELEGRAM_BOT", "SMTP" }) Assert.Contains($"data-ns-channel=\"{channel}\" data-ns-scope=\"SYSTEM\"", invoice);
+        Assert.DoesNotContain("data-ns-channel=\"TELEGRAM_GROUP\"", invoice);
+        Assert.Contains("data-ta-tab=\"invoice\" aria-current=\"page\"", invoice);
+        var portal = WebUtility.HtmlDecode(await Client(f).GetStringAsync("/notificationsettings?tab=portal"));
+        Assert.Contains("data-ns-channel=\"SMTP\" data-ns-scope=\"PORTAL\"", portal);
+        Assert.Contains("data-ns-channel=\"TELEGRAM_GROUP\" data-ns-scope=\"SYSTEM\"", portal);
+        Assert.DoesNotContain("data-ns-channel=\"ZALO_OA\"", portal);
+        Assert.Contains("name=\"scope\" value=\"PORTAL\"", portal);
     }
 
     private static WebApplicationFactory<admin::Program> Factory(string role, out FakePortal portal, params string[] permissions)
