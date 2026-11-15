@@ -4,7 +4,7 @@
 - Change ID: `CONTRACT-REVIEW-CHG-20261115T011008Z-3AE83B`
 - Created UTC: 2026-11-15T01:10:08.150311+00:00
 - Tiêu đề: Accept all suggestions; Word export marked on the customer's original file
-- Trạng thái: IMPLEMENTED
+- Trạng thái: DEPLOYED
 
 ## Yêu cầu và phạm vi
 Operator 2026-11-15: "có button đồng ý hết và xuất ra file word giống bản gốc mà đã có gạch bỏ (gạch ngang), các phần thêm mới thay thế
@@ -40,7 +40,9 @@ thì tô khối màu vàng... comment các nội dung, phần nào thay thế đ
 ## Publish
 - Project:
 - Destination (chỉ từ config):
-- Trạng thái: NOT_PUBLISHED
+- portal DEPLOYED 2026-11-15 01:14:56Z (giờ server 08:14:56) từ d8db258 (gồm c882ef0 đang chạy + origin/main; 0 lượt AI đang chạy);
+  artifact 25be3c44f1c7a0f35944fef62aa930a28fedab6ef06e2718aae90ccb422f4041; package 01FA4759663586564852F775418E7723C36AAF9A79EAEB3E75AC2CC36E5EC1E6; health 200.
+- Trạng thái: DEPLOYED
 - Artifact SHA256:
 - Smoke test:
 
