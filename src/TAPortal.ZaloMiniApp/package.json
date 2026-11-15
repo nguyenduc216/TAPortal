@@ -1,0 +1,29 @@
+{
+  "name": "taportal-zalo-mini-app",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Mini App T.A trên Zalo: đăng nhập bằng số điện thoại Zalo vào TA Portal / Hóa đơn tự động.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "mock": "vite --mode mock",
+    "build": "tsc --noEmit && vite build",
+    "typecheck": "tsc --noEmit",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "react-router-dom": "6.28.0",
+    "zmp-sdk": "2.53.4",
+    "zmp-ui": "1.11.15-2"
+  },
+  "devDependencies": {
+    "@types/react": "18.3.12",
+    "@types/react-dom": "18.3.1",
+    "@vitejs/plugin-react": "4.3.4",
+    "typescript": "5.6.3",
+    "vite": "5.4.11",
+    "zmp-vite-plugin": "1.1.6"
+  }
+}

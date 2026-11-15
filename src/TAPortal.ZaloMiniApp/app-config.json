@@ -1,0 +1,17 @@
+{
+  "app": {
+    "title": "T.A",
+    "headerColor": "#0F4C81",
+    "textColor": "white",
+    "statusBarColor": "#0F4C81",
+    "leftButton": "back",
+    "statusBar": "normal",
+    "actionBarHidden": false,
+    "hideIOSSafeAreaBottom": false,
+    "hideAndroidBottomNavigationBar": false
+  },
+  "debug": false,
+  "listCSS": [],
+  "listSyncJS": [],
+  "listAsyncJS": []
+}

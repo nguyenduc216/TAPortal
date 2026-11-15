@@ -23,5 +23,17 @@
     "merge_status": "PENDING_APPROVAL",
     "branch": "feature/zalo-mini-app",
     "tests": "Safe 717/717 passed; Release build 0 errors"
+  },
+  {
+    "change_id": "ZALO-MINI-APP-CHG-20261115T220147Z-0C0F47",
+    "created_at": "2026-11-15T22:01:47.420202+00:00",
+    "title": "Zalo Mini App GĐ1: project TAPortal.ZaloMiniApp, đăng nhập QR/mật khẩu, chọn tài khoản, trang chủ, tài khoản",
+    "status": "IMPLEMENTED",
+    "commit_sha": null,
+    "migration_status": "NOT_EXECUTED",
+    "publish_status": "NOT_APPLICABLE (Zalo deploy pending App ID)",
+    "merge_status": "PENDING_APPROVAL",
+    "branch": "feature/TAPortal.ZaloMiniApp",
+    "tests": "npm build OK; Safe 779/779 passed"
   }
 ]
