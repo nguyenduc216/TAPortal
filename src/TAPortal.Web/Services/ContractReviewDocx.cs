@@ -54,7 +54,7 @@ public static class DocxParagraphs
     }
 
     // Text runs in document order; deleted text of existing tracked changes (w:delText) is ignored, inserted text kept.
-    private static string TextOf(XElement p)
+    internal static string TextOf(XElement p)
     {
         var sb = new StringBuilder();
         foreach (var node in p.Descendants())

@@ -22,6 +22,7 @@
 }
 @section PageActions {
     <a class="btn" asp-action="Details" asp-route-id="@r.Id" asp-route-v="@Model.VersionNo" asp-route-mode="@Model.Mode">@UiIcon.Render("refresh")<span>Tải lại</span></a>
+    <a class="btn btn-ta-gold" asp-action="ExportMarked" asp-route-id="@r.Id" download data-ta-hard data-ta-review-export-marked title="File Word gốc của khách, giữ nguyên định dạng: chữ bỏ gạch ngang, chữ mới tô vàng, comment lý do và nội dung thay thế (gồm các gợi ý đã đồng ý)">@UiIcon.Render("file-text")<span>Xuất Word chỉnh lý</span></a>
     <a class="btn" asp-action="Export" asp-route-id="@r.Id" asp-route-v="@Model.VersionNo" download data-ta-hard>@UiIcon.Render("file-text")<span>Tải Word v@(Model.VersionNo)</span></a>
     @if (Model.VersionNo > 0) {<a class="btn btn-primary" asp-action="Export" asp-route-id="@r.Id" asp-route-v="@Model.VersionNo" asp-route-tracked="true" download data-ta-hard data-ta-review-export-tracked>@UiIcon.Render("file-text")<span>Word theo dõi thay đổi</span></a>}
 }
@@ -60,6 +61,10 @@
                         <button type="button" class="btn btn-sm" data-ta-compare-step="-1">◀ Gợi ý trước</button>
                         <span class="ta-cell-sub" data-ta-compare-pos>—</span>
                         <button type="button" class="btn btn-sm" data-ta-compare-step="1">Gợi ý sau ▶</button>
+                        @if (editable && Model.RowFindings?.Values.SelectMany(v => v).Any(f => f.Status == ContractReviewPolicy.Open && f.Action != ContractReviewPolicy.NoteOnly) == true)
+                        {
+                            <form asp-action="AcceptAll" asp-route-id="@r.Id" method="post" data-ta-review-form data-ta-confirm="Đồng ý tất cả gợi ý chưa xử lý?"><button type="submit" class="btn btn-sm btn-success">@UiIcon.Render("checks")<span>Đồng ý tất cả</span></button></form>
+                        }
                     </div>
                     <div class="ta-rv-compare__head">
                         <div>Bản gốc của khách hàng</div>
@@ -432,6 +437,12 @@
                             <input type="hidden" name="mask" value="false" />
                             <button type="submit" class="btn btn-ta-gold w-100" disabled="@(!Model.AiConfigured)" data-ta-loading data-ta-loading-text="Đang gửi...">@UiIcon.Render("search")<span>Chạy AI rà soát @(Model.VersionNo == 0 ? "bản gốc" : "v" + Model.VersionNo)</span></button>
                             <div class="form-hint">Mô hình @Model.AiModel. Chi phí ước tính 0,2–0,5 USD cho hợp đồng 20 trang; mỗi lần chạy được ghi lại bên dưới.</div>
+                        </form>
+                    }
+                    @if (editable && Model.OpenCount > 0)
+                    {
+                        <form asp-action="AcceptAll" asp-route-id="@r.Id" method="post" data-ta-review-form data-ta-review-accept-all data-ta-confirm="Đồng ý tất cả @Model.Findings.Count(f => f.Status == ContractReviewPolicy.Open && f.Action != ContractReviewPolicy.NoteOnly) gợi ý chưa xử lý? Có thể đặt lại từng gợi ý sau.">
+                            <button type="submit" class="btn btn-success w-100">@UiIcon.Render("checks")<span>Đồng ý tất cả gợi ý</span></button>
                         </form>
                     }
                     @if (editable && Model.DecidedCount > 0)

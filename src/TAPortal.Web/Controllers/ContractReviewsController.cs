@@ -138,6 +138,43 @@ public sealed class ContractReviewsController(IContractReviewStore reviews, ICon
         return Done(id, result, "Đã lưu quyết định cho góp ý.", "f-" + findingId);
     }
 
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [Authorize(Policy = AdminPermissions.Policy.ContractReviewEdit)]
+    public async Task<IActionResult> AcceptAll(Guid id)
+    {
+        if (UsersController.ActorId(User) is not Guid actor) return Forbid();
+        var result = await reviews.AcceptAllAsync(actor, id, Ip);
+        return Done(id, result, $"Đã đồng ý {result.VersionNo} gợi ý. Có thể xuất \"Word chỉnh lý\" hoặc tạo phiên bản mới.");
+    }
+
+    // The customer's own Word file with the accepted suggestions marked in place: removed text struck through, new text
+    // highlighted yellow, a comment per change (reason, replacement, legal basis); structure and formatting untouched.
+    [HttpGet]
+    public async Task<IActionResult> ExportMarked(Guid id)
+    {
+        var review = await reviews.GetAsync(id);
+        var originalFile = review?.Files.Where(f => f.Kind == "ORIGINAL").OrderBy(f => f.CreatedAt).FirstOrDefault();
+        if (review is null || originalFile is null) return NotFound();
+        var original = await reviews.DownloadAsync(id, originalFile.Id);
+        if (original is null) return NotFound();
+        var marks = (await reviews.FindingsAsync(id))
+            .Where(f => f.IsDecided || (f.Action == ContractReviewPolicy.NoteOnly && f.Status == ContractReviewPolicy.Open))
+            .OrderBy(f => f.VersionNo).ThenBy(f => f.CreatedAt)
+            .Select(f => new WordMark(f.ParagraphKey, f.Action, f.Quote, f.Replacement, ContractReviewWordExport.CommentFor(f))).ToList();
+        WordExportResult result;
+        try { result = ContractReviewWordExport.Mark(original.Data, marks); }
+        catch (Exception ex) when (ex is InvalidDataException or System.Xml.XmlException)
+        {
+            logger.LogWarning(ex, "CONTRACT_REVIEW_EXPORT_FAILED {ReviewId}", id);
+            return Back(id, "Không mở được file Word gốc để xuất bản chỉnh lý.");
+        }
+        Response.Headers.XContentTypeOptions = "nosniff";
+        Response.Headers.CacheControl = "private, no-store";
+        var baseName = Path.GetFileNameWithoutExtension(original.FileName);
+        return File(result.Data, DocxWriter.ContentType, ContractPolicy.SafeFileName($"{baseName} - chinh ly {review.Code}.docx"));
+    }
+
     // "✎ Sửa trực tiếp" on a paragraph: recorded as a staff finding (whole paragraph rewritten) that is accepted at once, so
     // the current version stays unchanged and the edit goes into the next version like any other accepted finding.
     [HttpPost]

@@ -107,6 +107,8 @@ public interface IContractReviewStore
     Task<ReviewResult> AddFindingAsync(Guid actor, Guid id, ReviewFindingInput input, string? ip);
     Task<ReviewResult> DecideFindingAsync(Guid actor, Guid id, Guid findingId, string status, string? staffText, string? staffNote, string? ip);
     Task<ReviewResult> CreateVersionAsync(Guid actor, Guid id, string? note, string? ip);
+    // "Đồng ý tất cả": every open suggestion of the current version that changes text becomes accepted (notes stay open).
+    Task<ReviewResult> AcceptAllAsync(Guid actor, Guid id, string? ip) => Task.FromResult(new ReviewResult(ReviewOutcome.Invalid));
     Task<ReviewResult> MarkSentAsync(Guid actor, Guid id, string? ip);
     Task<ReviewResult> RecordCustomerAsync(Guid actor, Guid id, Guid changeId, string decision, string? customerText, string? customerNote, string? ip);
     Task<ReviewResult> CreateCustomerVersionAsync(Guid actor, Guid id, string? note, string? ip);
@@ -478,6 +480,22 @@ public sealed class SqlContractReviewStore(IConfiguration configuration, AdminAu
             var written = await Audit(cn, tx, actor, "CONTRACT_REVIEW_VERSION_CREATED", id, AuditSql.Json(("versionNo", from)),
                 AuditSql.Json(("versionNo", no), ("changes", result.Changes.Count), ("findings", findings.Count)), ip);
             return new(ReviewOutcome.Saved, id, no, AuditPersisted: written);
+        });
+
+    public Task<ReviewResult> AcceptAllAsync(Guid actor, Guid id, string? ip) =>
+        Write(actor, AdminPermissions.ContractReviewEdit, async (cn, tx) =>
+        {
+            var state = await Lock(cn, tx, id);
+            if (state is null) return new(ReviewOutcome.NotFound);
+            if (ContractReviewPolicy.IsLocked(state.Value.Status) || state.Value.Status == ContractReviewPolicy.Analyzing) return new(ReviewOutcome.Locked, id);
+            var count = await Exec(cn, tx, """
+UPDATE dbo.ContractReviewFindings SET Status='ACCEPTED',DecidedAt=SYSUTCDATETIME(),DecidedBy=@by
+WHERE ReviewId=@id AND VersionNo=@no AND Status='OPEN' AND Action<>'NOTE' AND AppliedInVersionNo IS NULL;
+""", ("@by", actor), ("@id", id), ("@no", state.Value.Version));
+            if (count == 0) return new(ReviewOutcome.Invalid, id, Errors: ["Không còn gợi ý nào chưa xử lý."]);
+            if (state.Value.Status == ContractReviewPolicy.New) await Exec(cn, tx, ContractReviewSql.SetStatus, ("@id", id), ("@status", ContractReviewPolicy.InReview), ("@by", actor));
+            var written = await Audit(cn, tx, actor, "CONTRACT_REVIEW_ACCEPT_ALL", id, "{}", AuditSql.Json(("versionNo", state.Value.Version), ("accepted", count)), ip);
+            return new(ReviewOutcome.Saved, id, count, AuditPersisted: written);
         });
 
     public Task<ReviewResult> MarkSentAsync(Guid actor, Guid id, string? ip) =>
