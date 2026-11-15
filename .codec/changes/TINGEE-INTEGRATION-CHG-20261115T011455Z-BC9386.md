@@ -4,7 +4,7 @@
 - Change ID: `TINGEE-INTEGRATION-CHG-20261115T011455Z-BC9386`
 - Created UTC: 2026-11-15T01:14:55.012612+00:00
 - Tiêu đề: Cai dat thong bao: tab Hoa don tu dong va Portal, kenh email rieng cho Portal
-- Trạng thái: IMPLEMENTED
+- Trạng thái: DEPLOYED
 
 ## Yêu cầu và phạm vi
 Operator (2026-11-15, ảnh trang "Cài đặt thông báo"): "Phân chia rõ cài đặt cho hoadontudong và portal, thêm phần của portal, sử dụng tab".
@@ -32,9 +32,9 @@ Operator (2026-11-15, ảnh trang "Cài đặt thông báo"): "Phân chia rõ c�
 
 ## Git
 - Branch: feature/tx-sync
-- Commit SHA: xem report
+- Commit SHA: 10c9c00
 - PR:
-- Merge: xem report
+- Merge: fast-forward main
 - Merge SHA:
 
 ## Rủi ro, quyết định và việc còn lại

@@ -1,13 +1,11 @@
 # CODEC DELIVERY REPORT — TINGEE-INTEGRATION-CHG-20261115T011455Z-BC9386
-
 Feature ID: `TINGEE-INTEGRATION`
 Change ID: `TINGEE-INTEGRATION-CHG-20261115T011455Z-BC9386`
-
-1. Mục tiêu và kết quả thực tế:
-2. Danh sách file cập nhật (relative + nếu cần absolute):
-3. Database `TAPortalSys`: migration path + thứ tự + trạng thái NOT_EXECUTED/OPERATOR_CONFIRMED:
-4. Build/test: lệnh, pass/fail/not run:
-5. Publish: project, destination đã duyệt, artifact SHA256, status:
-6. Git: branch, commit SHA, PR, merge SHA hoặc PENDING_APPROVAL:
-7. Rủi ro/rollback/việc operator cần làm:
-8. Bằng chứng kiểm tra (URL/log, không có secrets):
+1. Mục tiêu và kết quả thực tế: "Cài đặt thông báo" chia 2 tab Hóa đơn tự động / Portal; kênh Email T.A Portal riêng cho nhân viên.
+2. Danh sách file cập nhật: xem `.codec/changes/TINGEE-INTEGRATION-CHG-20261115T011455Z-BC9386.md`.
+3. Database: migration 055 EXECUTED (verify 097 PASS); rollback 098.
+4. Build/test: Release build 0 lỗi; Safe tests 776/776.
+5. Publish: webhooks 10c9c00 0b1badd6…, portal 2cc1671 cdba878e…, invoice 98dc9c6 89e879a9…; health 200. Source commit 10c9c00.
+6. Git: branch `feature/tx-sync`, source commit 10c9c00; main fast-forward.
+7. Rủi ro/việc còn lại: operator cấu hình và bật kênh Email T.A Portal.
+8. Bằng chứng: Safe tests; log migration; log deploy.
