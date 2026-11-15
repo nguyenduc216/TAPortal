@@ -36,3 +36,4 @@ khách; ý kiến khách cho từng thay đổi tạo phiên bản tiếp theo; 
 - Tên hiển thị trợ lý trên trang khách hàng (giai đoạn 2).
 | `CONTRACT-REVIEW-CHG-20261114T110220Z-5DB5FA` | 2026-11-14 | Law library: upload Word/PDF/TXT, keep files, re-import, edit articles | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |
 | `CONTRACT-REVIEW-CHG-20261114T143425Z-457FA8` | 2026-11-14 | In-place review: paper view, accept/edit/reject on highlights, direct paragraph edit, customer answers | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |
+| `CONTRACT-REVIEW-CHG-20261115T011008Z-3AE83B` | 2026-11-15 | Accept all suggestions; Word export marked on the customer's original file | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |

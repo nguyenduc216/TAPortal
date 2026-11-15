@@ -7,6 +7,7 @@ using System.Security.Claims;
 using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.RegularExpressions;
+using System.Xml.Linq;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Hosting;
@@ -141,6 +142,87 @@ public sealed class SafeContractReviewTests
         var read = S.DocxParagraphs.Read(docx).Select(p => p.Text).ToList();
         Assert.Contains(after[2].Text, read);
         Assert.DoesNotContain(before[3].Text, read);
+    }
+
+    [Fact]
+    public void TheMarkedExportKeepsTheOriginalFileAndMarksChangesInPlace()
+    {
+        // An original with formatting the export must keep: a quote split over two runs (bold + plain), a styles part,
+        // a header and a paragraph property.
+        const string w = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
+        var documentXml = $"""
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:w="{w}"><w:body>
+<w:p><w:pPr><w:jc w:val="center"/></w:pPr><w:r><w:rPr><w:b/></w:rPr><w:t>HỢP ĐỒNG</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">Bên B thanh toán trong </w:t></w:r><w:r><w:rPr><w:b/></w:rPr><w:t>30</w:t></w:r><w:r><w:t xml:space="preserve"> ngày bằng chuyển khoản.</w:t></w:r></w:p>
+<w:p><w:r><w:t>Bên A chịu phạt 50% giá trị hợp đồng.</w:t></w:r></w:p>
+<w:p><w:r><w:t>Hiệu lực từ ngày ký.</w:t></w:r></w:p>
+<w:sectPr><w:headerReference w:type="default" r:id="rId9" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"/></w:sectPr>
+</w:body></w:document>
+""";
+        var original = Zip(("[Content_Types].xml", """<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>"""),
+            ("_rels/.rels", """<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>"""),
+            ("word/_rels/document.xml.rels", """<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId9" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header" Target="header1.xml"/></Relationships>"""),
+            ("word/styles.xml", "<w:styles xmlns:w=\"" + w + "\"><w:style w:styleId=\"Custom\"/></w:styles>"),
+            ("word/header1.xml", "<w:hdr xmlns:w=\"" + w + "\"><w:p><w:r><w:t>LOGO KHÁCH</w:t></w:r></w:p></w:hdr>"),
+            ("word/document.xml", documentXml));
+        Assert.Equal(["P1", "P2", "P3", "P4"], S.DocxParagraphs.Read(original).Select(p => p.Key));
+
+        var result = S.ContractReviewWordExport.Mark(original,
+        [
+            new("P2", "REPLACE", "trong 30 ngày", "trong 10 ngày làm việc", "Thời hạn quá dài.\nNội dung thay thế: trong 10 ngày làm việc"),
+            new("P3", "DELETE", null, null, "Mức phạt vượt 8%."),
+            new("P4", "INSERT", null, "Điều 9. Giải quyết tranh chấp tại Tòa án.", "Thiếu điều khoản tranh chấp."),
+            new("P4", "NOTE", "từ ngày ký", null, "Ghi rõ ngày ký."),
+            new("N3", "REPLACE", null, "x", "Đoạn của phiên bản sau.")
+        ]);
+        Assert.Equal((3, 2), (result.Applied, result.CommentOnly));
+        using var zip = new ZipArchive(new MemoryStream(result.Data));
+        // Other parts are copied unchanged (structure, styles, header with the customer's logo text).
+        Assert.Equal(Read(new ZipArchive(new MemoryStream(original)), "word/styles.xml"), Read(zip, "word/styles.xml"));
+        Assert.Contains("LOGO KHÁCH", Read(zip, "word/header1.xml"));
+        var doc = XDocument.Parse(Read(zip, "word/document.xml"));
+        XNamespace W = w;
+        Assert.Equal("center", doc.Descendants(W + "jc").First().Attribute(W + "val")!.Value);    // paragraph formatting kept
+        Assert.NotNull(doc.Descendants(W + "headerReference").SingleOrDefault());
+        var p2 = doc.Descendants(W + "p").ElementAt(1);
+        var struck = p2.Descendants(W + "r").Where(r => r.Element(W + "rPr")?.Element(W + "strike") is not null).Select(r => string.Concat(r.Elements(W + "t").Select(t => t.Value))).ToList();
+        Assert.Equal("trong 30 ngày", string.Concat(struck));                                     // exactly the quote, across two runs
+        Assert.Contains(p2.Descendants(W + "r"), r => r.Element(W + "rPr")?.Element(W + "b") is not null && r.Element(W + "rPr")?.Element(W + "strike") is not null);   // bold kept on "30"
+        var yellow = p2.Descendants(W + "r").Single(r => (string?)r.Element(W + "rPr")?.Element(W + "highlight")?.Attribute(W + "val") == "yellow");
+        Assert.Contains("trong 10 ngày làm việc", string.Concat(yellow.Elements(W + "t").Select(t => t.Value)));
+        Assert.Equal("Bên B thanh toán trong 30 ngày trong 10 ngày làm việc bằng chuyển khoản.", DocxNormalize(p2));
+        var p3 = doc.Descendants(W + "p").ElementAt(2);
+        Assert.All(p3.Descendants(W + "r").Where(r => r.Elements(W + "t").Any()), r => Assert.NotNull(r.Element(W + "rPr")?.Element(W + "strike")));
+        Assert.Contains(doc.Descendants(W + "p"), p => DocxNormalize(p) == "Điều 9. Giải quyết tranh chấp tại Tòa án.");   // inserted after P4
+        Assert.Equal(5, doc.Descendants(W + "commentReference").Count());
+        var comments = Read(zip, "word/comments.xml");
+        Assert.Contains("Nội dung thay thế: trong 10 ngày làm việc", comments);
+        Assert.Contains("Ghi rõ ngày ký.", comments);
+        Assert.Contains("comments.xml", Read(zip, "word/_rels/document.xml.rels"));
+        Assert.Contains("rId9", Read(zip, "word/_rels/document.xml.rels"));
+        Assert.Contains("/word/comments.xml", Read(zip, "[Content_Types].xml"));
+        Assert.Equal(5, S.DocxParagraphs.Read(result.Data).Count);                               // still a valid, readable docx
+    }
+
+    // A minimal .docx whose paragraphs are exactly the given ones (P1..Pn), like a customer's file.
+    private static byte[] PlainDocx(IEnumerable<S.ReviewParagraph> paragraphs) => Zip(
+        ("[Content_Types].xml", """<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="xml" ContentType="application/xml"/><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>"""),
+        ("word/document.xml", "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:body>"
+            + string.Concat(paragraphs.Select(p => "<w:p><w:r><w:t xml:space=\"preserve\">" + System.Security.SecurityElement.Escape(p.Text) + "</w:t></w:r></w:p>")) + "</w:body></w:document>"));
+
+    private static string DocxNormalize(XElement p) => S.DocxParagraphs.Normalize(string.Concat(p.Descendants().Where(e => e.Name.LocalName == "t").Select(e => e.Value)));
+
+    private static byte[] Zip(params (string Name, string Text)[] parts)
+    {
+        using var ms = new MemoryStream();
+        using (var zip = new ZipArchive(ms, ZipArchiveMode.Create, true))
+            foreach (var (name, text) in parts)
+            {
+                using var wr = new StreamWriter(zip.CreateEntry(name).Open(), new UTF8Encoding(false));
+                wr.Write(text.Trim());
+            }
+        return ms.ToArray();
     }
 
     [Fact]
@@ -461,6 +543,19 @@ Nội dung điều 5.
         var citations = S.LegalCitation.Parse("Điều 418, khoản 2 – 91/2015/QH13: phạt vi phạm\nKhuyến nghị thực tiễn");
         Assert.Equal(("91/2015/QH13|điều 418", "khoản 2"), (citations[0].Key, citations[0].Clause));
         Assert.Null(citations[1].Key);
+        // "Đồng ý tất cả" and the export on the customer's own file.
+        Assert.Contains("data-ta-review-accept-all", html);
+        Assert.Contains("data-ta-review-export-marked", html);
+        var all = await c.PostAsync($"/contractreviews/acceptall/{R1}", Form(token));
+        Assert.Equal(HttpStatusCode.Redirect, all.StatusCode);
+        Assert.True(store.AcceptedAll);
+        var marked = await c.GetAsync($"/contractreviews/exportmarked/{R1}");
+        Assert.Equal(HttpStatusCode.OK, marked.StatusCode);
+        using (var mz = new ZipArchive(new MemoryStream(await marked.Content.ReadAsByteArrayAsync())))
+        {
+            Assert.Contains("w:highlight w:val=\"yellow\"", Read(mz, "word/document.xml"));          // accepted P5 suggestion marked in place
+            Assert.Contains("hai bên ký và Bên B nhận đủ tạm ứng", Read(mz, "word/comments.xml"));
+        }
         var preview = Environment.GetEnvironmentVariable("TA_REVIEW_PREVIEW");
         if (!string.IsNullOrEmpty(preview)) { File.WriteAllText(preview, page); File.WriteAllText(preview.Replace(".html", "-compare.html"), await c.GetStringAsync($"/contractreviews/details/{R1}?v=1&mode=compare")); }
     }
@@ -586,7 +681,10 @@ Nội dung điều 5.
         ]);
         public Task<IReadOnlyList<S.ReviewChange>> ChangesAsync(Guid id) => Task.FromResult<IReadOnlyList<S.ReviewChange>>(
             [new(Guid.NewGuid(), 0, 1, "P3", F1, V0[2].Text, V1[2].Text, "Thời hạn thanh toán quá dài", "PENDING", null, null, null)]);
-        public Task<S.ReviewFileContent?> DownloadAsync(Guid id, Guid fileId) => Task.FromResult<S.ReviewFileContent?>(null);
+        public Task<S.ReviewFileContent?> DownloadAsync(Guid id, Guid fileId) =>
+            Task.FromResult<S.ReviewFileContent?>(new("hop-dong.docx", S.DocxWriter.ContentType, PlainDocx(V0)));
+        public bool AcceptedAll;
+        public Task<S.ReviewResult> AcceptAllAsync(Guid actor, Guid id, string? ip) { AcceptedAll = true; return Task.FromResult(new S.ReviewResult(S.ReviewOutcome.Saved, R1, 2, AuditPersisted: true)); }
 
         public Task<S.ReviewResult> CreateAsync(Guid actor, S.ReviewInput input, S.ReviewUpload upload, string? ip)
         {
