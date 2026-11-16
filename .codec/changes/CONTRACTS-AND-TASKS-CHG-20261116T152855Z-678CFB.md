@@ -43,3 +43,6 @@ Operator 2026-11-16 (start of the contract / customer / task rework after the ne
 - Merge SHA:
 
 ## Rủi ro, quyết định và việc còn lại
+
+## Migration execution
+- 061-service-catalog.sql: PRECHECK NOT_APPLIED; DRYRUN PASS/NOT_APPLIED (trancount 0); gates PASS (800); REAL RUN VERIFY_STATUS=PASS => EXECUTED 2026-11-16T15:31:25Z
