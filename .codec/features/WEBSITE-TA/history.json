@@ -16,9 +16,9 @@
     "created_at": "2026-11-15T22:44:41.264893+00:00",
     "title": "Footer: email/hotline cùng hàng với nhãn",
     "status": "PLANNED",
-    "commit_sha": null,
+    "commit_sha": "d998c53",
     "migration_status": "NOT_EXECUTED",
-    "publish_status": "NOT_PUBLISHED",
+    "publish_status": "DEPLOYED portal d998c53 (post library); website b7cfb13",
     "merge_status": "PENDING_APPROVAL"
   }
 ]
