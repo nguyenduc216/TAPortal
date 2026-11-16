@@ -148,7 +148,7 @@ public sealed class WorkController(IWorkTaskStore work, ILogger<WorkController> 
     [HttpPost]
     [ValidateAntiForgeryToken]
     [Authorize(Policy = AdminPermissions.Policy.TasksView)]
-    public Task<IActionResult> Status(Guid id, string status, string? returnUrl) => Quick(id, returnUrl, actor => work.SetStatusAsync(actor, id, status ?? ""));
+    public Task<IActionResult> Status(Guid id, string status, string? note, string? returnUrl) => Quick(id, returnUrl, actor => work.SetStatusAsync(actor, id, status ?? "", note));
 
     [HttpPost]
     [ValidateAntiForgeryToken]

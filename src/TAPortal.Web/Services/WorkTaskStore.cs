@@ -145,7 +145,7 @@ public interface IWorkTaskStore
     Task<WorkResult> CreateAsync(Guid actor, WorkTaskInput input);
     Task<WorkResult> UpdateAsync(Guid actor, Guid id, WorkTaskInput input, string stamp);
     Task<WorkResult> DeleteAsync(Guid actor, Guid id);
-    Task<WorkResult> SetStatusAsync(Guid actor, Guid id, string status);
+    Task<WorkResult> SetStatusAsync(Guid actor, Guid id, string status, string? note = null);
     Task<WorkResult> AddChecklistAsync(Guid actor, Guid id, string title);
     Task<WorkResult> SetChecklistAsync(Guid actor, Guid id, Guid itemId, bool done);
     Task<WorkResult> RemoveChecklistAsync(Guid actor, Guid id, Guid itemId);
@@ -570,18 +570,23 @@ public sealed class SqlWorkTaskStore(IConfiguration configuration, ILogger<SqlWo
         return new(WorkOutcome.Saved, id);
     });
 
-    public async Task<WorkResult> SetStatusAsync(Guid actor, Guid id, string status) => await InTransaction(async (cn, tx) =>
+    public async Task<WorkResult> SetStatusAsync(Guid actor, Guid id, string status, string? note = null) => await InTransaction(async (cn, tx) =>
     {
         var (a, t) = await Load(cn, tx, actor, id);
         if (t is null || !t.CanSee(a)) return new(WorkOutcome.NotFound);
         if (t.Status == status) return new(WorkOutcome.NoChange, id);
         if (!WorkTaskPolicy.CanSetStatus(t.Status, status, t.CanEdit(a))) return new(WorkOutcome.Forbidden);
-        if (status == WorkTaskPolicy.Done && WorkTaskPolicy.CheckDone(t.Total, t.DoneCount) != WorkOutcome.Saved)
-            return new(WorkOutcome.ChecklistIncomplete, id, t.Total == 0
-                ? "Cần có checklist công việc trước khi chuyển sang Hoàn thành."
-                : $"Còn {t.Total - t.DoneCount} mục checklist chưa hoàn thành.");
+        string? doneNote = null;
+        if (status == WorkTaskPolicy.Done)
+        {
+            if (WorkTaskPolicy.CheckDone(t.Total, t.DoneCount) != WorkOutcome.Saved)
+                return new(WorkOutcome.ChecklistIncomplete, id, $"Còn {t.Total - t.DoneCount} mục checklist chưa hoàn thành.");
+            doneNote = WorkTaskPolicy.DoneNote(note);
+            if (doneNote is null) return new(WorkOutcome.Invalid, id, WorkTaskPolicy.DoneNoteRequired);
+        }
         await Exec(cn, tx, WorkTaskSql.SetStatus, ("@id", id), ("@status", status), ("@progress", (int)WorkTaskPolicy.Progress(status, t.Total, t.DoneCount)), ("@by", actor));
         await Log(cn, tx, id, "STATUS", null, t.Status, status, actor);
+        if (doneNote is not null) await Log(cn, tx, id, "COMMENT", WorkTaskPolicy.DoneNotePrefix + doneNote, null, null, actor);
         return new(WorkOutcome.Saved, id);
     });
 

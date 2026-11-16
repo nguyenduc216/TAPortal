@@ -54,7 +54,9 @@ public sealed class SafeAdminWorkTests
         Assert.True(S.WorkTaskPolicy.CanSetStatus("IN_PROGRESS", "CANCELLED", true));
         Assert.False(S.WorkTaskPolicy.CanSetStatus("CANCELLED", "NEW", false));
         Assert.False(S.WorkTaskPolicy.CanSetStatus("NEW", "APPROVED", true));
-        Assert.Equal(S.WorkOutcome.ChecklistIncomplete, S.WorkTaskPolicy.CheckDone(0, 0));
+        Assert.Equal(S.WorkOutcome.Saved, S.WorkTaskPolicy.CheckDone(0, 0));                 // checklist optional (2026-11-16)
+        Assert.Null(S.WorkTaskPolicy.DoneNote("   "));
+        Assert.Equal("Nộp tờ khai xong", S.WorkTaskPolicy.DoneNote(" Nộp tờ khai xong "));
         Assert.Equal(S.WorkOutcome.ChecklistIncomplete, S.WorkTaskPolicy.CheckDone(3, 2));
         Assert.Equal(S.WorkOutcome.Saved, S.WorkTaskPolicy.CheckDone(3, 3));
         Assert.Equal(66, S.WorkTaskPolicy.Progress("IN_PROGRESS", 3, 2));
@@ -210,6 +212,7 @@ public sealed class SafeAdminWorkTests
         done.Headers.Add("X-TA-Card", "1");
         var refused = WebUtility.HtmlDecode(await (await c.SendAsync(done)).Content.ReadAsStringAsync());
         Assert.Contains("mục checklist chưa hoàn thành", refused);
+        Assert.Contains("data-ta-done-note", cardHtml);                                     // the card carries the result-note box
 
         // Without JavaScript the same form redirects back.
         var plain = await c.PostAsync($"/work/checklistset/{MemoryWork.T1}", Form(token, ("item", MemoryWork.I1.ToString()), ("done", "true"), ("returnUrl", "/work")));
@@ -398,11 +401,12 @@ public sealed class SafeAdminWorkTests
             lock (gate) return tasks.TryGetValue(id, out var t) && Sees(t) ? act(t) : new(S.WorkOutcome.NotFound);
         }
 
-        public Task<S.WorkResult> SetStatusAsync(Guid actor, Guid id, string status) => Task.FromResult(Act(id, t =>
+        public Task<S.WorkResult> SetStatusAsync(Guid actor, Guid id, string status, string? note = null) => Task.FromResult(Act(id, t =>
         {
             var items = Items.Values.Where(i => i.Task == id).ToList();
             if (status == "DONE" && S.WorkTaskPolicy.CheckDone(items.Count, items.Count(i => i.Done)) != S.WorkOutcome.Saved)
                 return new(S.WorkOutcome.ChecklistIncomplete, id, $"Còn {items.Count(i => !i.Done)} mục checklist chưa hoàn thành.");
+            if (status == "DONE" && S.WorkTaskPolicy.DoneNote(note) is null) return new(S.WorkOutcome.Invalid, id, S.WorkTaskPolicy.DoneNoteRequired);
             tasks[id] = t with { Status = status };
             return new(S.WorkOutcome.Saved, id);
         }));

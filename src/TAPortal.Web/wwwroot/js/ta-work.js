@@ -52,7 +52,29 @@
     // Status selects submit on change (a <noscript> button covers browsers without JavaScript).
     document.addEventListener('change', (event) => {
         const field = event.target;
-        if (field instanceof HTMLSelectElement && field.hasAttribute('data-ta-autosubmit')) field.form?.requestSubmit();
+        if (!(field instanceof HTMLSelectElement) || !field.hasAttribute('data-ta-autosubmit')) return;
+        // Hoàn thành needs a note on the result (operator 2026-11-16): open the note box instead of submitting.
+        const note = field.form?.querySelector('[data-ta-done-note]');
+        if (note) {
+            const box = note.querySelector('textarea');
+            const done = field.value === 'DONE';
+            note.hidden = !done;
+            box.required = done;
+            if (done) { box.focus(); return; }
+            box.value = '';
+        }
+        field.form?.requestSubmit();
+    });
+
+    document.addEventListener('click', (event) => {
+        const cancel = event.target instanceof Element ? event.target.closest('[data-ta-done-cancel]') : null;
+        if (!cancel) return;
+        const form = cancel.closest('form');
+        const note = form.querySelector('[data-ta-done-note]');
+        const select = form.querySelector('select[name="status"]');
+        note.hidden = true;
+        note.querySelector('textarea').required = false;
+        select.value = select.querySelector('option[selected]')?.value ?? select.options[0].value;
     });
 
     // ---- Employee picker (Views/Work/_PeoplePicker) -------------------------------------------------------------------

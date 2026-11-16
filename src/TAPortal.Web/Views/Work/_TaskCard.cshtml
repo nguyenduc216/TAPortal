@@ -40,6 +40,11 @@
             }
         </select>
         <noscript><button class="btn btn-sm" type="submit">Lưu</button></noscript>
+        <div class="ta-task__done-note" data-ta-done-note hidden>
+            <label class="form-label mb-0" for="dn-@t.Id">Ghi chú kết quả (bắt buộc khi hoàn thành)</label>
+            <div class="ta-input-icon ta-input-icon--top">@UiIcon.Render("file-text")<textarea class="form-control form-control-sm" id="dn-@t.Id" name="note" rows="2" maxlength="@(WorkTaskPolicy.CommentMax - WorkTaskPolicy.DoneNotePrefix.Length)" placeholder="Đã làm gì, kết quả ra sao..." data-ta-voice></textarea></div>
+            <div class="ta-task__done-actions"><button class="btn btn-sm btn-primary" type="submit">@UiIcon.Render("check")Xác nhận hoàn thành</button><button class="btn btn-sm" type="button" data-ta-done-cancel>Hủy</button></div>
+        </div>
     </form>
 
     <section class="ta-task__checklist" aria-label="Checklist">

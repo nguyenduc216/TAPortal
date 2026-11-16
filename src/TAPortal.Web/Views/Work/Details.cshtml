@@ -40,6 +40,11 @@
                             @foreach (var s in WorkTaskPolicy.Statuses.Where(s => s != WorkTaskPolicy.Cancelled || d.CanEdit || closed)) {<option value="@s" selected="@(s == t.Status)">@WorkTaskPolicy.StatusLabel(s)</option>}
                         </select>
                         <noscript><button class="btn btn-sm" type="submit">Lưu</button></noscript>
+                        <div class="ta-task__done-note" data-ta-done-note hidden>
+            <label class="form-label mb-0" for="dn-@t.Id">Ghi chú kết quả (bắt buộc khi hoàn thành)</label>
+            <div class="ta-input-icon ta-input-icon--top">@UiIcon.Render("file-text")<textarea class="form-control form-control-sm" id="dn-@t.Id" name="note" rows="2" maxlength="@(WorkTaskPolicy.CommentMax - WorkTaskPolicy.DoneNotePrefix.Length)" placeholder="Đã làm gì, kết quả ra sao..." data-ta-voice></textarea></div>
+            <div class="ta-task__done-actions"><button class="btn btn-sm btn-primary" type="submit">@UiIcon.Render("check")Xác nhận hoàn thành</button><button class="btn btn-sm" type="button" data-ta-done-cancel>Hủy</button></div>
+        </div>
                     </form>
                 </dd>
                 <dt>Ưu tiên</dt><dd><span class="ta-badge ta-badge--@WorkTaskPolicy.PriorityTone(t.Priority)">@WorkTaskPolicy.PriorityLabel(t.Priority)</span></dd>
@@ -57,7 +62,7 @@
     <section class="card" aria-labelledby="checkTitle">
         <div class="card-header"><h2 class="card-title" id="checkTitle">@UiIcon.Render("checks")Checklist (@t.ChecklistDone/@t.ChecklistTotal)</h2></div>
         <div class="card-body">
-            @if (d.Checklist.Count == 0) {<p class="text-secondary">Chưa có mục nào. Công việc cần có checklist và hoàn thành hết mới chuyển được sang “Hoàn thành”.</p>}
+            @if (d.Checklist.Count == 0) {<p class="text-secondary">Chưa có mục nào. Checklist không bắt buộc; nếu có thì phải tích hết, và khi chuyển sang “Hoàn thành” cần nhập ghi chú kết quả.</p>}
             <ul class="ta-checklist">
                 @foreach (var i in d.Checklist)
                 {

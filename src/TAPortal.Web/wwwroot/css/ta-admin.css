@@ -88,7 +88,10 @@
 .ta-task__due.is-soon { color: var(--ta-warning-text); font-weight: 600; }
 .ta-task__due.is-overdue { color: var(--ta-danger-text); font-weight: 650; }
 .ta-task__error { margin: 0; }
-.ta-task__status { display: flex; align-items: center; gap: var(--ta-sp-2); }
+.ta-task__status { display: flex; align-items: center; gap: var(--ta-sp-2); flex-wrap: wrap; }
+.ta-task__done-note { flex: 1 1 100%; display: grid; gap: var(--ta-sp-2); }
+.ta-task__done-note[hidden] { display: none; }
+.ta-task__done-actions { display: flex; gap: var(--ta-sp-2); }
 .ta-task__inline { display: flex; gap: var(--ta-sp-2); align-items: flex-start; margin-top: var(--ta-sp-2); }
 .ta-task__inline > .form-control, .ta-task__inline > .ta-voice, .ta-task__inline > .ta-input-icon { flex: 1 1 auto; min-width: 0; }
 .ta-progress { height: 6px; border-radius: 99px; background: var(--ta-surface-2); border: 1px solid var(--ta-border); overflow: hidden; }
