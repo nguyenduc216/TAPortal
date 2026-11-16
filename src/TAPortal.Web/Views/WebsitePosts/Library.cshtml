@@ -11,7 +11,7 @@
     <a class="btn" asp-action="Index">@UiIcon.Render("arrow-left")<span>Về danh sách bài viết</span></a>
 }
 @if (Model.Error is not null) {<div class="ta-alert ta-alert--danger" role="alert">@UiIcon.Render("alert-circle")<div class="ta-alert__body">@Model.Error</div></div>}
-<div class="ta-alert ta-alert--info" role="note">@UiIcon.Render("info-circle")<div class="ta-alert__body">Bài được soạn theo quy định đến tháng 11/2026. Trước khi xuất bản, chuyên viên T.A nên đối chiếu lại số liệu, thời hạn và văn bản pháp luật được dẫn trong bài.</div></div>
+<div class="ta-alert ta-alert--info" role="note">@UiIcon.Render("info-circle")<div class="ta-alert__body">Bài được soạn theo quy định đến tháng 11/2026. Trước khi xuất bản, chuyên viên T.A nên đối chiếu lại số liệu, thời hạn và văn bản pháp luật được dẫn trong bài. Bấm "Xem thử" để đọc bài như trên website, kèm danh sách nguồn đã tham khảo.</div></div>
 <section class="card ta-table-card" aria-label="Danh sách bài soạn sẵn">
     <form method="post" asp-action="ImportLibrary">
         <div class="ta-table-toolbar d-flex flex-wrap gap-2 align-items-center justify-content-between">
@@ -23,23 +23,35 @@
         </div>
         <div class="ta-table-wrap">
             <table class="ta-table ta-table-stack">
-                <thead><tr><th scope="col">#</th><th scope="col">Bài viết</th><th scope="col">Chuyên mục</th><th scope="col">Trạng thái</th></tr></thead>
+                <thead><tr><th scope="col">#</th><th scope="col">Bài viết</th><th scope="col">Nguồn tham khảo</th><th scope="col">Chuyên mục</th><th scope="col">Trạng thái</th><th scope="col"><span class="visually-hidden">Xem thử</span></th></tr></thead>
                 <tbody>
                 @foreach (var p in Model.Posts)
                 {
                     var has = Model.Existing.TryGetValue(p.Slug, out var id);
+                    var hosts = (p.Sources ?? []).Select(s => PostLibrary.Host(PostLibrary.SplitSource(s).Url)).Where(h => h.Length > 0).Distinct().ToList();
                     <tr>
                         <td>@p.Order</td>
                         <td class="ta-cell-strong">@p.Title<span class="ta-cell-sub d-block">@p.Summary</span>
                             @if (p.Uncertain is { Count: > 0 })
                             {
-                                <details class="ta-web-cat mt-1"><summary class="text-danger">Cần T.A rà lại (@p.Uncertain.Count điểm)</summary><ul class="ta-cell-sub mb-1">@foreach (var u in p.Uncertain) {<li>@u</li>}</ul>
-                                    @if (p.Sources is { Count: > 0 }) {<b class="ta-cell-sub">Nguồn đã tham khảo</b><ul class="ta-cell-sub">@foreach (var s in p.Sources) {<li>@s</li>}</ul>}
+                                <details class="ta-web-cat mt-1"><summary class="text-danger">Cần T.A rà lại (@p.Uncertain.Count điểm)</summary>
+                                    <span class="ta-cell-sub d-block">Chi tiết chưa đối chiếu được với nguyên văn văn bản; bài đã viết thận trọng ở những chỗ này.</span>
+                                    <ol class="ta-cell-sub mb-1">@foreach (var u in p.Uncertain) {<li>@u</li>}</ol>
                                 </details>
                             }
                         </td>
+                        <td data-label="Nguồn tham khảo">
+                            @if (p.Sources is { Count: > 0 })
+                            {
+                                <details class="ta-web-cat"><summary>@p.Sources.Count nguồn · @string.Join(", ", hosts.Take(3))@(hosts.Count > 3 ? "…" : "")</summary>
+                                    <ol class="ta-cell-sub mb-1">@foreach (var s in p.Sources) { var (label, url) = PostLibrary.SplitSource(s); <li>@if (url is not null) {<a href="@url" target="_blank" rel="noopener noreferrer">@label</a>} else {@label}</li> }</ol>
+                                </details>
+                            }
+                            else {<span class="ta-cell-sub">Chưa ghi nguồn</span>}
+                        </td>
                         <td data-label="Chuyên mục">@PostLibrary.CategoryName(p.Category)</td>
                         <td data-label="Trạng thái">@if (has && Model.IsDraft(p.Slug)) {<a class="ta-badge ta-badge--warning" asp-action="Edit" asp-route-id="@id">Bản nháp – mở bài</a>} else if (has) {<a class="ta-badge ta-badge--success" asp-action="Edit" asp-route-id="@id">Đã đăng – mở bài</a>} else {<span class="ta-badge ta-badge--neutral">Chưa thêm</span>}</td>
+                        <td><a class="btn btn-sm" asp-action="LibraryPreview" asp-route-slug="@p.Slug" target="_blank" rel="noopener">@UiIcon.Render("eye")<span>Xem thử</span></a></td>
                     </tr>
                 }
                 </tbody>

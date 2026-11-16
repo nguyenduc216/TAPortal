@@ -433,7 +433,23 @@ public sealed class SafeWebsiteTests
         Assert.All(store.Posts.Values, p => Assert.Equal(S.PostLibrary.Author, p.Input.AuthorName));
         await client.PostAsync("/WebsitePosts/ImportLibrary", Form(token));
         Assert.Equal(S.PostLibrary.All.Count, store.Posts.Count);
-        Assert.Contains("Thêm và đăng luôn " + S.PostLibrary.All.Count, WebUtility.HtmlDecode(await client.GetStringAsync("/WebsitePosts/Library")));
+        var library = WebUtility.HtmlDecode(await client.GetStringAsync("/WebsitePosts/Library"));
+        Assert.Contains("Thêm và đăng luôn " + S.PostLibrary.All.Count, library);
+        Assert.Contains("/WebsitePosts/LibraryPreview?slug=" + first.Slug, library);
+        Assert.Contains("luatvietnam.vn", library); // sources visible on the list, not only in the review notes
+
+        // "Xem thử": the article as the website shows it, plus its sources (links) and review points for staff.
+        // Every source is a link, or says plainly it was only a search result (no direct link to show).
+        Assert.All(S.PostLibrary.All, p => Assert.All(p.Sources!, s => Assert.True(S.PostLibrary.SplitSource(s).Url is not null || s.Contains("tra cứu"), s)));
+        var previewResponse = await client.GetAsync("/WebsitePosts/LibraryPreview?slug=" + first.Slug);
+        Assert.Equal(HttpStatusCode.OK, previewResponse.StatusCode);
+        var preview = WebUtility.HtmlDecode(await previewResponse.Content.ReadAsStringAsync());
+        Assert.Contains(first.Title, preview);
+        Assert.Contains("XEM THỬ", preview);
+        Assert.Contains("href=\"" + S.PostLibrary.SplitSource(first.Sources![0]).Url + "\"", preview);
+        Assert.Contains("Cần T.A rà lại", preview);
+        Assert.Contains("noindex", preview);
+        Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync("/WebsitePosts/LibraryPreview?slug=khong-co")).StatusCode);
 
         // "Thêm và đăng luôn": existing library drafts are published in place, nothing is duplicated.
         Assert.Equal(HttpStatusCode.Redirect, (await client.PostAsync("/WebsitePosts/ImportLibrary", Form(token, ("publish", "true")))).StatusCode);
@@ -453,6 +469,7 @@ public sealed class SafeWebsiteTests
 
         await using var viewer = AdminFactory(new MemoryAdminStore(), "WEBSITE.VIEW");
         Assert.NotEqual(HttpStatusCode.OK, (await AdminClient(viewer).GetAsync("/WebsitePosts/Library")).StatusCode);
+        Assert.NotEqual(HttpStatusCode.OK, (await AdminClient(viewer).GetAsync("/WebsitePosts/LibraryPreview?slug=" + first.Slug)).StatusCode);
     }
 
     // ---- Public website (fake reader) -----------------------------------------------------------------------------

@@ -29,6 +29,20 @@ public static class PostLibrary
 
     public static string CategoryName(string slug) => Categories.FirstOrDefault(c => c.Slug == slug).Name ?? slug;
 
+    public static LibraryPost? Find(string? slug) => All.FirstOrDefault(p => p.Slug == slug);
+
+    /// <summary>"Tên nguồn – https://…" → (label, url); url is null unless it is an http(s) link.</summary>
+    public static (string Label, string? Url) SplitSource(string source)
+    {
+        var at = source.LastIndexOf(" – http", StringComparison.Ordinal);
+        if (at < 0) return (source, null);
+        var url = source[(at + 3)..].Trim();
+        return Uri.TryCreate(url, UriKind.Absolute, out var u) && (u.Scheme == Uri.UriSchemeHttps || u.Scheme == Uri.UriSchemeHttp)
+            ? (source[..at].Trim(), url) : (source, null);
+    }
+
+    public static string Host(string? url) => Uri.TryCreate(url, UriKind.Absolute, out var u) ? u.Host.Replace("www.", "") : "";
+
     private static IReadOnlyList<LibraryPost> Load()
     {
         var asm = Assembly.GetExecutingAssembly();

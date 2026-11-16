@@ -6,6 +6,7 @@
     var publicUrl = WebsiteUi.PublicUrl(Configuration);
     var (body, toc) = PostHtml.WithToc(PostHtml.Sanitize(Model.BodyHtml).Replace("src=\"/media/", "src=\"" + WebsiteUi.MediaBase + "/"));
     var vi = System.Globalization.CultureInfo.GetCultureInfo("vi-VN");
+    var library = ViewData["LibraryPost"] as LibraryPost; // "Bài soạn sẵn" preview: not saved yet, sources shown for the reviewer
 }
 <!DOCTYPE html>
 <html lang="vi">
@@ -15,10 +16,17 @@
     <meta name="robots" content="noindex,nofollow" />
     <title>Xem trước: @Model.Title</title>
     @foreach (var css in new[] { "styles.css", "dich-vu.css", "trang-phu.css", "site.css" }) {<link rel="stylesheet" href="@publicUrl/css/@css" />}
-    <style>.ta-preview-bar{position:sticky;top:0;z-index:50;background:#d7a407;color:#052b50;font:700 13px/1.4 'Be Vietnam Pro',sans-serif;padding:10px 16px;display:flex;gap:12px;justify-content:center;flex-wrap:wrap}.ta-preview-bar a{color:#052b50;text-decoration:underline}</style>
+    <style>.ta-preview-bar{position:sticky;top:0;z-index:50;background:#d7a407;color:#052b50;font:700 13px/1.4 'Be Vietnam Pro',sans-serif;padding:10px 16px;display:flex;gap:12px;justify-content:center;flex-wrap:wrap}.ta-preview-bar a{color:#052b50;text-decoration:underline}.ta-preview-notes{margin:32px auto 48px;padding:20px 24px;border:2px dashed #d7a407;border-radius:12px;background:#fffdf4;font:14px/1.7 'Be Vietnam Pro',sans-serif;color:#20364c}.ta-preview-notes h2{font-size:18px;color:#052b50;margin:8px 0 4px}.ta-preview-notes a{color:#0b5cad;word-break:break-all}.ta-preview-hint{color:#8a5a00;font-size:13px;margin:0 0 8px}</style>
 </head>
 <body>
+@if (library is not null)
+{
+<div class="ta-preview-bar">XEM THỬ – bài soạn sẵn, chưa có trên website · <a href="/WebsitePosts/Library">← Về Bài soạn sẵn</a> · <a href="#nguon-tham-khao">Nguồn tham khảo (@(library.Sources?.Count ?? 0))</a></div>
+}
+else
+{
 <div class="ta-preview-bar">XEM TRƯỚC – @(Model.Status == 1 ? "bài đã xuất bản" : "bản nháp, khách chưa thấy") · <a href="/WebsitePosts/Edit/@Model.Id">← Quay lại sửa bài</a></div>
+}
 <main class="dv-main" id="top">
 <article>
     <header class="ar-head"><div class="wrap"><div class="ar-head-inner">
@@ -34,6 +42,24 @@
         </div>
     </div>
 </article>
+@if (library is not null)
+{
+    <section class="wrap ta-preview-notes" id="nguon-tham-khao" aria-label="Ghi chú cho người duyệt">
+        <h2>Nguồn tham khảo khi soạn bài</h2>
+        <p class="ta-preview-hint">Chỉ người duyệt trong Portal thấy phần này, khách xem website không thấy.</p>
+        @if (library.Sources is { Count: > 0 })
+        {
+            <ol>@foreach (var s in library.Sources) { var (label, url) = PostLibrary.SplitSource(s); <li>@label@if (url is not null) {<text> – </text><a href="@url" target="_blank" rel="noopener noreferrer">@url</a>}</li> }</ol>
+        }
+        else {<p>Chưa ghi nguồn.</p>}
+        @if (library.Uncertain is { Count: > 0 })
+        {
+            <h2>Cần T.A rà lại (@library.Uncertain.Count điểm)</h2>
+            <p class="ta-preview-hint">Các chi tiết chưa đối chiếu được với nguyên văn văn bản; bài đã viết thận trọng ở những chỗ này.</p>
+            <ol>@foreach (var u in library.Uncertain) {<li>@u</li>}</ol>
+        }
+    </section>
+}
 </main>
 </body>
 </html>

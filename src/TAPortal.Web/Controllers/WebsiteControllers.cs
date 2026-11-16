@@ -373,6 +373,20 @@ public sealed class WebsitePostsController(IWebsiteAdminStore store, IConfigurat
         catch (SqlException ex) { logger.LogError(ex, "WEBSITE_ADMIN_UNAVAILABLE"); return View(new WebsitePostLibraryVm(PostLibrary.All, new Dictionary<string, Guid>(), WebsiteController.StoreUnavailable)); }
     }
 
+    // Preview of a ready-written article as the website would show it, with its sources, before anything is saved.
+    [HttpGet]
+    [Authorize(Policy = AdminPermissions.Policy.WebsitePostsEdit)]
+    public IActionResult LibraryPreview(string? slug)
+    {
+        if (PostLibrary.Find(slug) is not { } post) return NotFound();
+        var now = clock.GetUtcNow().UtcDateTime;
+        var model = new WebsitePostEdit(Guid.Empty, post.Slug, post.Title, post.Summary, post.BodyHtml, null, null, PostLibrary.Author, post.Tags, 0, null, false,
+            post.SeoTitle, post.SeoDescription, 0, now, now, []);
+        ViewData["LibraryPost"] = post;
+        Response.Headers.CacheControl = "no-store";
+        return View("Preview", model);
+    }
+
     [HttpPost]
     [ValidateAntiForgeryToken]
     [Authorize(Policy = AdminPermissions.Policy.WebsitePostsEdit)]
