@@ -9,6 +9,8 @@
     var form = "catForm" + key;
     var steps = x?.Steps ?? [];
     var suggestions = x?.UsedNotInTemplate.ToList() ?? [];
+    var metrics = ViewData["Metrics"] as IReadOnlyList<ServiceMetricOption> ?? [];
+    var picked = false;
 }
 <dialog class="ta-filter-dialog ta-catalog-dialog" id="@dlg" data-ta-catalog-dialog aria-labelledby="@(dlg)Title">
     <form id="@form" method="post" asp-controller="WorkCatalog" asp-action="Save" asp-route-id="@x?.Id" class="ta-catalog-dialog__form" data-ta-catalog-form>
@@ -41,7 +43,16 @@
                     </div>
                     <div>
                         <label class="form-label" for="@(form)Metric">Mã hạn mức chi phí</label>
-                        <div class="ta-input-icon">@UiIcon.Render("report-money")<input class="form-control ta-catalog-metric" id="@(form)Metric" name="Input.MetricCode" value="@x?.MetricCode" maxlength="@ServicePricingPolicy.CodeMax" list="catMetricList" placeholder="Gõ mã hoặc tên chỉ số, ví dụ SLCT" autocomplete="off" /></div>
+                        @* Shows code and name; the code is what is stored (several measures may share a name). *@
+                        <select class="form-select" id="@(form)Metric" name="Input.MetricCode">
+                            <option value="">— Không gắn chỉ số —</option>
+                            @foreach (var m in metrics)
+                            {
+                                <option value="@m.Code" selected="@(m.Code == x?.MetricCode && !picked)" title="@string.Join(", ", m.Services)">@m.Code — @m.Label@(m.Unit is null ? "" : " (" + m.Unit + ")")</option>
+                                picked |= m.Code == x?.MetricCode;
+                            }
+                            @if (x?.MetricCode is string orphan && metrics.All(m => m.Code != orphan)) {<option value="@orphan" selected>@orphan — (chưa có chỉ số nào mang mã này)</option>}
+                        </select>
                         <div class="form-hint">Chỉ số hạn mức của dịch vụ mà số lượng này được cộng vào để tính phí cuối tháng.</div>
                     </div>
                 </div>
