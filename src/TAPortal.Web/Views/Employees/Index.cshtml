@@ -1,3 +1,5 @@
+@inject IEmployeePhotoStore AvatarPhotos
+@{ var avatarIndex = await AvatarPhotos.IndexAsync(); }
 @model EmployeesIndexVm
 @{
     ViewData["Title"] = "Nhân viên";
@@ -56,7 +58,7 @@
                 {
                     <tr data-ta-row data-ta-employee="@x.Code">
                         <td data-label="Mã NV"><span class="ta-code">@x.Code</span></td>
-                        <td class="ta-cell-strong"><a class="text-reset" asp-action="Details" asp-route-id="@x.Id">@x.FullName</a><div class="ta-cell-sub">@x.BranchName</div></td>
+                        <td class="ta-cell-strong"><div class="d-flex align-items-center gap-2">@Avatar.Render(avatarIndex, x.FullName, employeeId: x.Id, cssClass: "ta-avatar--sm")<div class="min-w-0"><a class="text-reset" asp-action="Details" asp-route-id="@x.Id">@x.FullName</a><div class="ta-cell-sub">@x.BranchName</div></div></div></td>
                         <td data-label="Phòng ban / Nhóm">@(x.DepartmentName ?? "—")@if (x.TeamName is not null) {<div class="ta-cell-sub">@x.TeamName</div>}</td>
                         <td data-label="Chức danh">@(x.JobTitleName ?? "—")</td>
                         <td class="ta-nowrap" data-label="Điện thoại">@(x.MobilePhone ?? x.CompanyPhone)</td>

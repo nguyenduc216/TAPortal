@@ -56,7 +56,7 @@ try {
     & $Scp -q $tmp "${SshHost}:$($remote.Replace('\', '/'))/$name"
     if ($LASTEXITCODE -ne 0) { throw 'upload failed' }
     $ErrorActionPreference = 'Continue'
-    & $Ssh $SshHost "sqlcmd -S $Instance -E -d $Database -b -I -W -s '|' -i $remote\$name; `$c = `$LASTEXITCODE; Remove-Item $remote\$name; exit `$c" 2>&1 | Out-String | Write-Output
+    & $Ssh $SshHost "sqlcmd -S $Instance -E -d $Database -b -I -W -s '|' -f i:65001 -i $remote\$name; `$c = `$LASTEXITCODE; Remove-Item $remote\$name; exit `$c" 2>&1 | Out-String | Write-Output
     $code = $LASTEXITCODE
 } finally { Remove-Item $tmp -ErrorAction SilentlyContinue }
 exit $code

@@ -8,6 +8,7 @@
     ViewData["PageIcon"] = "mail";
     var canEdit = AdminPermissions.Has(User, AdminPermissions.InvoiceAppContentEdit);
 }
+<partial name="_SystemSettingsTabs" model="@("emails")" />
 @if (Model.Errors.Count > 0) {<div class="ta-alert ta-alert--danger" role="alert">@UiIcon.Render("alert-circle")<div class="ta-alert__body">@foreach (var e in Model.Errors) {<div>@e</div>}</div></div>}
 <div class="ta-content-split">
     <form class="card" asp-action="Email" asp-route-id="@Model.Spec.Code" method="post">

@@ -8,7 +8,7 @@ public sealed record SignupRequest(string? TaxCode, string CompanyName, string C
 
 public enum SignupOutcome { Created, TaxCodeTaken, EmailTaken, AuditUnavailable }
 
-public sealed record SignupResult(SignupOutcome Outcome, Guid UserId = default, Guid CustomerId = default, string? CustomerCode = null);
+public sealed record SignupResult(SignupOutcome Outcome, Guid UserId = default, Guid CustomerId = default, string? CustomerCode = null, string? Username = null);
 
 public interface ISignupStore
 {
@@ -49,19 +49,25 @@ public sealed class SqlSignupStore(IConfiguration configuration) : ISignupStore
                 do code = "CN" + System.Security.Cryptography.RandomNumberGenerator.GetInt32(10_000_000, 100_000_000).ToString(System.Globalization.CultureInfo.InvariantCulture);
                 while (await Exists(cn, tx, "SELECT 1 FROM dbo.Customers WITH (UPDLOCK, HOLDLOCK) WHERE Code=@v AND IsDeleted=0", code));
             }
+            // Operator 2026-11-13: usernames are ASCII letters, digits, '.' and '_' only, so the email is not the username:
+            // it is built from the part before '@' (made unique with a number). The email still signs in (CustomerStore.FindUser).
+            var baseName = UsernameRules.FromEmail(x.Email);
+            var username = baseName;
+            for (var n = 2; await Exists(cn, tx, "SELECT 1 FROM dbo.Users WITH (UPDLOCK, HOLDLOCK) WHERE NormalizedUsername=@v", username.ToUpperInvariant()); n++)
+                username = baseName + n.ToString(System.Globalization.CultureInfo.InvariantCulture);
             var customerId = Guid.NewGuid();
             var userId = Guid.NewGuid();
             await Run(cn, tx, "INSERT dbo.Customers(Id,Code,Name,TaxCode,Email,Phone,Address,CustomerType,Status,IsActive,CreatedBy) VALUES(@id,@code,@name,@tax,@email,@phone,@address,@type,'ACTIVE',1,@u)",
                 ("@id", customerId), ("@code", code), ("@name", x.CompanyName), ("@tax", x.TaxCode), ("@email", x.Email), ("@phone", x.Phone), ("@address", x.Address), ("@type", x.CustomerType), ("@u", userId));
-            await Run(cn, tx, "INSERT dbo.Users(Id,Username,NormalizedUsername,DisplayName,Email,NormalizedEmail,Phone,PasswordHash,MustChangePassword,Status,IsActive,CreatedBy) VALUES(@u,@email,@ne,@display,@email,@ne,@phone,@hash,1,'ACTIVE',1,@u)",
-                ("@u", userId), ("@email", x.Email), ("@ne", normalizedEmail), ("@display", x.ContactName), ("@phone", x.Phone), ("@hash", x.PasswordHash));
+            await Run(cn, tx, "INSERT dbo.Users(Id,Username,NormalizedUsername,DisplayName,Email,NormalizedEmail,Phone,PasswordHash,MustChangePassword,Status,IsActive,CreatedBy) VALUES(@u,@name,@nu,@display,@email,@ne,@phone,@hash,1,'ACTIVE',1,@u)",
+                ("@u", userId), ("@name", username), ("@nu", username.ToUpperInvariant()), ("@email", x.Email), ("@ne", normalizedEmail), ("@display", x.ContactName), ("@phone", x.Phone), ("@hash", x.PasswordHash));
             await Run(cn, tx, "INSERT dbo.CustomerPortalMemberships(Id,UserId,CustomerId,PortalRole,IsActive,CreatedBy) VALUES(NEWID(),@u,@c,'OWNER',1,@u)",
                 ("@u", userId), ("@c", customerId));
             // No password data and no contact details in the audit row: ids, code and type only.
             await AuditSql.WriteOrThrowAsync(cn, tx, AuditPolicy.RequireDurable(configuration), userId, AuditAction, "dbo.Customers", customerId.ToString(),
                 "{}", AuditSql.Json(("code", code), ("customerType", x.CustomerType), ("userId", userId), ("role", "OWNER"), ("via", "CUSTOMER_PORTAL"), ("termsAccepted", x.TermsVersion)), x.Ip);
             await tx.CommitAsync();
-            return new(SignupOutcome.Created, userId, customerId, code);
+            return new(SignupOutcome.Created, userId, customerId, code, username);
         }
         catch (AuditUnavailableException) { await tx.RollbackAsync(); return new(SignupOutcome.AuditUnavailable); }
         catch (SqlException ex) when (ex.Number is 2601 or 2627)

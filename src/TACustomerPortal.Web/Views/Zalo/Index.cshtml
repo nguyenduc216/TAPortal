@@ -1,0 +1,67 @@
+@model TAPortal.Integrations.ZaloMiniApp.ZaloPanel
+@{
+    ViewData["Title"] = "Ứng dụng trên Zalo";
+    ViewData["Eyebrow"] = "Tài khoản";
+    ViewData["Subtitle"] = "Đăng nhập ứng dụng Hóa đơn tự động trên Zalo bằng số điện thoại của tài khoản.";
+    var challenge = TempData["OtpChallenge"]?.ToString();   // TempData turns a GUID string back into a Guid
+}
+<div class="cp-grid cp-grid--2" data-cp-zalo>
+    <section class="cp-card">
+        <div class="cp-card__head"><span class="cp-blob cp-blob--blue">@UiIcon.Render("phone")</span><h2>Số điện thoại</h2>
+            @if (Model.Verified) {<span class="cp-badge cp-badge--green" style="margin-left:auto" data-cp-phone-verified>Đã xác minh</span>}
+            else {<span class="cp-badge cp-badge--gold" style="margin-left:auto" data-cp-phone-unverified>Chưa xác minh</span>}
+        </div>
+        <div class="cp-card__body">
+            @if (Model.VerificationRequired && !Model.Verified)
+            {
+                <div class="cp-alert" role="alert" data-cp-verify-required>Vui lòng xác minh số điện thoại bằng mã OTP gửi qua Zalo để tiếp tục sử dụng Hóa đơn tự động.</div>
+            }
+            <p class="cp-hint">Chỉ Zalo đăng ký bằng đúng số điện thoại này mới đăng nhập được ứng dụng trên Zalo của tài khoản.</p>
+            <form method="post" asp-action="Phone" class="cp-field">
+                <label class="cp-label" for="zaloPhone">Số điện thoại di động</label>
+                <div class="cp-input-wrap">@UiIcon.Render("phone")<input id="zaloPhone" name="phone" class="cp-input" type="tel" inputmode="tel" autocomplete="tel" maxlength="20" value="@Model.Phone" placeholder="0912345678" required /></div>
+                <button type="submit" class="cp-btn" style="margin-top:8px">@UiIcon.Render("device-floppy")<span>Lưu số điện thoại</span></button>
+            </form>
+            @if (!Model.Verified && Model.PhoneIsMobile)
+            {
+                @if (!Model.OtpAvailable)
+                {
+                    <p class="cp-hint" data-cp-otp-unavailable>Chức năng gửi mã OTP qua Zalo chưa được bật. Vui lòng liên hệ bộ phận hỗ trợ Hóa đơn tự động.</p>
+                }
+                else if (challenge is not null)
+                {
+                    <form method="post" asp-action="ConfirmOtp" class="cp-field" data-cp-otp-form>
+                        <input type="hidden" name="challengeId" value="@challenge" />
+                        <label class="cp-label" for="otpCode">Mã xác minh (6 chữ số)</label>
+                        <div class="cp-input-wrap">@UiIcon.Render("key")<input id="otpCode" name="code" class="cp-input" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required autofocus /></div>
+                        <button type="submit" class="cp-btn cp-btn--primary" style="margin-top:8px">@UiIcon.Render("shield-check")<span>Xác minh</span></button>
+                    </form>
+                    <form method="post" asp-action="SendOtp"><button type="submit" class="cp-btn">@UiIcon.Render("refresh")<span>Gửi lại mã</span></button></form>
+                }
+                else
+                {
+                    <form method="post" asp-action="SendOtp"><button type="submit" class="cp-btn cp-btn--primary" data-cp-send-otp>@UiIcon.Render("send")<span>Gửi mã xác minh qua Zalo</span></button></form>
+                }
+            }
+        </div>
+    </section>
+    <section class="cp-card">
+        <div class="cp-card__head"><span class="cp-blob cp-blob--gold">@UiIcon.Render("qrcode")</span><h2>Đăng nhập ứng dụng trên Zalo</h2></div>
+        <div class="cp-card__body">
+            <p class="cp-hint">Mở mã QR rồi quét bằng Zalo để vào ứng dụng. Mỗi mã chỉ dùng được một lần trong 5 phút. Bạn cũng có thể đăng nhập ngay trong ứng dụng bằng tên đăng nhập và mật khẩu.</p>
+            @if (!Model.QrAvailable) {<p class="cp-hint" data-cp-qr-unavailable>Ứng dụng trên Zalo đang được chuẩn bị, mã QR sẽ có khi ứng dụng hoạt động.</p>}
+            else if (!Model.Verified) {<p class="cp-hint">Xác minh số điện thoại trước để mở mã QR.</p>}
+            <p class="cp-hint" data-cp-links>@(Model.LinkCount > 0 ? $"Tài khoản đang liên kết với {Model.LinkCount} tài khoản Zalo." : "Tài khoản chưa liên kết với Zalo nào.")</p>
+        </div>
+        <div class="cp-card__foot">
+            @if (Model.LinkCount > 0)
+            {
+                <form method="post" asp-action="Unlink" onsubmit="return confirm('Hủy liên kết Zalo? Lần sau mở ứng dụng trên Zalo sẽ cần đăng nhập lại.')"><button type="submit" class="cp-btn cp-btn--danger">@UiIcon.Render("x")<span>Hủy liên kết Zalo</span></button></form>
+            }
+            @if (Model.QrAvailable && Model.Verified)
+            {
+                <form method="post" asp-action="Qr" style="margin-left:auto"><button type="submit" class="cp-btn cp-btn--primary" data-cp-open-qr>@UiIcon.Render("qrcode")<span>Mở mã QR</span></button></form>
+            }
+        </div>
+    </section>
+</div>

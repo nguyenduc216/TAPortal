@@ -1,5 +1,6 @@
 @model CustomerOverviewVm
 @inject IContractStore Contracts
+@inject ICustomerStaffStore Staff
 @{
     var ws = (CustomerWorkspaceHeader)ViewData["Workspace"]!;
     ViewData["Title"] = ws.Code;
@@ -30,6 +31,49 @@
                 <dt>Điện thoại</dt><dd>@(c.Phone ?? "—")</dd>
                 <dt>Địa chỉ</dt><dd>@(c.Address ?? "—")</dd>
             </dl>
+        </div>
+    </section>
+    @{
+        // Nhân sự phụ trách (migration 041): read here like the contracts card; unreadable => a short notice.
+        CustomerStaffView? staff = null;
+        try { staff = await Staff.GetAsync(c.Id); } catch (Exception) { staff = null; }
+        var canEditStaff = AdminPermissions.Has(User, AdminPermissions.CustomersUpdate);
+    }
+    <section class="card" aria-labelledby="staffTitle" data-ta-customer-staff>
+        <div class="card-header"><h2 class="card-title" id="staffTitle">@UiIcon.Render("users")Nhân sự phụ trách</h2></div>
+        <div class="card-body">
+            @if (staff is null)
+            {
+                <p class="text-secondary mb-0">Không đọc được nhân sự phụ trách (chi tiết đã ghi vào nhật ký ứng dụng).</p>
+            }
+            else
+            {
+                <dl class="ta-dl">
+                    <dt>Quản lý</dt><dd>@(staff.Manager?.Name ?? "—")</dd>
+                    <dt>Thực hiện</dt><dd>@(staff.Executors.Any() ? string.Join(", ", staff.Executors.Select(e => e.Name)) : "—")</dd>
+                </dl>
+                @if (canEditStaff)
+                {
+                    <details class="ta-staff-edit mt-3">
+                        <summary class="btn btn-sm">@UiIcon.Render("pencil")<span>Phân công</span></summary>
+                        <form class="mt-3" method="post" asp-action="Staff" asp-route-id="@c.Id">
+                            <label class="form-label" for="staffManager">Quản lý (một người)</label>
+                            <select class="form-select" id="staffManager" name="manager">
+                                <option value="">— Chưa có —</option>
+                                @foreach (var e in staff.Employees) {<option value="@e.Id" selected="@(e.Id == staff.Manager?.EmployeeId)">@e.Name</option>}
+                            </select>
+                            <div class="form-label mt-3">Nhân viên thực hiện</div>
+                            <div class="ta-check-list" role="group" aria-label="Nhân viên thực hiện">
+                                @foreach (var e in staff.Employees)
+                                {
+                                    <label class="form-check"><input class="form-check-input" type="checkbox" name="executors" value="@e.Id" checked="@staff.Executors.Any(x => x.EmployeeId == e.Id)" /><span class="form-check-label">@e.Name</span></label>
+                                }
+                            </div>
+                            <button class="btn btn-ta-gold mt-3" type="submit">@UiIcon.Render("device-floppy")<span>Lưu phân công</span></button>
+                        </form>
+                    </details>
+                }
+            }
         </div>
     </section>
     <section class="card" aria-labelledby="portalTitle" data-ta-portal-summary>

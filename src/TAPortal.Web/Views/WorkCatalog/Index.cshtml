@@ -1,0 +1,76 @@
+@model IReadOnlyList<WorkCatalogItem>
+@{
+    ViewData["Title"] = "Danh mục công việc";
+    ViewData["Subtitle"] = "Tên các đầu việc nhân viên được chọn khi tạo việc. Gõ vài chữ là gợi ý; không nhập tên tự do được. Chi tiết từng việc ghi ở phần Mô tả.";
+    ViewData["PageIcon"] = "list-tree";
+    var active = Model.Count(x => x.IsActive);
+    var nextSort = (Model.Count == 0 ? 0 : Model.Max(x => x.SortOrder)) + 10;
+}
+@section PageActions {
+    <button class="btn btn-ta-gold" type="button" data-ta-catalog-open="catDlgnew">@UiIcon.Render("plus")<span>Thêm đầu việc</span></button>
+}
+@if (ViewData["Unavailable"] is true)
+{
+    <div class="ta-alert ta-alert--warning" role="alert">@UiIcon.Render("alert-triangle")<div class="ta-alert__body">Chưa đọc được danh mục công việc (bảng dbo.WorkTaskCatalog chưa sẵn sàng).</div></div>
+}
+@* Danh mục công việc (operator 2026-11-16): the grid shows text; Tên / Mô tả / Thứ tự are edited in place (double-click or
+   Enter, then Enter to save, Esc to cancel) and Đang dùng saves on its own; Sửa / Thêm đầu việc open a popup with the
+   general information and the checklist. *@
+<section class="card ta-table-card" aria-label="Danh sách đầu việc">
+    <div class="ta-table-toolbar">
+        @* Typing filters the table and lists the matching entry names (accents optional); picking one narrows the table to it. *@
+        <div class="ta-search ta-combo" data-ta-combo data-ta-combo-free>@UiIcon.Render("search")<input class="form-control" type="search" aria-label="Tìm đầu việc" placeholder="Tìm đầu việc..." autocomplete="off"
+            role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="catalogSearchList" oninput="taFilterRows(this.value,'catalogTable')" data-ta-combo-input />
+            <ul class="ta-combo__list" id="catalogSearchList" role="listbox" hidden>
+                @foreach (var x in Model)
+                {
+                    <li class="ta-combo__option" role="option" aria-selected="false" data-value="@x.Name"><span class="ta-combo__name">@x.Name</span>@if (!x.IsActive) {<small class="ta-combo__desc">Đã ẩn</small>}</li>
+                }
+                <li class="ta-combo__empty" data-ta-combo-empty hidden>Không có đầu việc phù hợp.</li>
+            </ul>
+        </div>
+        <span class="small text-secondary ms-auto">@active đang dùng · @(Model.Count - active) đã ẩn</span>
+    </div>
+    @if (Model.Count == 0)
+    {
+        <div class="ta-empty"><span class="ta-empty__icon">@UiIcon.Render("list-tree")</span><p class="ta-empty__title">Chưa có đầu việc nào</p><p class="ta-empty__text">Khi danh mục còn trống, nhân viên vẫn nhập tên việc tự do.</p>
+            <button class="btn btn-ta-gold mt-2" type="button" data-ta-catalog-open="catDlgnew">@UiIcon.Render("plus")<span>Thêm đầu việc</span></button></div>
+    }
+    else
+    {
+        <div class="ta-table-wrap">
+            <table class="ta-table ta-table-stack ta-catalog-grid" id="catalogTable">
+                <thead><tr><th scope="col">Đầu việc</th><th scope="col">Mô tả</th><th scope="col" class="text-end">Thứ tự</th><th scope="col">Đang dùng</th><th scope="col">Checklist</th><th scope="col" class="text-end">Số việc</th><th scope="col" class="ta-col-actions">Thao tác</th></tr></thead>
+                <tbody>
+                @foreach (var x in Model)
+                {
+                    var key = x.Id.ToString("N");
+                    var form = "catForm" + key;
+                    var dlg = "catDlg" + key;
+                    <tr data-ta-row class="@(x.IsActive ? null : "text-secondary")">
+                        <td data-label="Đầu việc"><span class="ta-inline fw-semibold" tabindex="0" data-ta-inline="Input.Name" data-ta-inline-form="@form" data-ta-inline-required title="Bấm đúp để sửa nhanh">@x.Name</span></td>
+                        <td data-label="Mô tả"><span class="ta-inline" tabindex="0" data-ta-inline="Input.Description" data-ta-inline-form="@form" title="Bấm đúp để sửa nhanh">@x.Description</span></td>
+                        <td data-label="Thứ tự" class="text-end"><span class="ta-inline ta-inline--num" tabindex="0" data-ta-inline="Input.SortOrder" data-ta-inline-form="@form" data-ta-inline-type="number" title="Bấm đúp để sửa nhanh">@x.SortOrder</span></td>
+                        <td data-label="Đang dùng"><label class="form-check form-switch m-0" title="Bật / tắt là lưu ngay"><input class="form-check-input" type="checkbox" checked="@x.IsActive" data-ta-inline-active="@form" aria-label="Đang dùng: @x.Name" /></label></td>
+                        <td data-label="Checklist"><button class="btn btn-sm btn-ghost-secondary ta-catalog-steps" type="button" data-ta-catalog-open="@dlg" data-ta-catalog-tab="checklist" title="Xem / sửa checklist">@UiIcon.Render("checks")<span>@(x.ChecklistCount == 0 ? "Chưa có" : x.ChecklistCount + " mục")</span></button></td>
+                        <td class="text-end" data-label="Số việc">@if (x.TaskCount > 0) {<a class="ta-catalog-count" asp-controller="Work" asp-action="Tasks" asp-route-q="@x.Name" title="Xem các công việc “@x.Name”">@x.TaskCount</a>} else {<span class="text-secondary">0</span>}</td>
+                        <td class="ta-col-actions">
+                            <div class="ta-actions">
+                                <button class="ta-icon-btn" type="button" data-ta-catalog-open="@dlg" aria-label="Sửa @x.Name" title="Sửa">@UiIcon.Render("pencil")</button>
+                                <form method="post" asp-action="Delete" asp-route-id="@x.Id" onsubmit="return confirm('Xóa đầu việc này khỏi danh mục? Các công việc đã tạo vẫn giữ tên.');"><button class="ta-icon-btn" type="submit" aria-label="Xóa @x.Name" title="Xóa">@UiIcon.Render("trash")</button></form>
+                            </div>
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+        <div class="ta-empty d-none" data-ta-no-results><span class="ta-empty__icon">@UiIcon.Render("search-off")</span><p class="ta-empty__title">Không tìm thấy đầu việc</p></div>
+        <div class="card-footer text-secondary small">Bấm đúp vào tên, mô tả hoặc thứ tự để sửa nhanh ngay trên lưới (Enter để lưu, Esc để bỏ); bật / tắt “Đang dùng” là lưu ngay. Bấm @UiIcon.Render("pencil") để sửa đầy đủ cả checklist. Đổi tên một đầu việc thì các công việc và việc lặp đang mang tên cũ cũng đổi theo. Checklist mẫu cũng bổ sung được từ trang chi tiết một công việc đang làm.</div>
+    }
+</section>
+<partial name="_CatalogDialog" model="new WorkCatalogDialogVm(null, nextSort)" />
+@foreach (var x in Model)
+{
+    <partial name="_CatalogDialog" model="new WorkCatalogDialogVm(x, nextSort)" />
+}

@@ -68,7 +68,7 @@
         popup.hidden = true;
         popup.innerHTML = `<div class="ta-input-icon">${iconHtml('taIconSearch')}<input type="text" class="form-control form-control-sm" role="combobox" aria-autocomplete="list" aria-expanded="true" aria-controls="${uid}List" autocomplete="off" placeholder="Tìm kiếm..." aria-label="Tìm trong danh sách" /></div><ul class="ta-select__list" role="listbox" id="${uid}List"></ul><div class="ta-select__empty" hidden>Không tìm thấy kết quả</div>`;
         popup.dataset.taTransient = 'true';
-        (select.closest('.modal') || document.body).appendChild(popup);
+        (select.closest('.modal, dialog') || document.body).appendChild(popup);
         const search = popup.querySelector('input');
         const list = popup.querySelector('ul');
         const empty = popup.querySelector('.ta-select__empty');
@@ -375,3 +375,45 @@ document.addEventListener('submit', (event) => {
         event.stopImmediatePropagation();
     }
 }, true);
+
+// ⋮ menus in the sticky actions column: lift the open cell above the next rows (fallback for browsers without :has).
+(() => {
+    const cell = (event) => event.target?.closest?.('td.ta-col-actions');
+    document.addEventListener('show.bs.dropdown', (event) => cell(event)?.classList.add('ta-menu-open'));
+    document.addEventListener('hidden.bs.dropdown', (event) => cell(event)?.classList.remove('ta-menu-open'));
+})();
+
+// Ảnh đại diện: crop the chosen picture to a centred square, shrink it to 320 px JPEG, then send the form.
+(() => {
+    const SIZE = 320;
+    const shrink = (file) => new Promise((resolve, reject) => {
+        const url = URL.createObjectURL(file);
+        const img = new Image();
+        img.onload = () => {
+            const side = Math.min(img.naturalWidth, img.naturalHeight);
+            const canvas = document.createElement('canvas');
+            canvas.width = SIZE; canvas.height = SIZE;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, SIZE, SIZE);
+            ctx.drawImage(img, (img.naturalWidth - side) / 2, (img.naturalHeight - side) / 2, side, side, 0, 0, SIZE, SIZE);
+            URL.revokeObjectURL(url);
+            canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error('toBlob')), 'image/jpeg', 0.86);
+        };
+        img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('decode')); };
+        img.src = url;
+    });
+    document.addEventListener('change', async (event) => {
+        const input = event.target;
+        if (!(input instanceof HTMLInputElement) || !input.matches('[data-ta-photo-input]') || !input.files?.length) return;
+        const form = input.closest('form');
+        try {
+            const blob = await shrink(input.files[0]);
+            const data = new DataTransfer();
+            data.items.add(new File([blob], 'avatar.jpg', { type: 'image/jpeg' }));
+            input.files = data.files;
+        } catch {
+            // Not decodable here (e.g. HEIC): send the file as is; the server explains what it accepts.
+        }
+        form.requestSubmit ? form.requestSubmit() : form.submit();
+    });
+})();

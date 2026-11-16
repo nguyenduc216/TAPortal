@@ -6,7 +6,11 @@ public sealed record WorkDashboardVm(WorkActor? Actor, IReadOnlyList<WorkTaskCar
 
 public sealed record WorkListVm(WorkActor? Actor, IReadOnlyList<WorkTaskRow>? Tasks, WorkTaskFilter Filter, WorkLookups Lookups, DateOnly Today, string? Error);
 
-public sealed record WorkDetailsVm(WorkTaskDetail Detail, DateOnly Today, string? Error);
+// Danh mục công việc: the add / edit popup of one entry (Item null = a new entry).
+public sealed record WorkCatalogDialogVm(WorkCatalogItem? Item, int NextSort);
+
+// Documents: null when the documents table is not available (migration 058). ActorId: who may change a document's note.
+public sealed record WorkDetailsVm(WorkTaskDetail Detail, DateOnly Today, string? Error, bool CanEditCatalog = false, IReadOnlyList<WorkDocument>? Documents = null, Guid? ActorId = null);
 
 public sealed record WorkEditVm(Guid? Id, WorkTaskInput Input, WorkActor Actor, WorkLookups Lookups, string? Stamp);
 
@@ -36,3 +40,7 @@ public sealed record PeoplePickerVm(string Name, bool Multiple, IReadOnlyList<Wo
     /// <summary>A stable avatar colour per person (same person, same colour on every page).</summary>
     public static int Tone(Guid id) => (int)((uint)id.GetHashCode() % (uint)Tones);
 }
+
+// Tên công việc chosen from Danh mục công việc (operator 2026-11-14): typing suggests entries; with an empty catalogue the
+// field is a plain text box.
+public sealed record CatalogTitleVm(string Id, string? Value, int MaxLength, IReadOnlyList<WorkCatalogEntry> Catalog);

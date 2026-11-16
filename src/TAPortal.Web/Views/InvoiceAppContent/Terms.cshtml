@@ -1,5 +1,7 @@
 @model TAPortal.Web.Controllers.InvoiceAppTermsVm
 @{
+    ViewData["ParentTitle"] = "Cấu hình hệ thống";
+    ViewData["ParentController"] = "SystemSettings";
     ViewData["Title"] = "Điều khoản dịch vụ";
     ViewData["Heading"] = "Điều khoản sử dụng dịch vụ Hóa đơn tự động";
     ViewData["Subtitle"] = "Hiện trong hộp thoại khi khách bấm \"điều khoản sử dụng\" lúc đăng ký và tại trang /account/terms của Hóa đơn tự động.";
@@ -8,6 +10,7 @@
     var articles = PortalTerms.Parse(Model.Body);
     var placeholders = System.Text.RegularExpressions.Regex.Matches(Model.Body, @"\[[^\]\r\n]{2,40}\]").Select(m => m.Value).Distinct().ToList();
 }
+<partial name="_SystemSettingsTabs" model="@("terms")" />
 @if (Model.Errors.Count > 0) {<div class="ta-alert ta-alert--danger" role="alert">@UiIcon.Render("alert-circle")<div class="ta-alert__body">@foreach (var e in Model.Errors) {<div>@e</div>}</div></div>}
 @if (placeholders.Count > 0) {<div class="ta-alert ta-alert--warning" role="status">@UiIcon.Render("alert-triangle")<div class="ta-alert__body">Còn @placeholders.Count chỗ cần điền: @string.Join(", ", placeholders). Khách hàng đang thấy nguyên các chỗ này.</div></div>}
 <div class="ta-content-split">

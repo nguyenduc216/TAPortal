@@ -38,14 +38,15 @@ public interface IDashboardStore
 // Each KPI is one aggregate over a single table (or one row per membership), so JOINs cannot double count.
 public static class DashboardSql
 {
-    public const string Users = """
+    // T.A staff accounts only, the same set as Quản lý người dùng (customer accounts are counted under customers).
+    public static readonly string Users = """
 SELECT
- SUM(CASE WHEN IsDeleted=0 AND IsActive=1 AND Status='ACTIVE' THEN 1 ELSE 0 END),
- SUM(CASE WHEN IsDeleted=0 AND IsActive=0 THEN 1 ELSE 0 END),
- SUM(CASE WHEN IsDeleted=0 AND IsActive=1 AND (Status IS NULL OR Status<>'ACTIVE') THEN 1 ELSE 0 END),
- SUM(CASE WHEN IsDeleted=1 THEN 1 ELSE 0 END)
-FROM dbo.Users;
-""";
+ SUM(CASE WHEN u.IsDeleted=0 AND u.IsActive=1 AND u.Status='ACTIVE' THEN 1 ELSE 0 END),
+ SUM(CASE WHEN u.IsDeleted=0 AND u.IsActive=0 THEN 1 ELSE 0 END),
+ SUM(CASE WHEN u.IsDeleted=0 AND u.IsActive=1 AND (u.Status IS NULL OR u.Status<>'ACTIVE') THEN 1 ELSE 0 END),
+ SUM(CASE WHEN u.IsDeleted=1 THEN 1 ELSE 0 END)
+FROM dbo.Users u WHERE
+""" + StaffAccountSql.IsStaff("u") + ";";
     public const string Customers = """
 SELECT
  SUM(CASE WHEN IsActive=1 AND Status='ACTIVE' THEN 1 ELSE 0 END),

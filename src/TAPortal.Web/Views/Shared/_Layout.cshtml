@@ -1,3 +1,4 @@
+@inject IEmployeePhotoStore AvatarPhotos
 @functions {
     // SYS_ADMIN sees everything; other accounts see only the items their permissions open (same rule as the policies).
     private bool Can(string code) => AdminPermissions.Has(User, code);
@@ -35,7 +36,12 @@
     var canWork = Can(AdminPermissions.TasksView);
     var canTaskTemplates = Can(AdminPermissions.TaskTemplatesManage);
     var canTaskReport = Can(AdminPermissions.TaskReportView);
+    var canTaskCatalog = Can(AdminPermissions.TaskCatalogManage);
+    var impersonation = Impersonation.Read(User);
+    var canImpersonationLog = impersonation is null && Can(AdminPermissions.UsersImpersonate);
     var displayName = User.FindFirst("display_name")?.Value ?? User.Identity?.Name;
+    var avatarIndex = await AvatarPhotos.IndexAsync();
+    Guid? currentUserId = Guid.TryParse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value, out var cuid) ? cuid : null;
     // Role names (never codes); "Người dùng TAPortal" only when no role name is known.
     var roleNames = User.FindAll("role_name").Select(c => c.Value).Where(v => !string.IsNullOrWhiteSpace(v)).Distinct().ToList();
     var roleLabel = isAdmin ? "Quản trị hệ thống" : roleNames.Count > 0 ? string.Join(", ", roleNames) : "Người dùng TAPortal";
@@ -57,12 +63,20 @@
     <link rel="shortcut icon" href="~/favicon.ico" asp-append-version="true" />
     <link rel="apple-touch-icon" sizes="180x180" href="~/images/apple-touch-icon.png" asp-append-version="true" />
     <meta name="theme-color" content="#082746" />
+    @* Cài ứng dụng + thông báo đẩy (wwwroot/js/ta-app.js, PushController). *@
+    <link rel="manifest" href="@Url.Content("~/manifest.webmanifest")" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="T.A Portal" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="ta-app" data-sw="@Url.Content("~/sw.js")" data-scope="@Url.Content("~/")" data-key="@Url.Content("~/push/key")" data-subscribe="@Url.Content("~/push/subscribe")" data-unsubscribe="@Url.Content("~/push/unsubscribe")" data-test="@Url.Content("~/push/test")" />
     <link rel="stylesheet" href="~/lib/tabler/tabler.min.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/ta-design.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/ta-admin.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/ta-website.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/ta-review.css" asp-append-version="true" />
 </head>
-<body>
+<body data-ta-identity="@(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value)@(impersonation is null ? "" : "/" + impersonation.SessionId)" data-ta-no-prefetch="@(impersonation is null ? null : "true")">
 @if (User.Identity?.IsAuthenticated == true)
 {
     <a class="ta-skip-link" href="#taMain">Bỏ qua đến nội dung chính</a>
@@ -83,7 +97,7 @@
                     </ul>
                 </div>
             }
-            @if (canWork || canTaskTemplates || canTaskReport)
+            @if (canWork || canTaskTemplates || canTaskReport || canTaskCatalog)
             {
                 <div class="ta-nav__group">
                     <p class="ta-nav__section">Công việc</p>
@@ -91,11 +105,12 @@
                         @if (canWork) {<li><a class="ta-nav__link" asp-controller="Work" asp-action="Index" title="Việc của tôi" aria-current="@(IsCurrent("Work", "Index") ? "page" : null)"><span class="ta-nav__icon">@UiIcon.Render("checks")</span><span class="ta-nav__label">Việc của tôi</span></a></li>
                         <li><a class="ta-nav__link" asp-controller="Work" asp-action="Tasks" title="Danh sách công việc" aria-current="@(IsCurrent("Work", "Tasks") || IsCurrent("Work", "Details") || IsCurrent("Work", "Create") || IsCurrent("Work", "Edit") ? "page" : null)"><span class="ta-nav__icon">@UiIcon.Render("list-tree")</span><span class="ta-nav__label">Danh sách công việc</span></a></li>}
                         @if (canTaskTemplates) {<li><a class="ta-nav__link" asp-controller="Work" asp-action="Templates" title="Việc lặp theo kỳ" aria-current="@(IsCurrent("Work", "Templates") || IsCurrent("Work", "TemplateCreate") || IsCurrent("Work", "TemplateEdit") ? "page" : null)"><span class="ta-nav__icon">@UiIcon.Render("refresh")</span><span class="ta-nav__label">Việc lặp theo kỳ</span></a></li>}
+                        @if (canTaskCatalog) {<li><a class="ta-nav__link" asp-controller="WorkCatalog" asp-action="Index" title="Danh mục công việc" aria-current="@(IsCurrent("WorkCatalog") ? "page" : null)"><span class="ta-nav__icon">@UiIcon.Render("list-tree")</span><span class="ta-nav__label">Danh mục công việc</span></a></li>}
                         @if (canTaskReport) {<li><a class="ta-nav__link" asp-controller="Work" asp-action="Report" title="Báo cáo tiến độ" aria-current="@(IsCurrent("Work", "Report") ? "page" : null)"><span class="ta-nav__icon">@UiIcon.Render("chart-bar")</span><span class="ta-nav__label">Báo cáo tiến độ</span></a></li>}
                     </ul>
                 </div>
             }
-            @if (canCustomers || canReconciliation || Can(AdminPermissions.ContractsView))
+            @if (canCustomers || canReconciliation || Can(AdminPermissions.ContractsView) || Can(AdminPermissions.ContractReviewView))
             {
                 <div class="ta-nav__group">
                     <p class="ta-nav__section">Quản lý khách hàng</p>
@@ -104,6 +119,7 @@
                         @if (canCustomers) {<li><a class="ta-nav__link" asp-controller="Customers" asp-action="Index" title="Khách hàng" aria-current="@(IsCurrent("Customers") || IsCurrent("CustomerPortalAccounts") ? "page" : null)"><span class="ta-nav__icon">@UiIcon.Render("building")</span><span class="ta-nav__label">Khách hàng</span></a></li>}
                         @if (canReconciliation) {<li><a class="ta-nav__link" asp-controller="PaymentReconciliation" asp-action="Index" title="Đối soát giao dịch" aria-current="@(IsCurrent("PaymentReconciliation") ? "page" : null)"><span class="ta-nav__icon">@UiIcon.Render("report-money")</span><span class="ta-nav__label">Đối soát giao dịch</span></a></li>}
                         @if (Can(AdminPermissions.ContractsView)) {<li><a class="ta-nav__link" asp-controller="Contracts" asp-action="Index" title="Hợp đồng" aria-current="@(IsCurrent("Contracts") ? "page" : null)"><span class="ta-nav__icon">@UiIcon.Render("file-text")</span><span class="ta-nav__label">Hợp đồng</span></a></li>}
+                        @if (Can(AdminPermissions.ContractReviewView)) {<li><a class="ta-nav__link" asp-controller="ContractReviews" asp-action="Index" title="Hợp đồng dịch vụ" aria-current="@(IsCurrent("ContractReviews") || IsCurrent("LegalLibrary") || IsCurrent("LegalWatch") ? "page" : null)"><span class="ta-nav__icon">@UiIcon.Render("checks")</span><span class="ta-nav__label">Hợp đồng dịch vụ</span></a></li>}
                     </ul>
                 </div>
             }
@@ -117,16 +133,6 @@
                         <li><a class="ta-nav__link" asp-controller="WebsiteMedia" asp-action="Index" title="Thư viện ảnh" aria-current="@(IsCurrent("WebsiteMedia") ? "page" : null)"><span class="ta-nav__icon">@UiIcon.Render("photo")</span><span class="ta-nav__label">Thư viện ảnh</span></a></li>
                         <li><a class="ta-nav__link" asp-controller="Website" asp-action="Settings" title="Cài đặt chung" aria-current="@(IsCurrent("Website", "Settings") ? "page" : null)"><span class="ta-nav__icon">@UiIcon.Render("settings")</span><span class="ta-nav__label">Cài đặt chung</span></a></li>}
                         @if (Can(AdminPermissions.WebsiteLeadsView)) {<li><a class="ta-nav__link" asp-controller="WebsiteLeads" asp-action="Index" title="Liên hệ – báo giá" aria-current="@(IsCurrent("WebsiteLeads") ? "page" : null)"><span class="ta-nav__icon">@UiIcon.Render("inbox")</span><span class="ta-nav__label">Liên hệ – báo giá</span></a></li>}
-                    </ul>
-                </div>
-            }
-            @if (Can(AdminPermissions.InvoiceAppContentView))
-            {
-                <div class="ta-nav__group">
-                    <p class="ta-nav__section">Hóa đơn tự động</p>
-                    <ul class="ta-nav__list">
-                        <li><a class="ta-nav__link" asp-controller="InvoiceAppContent" asp-action="Index" title="Mẫu email" aria-current="@(IsCurrent("InvoiceAppContent", "Index") || IsCurrent("InvoiceAppContent", "Email") ? "page" : null)"><span class="ta-nav__icon">@UiIcon.Render("mail")</span><span class="ta-nav__label">Mẫu email</span></a></li>
-                        <li><a class="ta-nav__link" asp-controller="InvoiceAppContent" asp-action="Terms" title="Điều khoản dịch vụ" aria-current="@(IsCurrent("InvoiceAppContent", "Terms") ? "page" : null)"><span class="ta-nav__icon">@UiIcon.Render("file-text")</span><span class="ta-nav__label">Điều khoản dịch vụ</span></a></li>
                     </ul>
                 </div>
             }
@@ -179,11 +185,14 @@
                     {
                         <li><a class="ta-nav__link" asp-controller="Menus" asp-action="Index" title="Quản lý menu" aria-current="@(IsCurrent("Menus") ? "page" : null)"><span class="ta-nav__icon">@UiIcon.Render("list-tree")</span><span class="ta-nav__label">Quản lý menu</span></a></li>
                     }
-                    @if (User.IsInRole("SYS_ADMIN"))
+                    @if (canImpersonationLog)
                     {
-                        <li><a class="ta-nav__link" asp-controller="PasswordSecurity" asp-action="Index" title="Bảo mật mật khẩu" aria-current="@(IsCurrent("PasswordSecurity") ? "page" : null)"><span class="ta-nav__icon">@UiIcon.Render("lock")</span><span class="ta-nav__label">Bảo mật mật khẩu</span></a></li>
+                        <li><a class="ta-nav__link" asp-controller="Impersonation" asp-action="Index" title="Lịch sử truy cập hộ" aria-current="@(IsCurrent("Impersonation") ? "page" : null)"><span class="ta-nav__icon">@UiIcon.Render("user-shield")</span><span class="ta-nav__label">Lịch sử truy cập hộ</span></a></li>
                     }
-                    <li><span class="ta-nav__link is-disabled" aria-disabled="true" title="Cấu hình hệ thống — chức năng chưa triển khai"><span class="ta-nav__icon">@UiIcon.Render("settings")</span><span class="ta-nav__label">Cấu hình hệ thống</span><span class="ta-nav__badge">Sắp có</span></span></li>
+                    @if (TAPortal.Web.Controllers.SystemSettingsController.CanOpen(User))
+                    {
+                        <li><a class="ta-nav__link" asp-controller="SystemSettings" asp-action="Index" title="Cấu hình hệ thống" aria-current="@(IsCurrent("SystemSettings") || IsCurrent("InvoiceAppContent") || IsCurrent("PasswordSecurity") ? "page" : null)"><span class="ta-nav__icon">@UiIcon.Render("settings")</span><span class="ta-nav__label">Cấu hình hệ thống</span></a></li>
+                    }
                     <li><span class="ta-nav__link is-disabled" aria-disabled="true" title="Nhật ký hoạt động — chức năng chưa triển khai"><span class="ta-nav__icon">@UiIcon.Render("file-text")</span><span class="ta-nav__label">Nhật ký hoạt động</span><span class="ta-nav__badge">Sắp có</span></span></li>
                 </ul>
             </div>
@@ -191,6 +200,18 @@
     </aside>
     <div class="ta-overlay" data-ta-drawer-close hidden></div>
     <div class="ta-main">
+        @if (impersonation is not null)
+        {
+            @* "Truy cập hộ": always visible, outside the swapped <main>; leaving reloads the whole page (data-ta-hard). *@
+            <div class="ta-imp-bar" role="status" aria-live="polite">
+                @UiIcon.Render("user-shield")
+                <div class="ta-imp-bar__text">
+                    <strong>@impersonation.ActorDisplayName</strong> đang truy cập hộ <strong>@displayName</strong> (@User.Identity?.Name)
+                    <span class="ta-imp-bar__meta">Lý do: @impersonation.Reason · Hết hạn lúc @impersonation.ExpiresAtUtc.AddHours(7).ToString("HH:mm")</span>
+                </div>
+                <form asp-controller="Account" asp-action="StopImpersonation" method="post" data-ta-hard><button class="btn btn-sm ta-imp-bar__exit" type="submit" aria-label="Thoát truy cập hộ">@UiIcon.Render("logout")<span>Thoát truy cập hộ</span></button></form>
+            </div>
+        }
         <header class="ta-topbar">
             <button type="button" class="ta-icon-btn" data-ta-sidebar-toggle aria-controls="taSidebar" aria-expanded="true" aria-label="Thu gọn/mở rộng menu">@UiIcon.Render("menu-2")</button>
             <nav class="ta-breadcrumb" aria-label="Breadcrumb" id="taCrumbs" data-ta-swap>
@@ -200,9 +221,11 @@
                     <li><span aria-current="page">@ViewData["Title"]</span></li>
                 </ol>
             </nav>
-            <div class="dropdown ms-auto">
+            <div class="ta-topbar__end ms-auto">
+            <button type="button" class="btn btn-sm ta-app-install" data-ta-app-install hidden title="Cài T.A Portal lên thiết bị này">@UiIcon.Render("download")<span>Cài ứng dụng</span></button>
+            <div class="dropdown">
                 <a href="#" class="ta-user" data-bs-toggle="dropdown" role="button" aria-expanded="false" aria-label="Tài khoản: @displayName">
-                    <span class="ta-avatar" aria-hidden="true">@Initials(displayName)</span>
+                    @Avatar.Render(avatarIndex, displayName, userId: currentUserId, initials: Initials(displayName))
                     <span class="ta-user__text"><span class="ta-user__name d-block">@displayName</span><span class="ta-user__role d-block">@roleLabel</span></span>
                     @UiIcon.Render("chevron-down", "text-secondary")
                 </a>
@@ -210,9 +233,12 @@
                     <div class="dropdown-header">Đăng nhập với <strong>@User.Identity?.Name</strong></div>
                     <a asp-controller="Account" asp-action="Profile" class="dropdown-item">@UiIcon.Render("user-circle")<span>Hồ sơ cá nhân</span></a>
                     <a asp-controller="Account" asp-action="ChangePassword" class="dropdown-item">@UiIcon.Render("key")<span>Đổi mật khẩu</span></a>
+                    <a asp-controller="Account" asp-action="Zalo" class="dropdown-item">@UiIcon.Render("qrcode")<span>Zalo Mini App</span></a>
+                    <a href="@Url.Action("Profile", "Account")#app" class="dropdown-item">@UiIcon.Render("device-mobile")<span>Ứng dụng &amp; thông báo</span></a>
                     <div class="dropdown-divider"></div>
-                    <form asp-controller="Account" asp-action="Logout" method="post"><button class="dropdown-item text-danger" type="submit" data-ta-loading data-ta-loading-text="Đang đăng xuất...">@UiIcon.Render("logout")<span>Đăng xuất</span></button></form>
+                    <form asp-controller="Account" asp-action="Logout" method="post" data-ta-logout><button class="dropdown-item text-danger" type="submit" data-ta-loading data-ta-loading-text="Đang đăng xuất...">@UiIcon.Render("logout")<span>Đăng xuất</span></button></form>
                 </div>
+            </div>
             </div>
         </header>
         <main id="taMain" class="ta-content ta-page-enter" tabindex="-1" data-ta-swap>
@@ -243,10 +269,12 @@ else
 <script src="~/js/ta-update.js" asp-append-version="true"></script>
 <script src="~/js/ta-shell.js" asp-append-version="true"></script>
 <script src="~/js/ta-portal.js" asp-append-version="true"></script>
+<script src="~/js/ta-app.js" asp-append-version="true"></script>
 @* Loaded on every page: the shell swaps <main> without running page scripts; it initialises on ta:load and is idle elsewhere. *@
 <script src="~/js/ta-tingee-sandbox.js" asp-append-version="true"></script>
 <script src="~/js/ta-work.js" asp-append-version="true"></script>
 <script src="~/js/ta-website.js" asp-append-version="true"></script>
+<script src="~/js/ta-review.js" asp-append-version="true"></script>
 @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

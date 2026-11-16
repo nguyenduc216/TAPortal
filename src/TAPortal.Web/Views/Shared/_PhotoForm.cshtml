@@ -1,0 +1,22 @@
+@model PhotoFormVm
+@* Ảnh đại diện: choosing a file shrinks it in the browser (square, 320 px, JPEG) and saves at once. *@
+<div class="ta-photo-form">
+    @Model.Avatar
+    <div class="d-flex flex-column gap-2">
+        <form method="post" action="@Model.Action" enctype="multipart/form-data" data-ta-photo-form>
+            @Html.AntiForgeryToken()
+            <label class="btn btn-sm btn-soft-primary mb-0">@UiIcon.Render("photo")<span>@(Model.HasPhoto ? "Đổi ảnh đại diện" : "Tải ảnh đại diện")</span>
+                <input class="visually-hidden" type="file" name="photo" accept="image/jpeg,image/png,image/webp" data-ta-photo-input aria-label="Chọn ảnh đại diện" />
+            </label>
+        </form>
+        @if (Model.HasPhoto)
+        {
+            <form method="post" action="@Model.Action" onsubmit="return confirm('Xóa ảnh đại diện?');">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="remove" value="true" />
+                <button class="btn btn-sm" type="submit">@UiIcon.Render("trash")<span>Xóa ảnh</span></button>
+            </form>
+        }
+        <div class="form-hint">JPG, PNG hoặc WebP; ảnh được cắt vuông và thu nhỏ trước khi gửi.</div>
+    </div>
+</div>

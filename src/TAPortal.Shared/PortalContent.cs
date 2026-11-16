@@ -144,6 +144,11 @@ public static partial class PortalEmailRenderer
     public static bool HasBlock(string body, string key) =>
         body.Replace("\r", "").Split('\n').Any(l => l.Trim() == "{{" + key + "}}");
 
+    // Operator 2026-11-13: every email ends with "hoadontudong.vn - 1 sản phẩm của Tư vấn giải pháp T.A", the maker linking to T.A's website.
+    public const string ProductHost = "hoadontudong.vn";
+    public const string ProductUrl = "https://hoadontudong.vn";
+    public const string MakerUrl = "https://tuvangiaiphapta.vn";
+
     public static RenderedEmail Render(EmailTemplateSpec spec, string? subject, string? body, IReadOnlyDictionary<string, string> values, string baseUrl)
     {
         subject = string.IsNullOrWhiteSpace(subject) ? spec.DefaultSubject : subject;
@@ -205,7 +210,6 @@ public static partial class PortalEmailRenderer
             text.Append('\n');
         }
 
-        var host = Uri.TryCreate(baseUrl, UriKind.Absolute, out var u) ? u.Host : baseUrl;
         var page = $"""
             <!doctype html>
             <html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{E(subjectText)}</title></head>
@@ -218,12 +222,12 @@ public static partial class PortalEmailRenderer
             </td></tr>
             <tr><td style="padding:26px 28px 10px">{html}</td></tr>
             <tr><td style="padding:14px 28px;background:#f8fafc;border-top:1px solid #e2e8f0;border-radius:0 0 14px 14px;font-size:12.5px;color:#64748b">
-            Email tự động từ Hóa đơn tự động, vui lòng không trả lời email này.<br><a href="{E(baseUrl)}" style="color:#1d4ed8;text-decoration:none">{E(host)}</a>
+            Email tự động từ Hóa đơn tự động, vui lòng không trả lời email này.<br><a href="{ProductUrl}" style="color:#1d4ed8;text-decoration:none">{ProductHost}</a> - 1 sản phẩm của <a href="{MakerUrl}" style="color:#1d4ed8;text-decoration:none">Tư vấn giải pháp T.A</a>
             </td></tr>
             </table></td></tr></table>
             </body></html>
             """;
-        return new(subjectText, text.ToString().TrimEnd() + "\n", page);
+        return new(subjectText, text.ToString().TrimEnd() + $"\n\n--\n{ProductHost} - 1 sản phẩm của Tư vấn giải pháp T.A ({MakerUrl})\n", page);
     }
 
     private static string E(string s) => WebUtility.HtmlEncode(s);

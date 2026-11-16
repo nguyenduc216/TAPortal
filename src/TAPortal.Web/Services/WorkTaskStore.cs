@@ -24,7 +24,7 @@ public sealed record WorkTaskRow(
 
 public sealed record WorkChecklistItem(Guid Id, string Title, bool IsDone, DateTime? DoneAt, string? DoneByName);
 
-public sealed record WorkActivity(Guid Id, string Kind, string? Body, string? StatusFrom, string? StatusTo, DateTime CreatedAt, string? ActorName);
+public sealed record WorkActivity(Guid Id, string Kind, string? Body, string? StatusFrom, string? StatusTo, DateTime CreatedAt, string? ActorName, Guid? ActorId = null);
 
 public sealed record WorkTaskCard(WorkTaskRow Task, IReadOnlyList<WorkChecklistItem> Checklist, IReadOnlyList<WorkActivity> Recent, bool CanEdit, bool IsOwner);
 
@@ -38,7 +38,15 @@ public sealed record WorkLookupEmployee(Guid Id, string Code, string Name, bool 
 public sealed record WorkLookupCustomer(Guid Id, string Code, string Name);
 public sealed record WorkLookupContract(Guid Id, Guid CustomerId, string ContractNo, string Title);
 
-public sealed record WorkLookups(IReadOnlyList<WorkLookupEmployee> Employees, IReadOnlyList<WorkLookupCustomer> Customers, IReadOnlyList<WorkLookupContract> Contracts)
+// Why an employee counts a customer as theirs (task list filter): MANAGER / EXECUTOR (dbo.CustomerStaff, migration 041),
+// TASK (owner or co-worker of a task of that customer) or CONTRACT (owner of a contract of that customer).
+public sealed record WorkLookupLink(Guid EmployeeId, Guid CustomerId, string Source);
+
+// Catalog: the active entries of Danh mục công việc (empty = task names are free).
+public sealed record WorkCatalogEntry(string Name, string? Description, string? ChecklistText = null);
+
+public sealed record WorkLookups(IReadOnlyList<WorkLookupEmployee> Employees, IReadOnlyList<WorkLookupCustomer> Customers, IReadOnlyList<WorkLookupContract> Contracts,
+    IReadOnlyList<WorkLookupLink>? Links = null, IReadOnlyList<WorkCatalogEntry>? Catalog = null)
 {
     public static readonly WorkLookups Empty = new([], [], []);
 }
@@ -50,6 +58,33 @@ public sealed class WorkTaskFilter
     public Guid? Owner { get; set; }
     public Guid? Customer { get; set; }
     public string? Q { get; set; }
+    // Filter popup (operator 2026-11-13): several statuses, employees (owner or co-worker) and customers at once, and a date
+    // range on the start date, the due date or the completion day. The single Status/Owner/Customer above stay for old links.
+    public List<string> Statuses { get; set; } = [];
+    public List<Guid> Employees { get; set; } = [];
+    public List<Guid> Customers { get; set; } = [];
+    public string? DateField { get; set; }     // due | start | created | done
+    public DateTime? From { get; set; }
+    public DateTime? To { get; set; }
+
+    public static readonly string[] DateFields = ["due", "start", "created", "done"];
+    public static string DateFieldLabel(string? f) => f switch { "start" => "Ngày bắt đầu", "created" => "Ngày tạo", "done" => "Ngày hoàn thành", _ => "Hạn hoàn thành" };
+
+    /// <summary>The effective filter values: old single-value parameters folded in, unknown values dropped.</summary>
+    public (List<string> Statuses, List<Guid> Employees, List<Guid> Customers, string DateField) Normalized()
+    {
+        var statuses = Statuses.Append(Status ?? "").Where(x => WorkTaskPolicy.Statuses.Contains(x) || x is "open" or "overdue").Distinct().ToList();
+        var employees = Employees.Append(Owner ?? Guid.Empty).Where(x => x != Guid.Empty).Distinct().ToList();
+        var customers = Customers.Append(Customer ?? Guid.Empty).Where(x => x != Guid.Empty).Distinct().ToList();
+        return (statuses, employees, customers, DateField is "start" or "created" or "done" ? DateField : "due");
+    }
+
+    /// <summary>How many filters of the popup are in use (the badge on the "Bộ lọc" button).</summary>
+    public int ActiveCount()
+    {
+        var (st, em, cu, _) = Normalized();
+        return (st.Count > 0 ? 1 : 0) + (em.Count > 0 ? 1 : 0) + (cu.Count > 0 ? 1 : 0) + (From is not null || To is not null ? 1 : 0);
+    }
 }
 
 public sealed class WorkTaskInput
@@ -110,10 +145,12 @@ public interface IWorkTaskStore
     Task<WorkResult> CreateAsync(Guid actor, WorkTaskInput input);
     Task<WorkResult> UpdateAsync(Guid actor, Guid id, WorkTaskInput input, string stamp);
     Task<WorkResult> DeleteAsync(Guid actor, Guid id);
-    Task<WorkResult> SetStatusAsync(Guid actor, Guid id, string status);
+    Task<WorkResult> SetStatusAsync(Guid actor, Guid id, string status, string? note = null);
     Task<WorkResult> AddChecklistAsync(Guid actor, Guid id, string title);
     Task<WorkResult> SetChecklistAsync(Guid actor, Guid id, Guid itemId, bool done);
     Task<WorkResult> RemoveChecklistAsync(Guid actor, Guid id, Guid itemId);
+    // Checklist order (operator 2026-11-16, drag and drop): @items are the task's items in the new order.
+    Task<WorkResult> OrderChecklistAsync(Guid actor, Guid id, IReadOnlyList<Guid> items);
     Task<WorkResult> CommentAsync(Guid actor, Guid id, string body);
     Task<IReadOnlyList<WorkTemplateRow>> TemplatesAsync();
     Task<WorkTemplateRow?> TemplateAsync(Guid id);
@@ -176,10 +213,13 @@ SELECT x.TaskId,x.Id,x.Kind,x.Body,x.StatusFrom,x.StatusTo,x.CreatedAt,x.Display
 
  AND (@scope<>'mine' OR t.OwnerEmployeeId=@emp OR EXISTS(SELECT 1 FROM dbo.WorkTaskMembers sm WHERE sm.TaskId=t.Id AND sm.EmployeeId=@emp AND sm.IsActive=1))
  AND (@scope<>'created' OR t.CreatedBy=@actor)
- AND (@status IS NULL OR t.Status=@status OR (@status='open' AND t.Status IN ('NEW','IN_PROGRESS'))
-      OR (@status='overdue' AND t.Status IN ('NEW','IN_PROGRESS') AND t.DueDate<@today))
- AND (@owner IS NULL OR t.OwnerEmployeeId=@owner)
- AND (@customer IS NULL OR t.CustomerId=@customer)
+ AND (@statuses IS NULL OR @statuses LIKE '%,'+t.Status+',%' OR (@statuses LIKE '%,open,%' AND t.Status IN ('NEW','IN_PROGRESS'))
+      OR (@statuses LIKE '%,overdue,%' AND t.Status IN ('NEW','IN_PROGRESS') AND t.DueDate<@today))
+ AND (@employees IS NULL OR @employees LIKE '%,'+CONVERT(varchar(36),t.OwnerEmployeeId)+',%'
+      OR EXISTS(SELECT 1 FROM dbo.WorkTaskMembers fm WHERE fm.TaskId=t.Id AND fm.IsActive=1 AND @employees LIKE '%,'+CONVERT(varchar(36),fm.EmployeeId)+',%'))
+ AND (@customers IS NULL OR (t.CustomerId IS NOT NULL AND @customers LIKE '%,'+CONVERT(varchar(36),t.CustomerId)+',%'))
+ AND (@from IS NULL OR CASE @dateField WHEN 'start' THEN t.StartDate WHEN 'created' THEN CAST(DATEADD(HOUR,7,t.CreatedAt) AS date) WHEN 'done' THEN CAST(DATEADD(HOUR,7,t.CompletedAt) AS date) ELSE t.DueDate END>=@from)
+ AND (@to IS NULL OR CASE @dateField WHEN 'start' THEN t.StartDate WHEN 'created' THEN CAST(DATEADD(HOUR,7,t.CreatedAt) AS date) WHEN 'done' THEN CAST(DATEADD(HOUR,7,t.CompletedAt) AS date) ELSE t.DueDate END<=@to)
  AND (@q IS NULL OR t.Title LIKE @q ESCAPE '\' OR t.TaskNo LIKE @q ESCAPE '\')
 ORDER BY CASE WHEN t.Status IN ('NEW','IN_PROGRESS') THEN 0 ELSE 1 END, CASE WHEN t.DueDate IS NULL THEN 1 ELSE 0 END, t.DueDate, t.LastActivityAt DESC;
 """;
@@ -192,15 +232,29 @@ WHERE t.Id=@id;
 SELECT e.Id,e.EmployeeCode,e.FullName FROM dbo.WorkTaskMembers m JOIN dbo.Employees e ON e.Id=m.EmployeeId WHERE m.TaskId=@id AND m.IsActive=1 ORDER BY e.FullName;
 SELECT i.Id,i.Title,i.IsDone,i.DoneAt,du.DisplayName FROM dbo.WorkTaskChecklistItems i LEFT JOIN dbo.Users du ON du.Id=i.DoneBy
 WHERE i.TaskId=@id AND i.IsDeleted=0 ORDER BY i.SortOrder,i.CreatedAt;
-SELECT a.Id,a.Kind,a.Body,a.StatusFrom,a.StatusTo,a.CreatedAt,u.DisplayName FROM dbo.WorkTaskActivities a LEFT JOIN dbo.Users u ON u.Id=a.CreatedBy
+SELECT a.Id,a.Kind,a.Body,a.StatusFrom,a.StatusTo,a.CreatedAt,u.DisplayName,a.CreatedBy FROM dbo.WorkTaskActivities a LEFT JOIN dbo.Users u ON u.Id=a.CreatedBy
 WHERE a.TaskId=@id ORDER BY a.CreatedAt;
+IF COL_LENGTH(N'dbo.WorkTaskActivities', N'ImpersonatorUserId') IS NOT NULL
+ EXEC sp_executesql N'SELECT a.Id,iu.DisplayName FROM dbo.WorkTaskActivities a JOIN dbo.Users iu ON iu.Id=a.ImpersonatorUserId WHERE a.TaskId=@id', N'@id uniqueidentifier', @id=@id;
+ELSE SELECT TOP 0 CAST(NULL AS uniqueidentifier), CAST(NULL AS nvarchar(200));
 """;
 
     public const string Lookups = """
 SELECT e.Id,e.EmployeeCode,e.FullName,CASE WHEN e.UserId IS NULL THEN 0 ELSE 1 END FROM dbo.Employees e WHERE e.IsDeleted=0 AND e.IsActive=1 ORDER BY e.FullName;
 SELECT Id,Code,Name FROM dbo.Customers WHERE IsDeleted=0 ORDER BY Name;
 SELECT Id,CustomerId,ContractNo,Title FROM dbo.CustomerContracts WHERE IsDeleted=0 AND Status IN ('DRAFT','ACTIVE') ORDER BY ContractNo;
-""";
+IF OBJECT_ID(N'dbo.CustomerStaff', N'U') IS NOT NULL
+ SELECT s.EmployeeId,s.CustomerId,s.Role FROM dbo.CustomerStaff s JOIN dbo.Customers c ON c.Id=s.CustomerId AND c.IsDeleted=0
+ UNION SELECT t.OwnerEmployeeId,t.CustomerId,'TASK' FROM dbo.WorkTasks t WHERE t.IsDeleted=0 AND t.CustomerId IS NOT NULL
+ UNION SELECT m.EmployeeId,t.CustomerId,'TASK' FROM dbo.WorkTaskMembers m JOIN dbo.WorkTasks t ON t.Id=m.TaskId WHERE m.IsActive=1 AND t.IsDeleted=0 AND t.CustomerId IS NOT NULL
+ UNION SELECT k.OwnerEmployeeId,k.CustomerId,'CONTRACT' FROM dbo.CustomerContracts k WHERE k.IsDeleted=0 AND k.OwnerEmployeeId IS NOT NULL;
+ELSE
+ SELECT t.OwnerEmployeeId,t.CustomerId,'TASK' FROM dbo.WorkTasks t WHERE t.IsDeleted=0 AND t.CustomerId IS NOT NULL
+ UNION SELECT m.EmployeeId,t.CustomerId,'TASK' FROM dbo.WorkTaskMembers m JOIN dbo.WorkTasks t ON t.Id=m.TaskId WHERE m.IsActive=1 AND t.IsDeleted=0 AND t.CustomerId IS NOT NULL
+ UNION SELECT k.OwnerEmployeeId,k.CustomerId,'CONTRACT' FROM dbo.CustomerContracts k WHERE k.IsDeleted=0 AND k.OwnerEmployeeId IS NOT NULL;
+""" + WorkCatalogSql.Active;
+
+    public const string TemplateTitle = "SELECT Title FROM dbo.WorkTaskTemplates WHERE Id=@id AND IsDeleted=0;";
 
     public const string ForUpdate = """
 SELECT t.Status,t.OwnerEmployeeId,t.CreatedBy,t.RowVersion,
@@ -257,9 +311,17 @@ UPDATE dbo.WorkTaskChecklistItems SET IsDone=@done,DoneAt=CASE WHEN @done=1 THEN
 WHERE Id=@item AND TaskId=@id AND IsDeleted=0 AND IsDone<>@done;
 """;
     public const string RemoveChecklist = "UPDATE dbo.WorkTaskChecklistItems SET IsDeleted=1,DeletedAt=SYSUTCDATETIME(),DeletedBy=@by WHERE Id=@item AND TaskId=@id AND IsDeleted=0;";
+    public const string OrderChecklist = "UPDATE dbo.WorkTaskChecklistItems SET SortOrder=@n WHERE Id=@item AND TaskId=@id AND IsDeleted=0 AND SortOrder<>@n;";
     public const string Counts = "SELECT COUNT(1),SUM(CASE WHEN IsDone=1 THEN 1 ELSE 0 END) FROM dbo.WorkTaskChecklistItems WHERE TaskId=@id AND IsDeleted=0;";
 
-    public const string Activity = "INSERT dbo.WorkTaskActivities(TaskId,Kind,Body,StatusFrom,StatusTo,CreatedBy) VALUES(@id,@kind,@body,@from,@to,@by);";
+    // "Truy cập hộ" (042): @imp names the person who really acted under the account @by.
+    public const string Activity = """
+IF @imp IS NOT NULL AND COL_LENGTH(N'dbo.WorkTaskActivities', N'ImpersonatorUserId') IS NOT NULL
+ EXEC sp_executesql N'INSERT dbo.WorkTaskActivities(TaskId,Kind,Body,StatusFrom,StatusTo,CreatedBy,ImpersonatorUserId) VALUES(@id,@kind,@body,@from,@to,@by,@imp)',
+  N'@id uniqueidentifier,@kind varchar(20),@body nvarchar(4000),@from varchar(20),@to varchar(20),@by uniqueidentifier,@imp uniqueidentifier',
+  @id=@id,@kind=@kind,@body=@body,@from=@from,@to=@to,@by=@by,@imp=@imp;
+ELSE INSERT dbo.WorkTaskActivities(TaskId,Kind,Body,StatusFrom,StatusTo,CreatedBy) VALUES(@id,@kind,@body,@from,@to,@by);
+""";
 
     // ---- Templates --------------------------------------------------------------------------------------------------
     public const string Templates = """
@@ -369,6 +431,10 @@ public sealed class SqlWorkTaskStore(IConfiguration configuration, ILogger<SqlWo
             WorkTaskPolicy.CanEdit(a.ViewAll, a.CanAssign, t.CreatedBy == a.UserId), t.OwnerId == a.EmployeeId)).ToList();
     }
 
+    // ",a,b," for the LIKE '%,x,%' lists of the task filter (SQL Server 2014 has no STRING_SPLIT); null = no filter.
+    private static object Csv(IEnumerable<string> values) { var l = values.ToList(); return l.Count == 0 ? DBNull.Value : "," + string.Join(",", l) + ","; }
+    private static string Upper(Guid id) => id.ToString().ToUpperInvariant();
+
     private static List<T> Bucket<T>(Dictionary<Guid, List<T>> map, Guid key) => map.TryGetValue(key, out var l) ? l : map[key] = [];
 
     public async Task<IReadOnlyList<WorkTaskRow>> ListAsync(Guid actor, WorkTaskFilter filter)
@@ -379,10 +445,11 @@ public sealed class SqlWorkTaskStore(IConfiguration configuration, ILogger<SqlWo
         var scope = filter.Scope is "created" or "all" ? filter.Scope : "mine";
         if (scope == "all" && !a.ViewAll) scope = "mine";
         var q = WorkTaskPolicy.Clean(filter.Q, 100);
+        var (statuses, employees, customers, dateField) = filter.Normalized();
         var list = new List<WorkTaskRow>();
         await using var cmd = Command(cn, null, WorkTaskSql.List, [.. Scope(a), ("@scope", scope),
-            ("@status", (object?)(filter.Status is { } s && (WorkTaskPolicy.Statuses.Contains(s) || s is "open" or "overdue") ? s : null) ?? DBNull.Value),
-            ("@owner", Db(filter.Owner)), ("@customer", Db(filter.Customer)), ("@today", new DateParam(WorkClock.Today().ToDateTime(TimeOnly.MinValue))),
+            ("@statuses", Csv(statuses)), ("@employees", Csv(employees.Select(Upper))), ("@customers", Csv(customers.Select(Upper))),
+            ("@dateField", dateField), ("@from", Date(filter.From)), ("@to", Date(filter.To)), ("@today", new DateParam(WorkClock.Today().ToDateTime(TimeOnly.MinValue))),
             ("@q", q is null ? DBNull.Value : "%" + q.Replace("\\", "\\\\").Replace("%", "\\%").Replace("_", "\\_").Replace("[", "\\[") + "%")]);
         await using var r = await cmd.ExecuteReaderAsync();
         while (await r.ReadAsync()) list.Add(Row(r));
@@ -410,7 +477,13 @@ public sealed class SqlWorkTaskStore(IConfiguration configuration, ILogger<SqlWo
         while (await r.ReadAsync()) items.Add(new(r.GetGuid(0), r.GetString(1), r.GetBoolean(2), D(r, 3), S(r, 4)));
         var activities = new List<WorkActivity>();
         await r.NextResultAsync();
-        while (await r.ReadAsync()) activities.Add(new(r.GetGuid(0), r.GetString(1), S(r, 2), S(r, 3), S(r, 4), r.GetDateTime(5), S(r, 6)));
+        while (await r.ReadAsync()) activities.Add(new(r.GetGuid(0), r.GetString(1), S(r, 2), S(r, 3), S(r, 4), r.GetDateTime(5), S(r, 6), r.IsDBNull(7) ? null : r.GetGuid(7)));
+        // Events made during "Truy cập hộ": "<actor> (truy cập hộ <account>)".
+        var actedBy = new Dictionary<Guid, string>();
+        if (await r.NextResultAsync())
+            while (await r.ReadAsync()) actedBy[r.GetGuid(0)] = r.GetString(1);
+        if (actedBy.Count > 0)
+            activities = activities.Select(x => actedBy.TryGetValue(x.Id, out var who) ? x with { ActorName = WorkTaskPolicy.ActedUnder(who, x.ActorName) } : x).ToList();
         return new(row, desc, customer, contract, contractLabel, createdBy, members, items, activities,
             WorkTaskPolicy.CanEdit(a.ViewAll, a.CanAssign, row.CreatedBy == a.UserId), row.OwnerId == a.EmployeeId, stamp, template);
     }
@@ -427,7 +500,13 @@ public sealed class SqlWorkTaskStore(IConfiguration configuration, ILogger<SqlWo
         while (await r.ReadAsync()) customers.Add(new(r.GetGuid(0), S(r, 1) ?? "", r.GetString(2)));
         await r.NextResultAsync();
         while (await r.ReadAsync()) contracts.Add(new(r.GetGuid(0), r.GetGuid(1), r.GetString(2), r.GetString(3)));
-        return new(employees, customers, contracts);
+        var links = new List<WorkLookupLink>();
+        if (await r.NextResultAsync())
+            while (await r.ReadAsync()) links.Add(new(r.GetGuid(0), r.GetGuid(1), r.GetString(2)));
+        var catalog = new List<WorkCatalogEntry>();
+        if (await r.NextResultAsync())
+            while (await r.ReadAsync()) catalog.Add(new(r.GetString(0), S(r, 1), S(r, 2)));
+        return new(employees, customers, contracts, links, catalog);
     }
 
     // ---- Writes -------------------------------------------------------------------------------------------------------
@@ -437,6 +516,8 @@ public sealed class SqlWorkTaskStore(IConfiguration configuration, ILogger<SqlWo
         if (!await ActorPermissionSql.HasPermissionAsync(cn, tx, actor, AdminPermissions.TasksView) || !a.CanCreateAny) return new(WorkOutcome.Forbidden);
         var check = await CheckInput(cn, tx, a, input);
         if (check is not null) return check;
+        if (await CatalogTitle(cn, tx, input.Title) is not string title) return new(WorkOutcome.Invalid, Message: WorkCatalogPolicy.NotInCatalog);
+        input.Title = title;
         var id = Guid.NewGuid();
         var no = await NextTaskNo(cn, tx);
         if (no is null) return new(WorkOutcome.Invalid, Message: "Chưa cấu hình dãy số mã công việc (TASK_CODE).");
@@ -463,6 +544,12 @@ public sealed class SqlWorkTaskStore(IConfiguration configuration, ILogger<SqlWo
         await using (var r = await cmd.ExecuteReaderAsync())
             while (await r.ReadAsync()) current.Add(r.GetGuid(0));
         var title = input.Title.Trim(); var desc = WorkTaskPolicy.Clean(input.Description, WorkTaskPolicy.DescriptionMax);
+        // A renamed task takes its new name from the catalogue; an unchanged older name is kept.
+        if (title != t.Title)
+        {
+            if (await CatalogTitle(cn, tx, title) is not string named) return new(WorkOutcome.Invalid, Message: WorkCatalogPolicy.NotInCatalog);
+            title = named;
+        }
         var start = input.StartDate is DateTime s ? DateOnly.FromDateTime(s) : (DateOnly?)null; var due = input.DueDate is DateTime d ? DateOnly.FromDateTime(d) : (DateOnly?)null;
         var changed = title != t.Title || desc != t.Description || input.CustomerId != t.CustomerId || input.ContractId != t.ContractId || input.OwnerEmployeeId != t.OwnerId
             || input.Priority != t.Priority || start != t.StartDate || due != t.DueDate;
@@ -486,18 +573,23 @@ public sealed class SqlWorkTaskStore(IConfiguration configuration, ILogger<SqlWo
         return new(WorkOutcome.Saved, id);
     });
 
-    public async Task<WorkResult> SetStatusAsync(Guid actor, Guid id, string status) => await InTransaction(async (cn, tx) =>
+    public async Task<WorkResult> SetStatusAsync(Guid actor, Guid id, string status, string? note = null) => await InTransaction(async (cn, tx) =>
     {
         var (a, t) = await Load(cn, tx, actor, id);
         if (t is null || !t.CanSee(a)) return new(WorkOutcome.NotFound);
         if (t.Status == status) return new(WorkOutcome.NoChange, id);
         if (!WorkTaskPolicy.CanSetStatus(t.Status, status, t.CanEdit(a))) return new(WorkOutcome.Forbidden);
-        if (status == WorkTaskPolicy.Done && WorkTaskPolicy.CheckDone(t.Total, t.DoneCount) != WorkOutcome.Saved)
-            return new(WorkOutcome.ChecklistIncomplete, id, t.Total == 0
-                ? "Cần có checklist công việc trước khi chuyển sang Hoàn thành."
-                : $"Còn {t.Total - t.DoneCount} mục checklist chưa hoàn thành.");
+        string? doneNote = null;
+        if (status == WorkTaskPolicy.Done)
+        {
+            if (WorkTaskPolicy.CheckDone(t.Total, t.DoneCount) != WorkOutcome.Saved)
+                return new(WorkOutcome.ChecklistIncomplete, id, $"Còn {t.Total - t.DoneCount} mục checklist chưa hoàn thành.");
+            doneNote = WorkTaskPolicy.DoneNote(note);
+            if (doneNote is null) return new(WorkOutcome.Invalid, id, WorkTaskPolicy.DoneNoteRequired);
+        }
         await Exec(cn, tx, WorkTaskSql.SetStatus, ("@id", id), ("@status", status), ("@progress", (int)WorkTaskPolicy.Progress(status, t.Total, t.DoneCount)), ("@by", actor));
         await Log(cn, tx, id, "STATUS", null, t.Status, status, actor);
+        if (doneNote is not null) await Log(cn, tx, id, "COMMENT", WorkTaskPolicy.DoneNotePrefix + doneNote, null, null, actor);
         return new(WorkOutcome.Saved, id);
     });
 
@@ -546,6 +638,20 @@ public sealed class SqlWorkTaskStore(IConfiguration configuration, ILogger<SqlWo
         return new(WorkOutcome.Saved, id);
     });
 
+    public async Task<WorkResult> OrderChecklistAsync(Guid actor, Guid id, IReadOnlyList<Guid> items) => await InTransaction(async (cn, tx) =>
+    {
+        if (items.Count == 0 || items.Count > WorkTaskPolicy.ChecklistItemsMax || items.Distinct().Count() != items.Count)
+            return new(WorkOutcome.Invalid, id, "Thứ tự checklist không hợp lệ, vui lòng tải lại trang.");
+        var (a, t) = await Load(cn, tx, actor, id);
+        if (t is null || !t.CanSee(a)) return new(WorkOutcome.NotFound);
+        var changed = 0;
+        for (var n = 0; n < items.Count; n++)
+            changed += await Exec(cn, tx, WorkTaskSql.OrderChecklist, ("@id", id), ("@item", items[n]), ("@n", n + 1));
+        if (changed == 0) return new(WorkOutcome.NoChange, id);
+        await Log(cn, tx, id, "CHECKLIST", "Đổi thứ tự checklist", null, null, actor);
+        return new(WorkOutcome.Saved, id);
+    });
+
     public async Task<WorkResult> CommentAsync(Guid actor, Guid id, string body) => await InTransaction(async (cn, tx) =>
     {
         var text = WorkTaskPolicy.Clean(body, WorkTaskPolicy.CommentMax);
@@ -578,6 +684,14 @@ public sealed class SqlWorkTaskStore(IConfiguration configuration, ILogger<SqlWo
     }
 
     // Owner rules: TASKS.ASSIGN may pick any active employee as owner and co-workers; TASKS.CREATE alone only oneself, no co-workers.
+    // The catalogue spelling of a task name; the name itself while the catalogue is empty; null when it is not in the catalogue.
+    private static async Task<string?> CatalogTitle(SqlConnection cn, SqlTransaction tx, string title)
+    {
+        var clean = WorkCatalogPolicy.Clean(title);
+        var value = await Scalar(cn, tx, WorkCatalogSql.Resolve, ("@title", clean));
+        return value is string named ? (named.Length == 0 ? title.Trim() : named) : null;
+    }
+
     private static async Task<WorkResult?> CheckInput(SqlConnection cn, SqlTransaction tx, WorkActor a, WorkTaskInput input)
     {
         input.Priority = WorkTaskPolicy.Priorities.Contains(input.Priority) ? input.Priority : "NORMAL";
@@ -635,7 +749,8 @@ public sealed class SqlWorkTaskStore(IConfiguration configuration, ILogger<SqlWo
     }
 
     private static Task Log(SqlConnection cn, SqlTransaction tx, Guid id, string kind, string? body, string? from, string? to, Guid? actor) =>
-        Exec(cn, tx, WorkTaskSql.Activity, ("@id", id), ("@kind", kind), ("@body", Db(body)), ("@from", Db(from)), ("@to", Db(to)), ("@by", Db(actor)));
+        Exec(cn, tx, WorkTaskSql.Activity, ("@id", id), ("@kind", kind), ("@body", Db(body)), ("@from", Db(from)), ("@to", Db(to)), ("@by", Db(actor)),
+            ("@imp", Db(TAPortal.Shared.ImpersonationAmbient.Current?.ActorUserId)));
 
     // ---- Templates ------------------------------------------------------------------------------------------------------
     public async Task<IReadOnlyList<WorkTemplateRow>> TemplatesAsync() => await ReadTemplates(null);
@@ -660,6 +775,12 @@ public sealed class SqlWorkTaskStore(IConfiguration configuration, ILogger<SqlWo
     {
         if (!await ActorPermissionSql.HasPermissionAsync(cn, tx, actor, AdminPermissions.TaskTemplatesManage)) return new(WorkOutcome.Forbidden);
         if (WorkTemplatePolicy.Validate(input) is string error) return new(WorkOutcome.Invalid, Message: error);
+        var oldTitle = id is Guid tid ? await Scalar(cn, tx, WorkTaskSql.TemplateTitle, ("@id", tid)) as string : null;
+        if (!string.Equals(oldTitle, input.Title.Trim(), StringComparison.Ordinal))
+        {
+            if (await CatalogTitle(cn, tx, input.Title) is not string named) return new(WorkOutcome.Invalid, Message: WorkCatalogPolicy.NotInCatalog);
+            input.Title = named;
+        }
         if (Convert.ToInt32(await Scalar(cn, tx, WorkTaskSql.ActiveEmployee, ("@e", input.OwnerEmployeeId!.Value))) != 1) return new(WorkOutcome.Invalid, Message: "Nhân viên được chọn không còn hoạt động.");
         if (input.CustomerId is Guid c && Convert.ToInt32(await Scalar(cn, tx, WorkTaskSql.CustomerExists, ("@c", c))) != 1) return new(WorkOutcome.Invalid, Message: "Khách hàng không tồn tại.");
         if (input.ContractId is Guid k && Convert.ToInt32(await Scalar(cn, tx, WorkTaskSql.ContractOfCustomer, ("@k", k), ("@c", Db(input.CustomerId)))) != 1)

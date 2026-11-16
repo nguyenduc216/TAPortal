@@ -148,7 +148,7 @@ public sealed class AccountController(ICustomerStore store, PasswordService pass
                 break;
             case SignupOutcome.Created:
                 logger.LogInformation("CUSTOMER_SELF_REGISTERED customer {CustomerId} user {UserId}", result.CustomerId, result.UserId);
-                var sent = await SendLoginDetails(vm, result.CustomerCode, password);
+                var sent = await SendLoginDetails(vm, result.CustomerCode, password, result.Username ?? vm.Email);
                 TempData["SignupEmail"] = vm.Email;
                 TempData["SignupName"] = vm.CompanyName;
                 TempData["SignupSent"] = sent;
@@ -165,7 +165,7 @@ public sealed class AccountController(ICustomerStore store, PasswordService pass
             : RedirectToAction(nameof(Login));
 
     /// <summary>The account exists either way; a mail failure is logged and the page says to use "Quên mật khẩu" or support.</summary>
-    private async Task<bool> SendLoginDetails(SignupVm vm, string? customerCode, string password)
+    private async Task<bool> SendLoginDetails(SignupVm vm, string? customerCode, string password, string username)
     {
         if (!email.IsConfigured) { logger.LogError("CUSTOMER_SIGNUP_EMAIL_NOT_CONFIGURED"); return false; }
         try
@@ -176,7 +176,7 @@ public sealed class AccountController(ICustomerStore store, PasswordService pass
             var mail = PortalEmailRenderer.Render(spec, saved?.Subject, saved?.Body, new Dictionary<string, string>
             {
                 ["NguoiLienHe"] = vm.ContactName, ["TenKhachHang"] = vm.CompanyName, ["MaKhachHang"] = customerCode ?? vm.TaxCode ?? "",
-                ["DiaChiDangNhap"] = baseUrl + "/account/login", ["TenDangNhap"] = vm.Email, ["MatKhau"] = password
+                ["DiaChiDangNhap"] = baseUrl + "/account/login", ["TenDangNhap"] = username, ["MatKhau"] = password
             }, baseUrl);
             await email.SendAsync(new EmailMessage(vm.Email, mail.Subject, mail.TextBody, mail.HtmlBody));
             return true;

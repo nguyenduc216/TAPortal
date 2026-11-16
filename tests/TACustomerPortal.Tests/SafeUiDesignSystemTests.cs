@@ -253,7 +253,8 @@ public sealed class SafeUiDesignSystemTests
         Assert.DoesNotContain("href=\"/CustomerPortalAccounts\"", nav);  // managed inside each customer workspace
         foreach (Match link in Regex.Matches(nav, "<(a|span) class=\"ta-nav__link[^\"]*\"[^>]*>.*?</(a|span)></li>", RegexOptions.Singleline))
             Assert.Contains("<svg class=\"ta-icon\"", link.Value);       // no menu item without an icon
-        Assert.Equal(2, Regex.Matches(nav, "aria-disabled=\"true\"").Count); // unimplemented modules stay visibly disabled
+        Assert.Equal(1, Regex.Matches(nav, "aria-disabled=\"true\"").Count); // unimplemented modules stay visibly disabled
+        Assert.Contains("href=\"/SystemSettings\"", nav);                   // settings pages are tabs of one entry (operator 2026-11-13)
         Assert.Contains("data-ta-drawer-close", html);                       // mobile close button + overlay
         Assert.Contains("href=\"#taMain\"", html);                           // skip link
     }

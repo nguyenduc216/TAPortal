@@ -54,7 +54,9 @@ public sealed class SafeAdminWorkTests
         Assert.True(S.WorkTaskPolicy.CanSetStatus("IN_PROGRESS", "CANCELLED", true));
         Assert.False(S.WorkTaskPolicy.CanSetStatus("CANCELLED", "NEW", false));
         Assert.False(S.WorkTaskPolicy.CanSetStatus("NEW", "APPROVED", true));
-        Assert.Equal(S.WorkOutcome.ChecklistIncomplete, S.WorkTaskPolicy.CheckDone(0, 0));
+        Assert.Equal(S.WorkOutcome.Saved, S.WorkTaskPolicy.CheckDone(0, 0));                 // checklist optional (2026-11-16)
+        Assert.Null(S.WorkTaskPolicy.DoneNote("   "));
+        Assert.Equal("Nộp tờ khai xong", S.WorkTaskPolicy.DoneNote(" Nộp tờ khai xong "));
         Assert.Equal(S.WorkOutcome.ChecklistIncomplete, S.WorkTaskPolicy.CheckDone(3, 2));
         Assert.Equal(S.WorkOutcome.Saved, S.WorkTaskPolicy.CheckDone(3, 3));
         Assert.Equal(66, S.WorkTaskPolicy.Progress("IN_PROGRESS", 3, 2));
@@ -210,6 +212,7 @@ public sealed class SafeAdminWorkTests
         done.Headers.Add("X-TA-Card", "1");
         var refused = WebUtility.HtmlDecode(await (await c.SendAsync(done)).Content.ReadAsStringAsync());
         Assert.Contains("mục checklist chưa hoàn thành", refused);
+        Assert.Contains("data-ta-done-note", cardHtml);                                     // the card carries the result-note box
 
         // Without JavaScript the same form redirects back.
         var plain = await c.PostAsync($"/work/checklistset/{MemoryWork.T1}", Form(token, ("item", MemoryWork.I1.ToString()), ("done", "true"), ("returnUrl", "/work")));
@@ -219,6 +222,45 @@ public sealed class SafeAdminWorkTests
         // An external return URL is ignored.
         var evil = await c.PostAsync($"/work/comment/{MemoryWork.T1}", Form(token, ("body", "x"), ("returnUrl", "https://evil.example/")));
         Assert.Equal($"/Work/Details/{MemoryWork.T1}", evil.Headers.Location!.OriginalString);
+    }
+
+    [Fact]
+    public async Task TheTaskNameIsPickedFromTheCatalogueWhenOneExists()
+    {
+        // Operator 2026-11-14: typing suggests catalogue entries; free text is refused. An empty catalogue keeps a plain box.
+        var store = new MemoryWork();
+        using (var f = Factory("STAFF", store, "TASKS.VIEW", "TASKS.CREATE"))
+        {
+            var plain = WebUtility.HtmlDecode(await (await Client(f).GetAsync("/work/create")).Content.ReadAsStringAsync());
+            Assert.DoesNotContain("data-ta-combo", plain);
+            Assert.Contains("name=\"Input.Title\"", plain);
+        }
+        store.Catalog.Add(new("Kéo hóa đơn", "Kéo hóa đơn đầu ra, đầu vào"));
+        store.Catalog.Add(new("Nhập sao kê ngân hàng", null));
+        using (var f = Factory("STAFF", store, "TASKS.VIEW", "TASKS.CREATE"))
+        {
+            var html = WebUtility.HtmlDecode(await (await Client(f).GetAsync("/work/create")).Content.ReadAsStringAsync());
+            Assert.Contains("data-ta-combo-input", html);
+            Assert.Contains("role=\"combobox\"", html);
+            Assert.Contains("data-value=\"Kéo hóa đơn\"", html);
+            Assert.Contains("data-value=\"Nhập sao kê ngân hàng\"", html);
+            Assert.Contains("Chọn tên trong danh mục công việc", html);
+        }
+    }
+
+    [Fact]
+    public async Task TheTaskListHasASearchBarAndAFilterPopup()
+    {
+        // Operator 2026-11-13: search box + search button + "Bộ lọc" beside it; the popup holds several statuses, employees
+        // and customers, and a date range on a chosen date.
+        using var f = Factory("STAFF", new MemoryWork(), "TASKS.VIEW", "TASKS.ASSIGN");
+        var page = WebUtility.HtmlDecode(await Client(f).GetStringAsync("/work/tasks"));
+        Assert.Contains("data-ta-filter-open", page);
+        Assert.Contains("<dialog class=\"ta-filter-dialog\" data-ta-filter-dialog", page);
+        Assert.Contains("type=\"checkbox\" name=\"statuses\" value=\"overdue\"", page);
+        Assert.Contains("name=\"employees\"", page);
+        Assert.Contains("name=\"dateField\"", page);
+        Assert.Contains("data-ta-filter-links", page);
     }
 
     [Fact]
@@ -285,6 +327,196 @@ public sealed class SafeAdminWorkTests
 
     private static HttpClient Client(WebApplicationFactory<admin::Program> f) => f.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false, BaseAddress = new Uri("https://localhost") });
 
+    [Fact]
+    public async Task EachDeviceTurnsPushNotificationsOnForTheSignedInUser()
+    {
+        var push = new MemoryPush();
+        using var f = Factory("STAFF", new MemoryWork(), "TASKS.VIEW").WithWebHostBuilder(b => b.ConfigureTestServices(s =>
+        {
+            s.RemoveAll<S.IWebPushStore>(); s.AddSingleton<S.IWebPushStore>(push);
+            s.RemoveAll<S.IWebPushSender>(); s.AddSingleton<S.IWebPushSender>(push);
+        }));
+        var c = Client(f);
+        var html = WebUtility.HtmlDecode(await c.GetStringAsync("/work"));
+        Assert.Contains("data-ta-app-install", html);                                                          // "Cài ứng dụng" in the top bar
+        Assert.Contains("data-ta-logout", html);
+        var token = Token(html);
+
+        using var ec = System.Security.Cryptography.ECDiffieHellman.Create(System.Security.Cryptography.ECCurve.NamedCurves.nistP256);
+        var q = ec.ExportParameters(false).Q;
+        var key = S.WebPushCrypto.Encode(new byte[] { 4 }.Concat(q.X!).Concat(q.Y!).ToArray());
+        var auth = S.WebPushCrypto.Encode(new byte[16]);
+        const string endpoint = "https://fcm.googleapis.com/fcm/send/device-1";
+
+        var bad = await c.PostAsync("/push/subscribe", Form(token, ("endpoint", "https://10.0.0.5/x"), ("p256dh", key), ("auth", auth)));
+        Assert.Equal(HttpStatusCode.BadRequest, bad.StatusCode);
+        Assert.Empty(push.Devices);
+        Assert.Equal(HttpStatusCode.BadRequest, (await c.PostAsync("/push/subscribe", new FormUrlEncodedContent([new("endpoint", endpoint)]))).StatusCode);   // antiforgery
+
+        var ok = await c.PostAsync("/push/subscribe", Form(token, ("endpoint", endpoint), ("p256dh", key), ("auth", auth)));
+        Assert.Equal(HttpStatusCode.OK, ok.StatusCode);
+        Assert.Equal((Actor, endpoint), (push.Devices.Single().User, push.Devices.Single().Endpoint));
+
+        var test = await c.PostAsync("/push/test", Form(token));
+        Assert.Equal(HttpStatusCode.OK, test.StatusCode);
+        Assert.Contains("\"sent\":1", await test.Content.ReadAsStringAsync());
+        Assert.Equal(Actor, push.Sent.Single().User);
+
+        Assert.Equal(HttpStatusCode.OK, (await c.PostAsync("/push/unsubscribe", Form(token, ("endpoint", endpoint)))).StatusCode);
+        Assert.Empty(push.Devices);
+    }
+
+    private sealed class MemoryPush : S.IWebPushStore, S.IWebPushSender
+    {
+        public List<(Guid User, string Endpoint)> Devices { get; } = [];
+        public List<(Guid User, S.WebPushMessage Message)> Sent { get; } = [];
+        public Task<S.WebPushVapid?> VapidAsync(string subject) => Task.FromResult<S.WebPushVapid?>(new("BKey", new byte[32], subject));
+        public Task<bool> SaveAsync(Guid user, string endpoint, string p256dh, string auth, string? device)
+        {
+            Devices.RemoveAll(d => d.Endpoint == endpoint);
+            Devices.Add((user, endpoint));
+            return Task.FromResult(true);
+        }
+        public Task RemoveAsync(Guid user, string endpoint) { Devices.RemoveAll(d => d.User == user && d.Endpoint == endpoint); return Task.CompletedTask; }
+        public Task<IReadOnlyList<S.WebPushSubscription>?> ForUserAsync(Guid user) => Task.FromResult<IReadOnlyList<S.WebPushSubscription>?>([]);
+        public Task MarkAsync(Guid subscription, bool sent, bool gone) => Task.CompletedTask;
+        public Task<S.WebPushSendResult> SendAsync(Guid user, S.WebPushMessage message, CancellationToken ct = default)
+        {
+            Sent.Add((user, message));
+            return Task.FromResult(new S.WebPushSendResult(Devices.Count(d => d.User == user), 0, 0));
+        }
+    }
+
+    [Fact]
+    public void TaskDocumentsAcceptImagesWordPdfAndExcelByContent()
+    {
+        Assert.Equal("application/pdf", S.WorkDocumentPolicy.CheckFile("hd.pdf", "%PDF-1.7 x"u8.ToArray()).ContentType);
+        Assert.Equal("image/png", S.WorkDocumentPolicy.CheckFile("a.PNG", [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 1]).ContentType);
+        Assert.Equal("application/msword", S.WorkDocumentPolicy.CheckFile("cv.doc", [0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1, 0]).ContentType);
+        Assert.Equal("application/vnd.ms-excel", S.WorkDocumentPolicy.CheckFile("bang.xls", [0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1, 0]).ContentType);
+        Assert.Equal("image/webp", S.WorkDocumentPolicy.CheckFile("x.webp", "RIFF\0\0\0\0WEBPVP8 "u8.ToArray()).ContentType);
+        Assert.NotNull(S.WorkDocumentPolicy.CheckFile("fake.doc", "%PDF-1.7"u8.ToArray()).Error);       // content must match
+        Assert.StartsWith("Chỉ nhận ảnh", S.WorkDocumentPolicy.CheckFile("run.exe", [0x4D, 0x5A]).Error);
+        Assert.Null(S.WorkDocumentPolicy.Note("   "));
+        Assert.Equal(S.WorkDocumentPolicy.NoteMax, S.WorkDocumentPolicy.Note(new string('a', 2000))!.Length);
+        Assert.Contains("INSERT dbo.WorkTaskActivities(TaskId,Kind,Body,CreatedBy) VALUES(@task,'EDIT',N'Tải lên tài liệu: '+@name,@by)", S.WorkDocumentSql.Insert);
+        Assert.Contains("SET IsDeleted=1", S.WorkDocumentSql.Delete);                                         // soft delete
+        var sql = File.ReadAllText(Path.Combine(RepoRoot(), "database", "migrations", "058-work-task-documents.sql"));
+        Assert.Contains("CONSTRAINT CK_WorkTaskDocuments_Size CHECK (SizeBytes > 0 AND SizeBytes <= 10485760)", sql);
+        Assert.True(File.Exists(Path.Combine(RepoRoot(), "database", "scripts", "103-verify-work-task-documents.sql")));
+        Assert.True(File.Exists(Path.Combine(RepoRoot(), "database", "scripts", "104-rollback-work-task-documents.sql")));
+    }
+
+    [Fact]
+    public async Task TaskPageHasDocumentsBesideTheHistoryAndUploadsThem()
+    {
+        var store = new MemoryWork();
+        var docs = new MemoryDocs();
+        using var f = Factory("STAFF", store, "TASKS.VIEW").WithWebHostBuilder(b => b.ConfigureTestServices(s =>
+        {
+            s.RemoveAll<S.IWorkDocumentStore>();
+            s.AddSingleton<S.IWorkDocumentStore>(docs);
+        }));
+        var c = Client(f);
+        var first = await c.GetStringAsync($"/work/details/{MemoryWork.T1}");
+        await c.PostAsync($"/work/comment/{MemoryWork.T1}", Form(Token(first), ("body", "Đã nhận"), ("returnUrl", $"/work/details/{MemoryWork.T1}")));
+        var html = WebUtility.HtmlDecode(await c.GetStringAsync($"/work/details/{MemoryWork.T1}"));
+        Assert.Contains("data-ta-tabbtn=\"documents\"", html);
+        Assert.Contains("data-ta-tabbtn=\"thread\"", html);
+        Assert.Contains("ta-timeline__avatar", html);                                                         // who wrote each entry
+        Assert.Contains("Chưa có tài liệu nào.", html);
+
+        var form = new MultipartFormDataContent
+        {
+            { new StringContent(Token(html)), "__RequestVerificationToken" },
+            { new StringContent("Hóa đơn tháng 10"), "note" },
+            { new ByteArrayContent("%PDF-1.7 test"u8.ToArray()), "file", "hoa-don.pdf" }
+        };
+        var r = await c.PostAsync($"/work/documentupload/{MemoryWork.T1}", form);
+        Assert.Equal(HttpStatusCode.Redirect, r.StatusCode);
+        var saved = Assert.Single(docs.Items);
+        Assert.Equal(("hoa-don.pdf", "application/pdf", "Hóa đơn tháng 10"), (saved.Doc.FileName, saved.Doc.ContentType, saved.Doc.Note));
+
+        var page = WebUtility.HtmlDecode(await c.GetStringAsync($"/work/details/{MemoryWork.T1}"));
+        Assert.Contains(">hoa-don.pdf</a>", page);
+        Assert.Contains("Hóa đơn tháng 10", page);
+        var file = await c.GetAsync($"/work/document/{MemoryWork.T1}?doc={saved.Doc.Id}");
+        Assert.Equal(HttpStatusCode.OK, file.StatusCode);
+        Assert.Equal("attachment", file.Content.Headers.ContentDisposition?.DispositionType);
+        Assert.Equal(HttpStatusCode.NotFound, (await c.GetAsync($"/work/document/{MemoryWork.Hidden}?doc={saved.Doc.Id}")).StatusCode);   // someone else's task
+
+        var bad = new MultipartFormDataContent
+        {
+            { new StringContent(Token(page)), "__RequestVerificationToken" },
+            { new ByteArrayContent([0x4D, 0x5A, 0, 0]), "file", "virus.exe" }
+        };
+        Assert.Equal(HttpStatusCode.Redirect, (await c.PostAsync($"/work/documentupload/{MemoryWork.T1}", bad)).StatusCode);
+        Assert.Single(docs.Items);                                                                             // refused
+    }
+
+    private sealed class MemoryDocs : S.IWorkDocumentStore
+    {
+        public List<(Guid Task, S.WorkDocument Doc, byte[] Data)> Items { get; } = [];
+        public Task<IReadOnlyList<S.WorkDocument>?> ListAsync(Guid taskId) => Task.FromResult<IReadOnlyList<S.WorkDocument>?>(Items.Where(i => i.Task == taskId).Select(i => i.Doc).ToList());
+        public Task<string?> AddAsync(Guid actor, Guid taskId, string fileName, string contentType, byte[] data, string? note)
+        {
+            Items.Add((taskId, new S.WorkDocument(Guid.NewGuid(), fileName, contentType, data.Length, note, DateTime.UtcNow, actor, "An"), data));
+            return Task.FromResult<string?>(null);
+        }
+        public Task<bool> SetNoteAsync(Guid actor, Guid taskId, Guid docId, string? note) => Task.FromResult(false);
+        public Task<bool> DeleteAsync(Guid actor, Guid taskId, Guid docId) => Task.FromResult(Items.RemoveAll(i => i.Doc.Id == docId) > 0);
+        public Task<S.WorkDocumentContent?> ContentAsync(Guid taskId, Guid docId) =>
+            Task.FromResult(Items.Where(i => i.Task == taskId && i.Doc.Id == docId).Select(i => new S.WorkDocumentContent(i.Doc.FileName, i.Doc.ContentType, i.Data)).FirstOrDefault());
+    }
+
+    [Fact]
+    public async Task ChecklistItemsOfATaskAreReorderedByDragging()
+    {
+        var store = new MemoryWork();
+        using var f = Factory("STAFF", store, "TASKS.VIEW");
+        var c = Client(f);
+        var html = await c.GetStringAsync($"/work/details/{MemoryWork.T1}");
+        Assert.Contains("data-ta-step-handle", html);
+        Assert.Contains($"data-ta-order=\"checkOrder{MemoryWork.T1:N}\"", html);
+        Assert.Contains($"data-ta-item=\"{MemoryWork.I1}\"", html);
+        Assert.Contains("data-ta-step-handle", await c.GetStringAsync("/work"));                             // task cards too
+        var r = await c.PostAsync($"/work/checklistorder/{MemoryWork.T1}", Form(Token(html), ("items", MemoryWork.I2.ToString()), ("items", MemoryWork.I1.ToString())));
+        Assert.Equal(HttpStatusCode.Redirect, r.StatusCode);
+        Assert.Equal([MemoryWork.I2, MemoryWork.I1], store.LastOrder);
+    }
+
+    [Fact]
+    public async Task TheCataloguePageListsEntriesAsTextAndEditsThemInATabbedPopup()
+    {
+        var entry = new S.WorkCatalogItem(Guid.Parse("c1000000-0000-0000-0000-000000000001"), "Kéo hóa đơn", "Hóa đơn đầu vào", 10, true, 2, "Tải XML",
+            "[{\"title\":\"Tải XML\",\"guide\":\"Trên cổng thuế\"},{\"title\":\"Đối chiếu\"}]") { Used = [new("Nhập phần mềm", 1)] };
+        using var f = Factory("ADMIN", new MemoryWork(), "TASKS.VIEW", "TASKS.CATALOG.MANAGE").WithWebHostBuilder(b => b.ConfigureTestServices(s =>
+        {
+            s.RemoveAll<S.IWorkCatalogStore>();
+            s.AddSingleton<S.IWorkCatalogStore>(new OneEntryCatalog(entry));
+        }));
+        var r = await Client(f).GetAsync("/WorkCatalog");
+        Assert.Equal(HttpStatusCode.OK, r.StatusCode);
+        var html = WebUtility.HtmlDecode(await r.Content.ReadAsStringAsync());
+        Assert.Contains(">Kéo hóa đơn</span>", html);                                                         // grid shows text
+        Assert.Contains("data-ta-inline-active=\"catFormc1000000000000000000000000000001\"", html);
+        Assert.Contains("id=\"catDlgnew\"", html);                                                           // add popup
+        Assert.Contains("id=\"catDlgc1000000000000000000000000000001\"", html);                              // edit popup
+        Assert.Contains("name=\"Input.Items[1].Title\" value=\"Đối chiếu\"", html);
+        Assert.Contains(">Trên cổng thuế</textarea>", html);
+        Assert.Contains("data-ta-step-suggest=\"Nhập phần mềm\"", html);
+        Assert.Equal(2, Regex.Matches(html, "data-ta-tab=\"checklist\"").Count);
+    }
+
+    private sealed class OneEntryCatalog(S.WorkCatalogItem entry) : S.IWorkCatalogStore
+    {
+        public Task<IReadOnlyList<S.WorkCatalogItem>> ListAsync() => Task.FromResult<IReadOnlyList<S.WorkCatalogItem>>([entry]);
+        public Task<S.WorkCatalogResult> SaveAsync(Guid actor, Guid? id, S.WorkCatalogInput input) => Task.FromResult(new S.WorkCatalogResult(S.WorkCatalogOutcome.Saved));
+        public Task<S.WorkCatalogResult> DeleteAsync(Guid actor, Guid id) => Task.FromResult(new S.WorkCatalogResult(S.WorkCatalogOutcome.Saved));
+        public Task<S.WorkCatalogResult> AppendChecklistAsync(Guid actor, string name, IReadOnlyList<string> items) => Task.FromResult(new S.WorkCatalogResult(S.WorkCatalogOutcome.NoChange));
+        public Task<S.WorkGuideIndex> GuidesAsync() => Task.FromResult(S.WorkGuideIndex.Empty);
+    }
+
     private static WebApplicationFactory<admin::Program> Factory(string role, MemoryWork store, params string[] permissions) =>
         new WebApplicationFactory<admin::Program>().WithWebHostBuilder(b => b.UseEnvironment("Development")
             .ConfigureAppConfiguration((_, c) => c.AddInMemoryCollection(new Dictionary<string, string?> { ["Database:ConnectionString"] = "INVALID: tests must never use SQL" }))
@@ -348,7 +580,8 @@ public sealed class SafeAdminWorkTests
                 return Task.FromResult<S.WorkTaskDetail?>(new(c.Task, null, null, null, null, "An", [], c.Checklist, c.Recent, c.CanEdit, c.IsOwner, "00", null));
             }
         }
-        public Task<S.WorkLookups> LookupsAsync() => Task.FromResult(new S.WorkLookups([new(E1, "NV000001", "Nguyễn Văn An", true), new(E2, "NV000002", "Trần Thị Bình", false)], [], []));
+        public List<S.WorkCatalogEntry> Catalog { get; } = [];
+        public Task<S.WorkLookups> LookupsAsync() => Task.FromResult(new S.WorkLookups([new(E1, "NV000001", "Nguyễn Văn An", true), new(E2, "NV000002", "Trần Thị Bình", false)], [], [], null, Catalog));
         public Task<S.WorkResult> CreateAsync(Guid actor, S.WorkTaskInput input) => Task.FromResult(new S.WorkResult(S.WorkOutcome.Forbidden));
         public Task<S.WorkResult> UpdateAsync(Guid actor, Guid id, S.WorkTaskInput input, string stamp) => Task.FromResult(new S.WorkResult(S.WorkOutcome.Forbidden));
         public Task<S.WorkResult> DeleteAsync(Guid actor, Guid id) => Task.FromResult(new S.WorkResult(S.WorkOutcome.Forbidden));
@@ -358,11 +591,12 @@ public sealed class SafeAdminWorkTests
             lock (gate) return tasks.TryGetValue(id, out var t) && Sees(t) ? act(t) : new(S.WorkOutcome.NotFound);
         }
 
-        public Task<S.WorkResult> SetStatusAsync(Guid actor, Guid id, string status) => Task.FromResult(Act(id, t =>
+        public Task<S.WorkResult> SetStatusAsync(Guid actor, Guid id, string status, string? note = null) => Task.FromResult(Act(id, t =>
         {
             var items = Items.Values.Where(i => i.Task == id).ToList();
             if (status == "DONE" && S.WorkTaskPolicy.CheckDone(items.Count, items.Count(i => i.Done)) != S.WorkOutcome.Saved)
                 return new(S.WorkOutcome.ChecklistIncomplete, id, $"Còn {items.Count(i => !i.Done)} mục checklist chưa hoàn thành.");
+            if (status == "DONE" && S.WorkTaskPolicy.DoneNote(note) is null) return new(S.WorkOutcome.Invalid, id, S.WorkTaskPolicy.DoneNoteRequired);
             tasks[id] = t with { Status = status };
             return new(S.WorkOutcome.Saved, id);
         }));
@@ -374,6 +608,8 @@ public sealed class SafeAdminWorkTests
             return new(S.WorkOutcome.Saved, id);
         }));
         public Task<S.WorkResult> RemoveChecklistAsync(Guid actor, Guid id, Guid itemId) => Task.FromResult(Act(id, t => Items.Remove(itemId) ? new(S.WorkOutcome.Saved, id) : new(S.WorkOutcome.NotFound)));
+        public List<Guid> LastOrder { get; } = [];
+        public Task<S.WorkResult> OrderChecklistAsync(Guid actor, Guid id, IReadOnlyList<Guid> items) => Task.FromResult(Act(id, t => { LastOrder.Clear(); LastOrder.AddRange(items); return new(S.WorkOutcome.Saved, id); }));
         public Task<S.WorkResult> CommentAsync(Guid actor, Guid id, string body) => Task.FromResult(Act(id, t => { comments.Add((id, body)); return new(S.WorkOutcome.Saved, id); }));
         public Task<IReadOnlyList<S.WorkTemplateRow>> TemplatesAsync() => Task.FromResult<IReadOnlyList<S.WorkTemplateRow>>([]);
         public Task<S.WorkTemplateRow?> TemplateAsync(Guid id) => Task.FromResult<S.WorkTemplateRow?>(null);

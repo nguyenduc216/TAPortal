@@ -158,6 +158,8 @@ public sealed record TingeeBillInfo
     [JsonPropertyName("totalAmountPaid")] public decimal TotalAmountPaid { get; init; }
     [JsonPropertyName("totalPaymentsCount")] public int TotalPaymentsCount { get; init; }
     [JsonPropertyName("status")] public string? Status { get; init; }
+    /// <summary>Minutes the QR still has according to the partner (e.g. 1405 for a 1440-minute QR read 35 minutes later).</summary>
+    [JsonPropertyName("expireInMinute")] public int? ExpireInMinute { get; init; }
 }
 
 /// <summary>A failed Tingee call: Code is Tingee's result code ("1065", "90", ...) and Message its text.</summary>

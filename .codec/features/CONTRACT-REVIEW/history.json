@@ -1,0 +1,42 @@
+[
+  {
+    "change_id": "CONTRACT-REVIEW-CHG-20261114T070011Z-272162",
+    "created_at": "2026-11-14T07:00:11.638792+00:00",
+    "title": "Hop dong dich vu phase 1: AI contract review on TAPortal",
+    "status": "DEPLOYED",
+    "commit_sha": "a71a655",
+    "migration_status": "EXECUTED",
+    "publish_status": "DEPLOYED",
+    "merge_status": "MERGED 5e0653c"
+  },
+  {
+    "change_id": "CONTRACT-REVIEW-CHG-20261114T110220Z-5DB5FA",
+    "created_at": "2026-11-14T11:02:20.186935+00:00",
+    "title": "Law library: upload Word/PDF/TXT, keep files, re-import, edit articles",
+    "status": "DEPLOYED",
+    "commit_sha": "0613b03",
+    "migration_status": "EXECUTED",
+    "publish_status": "DEPLOYED",
+    "merge_status": "PENDING_APPROVAL"
+  },
+  {
+    "change_id": "CONTRACT-REVIEW-CHG-20261114T143425Z-457FA8",
+    "created_at": "2026-11-14T14:34:25.799393+00:00",
+    "title": "In-place review: paper view, accept/edit/reject on highlights, direct paragraph edit, customer answers",
+    "status": "DEPLOYED",
+    "commit_sha": "c882ef0",
+    "migration_status": "NOT_APPLICABLE",
+    "publish_status": "DEPLOYED",
+    "merge_status": "PENDING_APPROVAL"
+  },
+  {
+    "change_id": "CONTRACT-REVIEW-CHG-20261115T011008Z-3AE83B",
+    "created_at": "2026-11-15T01:10:08.150311+00:00",
+    "title": "Accept all suggestions; Word export marked on the customer's original file",
+    "status": "DEPLOYED",
+    "commit_sha": "d8db258",
+    "migration_status": "NOT_APPLICABLE",
+    "publish_status": "DEPLOYED",
+    "merge_status": "PENDING_APPROVAL"
+  }
+]

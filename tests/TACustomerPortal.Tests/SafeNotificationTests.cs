@@ -143,6 +143,29 @@ public sealed class SafeNotificationTests
         Assert.Equal("rotated", protector.Unprotect(store.Rows.Single().Value.Secret)["password"]);
     }
 
+    // Operator 2026-11-15: staff emails (account, legal watch) use the Portal email channel; SYSTEM email until it is on.
+    [Fact]
+    public async Task StaffEmailsUseThePortalChannelFirst()
+    {
+        var store = new MemoryNotificationStore();
+        var transport = new FakeTransport();
+        var settings = new NotificationSettings(store, new PlainProtector(), transport, TimeProvider.System) { PublicHost = (_, _) => Task.FromResult(true) };
+        Assert.Equal([NotificationChannelKind.Smtp], NotificationCatalog.Channels(NotificationScope.Portal));
+        Assert.True(NotificationCatalog.ForStaff(NotificationScope.Portal, NotificationChannelKind.Smtp));
+        Assert.True(NotificationCatalog.ForStaff(NotificationScope.System, NotificationChannelKind.TelegramGroup));
+        Assert.False(NotificationCatalog.ForStaff(NotificationScope.System, NotificationChannelKind.Smtp));
+
+        Assert.NotNull(await settings.SendSystemEmailAsync("nv@example.com", "S", "B"));    // nothing on yet
+        var smtp = new Dictionary<string, string?> { ["host"] = "smtp.example.com", ["port"] = "587", ["fromAddress"] = "no-reply@ta.vn" };
+        Assert.Empty(await settings.SaveAsync(NotificationScope.System, null, NotificationChannelKind.Smtp, true, [], smtp, [], Actor));
+        Assert.Null(await settings.SendSystemEmailAsync("nv@example.com", "S", "B"));
+        Assert.Equal(NotificationScope.System, transport.Sent[^1].Scope);
+        Assert.Empty(await settings.SaveAsync(NotificationScope.Portal, null, NotificationChannelKind.Smtp, true, [], smtp, [], Actor));
+        Assert.Null(await settings.SendSystemEmailAsync("nv@example.com", "S", "B"));
+        Assert.Equal(NotificationScope.Portal, transport.Sent[^1].Scope);
+        Assert.Throws<ArgumentException>(() => { settings.ChannelsAsync(NotificationScope.Portal, A).GetAwaiter().GetResult(); });
+    }
+
     // ---- fakes (also used by the portal page tests) -------------------------------------------------------
     public sealed class PlainProtector : ISecretProtector
     {

@@ -65,7 +65,9 @@ public sealed class SafeAdminPermissionTests
     public void EveryAdminActionRequiresACataloguePermission()
     {
         var controllers = typeof(AdminControllers.HomeController).Assembly.GetTypes()
-            .Where(t => typeof(Controller).IsAssignableFrom(t) && !t.IsAbstract && t != typeof(AdminControllers.AccountController)).ToList();
+            .Where(t => typeof(Controller).IsAssignableFrom(t) && !t.IsAbstract && t != typeof(AdminControllers.AccountController)
+                // Personal like the account pages: each signed-in user turns notifications on for their own devices (2026-11-16).
+                && t != typeof(AdminControllers.PushController)).ToList();
         Assert.Contains(typeof(AdminControllers.RolesController), controllers);
         var problems = new List<string>();
         foreach (var type in controllers)

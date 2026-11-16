@@ -72,3 +72,4 @@ Database sẵn sàng cho phần thanh toán (verify PASS). Tiếp theo: operator
 | `TINGEE-INTEGRATION-CHG-20261112T113426Z-E2F99F` | 2026-11-12 | Trang thanh toán: tài khoản thụ hưởng thật khi QR dùng mã VQR (MB) | 189a449 | NOT_APPLICABLE | DEPLOYED | MERGED |
 | `TINGEE-INTEGRATION-CHG-20261112T153512Z-791FCD` | 2026-11-12 | Sync also reads root-account payments; one sync run at a time | 357f115 | NOT_APPLICABLE | DEPLOYED | MERGED |
 | `TINGEE-INTEGRATION-CHG-20261112T161108Z-A11DB4` | 2026-11-12 | History page size 50 (partner refuses 200 with 1108) | c9801ac | NOT_APPLICABLE | DEPLOYED | MERGED |
+| `TINGEE-INTEGRATION-CHG-20261115T011455Z-BC9386` | 2026-11-15 | Cai dat thong bao: tab Hoa don tu dong va Portal, kenh email rieng cho Portal | 10c9c00 | EXECUTED | DEPLOYED | MERGED |

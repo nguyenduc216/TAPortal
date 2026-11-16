@@ -1,3 +1,4 @@
+@inject IEmployeePhotoStore AvatarPhotos
 @model PeoplePickerVm
 @{
     var id = "pp" + Model.Name.Replace(".", "");
@@ -13,7 +14,7 @@
             var on = Model.Selected.Contains(e.Id);
             <label class="ta-person" data-ta-person="@e.Id" data-ta-search="@(e.Name.ToLowerInvariant()) @(e.Code.ToLowerInvariant())">
                 <input class="ta-person__input" type="@(Model.Multiple ? "checkbox" : "radio")" name="@Model.Name" value="@e.Id" checked="@on" required="@(Model.Required && !Model.Multiple)" id="@id-@e.Id" />
-                <span class="ta-avatar ta-avatar--sm ta-avatar--t@(PeoplePickerVm.Tone(e.Id))" aria-hidden="true">@PeoplePickerVm.Initials(e.Name)</span>
+                @Avatar.Render(await AvatarPhotos.IndexAsync(), e.Name, employeeId: e.Id, cssClass: "ta-avatar--sm ta-avatar--t" + PeoplePickerVm.Tone(e.Id), initials: PeoplePickerVm.Initials(e.Name))
                 <span class="ta-person__text">
                     <span class="ta-person__name">@e.Name</span>
                     <span class="ta-person__meta">@e.Code@(e.HasAccount ? "" : " · chưa có tài khoản")</span>

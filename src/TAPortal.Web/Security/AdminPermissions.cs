@@ -39,6 +39,7 @@ public static class AdminPermissions
     public const string UsersCreate = "AUTH.USERS.CREATE";
     public const string UsersUpdate = "AUTH.USERS.UPDATE";
     public const string UsersDelete = "AUTH.USERS.DELETE";
+    public const string UsersImpersonate = "AUTH.USERS.IMPERSONATE";   // "Truy cập hộ" (migration 042)
     public const string RolesView = "AUTH.ROLES.VIEW";
     public const string RolesManage = "AUTH.ROLES.MANAGE";
     public const string MenusManage = "SYSTEM.MENUS.MANAGE";
@@ -75,6 +76,15 @@ public static class AdminPermissions
     public const string ContractsUpdate = "CONTRACTS.UPDATE";
     public const string ContractsDelete = "CONTRACTS.DELETE";
 
+    // Hợp đồng dịch vụ: contract revision requests with AI review and the law library, inserted by migration 044.
+    public const string ContractReviewModuleKey = "CONTRACT_REVIEW";
+    public const string ContractReviewView = "CONTRACTS.REVIEW.VIEW";
+    public const string ContractReviewCreate = "CONTRACTS.REVIEW.CREATE";
+    public const string ContractReviewRunAi = "CONTRACTS.REVIEW.RUN_AI";
+    public const string ContractReviewEdit = "CONTRACTS.REVIEW.EDIT";
+    public const string ContractReviewFinalize = "CONTRACTS.REVIEW.FINALIZE";
+    public const string LegalLibraryManage = "LEGAL.LIBRARY.MANAGE";
+
     // Website TA (tuvangiaiphapta.vn content), inserted by migration 035.
     public const string WebsiteModuleKey = "WEBSITE";
     public const string WebsiteView = "WEBSITE.VIEW";
@@ -94,6 +104,7 @@ public static class AdminPermissions
     public const string TasksViewAll = "TASKS.VIEW_ALL";
     public const string TaskTemplatesManage = "TASKS.TEMPLATES.MANAGE";
     public const string TaskReportView = "TASKS.REPORT.VIEW";
+    public const string TaskCatalogManage = "TASKS.CATALOG.MANAGE";   // Danh mục công việc (migration 043)
 
     // Policy names for [Authorize(Policy = ...)] (PermissionPolicyProvider resolves "PERM:<code>").
     public static class Policy
@@ -116,6 +127,7 @@ public static class AdminPermissions
         public const string UsersCreate = PermissionPolicies.Prefix + AdminPermissions.UsersCreate;
         public const string UsersUpdate = PermissionPolicies.Prefix + AdminPermissions.UsersUpdate;
         public const string UsersDelete = PermissionPolicies.Prefix + AdminPermissions.UsersDelete;
+        public const string UsersImpersonate = PermissionPolicies.Prefix + AdminPermissions.UsersImpersonate;
         public const string RolesView = PermissionPolicies.Prefix + AdminPermissions.RolesView;
         public const string RolesManage = PermissionPolicies.Prefix + AdminPermissions.RolesManage;
         public const string MenusManage = PermissionPolicies.Prefix + AdminPermissions.MenusManage;
@@ -142,6 +154,12 @@ public static class AdminPermissions
         public const string ContractsCreate = PermissionPolicies.Prefix + AdminPermissions.ContractsCreate;
         public const string ContractsUpdate = PermissionPolicies.Prefix + AdminPermissions.ContractsUpdate;
         public const string ContractsDelete = PermissionPolicies.Prefix + AdminPermissions.ContractsDelete;
+        public const string ContractReviewView = PermissionPolicies.Prefix + AdminPermissions.ContractReviewView;
+        public const string ContractReviewCreate = PermissionPolicies.Prefix + AdminPermissions.ContractReviewCreate;
+        public const string ContractReviewRunAi = PermissionPolicies.Prefix + AdminPermissions.ContractReviewRunAi;
+        public const string ContractReviewEdit = PermissionPolicies.Prefix + AdminPermissions.ContractReviewEdit;
+        public const string ContractReviewFinalize = PermissionPolicies.Prefix + AdminPermissions.ContractReviewFinalize;
+        public const string LegalLibraryManage = PermissionPolicies.Prefix + AdminPermissions.LegalLibraryManage;
         public const string WebsiteView = PermissionPolicies.Prefix + AdminPermissions.WebsiteView;
         public const string WebsiteContentEdit = PermissionPolicies.Prefix + AdminPermissions.WebsiteContentEdit;
         public const string WebsitePostsEdit = PermissionPolicies.Prefix + AdminPermissions.WebsitePostsEdit;
@@ -154,6 +172,7 @@ public static class AdminPermissions
         public const string TasksView = PermissionPolicies.Prefix + AdminPermissions.TasksView;
         public const string TaskTemplatesManage = PermissionPolicies.Prefix + AdminPermissions.TaskTemplatesManage;
         public const string TaskReportView = PermissionPolicies.Prefix + AdminPermissions.TaskReportView;
+        public const string TaskCatalogManage = PermissionPolicies.Prefix + AdminPermissions.TaskCatalogManage;
     }
 
     public static readonly IReadOnlyList<AdminPermissionModule> Modules =
@@ -195,7 +214,8 @@ public static class AdminPermissions
             new(TasksAssign, "Giao việc cho nhân viên khác", "ASSIGN"),
             new(TasksViewAll, "Giám sát: xem và tương tác mọi công việc", "VIEW_ALL"),
             new(TaskTemplatesManage, "Quản lý việc lặp theo kỳ", "MANAGE"),
-            new(TaskReportView, "Xem báo cáo tiến độ từng nhân viên", "VIEW")
+            new(TaskReportView, "Xem báo cáo tiến độ từng nhân viên", "VIEW"),
+            new(TaskCatalogManage, "Quản lý danh mục công việc (tên các đầu việc được phép chọn)", "MANAGE")
         ]),
         new(ContractsModuleKey, "Hợp đồng",
         [
@@ -203,6 +223,15 @@ public static class AdminPermissions
             new(ContractsCreate, "Thêm hợp đồng", "CREATE"),
             new(ContractsUpdate, "Sửa hợp đồng, đính kèm hoặc gỡ file", "UPDATE"),
             new(ContractsDelete, "Xóa (mềm) hợp đồng", "DELETE")
+        ]),
+        new(ContractReviewModuleKey, "Hợp đồng dịch vụ",
+        [
+            new(ContractReviewView, "Xem yêu cầu chỉnh lý hợp đồng, các phiên bản và góp ý", "VIEW"),
+            new(ContractReviewCreate, "Tạo yêu cầu chỉnh lý, tải file hợp đồng gốc", "CREATE"),
+            new(ContractReviewRunAi, "Chạy AI rà soát hợp đồng (có tính phí API)", "RUN_AI"),
+            new(ContractReviewEdit, "Xử lý góp ý, tạo phiên bản, ghi nhận phản hồi của khách hàng", "EDIT"),
+            new(ContractReviewFinalize, "Duyệt bản cuối hoặc hủy yêu cầu chỉnh lý", "FINALIZE"),
+            new(LegalLibraryManage, "Quản lý kho văn bản pháp luật dùng để trích dẫn", "MANAGE")
         ]),
         new(HrModuleKey, "Nhân sự",
         [
@@ -249,6 +278,7 @@ public static class AdminPermissions
             new(UsersCreate, "Tạo người dùng", "CREATE"),
             new(UsersUpdate, "Sửa, khóa/mở người dùng", "UPDATE"),
             new(UsersDelete, "Xóa (mềm) người dùng", "DELETE"),
+            new(UsersImpersonate, "Truy cập hộ (đăng nhập dưới quyền) tài khoản người dùng, xem lịch sử truy cập hộ", "IMPERSONATE"),
             new(RolesView, "Xem vai trò và phân quyền", "VIEW"),
             new(MenusManage, "Xem cấu hình menu", "MANAGE")
         ])
@@ -260,11 +290,21 @@ public static class AdminPermissions
 
     // Codes inserted by migration 028: every module except HR, whose rows come from the HR core bootstrap of TAPortalSys.
     // AUTH.ROLES.MANAGE is inserted too but is not grantable: role management is SYS_ADMIN only (operator 2026-11-07).
-    public static readonly IReadOnlyList<string> MigrationCodes = Modules.Where(m => m.Key is not (HrModuleKey or ContractsModuleKey or TasksModuleKey or WebsiteModuleKey or InvoiceAppModuleKey))
-        .SelectMany(m => m.Permissions).Select(p => p.Code).Append(RolesManage).ToList();
+    public static readonly IReadOnlyList<string> MigrationCodes = Modules.Where(m => m.Key is not (HrModuleKey or ContractsModuleKey or ContractReviewModuleKey or TasksModuleKey or WebsiteModuleKey or InvoiceAppModuleKey))
+        .SelectMany(m => m.Permissions).Select(p => p.Code).Where(c => c != UsersImpersonate).Append(RolesManage).ToList();
+
+    // Code inserted by migration 042 ("Truy cập hộ").
+    public static readonly IReadOnlyList<string> Migration042Codes = [UsersImpersonate];
 
     // Codes inserted by migration 031 (Công việc, Hợp đồng).
     public static readonly IReadOnlyList<string> Migration031Codes = Modules.Where(m => m.Key is ContractsModuleKey or TasksModuleKey)
+        .SelectMany(m => m.Permissions).Select(p => p.Code).Where(c => c != TaskCatalogManage).ToList();
+
+    // Code inserted by migration 043 (Danh mục công việc).
+    public static readonly IReadOnlyList<string> Migration043Codes = [TaskCatalogManage];
+
+    // Codes inserted by migration 044 (Hợp đồng dịch vụ).
+    public static readonly IReadOnlyList<string> Migration044Codes = Modules.Where(m => m.Key is ContractReviewModuleKey)
         .SelectMany(m => m.Permissions).Select(p => p.Code).ToList();
 
     // Codes inserted by migration 035 (Website TA).
@@ -297,6 +337,7 @@ public static class AdminNavigation
         new(AdminPermissions.CustomersView, "Customers", "Index"),
         new(AdminPermissions.ReconciliationView, "PaymentReconciliation", "Index"),
         new(AdminPermissions.ContractsView, "Contracts", "Index"),
+        new(AdminPermissions.ContractReviewView, "ContractReviews", "Index"),
         new(AdminPermissions.TaskReportView, "Work", "Report"),
         new(AdminPermissions.EmployeesView, "Employees", "Index"),
         new(AdminPermissions.DepartmentsView, "Departments", "Index"),

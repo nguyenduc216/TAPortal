@@ -1,0 +1,15 @@
+@model string
+@* Tabs of "Cấu hình hệ thống" (operator 2026-11-13). The model is the active tab: "emails", "terms" or "password". *@
+<nav aria-label="Cấu hình hệ thống">
+    <ul class="ta-tabs">
+        @if (AdminPermissions.Has(User, AdminPermissions.InvoiceAppContentView))
+        {
+            <li><a class="ta-tabs__link" asp-controller="InvoiceAppContent" asp-action="Index" data-ta-tab="emails" aria-current="@(Model == "emails" ? "page" : null)">@UiIcon.Render("mail")<span>Mẫu email</span></a></li>
+            <li><a class="ta-tabs__link" asp-controller="InvoiceAppContent" asp-action="Terms" data-ta-tab="terms" aria-current="@(Model == "terms" ? "page" : null)">@UiIcon.Render("file-text")<span>Điều khoản dịch vụ</span></a></li>
+        }
+        @if (AdminPermissions.Has(User, AdminPermissions.RolesManage))
+        {
+            <li><a class="ta-tabs__link" asp-controller="PasswordSecurity" asp-action="Index" data-ta-tab="password" aria-current="@(Model == "password" ? "page" : null)">@UiIcon.Render("lock")<span>Bảo mật mật khẩu</span></a></li>
+        }
+    </ul>
+</nav>

@@ -462,5 +462,15 @@
     "migration_status": "NOT_APPLICABLE",
     "publish_status": "DEPLOYED",
     "merge_status": "MERGED"
+  },
+  {
+    "change_id": "TINGEE-INTEGRATION-CHG-20261115T011455Z-BC9386",
+    "created_at": "2026-11-15T01:14:55.012612+00:00",
+    "title": "Cai dat thong bao: tab Hoa don tu dong va Portal, kenh email rieng cho Portal",
+    "status": "DEPLOYED",
+    "commit_sha": "10c9c00",
+    "migration_status": "EXECUTED",
+    "publish_status": "DEPLOYED",
+    "merge_status": "MERGED"
   }
 ]

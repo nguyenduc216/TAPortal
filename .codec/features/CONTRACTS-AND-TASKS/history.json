@@ -48,5 +48,135 @@
     "migration_status": "NOT_APPLICABLE",
     "publish_status": "DEPLOYED",
     "merge_status": "MERGED"
+  },
+  {
+    "change_id": "CONTRACTS-AND-TASKS-CHG-20261113T113022Z-FE45B3",
+    "created_at": "2026-11-13T11:30:22.553137+00:00",
+    "title": "Repair garbled Vietnamese (sqlcmd UTF-8 input), compact task list on mobile",
+    "status": "DEPLOYED",
+    "commit_sha": "6a3e43f",
+    "migration_status": "EXECUTED",
+    "publish_status": "DEPLOYED",
+    "merge_status": "PENDING_APPROVAL"
+  },
+  {
+    "change_id": "CONTRACTS-AND-TASKS-CHG-20261113T114748Z-364101",
+    "created_at": "2026-11-13T11:47:48.574815+00:00",
+    "title": "Customer staff assignment (manager/executors) and task filter popup",
+    "status": "DEPLOYED",
+    "commit_sha": "fd95f76",
+    "migration_status": "EXECUTED",
+    "publish_status": "DEPLOYED",
+    "merge_status": "PENDING_APPROVAL"
+  },
+  {
+    "change_id": "CONTRACTS-AND-TASKS-CHG-20261114T021052Z-F6F9C9",
+    "created_at": "2026-11-14T02:10:52.069333+00:00",
+    "title": "Danh muc cong viec: chon ten viec tu danh muc, goi y khi go, khong nhap tu do",
+    "status": "DEPLOYED",
+    "commit_sha": "f3932f4",
+    "migration_status": "EXECUTED",
+    "publish_status": "DEPLOYED",
+    "merge_status": "PENDING_APPROVAL"
+  },
+  {
+    "change_id": "CONTRACTS-AND-TASKS-CHG-20261116T014956Z-621486",
+    "created_at": "2026-11-16T01:49:56.966046+00:00",
+    "title": "Hoàn thành: checklist không bắt buộc, bắt buộc ghi chú kết quả",
+    "status": "PLANNED",
+    "commit_sha": null,
+    "migration_status": "NOT_EXECUTED",
+    "publish_status": "NOT_PUBLISHED",
+    "merge_status": "PENDING_APPROVAL"
+  },
+  {
+    "change_id": "CONTRACTS-AND-TASKS-CHG-20261116T060542Z-E543D2",
+    "created_at": "2026-11-16T06:05:42.092635+00:00",
+    "title": "Danh mục công việc: ô tìm có danh sách gợi ý tên đầu việc",
+    "status": "PLANNED",
+    "commit_sha": null,
+    "migration_status": "NOT_EXECUTED",
+    "publish_status": "NOT_PUBLISHED",
+    "merge_status": "PENDING_APPROVAL"
+  },
+  {
+    "change_id": "CONTRACTS-AND-TASKS-CHG-20261116T062438Z-9435EF",
+    "created_at": "2026-11-16T06:24:38.670342+00:00",
+    "title": "Danh mục công việc: nút Hủy hiện khi đang sửa dòng/checklist mẫu",
+    "status": "PLANNED",
+    "commit_sha": null,
+    "migration_status": "NOT_EXECUTED",
+    "publish_status": "NOT_PUBLISHED",
+    "merge_status": "PENDING_APPROVAL"
+  },
+  {
+    "change_id": "CONTRACTS-AND-TASKS-CHG-20261116T071620Z-30C6CF",
+    "created_at": "2026-11-16T07:16:20.408551+00:00",
+    "title": "Danh mục công việc: lưới dạng chữ, sửa nhanh trên lưới, popup 2 tab, kéo thả checklist",
+    "status": "PLANNED",
+    "commit_sha": null,
+    "migration_status": "NOT_EXECUTED",
+    "publish_status": "NOT_PUBLISHED",
+    "merge_status": "PENDING_APPROVAL"
+  },
+  {
+    "change_id": "CONTRACTS-AND-TASKS-CHG-20261116T081529Z-265C15",
+    "created_at": "2026-11-16T08:15:29.204742+00:00",
+    "title": "Công việc: kéo thả đổi thứ tự checklist trong từng công việc",
+    "status": "PLANNED",
+    "commit_sha": null,
+    "migration_status": "NOT_EXECUTED",
+    "publish_status": "NOT_PUBLISHED",
+    "merge_status": "PENDING_APPROVAL"
+  },
+  {
+    "change_id": "CONTRACTS-AND-TASKS-CHG-20261116T092358Z-A041C1",
+    "created_at": "2026-11-16T09:23:58.929943+00:00",
+    "title": "Checklist mẫu: lưu là thêm mục còn thiếu vào các việc cùng tên đang làm",
+    "status": "PLANNED",
+    "commit_sha": null,
+    "migration_status": "NOT_EXECUTED",
+    "publish_status": "NOT_PUBLISHED",
+    "merge_status": "PENDING_APPROVAL"
+  },
+  {
+    "change_id": "CONTRACTS-AND-TASKS-CHG-20261116T094307Z-E76F9F",
+    "created_at": "2026-11-16T09:43:07.124420+00:00",
+    "title": "Lọc công việc theo Ngày tạo; danh sách chọn trong popup; trang chi tiết trải rộng",
+    "status": "PLANNED",
+    "commit_sha": null,
+    "migration_status": "NOT_EXECUTED",
+    "publish_status": "NOT_PUBLISHED",
+    "merge_status": "PENDING_APPROVAL"
+  },
+  {
+    "change_id": "CONTRACTS-AND-TASKS-CHG-20261116T100405Z-FE449A",
+    "created_at": "2026-11-16T10:04:05.060163+00:00",
+    "title": "Công việc: ảnh đại diện trong lịch sử, tab Tài liệu (upload ảnh/Word/PDF/Excel kèm ghi chú)",
+    "status": "PLANNED",
+    "commit_sha": null,
+    "migration_status": "NOT_EXECUTED",
+    "publish_status": "NOT_PUBLISHED",
+    "merge_status": "PENDING_APPROVAL"
+  },
+  {
+    "change_id": "CONTRACTS-AND-TASKS-CHG-20261116T123108Z-D0F409",
+    "created_at": "2026-11-16T12:31:08.061291+00:00",
+    "title": "Admin portal installable as an app (PWA) and web push notifications on desktop and mobile",
+    "status": "PLANNED",
+    "commit_sha": null,
+    "migration_status": "NOT_EXECUTED",
+    "publish_status": "NOT_PUBLISHED",
+    "merge_status": "PENDING_APPROVAL"
+  },
+  {
+    "change_id": "CONTRACTS-AND-TASKS-CHG-20261116T132430Z-4D8A1A",
+    "created_at": "2026-11-16T13:24:30.466446+00:00",
+    "title": "Push notifications for every task change and a daily due reminder",
+    "status": "PLANNED",
+    "commit_sha": null,
+    "migration_status": "NOT_EXECUTED",
+    "publish_status": "NOT_PUBLISHED",
+    "merge_status": "PENDING_APPROVAL"
   }
 ]

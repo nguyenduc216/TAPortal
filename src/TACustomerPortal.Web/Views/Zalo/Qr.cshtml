@@ -1,0 +1,23 @@
+@model TAPortal.Integrations.ZaloMiniApp.MiniAppQr
+@{
+    ViewData["Title"] = "Mã QR đăng nhập Zalo";
+    ViewData["Eyebrow"] = "Tài khoản";
+    var inv = System.Globalization.CultureInfo.InvariantCulture;
+    var now = DateTime.UtcNow;
+}
+<div class="cp-grid cp-grid--2">
+    <section class="cp-card">
+        <div class="cp-card__body cp-pay__qr">
+            <div class="cp-pay__qr-box" data-cp-zalo-qr>@Html.Raw(ViewData["QrSvg"])</div>
+            <div class="cp-pay__timer" data-cp-countdown="@Model.ExpiresAtUtc!.Value.ToString("o", inv)" data-cp-countdown-now="@now.ToString("o", inv)" data-cp-countdown-stay role="timer" aria-live="off">
+                @UiIcon.Render("clock")<span>Mã QR còn hiệu lực</span><strong data-cp-countdown-value>00:05:00</strong>
+            </div>
+            <p class="cp-hint" style="margin:0">Mở Zalo trên điện thoại có số điện thoại của tài khoản, chọn quét mã QR.</p>
+        </div>
+        <div class="cp-card__foot">
+            <a class="cp-btn" asp-action="Index">@UiIcon.Render("arrow-left")<span>Quay lại</span></a>
+            <form method="post" asp-action="Qr" style="margin-left:auto"><button type="submit" class="cp-btn cp-btn--primary">@UiIcon.Render("refresh")<span>Tạo mã mới</span></button></form>
+        </div>
+    </section>
+    <aside class="cp-note" style="align-self:start">@UiIcon.Render("info-circle")<div>Mã chỉ dùng được một lần. Nếu người khác quét, mã sẽ bị hủy và họ không vào được vì số điện thoại Zalo không trùng. Đừng chia sẻ ảnh chụp mã này.</div></aside>
+</div>

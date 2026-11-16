@@ -38,5 +38,35 @@
     "migration_status": "EXECUTED",
     "publish_status": "DEPLOYED",
     "merge_status": "MERGED"
+  },
+  {
+    "change_id": "ADMIN-ROLE-PERMISSIONS-CHG-20261113T062558Z-482FBB",
+    "created_at": "2026-11-13T06:25:58.840756+00:00",
+    "title": "Cau hinh he thong gom Mau email, Dieu khoan, Bao mat mat khau",
+    "status": "DEPLOYED",
+    "commit_sha": "6e50bf9",
+    "migration_status": "NOT_APPLICABLE",
+    "publish_status": "DEPLOYED",
+    "merge_status": "MERGED"
+  },
+  {
+    "change_id": "ADMIN-ROLE-PERMISSIONS-CHG-20261114T013654Z-1EEB49",
+    "created_at": "2026-11-14T01:36:54.394790+00:00",
+    "title": "Quan ly nguoi dung chi hien tai khoan nhan vien T.A, an tai khoan khach hang",
+    "status": "DEPLOYED",
+    "commit_sha": "005d430",
+    "migration_status": "NOT_APPLICABLE",
+    "publish_status": "DEPLOYED",
+    "merge_status": "PENDING_APPROVAL"
+  },
+  {
+    "change_id": "ADMIN-ROLE-PERMISSIONS-CHG-20261114T165108Z-184086",
+    "created_at": "2026-11-14T16:51:08.251583+00:00",
+    "title": "Anh dai dien (avatar) nhan vien: tai anh, hien thi tren moi danh sach",
+    "status": "DEPLOYED",
+    "commit_sha": "6aec8c6",
+    "migration_status": "051 EXECUTED",
+    "publish_status": "DEPLOYED",
+    "merge_status": "PENDING_APPROVAL"
   }
 ]

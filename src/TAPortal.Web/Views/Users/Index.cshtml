@@ -1,3 +1,5 @@
+@inject IEmployeePhotoStore AvatarPhotos
+@{ var avatarIndex = await AvatarPhotos.IndexAsync(); }
 @model IReadOnlyList<PortalUser>
 @functions {
     private static string Initial(string? name)
@@ -9,7 +11,7 @@
 @{
     ViewData["Title"] = "Người dùng";
     ViewData["Heading"] = "Quản lý người dùng";
-    ViewData["Subtitle"] = "Tài khoản, trạng thái và quyền truy cập hệ thống.";
+    ViewData["Subtitle"] = "Tài khoản nhân viên T.A: trạng thái và quyền truy cập hệ thống.";
     ViewData["PageIcon"] = "users";
     var roles = ViewData["Roles"] as List<PortalRole> ?? [];
     var draft = ViewData["CreateUser"] as UserCreateVm;
@@ -24,6 +26,8 @@
     var canUpdate = AdminPermissions.Has(User, AdminPermissions.UsersUpdate);
     var canDelete = AdminPermissions.Has(User, AdminPermissions.UsersDelete);
     var canRoles = AdminPermissions.Has(User, AdminPermissions.RolesManage);
+    // "Truy cập hộ": not from inside another "Truy cập hộ" session.
+    var canImpersonate = AdminPermissions.Has(User, AdminPermissions.UsersImpersonate) && !Impersonation.IsActive(User);
     // Only a SYS_ADMIN may grant SYS_ADMIN (re-checked on the server).
     var grantable = isSystemAdmin ? roles.Where(r => r.IsActive).ToList() : [];   // roles are given by a SYS_ADMIN only
 }
@@ -53,7 +57,7 @@
                     <tr data-ta-row>
                         <td class="ta-cell-strong">
                             <div class="d-flex align-items-center gap-3">
-                                <span class="ta-avatar" aria-hidden="true">@Initial(x.DisplayName)</span>
+                                @Avatar.Render(avatarIndex, x.DisplayName, userId: x.Id, initials: Initial(x.DisplayName))
                                 <div class="min-w-0"><div>@x.DisplayName @if (isSelf) {<span class="ta-badge ta-badge--info ta-badge--plain ms-1">Bạn</span>}</div><div class="ta-cell-sub">@x.Username</div></div>
                             </div>
                         </td>
@@ -66,10 +70,11 @@
                             <div class="ta-actions">
                                 @if (canUpdate) {<a class="btn btn-sm btn-soft-primary" asp-action="Edit" asp-route-id="@x.Id" aria-label="Sửa @x.Username">@UiIcon.Render("pencil")<span>Sửa</span></a>}
                                 @if (canRoles) {<a class="btn btn-sm" asp-action="Roles" asp-route-id="@x.Id" aria-label="Phân quyền @x.Username">@UiIcon.Render("shield-lock")<span>Vai trò</span></a>}
-                                @if (canUpdate || canDelete) {
+                                @if (canUpdate || canDelete || canImpersonate) {
                                 <div class="dropdown">
                                     <button type="button" class="btn btn-sm ta-btn-icon" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Thao tác khác cho @x.Username" title="Thao tác khác">@UiIcon.Render("dots-vertical")</button>
                                     <div class="dropdown-menu dropdown-menu-end">
+                                        @if (canImpersonate && !isSelf && eligible) {<a class="dropdown-item" asp-controller="Impersonation" asp-action="Start" asp-route-id="@x.Id">@UiIcon.Render("user-shield")<span>Truy cập hộ</span></a>}
                                         @if (canUpdate) {<a class="dropdown-item" asp-action="Edit" asp-route-id="@x.Id" asp-fragment="IsActive">@UiIcon.Render("lock")<span>Khóa / mở đăng nhập</span></a>}
                                         @if (canDelete) {
                                             if (isSelf) {<span class="dropdown-item disabled" aria-disabled="true">@UiIcon.Render("trash")<span>Không thể tự xóa</span></span>}
@@ -87,7 +92,9 @@
         </div>
         <div class="ta-empty d-none" data-ta-no-results><span class="ta-empty__icon">@UiIcon.Render("search-off")</span><p class="ta-empty__title">Không tìm thấy kết quả phù hợp</p></div>
         <div class="ta-table-footer" data-ta-pager-for="usersTable" data-ta-unit="người dùng"></div>
-        <div class="card-footer text-secondary small">Khóa/mở đăng nhập thực hiện trong màn hình Sửa (mục "Cho phép đăng nhập").</div>
+        <div class="card-footer text-secondary small">Khóa/mở đăng nhập thực hiện trong màn hình Sửa (mục "Cho phép đăng nhập").
+            Tài khoản của khách hàng (Hóa đơn tự động) không nằm ở đây: xem trong từng khách hàng
+            @if (AdminPermissions.Has(User, AdminPermissions.CustomerPortalManage)) {<text>hoặc <a asp-controller="Customers" asp-action="Accounts">Khách hàng &gt; Tài khoản Portal</a></text>}</div>
     }
 </section>
 <div class="modal modal-blur fade" id="createUser" tabindex="-1" aria-labelledby="createUserTitle" aria-hidden="true" data-ta-open="@(draft is null ? "false" : "true")">

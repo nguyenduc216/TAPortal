@@ -20,7 +20,9 @@ namespace TAPortal.Integrations.Notifications;
 
 public static class NotificationScope
 {
-    public const string System = "SYSTEM", Customer = "CUSTOMER";
+    // PORTAL (operator 2026-11-15, migration 055): T.A Portal's own channels for T.A staff (account emails, legal watch),
+    // set in the "Portal" tab of "Cài đặt thông báo"; SYSTEM channels speak to customers as "Hóa đơn tự động".
+    public const string System = "SYSTEM", Customer = "CUSTOMER", Portal = "PORTAL";
 }
 
 public static class NotificationChannelKind
@@ -48,9 +50,16 @@ public sealed record ChannelField(string Key, string Label, bool Secret, bool Re
 /// <summary>What each channel needs, its label, and which channels each owner may configure.</summary>
 public static class NotificationCatalog
 {
-    public static IReadOnlyList<string> Channels(string scope) => scope == NotificationScope.System
-        ? [NotificationChannelKind.ZaloOa, NotificationChannelKind.TelegramBot, NotificationChannelKind.TelegramGroup, NotificationChannelKind.Smtp]
-        : [NotificationChannelKind.ZaloOa, NotificationChannelKind.TelegramGroup, NotificationChannelKind.Smtp];
+    public static IReadOnlyList<string> Channels(string scope) => scope switch
+    {
+        NotificationScope.System => [NotificationChannelKind.ZaloOa, NotificationChannelKind.TelegramBot, NotificationChannelKind.TelegramGroup, NotificationChannelKind.Smtp],
+        NotificationScope.Portal => [NotificationChannelKind.Smtp],
+        _ => [NotificationChannelKind.ZaloOa, NotificationChannelKind.TelegramGroup, NotificationChannelKind.Smtp]
+    };
+
+    /// <summary>True when the channel's messages go to T.A staff (shown in the "Portal" tab), not to customers.</summary>
+    public static bool ForStaff(string scope, string channel) =>
+        scope == NotificationScope.Portal || (scope == NotificationScope.System && channel == NotificationChannelKind.TelegramGroup);
 
     public static bool Allowed(string scope, string channel) => Channels(scope).Contains(channel);
 
@@ -74,6 +83,7 @@ public static class NotificationCatalog
     public static string Audience(string scope, string channel) => (scope, channel) switch
     {
         (NotificationScope.System, NotificationChannelKind.TelegramGroup) => "Nhóm nhân viên T.A: mọi giao dịch cần xử lý của mọi khách hàng.",
+        (NotificationScope.Portal, _) => "Nhân viên T.A dùng Portal: email tài khoản (mật khẩu mới sau khi đổi), bản tin theo dõi văn bản pháp luật. Chưa bật thì dùng kênh Email của Hóa đơn tự động.",
         (NotificationScope.System, _) => "Doanh nghiệp dùng hóa đơn điện tử, tại địa chỉ doanh nghiệp khai báo ở mục \"Nhận thông báo từ T.A\".",
         (_, NotificationChannelKind.TelegramGroup) => "Nhóm nhân viên của doanh nghiệp: tiền vào đơn hàng và giao dịch cần xử lý.",
         (_, NotificationChannelKind.Smtp) => "Khách hàng của doanh nghiệp (email của khách trên đơn hàng) khi đơn nhận tiền.",

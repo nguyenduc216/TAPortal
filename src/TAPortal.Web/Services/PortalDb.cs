@@ -22,6 +22,21 @@ public interface IAdminAuthStore
     Task RequirePasswordChangeAsync(Guid userId) => Task.CompletedTask;
 }
 
+// Operator 2026-11-14: Quản lý người dùng lists T.A staff accounts only. A customer account (it has a Customer Portal
+// membership, no TAPortal role or permission and no employee record) is managed under its customer (Khách hàng >
+// Tài khoản Hóa đơn tự động), not here. An account that is both (staff who also owns a customer) stays listed.
+public static class StaffAccountSql
+{
+    public static string IsStaff(string alias) => $"""
+(NOT EXISTS(SELECT 1 FROM dbo.CustomerPortalMemberships sm WHERE sm.UserId={alias}.Id)
+ OR EXISTS(SELECT 1 FROM dbo.UserRoles sr WHERE sr.UserId={alias}.Id)
+ OR EXISTS(SELECT 1 FROM dbo.UserPermissions sp WHERE sp.UserId={alias}.Id)
+ OR EXISTS(SELECT 1 FROM dbo.Employees se WHERE se.UserId={alias}.Id AND se.IsDeleted=0))
+""";
+
+    public static readonly string StaffUsers = "SELECT u.Id,u.Username,u.DisplayName,u.Email,u.Phone,u.Status,u.IsActive FROM dbo.Users u WHERE u.IsDeleted=0 AND " + IsStaff("u") + " ORDER BY u.DisplayName";
+}
+
 public sealed class PortalDb : IAdminAuthStore
 {
     private readonly string _connectionString;
@@ -256,7 +271,7 @@ VALUES(@id,@username,@nu,@email,@ne,@phone,@name,@hash,@must,'ACTIVE',1,@created
     {
         var list = new List<PortalUser>();
         await using var cn = Open(); await cn.OpenAsync();
-        await using var cmd = new SqlCommand("SELECT Id,Username,DisplayName,Email,Phone,Status,IsActive FROM dbo.Users WHERE IsDeleted=0 ORDER BY DisplayName", cn);
+        await using var cmd = new SqlCommand(StaffAccountSql.StaffUsers, cn);
         await using var rd = await cmd.ExecuteReaderAsync();
         while (await rd.ReadAsync()) list.Add(new(rd.GetGuid(0),rd.GetString(1),rd.GetString(2),rd.IsDBNull(3)?null:rd.GetString(3),rd.IsDBNull(4)?null:rd.GetString(4),rd.GetString(5),rd.GetBoolean(6)));
         return list;

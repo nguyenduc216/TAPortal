@@ -19,6 +19,10 @@ public static class WorkTaskPolicy
     public const int TitleMax = 250, DescriptionMax = 4000, ChecklistMax = 500, CommentMax = 4000, ChecklistItemsMax = 50;
 
     public static readonly IReadOnlyList<string> Statuses = [New, InProgress, Done, Cancelled];
+
+    // An event made during "Truy cập hộ" names the person who acted and the account used.
+    public static string ActedUnder(string actor, string? account) =>
+        string.IsNullOrWhiteSpace(account) ? $"{actor} (truy cập hộ)" : $"{actor} (truy cập hộ {account})";
     public static readonly IReadOnlyList<string> Priorities = ["LOW", "NORMAL", "HIGH", "URGENT"];
 
     public static string StatusLabel(string? s) => s switch
@@ -48,8 +52,13 @@ public static class WorkTaskPolicy
     public static bool CanSetStatus(string from, string to, bool canEdit) =>
         Statuses.Contains(to) && from != to && (canEdit || from != Cancelled && to != Cancelled);
 
-    // DONE needs at least one checklist item and every item ticked ("mỗi công việc phải có checklist" — operator 2026-11-07).
-    public static WorkOutcome CheckDone(int total, int done) => total > 0 && done == total ? WorkOutcome.Saved : WorkOutcome.ChecklistIncomplete;
+    // DONE: a checklist is optional (operator 2026-11-16, replacing "mỗi công việc phải có checklist" of 2026-11-07), but every
+    // item that exists must be ticked, and a note on the result is required (DoneNote).
+    public static WorkOutcome CheckDone(int total, int done) => done >= total ? WorkOutcome.Saved : WorkOutcome.ChecklistIncomplete;
+
+    public const string DoneNotePrefix = "Hoàn thành: ";
+    public const string DoneNoteRequired = "Cần nhập ghi chú kết quả khi chuyển sang Hoàn thành.";
+    public static string? DoneNote(string? note) => Clean(note, CommentMax - DoneNotePrefix.Length);
 
     public static byte Progress(string status, int total, int done) =>
         status == Done ? (byte)100 : total == 0 ? (byte)0 : (byte)Math.Clamp(done * 100 / total, 0, 100);

@@ -17,7 +17,7 @@ namespace TACustomerPortal.Web.Controllers;
 /// </summary>
 [AllowAnonymous, Route("pay/{token}"), EnableRateLimiting("pay"), PaymentsDataUnavailable]
 [ResponseCache(Location = ResponseCacheLocation.None, NoStore = true)]
-public sealed class PayController(IOrderPageStore pages, ILogoStore logos, IPaymentStore store, TimeProvider clock) : Controller
+public sealed class PayController(IOrderPageStore pages, ILogoStore logos, IPaymentStore store, OrderPayments payments, TimeProvider clock) : Controller
 {
     [HttpGet("")]
     public async Task<IActionResult> Index(string token)
@@ -25,6 +25,8 @@ public sealed class PayController(IOrderPageStore pages, ILogoStore logos, IPaym
         if (await Find(token) is not { } page) return NotFound();
         var order = await store.OrderAsync(page.CustomerId, page.OrderId);
         if (order is null) return NotFound();
+        // A QR that disappeared at the bank is replaced before the payer sees it (operator 2026-11-13).
+        order = await payments.EnsureLiveQrAsync(page.CustomerId, order, QrLiveness.SystemActor);
         return View(await Vm(token, page, order, null));
     }
 

@@ -1,0 +1,35 @@
+@model TAPortal.Integrations.ZaloMiniApp.MiniAppQr
+@{
+    ViewData["Title"] = "Mã QR đăng nhập Mini App";
+    ViewData["PageIcon"] = "qrcode";
+    var seconds = Math.Max(0, (int)(Model.ExpiresAtUtc!.Value - DateTime.UtcNow).TotalSeconds);
+}
+<div class="row g-3"><div class="col-xl-6">
+<section class="card">
+    <div class="card-body text-center">
+        <div class="ta-zalo-qr" data-ta-zalo-qr style="max-width:300px;margin:0 auto 12px;padding:10px;border:1px solid var(--tblr-border-color,#e5e7eb);border-radius:16px;background:#fff">@Html.Raw(ViewData["QrSvg"])</div>
+        <p class="mb-1">Mã QR còn hiệu lực <strong data-ta-zalo-timer data-seconds="@seconds">@($"{seconds / 60:00}:{seconds % 60:00}")</strong></p>
+        <p class="text-secondary mb-0">Mở Zalo trên điện thoại có số điện thoại của tài khoản, chọn quét mã QR.</p>
+    </div>
+    <div class="card-footer ta-form-actions">
+        <a class="btn" asp-action="Zalo">@UiIcon.Render("arrow-left")<span>Quay lại</span></a>
+        <form method="post" asp-action="ZaloQr" class="ms-auto" data-ta-hard><button type="submit" class="btn btn-primary">@UiIcon.Render("refresh")<span>Tạo mã mới</span></button></form>
+    </div>
+</section>
+</div>
+<div class="col-xl-6"><div class="ta-alert ta-alert--warning"><div class="ta-alert__body">Mã chỉ dùng được một lần. Nếu người khác quét, mã sẽ bị hủy và họ không vào được vì số điện thoại Zalo không trùng. Đừng chia sẻ ảnh chụp mã này.</div></div></div>
+</div>
+<script>
+(() => {
+    const out = document.querySelector("[data-ta-zalo-timer]");
+    if (!out) return;
+    const end = Date.now() + Number(out.dataset.seconds) * 1000;
+    const two = n => String(n).padStart(2, "0");
+    const tick = () => {
+        const left = Math.max(0, Math.round((end - Date.now()) / 1000));
+        out.textContent = left > 0 ? two(Math.floor(left / 60)) + ":" + two(left % 60) : "Đã hết hạn";
+        if (left === 0) { clearInterval(timer); document.querySelector("[data-ta-zalo-qr]").style.opacity = ".25"; }
+    };
+    const timer = setInterval(tick, 1000);
+})();
+</script>

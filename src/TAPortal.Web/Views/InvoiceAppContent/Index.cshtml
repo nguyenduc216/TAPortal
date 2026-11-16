@@ -1,10 +1,13 @@
 @model TAPortal.Web.Controllers.InvoiceAppEmailsVm
 @{
+    ViewData["ParentTitle"] = "Cấu hình hệ thống";
+    ViewData["ParentController"] = "SystemSettings";
     ViewData["Title"] = "Mẫu email";
     ViewData["Heading"] = "Mẫu email Hóa đơn tự động";
     ViewData["Subtitle"] = "Nội dung các email hệ thống Hóa đơn tự động gửi cho khách hàng. Logo, khung và chân email được thêm tự động.";
     ViewData["PageIcon"] = "mail";
 }
+<partial name="_SystemSettingsTabs" model="@("emails")" />
 <section class="card ta-table-card" aria-label="Danh sách mẫu email">
     <div class="ta-table-wrap">
         <table class="ta-table ta-table-stack">

@@ -9,7 +9,7 @@ using TAPortal.Web.Services;
 
 namespace TAPortal.Web.Controllers;
 
-public sealed class AccountController(PortalDb db, IAdminAuthStore auth, PasswordService passwords, IAdminLoginThrottle throttle, ILogger<AccountController> logger,
+public sealed partial class AccountController(PortalDb db, IAdminAuthStore auth, PasswordService passwords, IAdminLoginThrottle throttle, ILogger<AccountController> logger,
     IPasswordSecurityStore passwordSecurity, IServiceProvider services) : Controller
 {
     // Unknown, ineligible or hash-less accounts still pay the full PBKDF2 cost so response time does not reveal which accounts exist.
@@ -105,6 +105,12 @@ public sealed class AccountController(PortalDb db, IAdminAuthStore auth, Passwor
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Logout()
     {
+        // Signing out during "Truy cập hộ" ends that session too.
+        if (Impersonation.Read(User) is { } impersonation)
+        {
+            try { await services.GetRequiredService<IImpersonationStore>().EndAsync(impersonation.SessionId, "LOGOUT"); }
+            catch (Microsoft.Data.SqlClient.SqlException ex) { logger.LogWarning(ex, "IMPERSONATION_END_FAILED session {SessionId}", impersonation.SessionId); }
+        }
         await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
         // Ask supporting browsers to drop any cached admin pages for this origin (no-store already prevents storing them).
         Response.Headers["Clear-Site-Data"] = "\"cache\"";
@@ -113,9 +119,10 @@ public sealed class AccountController(PortalDb db, IAdminAuthStore auth, Passwor
 
     [Authorize]
     [HttpGet]
-    public async Task<IActionResult> Profile()
+    public async Task<IActionResult> Profile([FromServices] IWebPushStore push)
     {
         var user = await db.GetAuthUserAsync(User.Identity!.Name!);
+        if (user is not null && Impersonation.Read(User) is null) ViewBag.PushDevices = await push.ForUserAsync(user.Id);
         // Show role names, never role codes.
         if (user is not null)
             ViewBag.RoleNames = (await db.GetRolesAsync()).Where(r => user.Roles.Contains(r.Code, StringComparer.OrdinalIgnoreCase)).Select(r => r.Name).ToList();

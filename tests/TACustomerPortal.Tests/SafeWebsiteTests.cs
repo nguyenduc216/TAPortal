@@ -305,7 +305,15 @@ public sealed class SafeWebsiteTests
             }
             Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync("/InvoiceAppContent/Email/EMAIL.NOPE")).StatusCode);
             var editor = await client.GetStringAsync("/InvoiceAppContent/Email/EMAIL.ACCOUNT_CREATED");
-            Assert.Contains("Mẫu email</span>", editor);                                   // sidebar group "Hóa đơn tự động"
+            // Operator 2026-11-13: the pages are tabs of "Cấu hình hệ thống" (one menu entry), not a menu group of their own.
+            Assert.Contains("data-ta-tab=\"emails\" aria-current=\"page\" href=\"/InvoiceAppContent\"", editor);
+            Assert.Contains("data-ta-tab=\"terms\"", editor);
+            Assert.DoesNotContain("data-ta-tab=\"password\"", editor);                      // password security needs AUTH.ROLES.MANAGE
+            Assert.Contains("title=\"Cấu hình hệ thống\" aria-current=\"page\" href=\"/SystemSettings\"", WebUtility.HtmlDecode(editor));
+            Assert.DoesNotContain("ta-nav__section\">Hóa đơn tự động<", WebUtility.HtmlDecode(editor));
+            var hub = await client.GetAsync("/SystemSettings");
+            Assert.Equal(HttpStatusCode.Redirect, hub.StatusCode);
+            Assert.Equal("/InvoiceAppContent", hub.Headers.Location?.OriginalString);
             Assert.Contains("srcdoc=\"", editor);
             Assert.Contains("images/logo.png", WebUtility.HtmlDecode(editor));
             var preview = await client.PostAsync("/InvoiceAppContent/Email/EMAIL.ACCOUNT_CREATED", Form(Token(editor), ("subject", "Chào {{NguoiLienHe}}"),
