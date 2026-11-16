@@ -151,6 +151,8 @@ public sealed class SafeServiceCatalogTests
         Assert.Contains("WHERE st.ServiceId=@service ORDER BY st.SortOrder", S.ServicePeriodSql.ServiceTasks);    // tasks in the service's order
         Assert.Contains("t.Status<>'NEW' OR EXISTS(SELECT 1 FROM dbo.WorkTaskQuantities", S.ServicePeriodSql.Started);
         Assert.Contains("t.Unit=c.Unit,t.MetricCode=c.MetricCode", S.WorkTaskSql.UnitFromCatalog);
+        Assert.Contains("e.Id=p.OwnerEmployeeId WHERE p.IsDeleted=0", S.ServicePeriodSql.List);                  // pieces joined with a space
+        Assert.Contains("e.Id=p.OwnerEmployeeId WHERE p.Id=@id", S.ServicePeriodSql.Detail);
         var root = new DirectoryInfo(AppContext.BaseDirectory);
         while (!File.Exists(Path.Combine(root.FullName, "TAPortal.sln"))) root = root.Parent!;
         var migration = File.ReadAllText(Path.Combine(root.FullName, "database", "migrations", "065-service-periods.sql"));

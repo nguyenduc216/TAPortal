@@ -109,13 +109,14 @@ public static class ServicePeriodSql
 FROM dbo.ServicePeriods p JOIN dbo.Customers c ON c.Id=p.CustomerId JOIN dbo.Services s ON s.Id=p.ServiceId LEFT JOIN dbo.Employees e ON e.Id=p.OwnerEmployeeId
 """;
 
-    public const string List = "SELECT TOP 500" + Columns + "WHERE p.IsDeleted=0 AND " + Visible + """
+    // Raw strings drop their last line break: the pieces are joined with explicit spaces.
+    public const string List = "SELECT TOP 500" + Columns + " WHERE p.IsDeleted=0 AND " + Visible + """
  AND (@month IS NULL OR p.PeriodMonth=@month) AND (@customer IS NULL OR p.CustomerId=@customer) AND (@service IS NULL OR p.ServiceId=@service)
  AND (@q IS NULL OR c.Name LIKE @q ESCAPE '\' OR c.Code LIKE @q ESCAPE '\' OR s.Name LIKE @q ESCAPE '\')
 ORDER BY p.PeriodMonth DESC, c.Name, s.SortOrder, s.Name;
 """;
 
-    public const string Detail = "SELECT" + Columns + "WHERE p.Id=@id AND p.IsDeleted=0 AND " + Visible + """
+    public const string Detail = "SELECT" + Columns + " WHERE p.Id=@id AND p.IsDeleted=0 AND " + Visible + """
 ;
 SELECT Note FROM dbo.ServicePeriods WHERE Id=@id;
 SELECT t.Id,t.TaskNo,t.Title,t.Status,e.FullName,t.DueDate,t.Progress,
