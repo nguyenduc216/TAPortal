@@ -41,3 +41,6 @@ Operator 2026-11-16: "Tất cả các thông báo" (after web push in CONTRACTS-
 - Merge SHA:
 
 ## Rủi ro, quyết định và việc còn lại
+
+## Migration execution
+- 060-work-push-notifications.sql: PRECHECK NOT_APPLIED; DRYRUN PASS/NOT_APPLIED (trancount 0); gates PASS (792); REAL RUN VERIFY_STATUS=PASS => EXECUTED 2026-11-16T13:28:13Z
