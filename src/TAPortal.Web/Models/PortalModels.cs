@@ -68,6 +68,7 @@ public sealed class CustomerEditVm
     [StringLength(1000, ErrorMessage = "Địa chỉ tối đa 1000 ký tự.")] public string? Address { get; set; }
     [ValidateNever] public string Status { get; set; } = "ACTIVE";
     public bool IsActive { get; set; } = true;
+    public Guid? IndustryId { get; set; }   // Ngành nghề (migration 061)
 }
 
 public sealed record PortalUser(Guid Id, string Username, string DisplayName, string? Email, string? Phone, string Status, bool IsActive);

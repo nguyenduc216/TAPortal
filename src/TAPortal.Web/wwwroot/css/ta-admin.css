@@ -410,3 +410,31 @@
   .ta-form-grid.ta-form-grid--pair{grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--ta-sp-3,.75rem)}
   .ta-form-grid--pair .ta-input-icon .form-control{padding-right:.25rem}
 }
+/* Danh mục dịch vụ (operator 2026-11-16; Views/ServiceCatalog, wwwroot/js/ta-services.js). */
+.ta-svc-group .ta-table-toolbar .ta-section-title{gap:.5rem}
+.ta-svc-group__empty{margin:0;padding:0 var(--ta-sp-5,1.25rem) var(--ta-sp-4,1rem)}
+.ta-entry-grid .ta-input-icon{min-width:160px}
+.ta-entry-grid__num{width:110px}
+.ta-entry-grid__new td{background:var(--ta-surface-2,#f8fafc)}
+.ta-svc-form__tabs{padding-bottom:0}
+.ta-svc-modes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.75rem}
+.ta-svc-mode{display:flex;gap:.625rem;align-items:flex-start;padding:.75rem .875rem;border:1px solid var(--ta-border,#e2e8f0);border-radius:10px;cursor:pointer;background:#fff}
+.ta-svc-mode:has(input:checked){border-color:var(--ta-blue,#2563eb);background:var(--ta-blue-soft,#eff6ff)}
+.ta-svc-mode input{margin-top:.2rem;flex:none}
+.ta-svc-mode span{display:flex;flex-direction:column;gap:.125rem;min-width:0}
+.ta-svc-mode small{color:var(--ta-text-2,#64748b);font-size:.8125rem}
+.ta-pricing__title{font-size:1rem;font-weight:650;margin:1.25rem 0 .25rem}
+.ta-pricing__title:first-child{margin-top:0}
+.ta-pricing__metrics{display:grid;gap:.5rem;margin:.5rem 0}
+.ta-pricing__metric{display:grid;grid-template-columns:28px minmax(0,2fr) minmax(0,1fr) 36px;gap:.5rem;align-items:center}
+.ta-pricing__metric-no{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;background:var(--ta-surface-2,#f1f5f9);font-size:.8125rem;font-weight:600}
+.ta-pricing__table{min-width:640px}
+.ta-pricing__table th{white-space:normal;vertical-align:bottom}
+.ta-pricing__metric-head,.ta-pricing__fee-head{text-align:center}
+.ta-pricing__sub{font-weight:500;color:var(--ta-text-2,#64748b);text-align:center}
+.ta-pricing__table td{padding:.375rem .375rem;vertical-align:middle}
+.ta-pricing__label{min-width:160px}
+.ta-pricing__num{min-width:84px;text-align:right}
+.ta-pricing__fee{min-width:110px}
+@media (max-width:767.98px){.ta-svc-modes{grid-template-columns:1fr}.ta-pricing__metric{grid-template-columns:24px minmax(0,1fr) 36px}.ta-pricing__unit{grid-column:2}}
+.ta-pricing__actions{white-space:nowrap;width:1%}

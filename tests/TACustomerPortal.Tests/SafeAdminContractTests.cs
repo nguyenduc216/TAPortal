@@ -143,8 +143,11 @@ public sealed class SafeAdminContractTests
         while (!File.Exists(Path.Combine(root.FullName, "TAPortal.sln"))) root = root.Parent!;
         var migration = File.ReadAllText(Path.Combine(root.FullName, "database", "migrations", "031-contracts-and-work-tasks.sql"));
         var module = AdminSecurity.AdminPermissions.Modules.Single(m => m.Key == AdminSecurity.AdminPermissions.ContractsModuleKey);
-        var expected = module.Permissions.Select(p => p.Code).Order(StringComparer.Ordinal).ToList();
+        // CONTRACTS.SERVICES.MANAGE (Danh mục dịch vụ) came later, with migration 061.
+        var expected = module.Permissions.Select(p => p.Code).Where(c => c != "CONTRACTS.SERVICES.MANAGE").Order(StringComparer.Ordinal).ToList();
         Assert.Equal(["CONTRACTS.CREATE", "CONTRACTS.DELETE", "CONTRACTS.UPDATE", "CONTRACTS.VIEW"], expected);
+        Assert.Equal(["CONTRACTS.SERVICES.MANAGE"], AdminSecurity.AdminPermissions.Migration061Codes);
+        Assert.Contains("'CONTRACTS.SERVICES.MANAGE'", File.ReadAllText(Path.Combine(root.FullName, "database", "migrations", "061-service-catalog.sql")));
         Assert.Equal(expected, Regex.Matches(migration, @"\('(CONTRACTS\.[A-Z_]+)',").Select(m => m.Groups[1].Value).Distinct().Order(StringComparer.Ordinal).ToList());
         Assert.All(expected, c => Assert.Contains(c, AdminSecurity.AdminPermissions.Migration031Codes));
         Assert.Contains("dbo.CustomerContracts", migration);

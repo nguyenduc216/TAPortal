@@ -61,6 +61,7 @@ builder.Services.AddScoped<ICustomerStaffStore, SqlCustomerStaffStore>();
 builder.Services.AddScoped<IImpersonationStore, SqlImpersonationStore>();
 builder.Services.AddScoped<IWorkCatalogStore, SqlWorkCatalogStore>();
 builder.Services.AddScoped<IWorkDocumentStore, SqlWorkDocumentStore>();
+builder.Services.AddScoped<IServiceCatalogStore, SqlServiceCatalogStore>();
 // Cài ứng dụng + thông báo đẩy (wwwroot/sw.js, PushController, migration 059).
 builder.Services.AddSingleton<IWebPushStore, SqlWebPushStore>();
 builder.Services.AddScoped<IWebPushSender, WebPushSender>();

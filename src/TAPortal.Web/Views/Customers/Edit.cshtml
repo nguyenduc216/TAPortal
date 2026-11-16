@@ -1,6 +1,8 @@
 @model CustomerEditVm
+@inject IServiceCatalogStore ServiceCatalog
 @{
     var isNew = Model.Id == Guid.Empty;
+    var industries = await ServiceCatalog.IndustriesAsync();
     var ws = ViewData["Workspace"] as CustomerWorkspaceHeader;
     ViewData["ParentTitle"] = "Khách hàng";
     ViewData["ParentController"] = "Customers";
@@ -55,6 +57,16 @@
                 <label asp-for="Phone" class="form-label">Điện thoại</label>
                 <div class="ta-input-icon">@UiIcon.Render("phone")<input asp-for="Phone" class="form-control" maxlength="50" inputmode="tel" /></div>
                 <span asp-validation-for="Phone" class="invalid-feedback d-block"></span>
+            </div>
+            @* Ngành nghề (migration 061): Hợp đồng > Danh mục dịch vụ > Ngành nghề; fees may differ by industry. *@
+            <div>
+                <label for="IndustryId" class="form-label">Ngành nghề</label>
+                <select id="IndustryId" name="IndustryId" class="form-select">
+                    <option value="">— Chưa chọn —</option>
+                    @foreach (var ind in industries) {<option value="@ind.Id" selected="@(ind.Id == Model.IndustryId)">@ind.Name</option>}
+                    @if (Model.IndustryId is Guid current && industries.All(x => x.Id != current)) {<option value="@current" selected>(ngành đã ẩn)</option>}
+                </select>
+                <div class="form-hint">Loại hình ngành nghề dùng để tính phí dịch vụ (Thương mại - dịch vụ, Sản xuất - gia công...).</div>
             </div>
             <div class="ta-ws-span-2">
                 <label asp-for="Address" class="form-label">Địa chỉ</label>

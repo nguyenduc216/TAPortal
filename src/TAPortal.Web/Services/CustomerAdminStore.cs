@@ -38,14 +38,14 @@ public interface ICustomerAdminStore
 
 public static class CustomerAdminSql
 {
-    public const string Get = "SELECT Id,Code,Name,TaxCode,Email,Phone,Address,Status,IsActive FROM dbo.Customers WITH (UPDLOCK, HOLDLOCK) WHERE Id=@id AND IsDeleted=0;";
+    public const string Get = "SELECT Id,Code,Name,TaxCode,Email,Phone,Address,Status,IsActive,IndustryId FROM dbo.Customers WITH (UPDLOCK, HOLDLOCK) WHERE Id=@id AND IsDeleted=0;";
     public const string CodeTaken = "SELECT TOP 1 Code FROM dbo.Customers WITH (UPDLOCK, HOLDLOCK) WHERE Code=@code AND IsDeleted=0;";
     // Range-locked under SERIALIZABLE so two application requests for the same tax code serialize.
     // Inactive (not deleted) customers count: reactivation must not create an active duplicate.
     public const string TaxCodeTaken = "SELECT TOP 1 Code FROM dbo.Customers WITH (UPDLOCK, HOLDLOCK) WHERE IsDeleted=0 AND TaxCode IS NOT NULL AND REPLACE(REPLACE(REPLACE(TaxCode,' ',''),CHAR(9),''),CHAR(160),'')=@tax AND Id<>@id;";
     public const string CodesLike = "SELECT TOP 200 Code FROM dbo.Customers WHERE Code LIKE @prefix + '%';";
-    public const string Insert = "INSERT dbo.Customers(Id,Code,Name,TaxCode,Email,Phone,Address,Status,IsActive,CreatedBy) VALUES(@id,@code,@name,@tax,@email,@phone,@address,'ACTIVE',@active,@by);";
-    public const string Update = "UPDATE dbo.Customers SET Name=@name,TaxCode=@tax,Email=@email,Phone=@phone,Address=@address,IsActive=@active,UpdatedAt=SYSUTCDATETIME(),UpdatedBy=@by WHERE Id=@id AND IsDeleted=0;";
+    public const string Insert = "INSERT dbo.Customers(Id,Code,Name,TaxCode,Email,Phone,Address,Status,IsActive,IndustryId,CreatedBy) VALUES(@id,@code,@name,@tax,@email,@phone,@address,'ACTIVE',@active,(SELECT Id FROM dbo.Industries WHERE Id=@industry AND IsDeleted=0),@by);";
+    public const string Update = "UPDATE dbo.Customers SET Name=@name,TaxCode=@tax,Email=@email,Phone=@phone,Address=@address,IsActive=@active,IndustryId=CASE WHEN @industry IS NULL THEN NULL WHEN EXISTS(SELECT 1 FROM dbo.Industries WHERE Id=@industry AND IsDeleted=0) THEN @industry ELSE IndustryId END,UpdatedAt=SYSUTCDATETIME(),UpdatedBy=@by WHERE Id=@id AND IsDeleted=0;";
 }
 
 public static class CustomerChangePolicy
@@ -118,7 +118,7 @@ public sealed class SqlCustomerAdminStore(IConfiguration configuration, AdminAud
             var args = new List<(string, object)>
             {
                 ("@id", vm.Id), ("@name", vm.Name.Trim()), ("@tax", (object?)tax ?? DBNull.Value), ("@email", Db(vm.Email)),
-                ("@phone", Db(vm.Phone)), ("@address", Db(vm.Address)), ("@active", vm.IsActive), ("@by", (object?)actorId ?? DBNull.Value)
+                ("@phone", Db(vm.Phone)), ("@address", Db(vm.Address)), ("@active", vm.IsActive), ("@industry", (object?)vm.IndustryId ?? DBNull.Value), ("@by", (object?)actorId ?? DBNull.Value)
             };
             if (isNew) args.Add(("@code", vm.Code));
             await using (var cmd = new SqlCommand(isNew ? CustomerAdminSql.Insert : CustomerAdminSql.Update, cn, tx))
@@ -127,7 +127,7 @@ public sealed class SqlCustomerAdminStore(IConfiguration configuration, AdminAud
                 if (await cmd.ExecuteNonQueryAsync() != 1) return new(CustomerChangeOutcome.NotFound);
             }
             static string State(CustomerEditVm? c, string? tax) => c is null ? "{}" :
-                AuditSql.Json(("code", c.Code), ("name", c.Name), ("taxCode", tax), ("email", c.Email), ("phone", c.Phone), ("address", c.Address), ("isActive", c.IsActive));
+                AuditSql.Json(("code", c.Code), ("name", c.Name), ("taxCode", tax), ("email", c.Email), ("phone", c.Phone), ("address", c.Address), ("isActive", c.IsActive), ("industryId", c.IndustryId));
             await AuditSql.WriteOrThrowAsync(cn, tx, audit.RequireDurableAudit, actorId, isNew ? "CUSTOMER_CREATED" : "CUSTOMER_UPDATED", "dbo.Customers", vm.Id.ToString(),
                 State(before, currentTax), State(vm, tax), null);
             await tx.CommitAsync();
@@ -151,7 +151,7 @@ public sealed class SqlCustomerAdminStore(IConfiguration configuration, AdminAud
         await using var r = await cmd.ExecuteReaderAsync();
         if (!await r.ReadAsync()) return null;
         string? Text(int i) => r.IsDBNull(i) ? null : r.GetString(i);
-        return new CustomerEditVm { Id = r.GetGuid(0), Code = r.GetString(1), Name = r.GetString(2), TaxCode = Text(3), Email = Text(4), Phone = Text(5), Address = Text(6), Status = r.GetString(7), IsActive = r.GetBoolean(8) };
+        return new CustomerEditVm { Id = r.GetGuid(0), Code = r.GetString(1), Name = r.GetString(2), TaxCode = Text(3), Email = Text(4), Phone = Text(5), Address = Text(6), Status = r.GetString(7), IsActive = r.GetBoolean(8), IndustryId = r.IsDBNull(9) ? null : r.GetGuid(9) };
     }
 
     private static object Db(string? value) => string.IsNullOrWhiteSpace(value) ? DBNull.Value : value.Trim();

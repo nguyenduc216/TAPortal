@@ -75,6 +75,7 @@ public static class AdminPermissions
     public const string ContractsCreate = "CONTRACTS.CREATE";
     public const string ContractsUpdate = "CONTRACTS.UPDATE";
     public const string ContractsDelete = "CONTRACTS.DELETE";
+    public const string ServiceCatalogManage = "CONTRACTS.SERVICES.MANAGE";   // Danh mục dịch vụ, hạn mức phí, ngành nghề (migration 061)
 
     // Hợp đồng dịch vụ: contract revision requests with AI review and the law library, inserted by migration 044.
     public const string ContractReviewModuleKey = "CONTRACT_REVIEW";
@@ -154,6 +155,7 @@ public static class AdminPermissions
         public const string ContractsCreate = PermissionPolicies.Prefix + AdminPermissions.ContractsCreate;
         public const string ContractsUpdate = PermissionPolicies.Prefix + AdminPermissions.ContractsUpdate;
         public const string ContractsDelete = PermissionPolicies.Prefix + AdminPermissions.ContractsDelete;
+        public const string ServiceCatalogManage = PermissionPolicies.Prefix + AdminPermissions.ServiceCatalogManage;
         public const string ContractReviewView = PermissionPolicies.Prefix + AdminPermissions.ContractReviewView;
         public const string ContractReviewCreate = PermissionPolicies.Prefix + AdminPermissions.ContractReviewCreate;
         public const string ContractReviewRunAi = PermissionPolicies.Prefix + AdminPermissions.ContractReviewRunAi;
@@ -222,7 +224,8 @@ public static class AdminPermissions
             new(ContractsView, "Xem hợp đồng và file đính kèm", "VIEW"),
             new(ContractsCreate, "Thêm hợp đồng", "CREATE"),
             new(ContractsUpdate, "Sửa hợp đồng, đính kèm hoặc gỡ file", "UPDATE"),
-            new(ContractsDelete, "Xóa (mềm) hợp đồng", "DELETE")
+            new(ContractsDelete, "Xóa (mềm) hợp đồng", "DELETE"),
+            new(ServiceCatalogManage, "Quản lý danh mục dịch vụ, hạn mức phí và ngành nghề", "MANAGE")
         ]),
         new(ContractReviewModuleKey, "Hợp đồng dịch vụ",
         [
@@ -298,10 +301,13 @@ public static class AdminPermissions
 
     // Codes inserted by migration 031 (Công việc, Hợp đồng).
     public static readonly IReadOnlyList<string> Migration031Codes = Modules.Where(m => m.Key is ContractsModuleKey or TasksModuleKey)
-        .SelectMany(m => m.Permissions).Select(p => p.Code).Where(c => c != TaskCatalogManage).ToList();
+        .SelectMany(m => m.Permissions).Select(p => p.Code).Where(c => c != TaskCatalogManage && c != ServiceCatalogManage).ToList();
 
     // Code inserted by migration 043 (Danh mục công việc).
     public static readonly IReadOnlyList<string> Migration043Codes = [TaskCatalogManage];
+
+    // Code inserted by migration 061 (Danh mục dịch vụ).
+    public static readonly IReadOnlyList<string> Migration061Codes = [ServiceCatalogManage];
 
     // Codes inserted by migration 044 (Hợp đồng dịch vụ).
     public static readonly IReadOnlyList<string> Migration044Codes = Modules.Where(m => m.Key is ContractReviewModuleKey)

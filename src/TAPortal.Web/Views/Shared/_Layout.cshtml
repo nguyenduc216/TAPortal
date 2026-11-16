@@ -110,7 +110,7 @@
                     </ul>
                 </div>
             }
-            @if (canCustomers || canReconciliation || Can(AdminPermissions.ContractsView) || Can(AdminPermissions.ContractReviewView))
+            @if (canCustomers || canReconciliation || Can(AdminPermissions.ContractsView) || Can(AdminPermissions.ContractReviewView) || Can(AdminPermissions.ServiceCatalogManage))
             {
                 <div class="ta-nav__group">
                     <p class="ta-nav__section">Quản lý khách hàng</p>
@@ -119,6 +119,7 @@
                         @if (canCustomers) {<li><a class="ta-nav__link" asp-controller="Customers" asp-action="Index" title="Khách hàng" aria-current="@(IsCurrent("Customers") || IsCurrent("CustomerPortalAccounts") ? "page" : null)"><span class="ta-nav__icon">@UiIcon.Render("building")</span><span class="ta-nav__label">Khách hàng</span></a></li>}
                         @if (canReconciliation) {<li><a class="ta-nav__link" asp-controller="PaymentReconciliation" asp-action="Index" title="Đối soát giao dịch" aria-current="@(IsCurrent("PaymentReconciliation") ? "page" : null)"><span class="ta-nav__icon">@UiIcon.Render("report-money")</span><span class="ta-nav__label">Đối soát giao dịch</span></a></li>}
                         @if (Can(AdminPermissions.ContractsView)) {<li><a class="ta-nav__link" asp-controller="Contracts" asp-action="Index" title="Hợp đồng" aria-current="@(IsCurrent("Contracts") ? "page" : null)"><span class="ta-nav__icon">@UiIcon.Render("file-text")</span><span class="ta-nav__label">Hợp đồng</span></a></li>}
+                        @if (Can(AdminPermissions.ServiceCatalogManage)) {<li><a class="ta-nav__link" asp-controller="ServiceCatalog" asp-action="Index" title="Danh mục dịch vụ" aria-current="@(IsCurrent("ServiceCatalog") ? "page" : null)"><span class="ta-nav__icon">@UiIcon.Render("package")</span><span class="ta-nav__label">Danh mục dịch vụ</span></a></li>}
                         @if (Can(AdminPermissions.ContractReviewView)) {<li><a class="ta-nav__link" asp-controller="ContractReviews" asp-action="Index" title="Hợp đồng dịch vụ" aria-current="@(IsCurrent("ContractReviews") || IsCurrent("LegalLibrary") || IsCurrent("LegalWatch") ? "page" : null)"><span class="ta-nav__icon">@UiIcon.Render("checks")</span><span class="ta-nav__label">Hợp đồng dịch vụ</span></a></li>}
                     </ul>
                 </div>
@@ -275,6 +276,7 @@ else
 <script src="~/js/ta-work.js" asp-append-version="true"></script>
 <script src="~/js/ta-website.js" asp-append-version="true"></script>
 <script src="~/js/ta-review.js" asp-append-version="true"></script>
+<script src="~/js/ta-services.js" asp-append-version="true"></script>
 @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

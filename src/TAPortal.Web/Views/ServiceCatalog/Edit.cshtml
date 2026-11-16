@@ -1,0 +1,116 @@
+@model ServiceEditVm
+@using TAPortal.Web.Controllers
+@using System.Text.Json
+@{
+    ViewData["Subtitle"] = "Thông tin dịch vụ, cách tính phí theo hạn mức, phạm vi công việc và nguyên tắc tính phí.";
+    ViewData["PageIcon"] = "package";
+    var i = Model.Input;
+    var mode = ServicePricingPolicy.Modes.Contains(i.PricingMode) ? i.PricingMode : ServicePricingPolicy.Tier;
+    var industries = JsonSerializer.Serialize(Model.Industries.Select(x => new { id = x.Id.ToString(), name = x.Name }));
+    var pricing = string.IsNullOrWhiteSpace(i.PricingJson) ? "" : i.PricingJson;
+}
+@if (Model.Error is not null)
+{
+    <div class="ta-alert ta-alert--danger" role="alert">@UiIcon.Render("alert-circle")<div class="ta-alert__body">@Model.Error</div></div>
+}
+@* Danh mục dịch vụ (operator 2026-11-16). The "Hạn mức & phí" table is drawn by wwwroot/js/ta-services.js from the hidden
+   Input.PricingJson and written back to it on every change; ServicePricingPolicy.Validate checks it on the server. *@
+<form method="post" asp-action="Save" asp-route-id="@Model.Id" class="card ta-svc-form" data-ta-tabs data-ta-svc-form>
+    <div class="card-header ta-svc-form__tabs">
+        <div class="ta-catalog-tabs" role="tablist" aria-label="Thông tin dịch vụ">
+            <button class="ta-catalog-tabs__tab" type="button" role="tab" aria-selected="true" tabindex="0" data-ta-tabbtn="general">@UiIcon.Render("file-text")<span>Thông tin chung</span></button>
+            <button class="ta-catalog-tabs__tab" type="button" role="tab" aria-selected="false" tabindex="-1" data-ta-tabbtn="pricing">@UiIcon.Render("report-money")<span>Hạn mức &amp; phí</span></button>
+            <button class="ta-catalog-tabs__tab" type="button" role="tab" aria-selected="false" tabindex="-1" data-ta-tabbtn="scope">@UiIcon.Render("checks")<span>Phạm vi công việc</span></button>
+            <button class="ta-catalog-tabs__tab" type="button" role="tab" aria-selected="false" tabindex="-1" data-ta-tabbtn="rules">@UiIcon.Render("info-circle")<span>Nguyên tắc &amp; ghi chú</span></button>
+        </div>
+    </div>
+    <div class="card-body">
+        <div data-ta-tabpanel="general">
+            <div class="ta-form-grid">
+                <div>
+                    <label class="form-label" for="sCategory">Nhóm dịch vụ <span class="text-danger">*</span></label>
+                    <select class="form-select" id="sCategory" name="Input.CategoryId" required>
+                        @foreach (var c in Model.Categories) {<option value="@c.Id" selected="@(c.Id == i.CategoryId)">@c.Name@(c.IsActive ? "" : " (đã ẩn)")</option>}
+                    </select>
+                </div>
+                <div>
+                    <label class="form-label" for="sName">Tên dịch vụ <span class="text-danger">*</span></label>
+                    <div class="ta-input-icon">@UiIcon.Render("package")<input class="form-control" id="sName" name="Input.Name" value="@i.Name" maxlength="@ServicePricingPolicy.NameMax" required placeholder="Ví dụ: Dịch vụ nhân sự hàng tháng" /></div>
+                </div>
+                <div class="ta-span-2">
+                    <label class="form-label" for="sDesc">Mô tả ngắn</label>
+                    <div class="ta-input-icon ta-input-icon--top">@UiIcon.Render("file-text")<textarea class="form-control" id="sDesc" name="Input.Description" rows="2" maxlength="@ServicePricingPolicy.DescriptionMax" data-ta-voice>@i.Description</textarea></div>
+                </div>
+                <div class="ta-span-2">
+                    <span class="form-label d-block">Cách tính phí</span>
+                    <div class="ta-svc-modes" role="radiogroup" aria-label="Cách tính phí">
+                        <label class="ta-svc-mode"><input type="radio" name="Input.PricingMode" value="TIER" checked="@(mode == "TIER")" data-ta-svc-mode /><span><strong>Theo hạn mức</strong><small>Bảng bậc theo chỉ số (số chứng từ, quy mô nhân sự, số bộ hồ sơ...)</small></span></label>
+                        <label class="ta-svc-mode"><input type="radio" name="Input.PricingMode" value="FIXED" checked="@(mode == "FIXED")" data-ta-svc-mode /><span><strong>Trọn gói</strong><small>Một mức phí cố định cho cả gói</small></span></label>
+                        <label class="ta-svc-mode"><input type="radio" name="Input.PricingMode" value="QUOTE" checked="@(mode == "QUOTE")" data-ta-svc-mode /><span><strong>Báo giá riêng</strong><small>Phí thỏa thuận theo từng trường hợp</small></span></label>
+                    </div>
+                </div>
+                <div data-ta-svc-when="TIER FIXED">
+                    <label class="form-label" for="sFeeLabel">Tên cột phí</label>
+                    <div class="ta-input-icon">@UiIcon.Render("cash")<input class="form-control" id="sFeeLabel" name="Input.FeeLabel" value="@i.FeeLabel" maxlength="@ServicePricingPolicy.FeeLabelMax" placeholder="Phí dịch vụ" /></div>
+                </div>
+                <div data-ta-svc-when="TIER FIXED">
+                    <label class="form-label" for="sFeeUnit">Đơn vị tính phí</label>
+                    <div class="ta-input-icon">@UiIcon.Render("hash")<input class="form-control" id="sFeeUnit" name="Input.FeeUnit" value="@i.FeeUnit" maxlength="@ServicePricingPolicy.UnitMax" placeholder="đồng/tháng" list="sFeeUnits" /></div>
+                    <datalist id="sFeeUnits"><option value="đồng/tháng"></option><option value="đồng/quý"></option><option value="đồng/năm"></option><option value="đồng/gói"></option><option value="đồng/lần"></option><option value="đồng"></option></datalist>
+                </div>
+                <div data-ta-svc-when="FIXED">
+                    <label class="form-label" for="sFixed">Phí trọn gói <span class="text-danger">*</span></label>
+                    <div class="ta-input-icon">@UiIcon.Render("cash")<input class="form-control" id="sFixed" name="Input.FixedFee" value="@i.FixedFee" inputmode="numeric" placeholder="10.000.000" data-ta-money /></div>
+                </div>
+                <div>
+                    <label class="form-label" for="sSort">Thứ tự</label>
+                    <div class="ta-input-icon">@UiIcon.Render("hash")<input class="form-control" id="sSort" name="Input.SortOrder" type="number" min="0" value="@i.SortOrder" /></div>
+                </div>
+                <div>
+                    <span class="form-label d-block">Trạng thái</span>
+                    <label class="form-check form-switch"><input class="form-check-input" type="checkbox" name="Input.IsActive" value="true" checked="@i.IsActive" /><span class="form-check-label">Đang dùng</span></label>
+                    <input type="hidden" name="Input.IsActive" value="false" />
+                </div>
+            </div>
+        </div>
+
+        <div data-ta-tabpanel="pricing" hidden>
+            <div data-ta-svc-when="FIXED QUOTE" class="ta-alert ta-alert--info">@UiIcon.Render("info-circle")<div class="ta-alert__body">Bảng hạn mức chỉ dùng khi cách tính phí là <strong>Theo hạn mức</strong> (tab Thông tin chung).</div></div>
+            <div data-ta-svc-when="TIER">
+                <div class="ta-pricing" data-ta-pricing data-industries="@industries">
+                    <h3 class="ta-pricing__title">Chỉ số hạn mức</h3>
+                    <p class="form-hint">Tên chỉ số và đơn vị, ví dụ: "Quy mô nhân sự được xử lý trong tháng" – "nhân sự"; "Số lượng chứng từ" – "chứng từ"; "Doanh thu tháng" – "triệu đồng". Tối đa 3 chỉ số.</p>
+                    <div class="ta-pricing__metrics" data-ta-pricing-metrics></div>
+                    <button type="button" class="btn btn-sm" data-ta-pricing-add-metric>@UiIcon.Render("plus")<span>Thêm chỉ số</span></button>
+
+                    <label class="form-check form-switch mt-3"><input class="form-check-input" type="checkbox" data-ta-pricing-industry @(Model.Industries.Count == 0 ? "disabled" : null) /><span class="form-check-label">Phí khác nhau theo ngành nghề (mỗi ngành một cột phí)</span></label>
+                    @if (Model.Industries.Count == 0) {<p class="form-hint">Chưa có ngành nghề đang dùng; thêm ở tab Ngành nghề của Danh mục dịch vụ.</p>}
+
+                    <h3 class="ta-pricing__title">Các bậc hạn mức</h3>
+                    <p class="form-hint">Mỗi bậc: khoảng giá trị của từng chỉ số (để trống "Từ" hoặc "Đến" nếu không giới hạn) và phí. "Mô tả bậc" để trống thì tự ghi, ví dụ "Từ 10 đến 14 nhân sự".</p>
+                    <div class="ta-table-wrap"><table class="ta-table ta-pricing__table" data-ta-pricing-table></table></div>
+                    <button type="button" class="btn btn-sm mt-2" data-ta-pricing-add-tier>@UiIcon.Render("plus")<span>Thêm bậc</span></button>
+                    <input type="hidden" name="Input.PricingJson" value="@pricing" data-ta-pricing-json />
+                </div>
+            </div>
+        </div>
+
+        <div data-ta-tabpanel="scope" hidden>
+            <label class="form-label" for="sScope">Phạm vi công việc</label>
+            <p class="form-hint">Mỗi dòng là một nội dung công việc trong phạm vi dịch vụ (dùng khi lập báo giá, hợp đồng).</p>
+            <div class="ta-input-icon ta-input-icon--top">@UiIcon.Render("checks")<textarea class="form-control" id="sScope" name="Input.ScopeText" rows="10" maxlength="@ServicePricingPolicy.TextMax" data-ta-voice
+                placeholder="Tổng hợp dữ liệu chấm công, tính lương và lập bảng lương hàng tháng...&#10;Soạn thảo hợp đồng lao động, phụ lục hợp đồng...">@i.ScopeText</textarea></div>
+        </div>
+
+        <div data-ta-tabpanel="rules" hidden>
+            <label class="form-label" for="sRules">Nguyên tắc tính phí &amp; ghi chú</label>
+            <p class="form-hint">Phụ thu, cách tính bậc tiếp theo, nội dung không bao gồm, điều kiện áp dụng... Mỗi dòng một ý.</p>
+            <div class="ta-input-icon ta-input-icon--top">@UiIcon.Render("info-circle")<textarea class="form-control" id="sRules" name="Input.RulesText" rows="10" maxlength="@ServicePricingPolicy.TextMax" data-ta-voice
+                placeholder="Từ bộ hồ sơ thứ 11, mỗi nhóm tăng thêm tối đa 02 bộ tính thêm 1.000.000 đồng...&#10;Phí trên chưa bao gồm thủ tục hồ sơ công đoàn...">@i.RulesText</textarea></div>
+        </div>
+    </div>
+    <div class="card-footer ta-form-actions">
+        <a class="btn" asp-action="Index">@UiIcon.Render("arrow-left")<span>Danh sách</span></a>
+        <button class="btn btn-primary" type="submit" data-ta-loading data-ta-loading-text="Đang lưu...">@UiIcon.Render("device-floppy")<span>Lưu</span></button>
+    </div>
+</form>

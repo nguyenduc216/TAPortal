@@ -391,6 +391,66 @@ public sealed class SafeAdminWorkTests
     }
 
     [Fact]
+    public async Task ServiceCatalogNeedsItsPermissionAndShowsGroupsServicesAndIndustries()
+    {
+        var svc = new MemoryServices();
+        WebApplicationFactory<admin::Program> F(params string[] permissions) => Factory("STAFF", new MemoryWork(), permissions).WithWebHostBuilder(b => b.ConfigureTestServices(s =>
+        {
+            s.RemoveAll<S.IServiceCatalogStore>(); s.AddSingleton<S.IServiceCatalogStore>(svc);
+        }));
+        using (var f = F("TASKS.VIEW", "CONTRACTS.VIEW"))
+            Assert.Equal(HttpStatusCode.Forbidden, (await Client(f).GetAsync("/servicecatalog")).StatusCode);
+
+        using var ok = F("TASKS.VIEW", "CONTRACTS.SERVICES.MANAGE");
+        var c = Client(ok);
+        var html = WebUtility.HtmlDecode(await c.GetStringAsync("/servicecatalog"));
+        Assert.Contains("Dịch vụ nhân sự hàng tháng", html);
+        Assert.Contains("5 bậc hạn mức", html);
+        Assert.Contains("Danh mục dịch vụ", html);                                                              // sidebar entry
+        var industries = WebUtility.HtmlDecode(await c.GetStringAsync("/servicecatalog?tab=industries"));
+        Assert.Contains("value=\"Thương mại - dịch vụ\"", industries);
+
+        var edit = WebUtility.HtmlDecode(await c.GetStringAsync($"/servicecatalog/edit/{MemoryServices.Staff}"));
+        Assert.Contains("data-ta-pricing", edit);
+        Assert.Contains("Quy mô nhân sự", edit);                                                                 // the stored table goes to the editor
+
+        var bad = await c.PostAsync($"/servicecatalog/save/{MemoryServices.Staff}", Form(Token(edit), ("Input.CategoryId", MemoryServices.Hr.ToString()), ("Input.Name", "Dịch vụ nhân sự hàng tháng"),
+            ("Input.PricingMode", "TIER"), ("Input.PricingJson", "{\"metrics\":[]}")));
+        Assert.Equal(HttpStatusCode.BadRequest, bad.StatusCode);
+        Assert.Contains("Nhập ít nhất một chỉ số hạn mức", WebUtility.HtmlDecode(await bad.Content.ReadAsStringAsync()));
+        var saved = await c.PostAsync("/servicecatalog/save", Form(Token(edit), ("Input.CategoryId", MemoryServices.Hr.ToString()), ("Input.Name", "Tư vấn thiết lập hồ sơ nhân sự ban đầu"),
+            ("Input.PricingMode", "FIXED"), ("Input.FixedFee", "10.000.000"), ("Input.FeeUnit", "đồng/gói")));
+        Assert.Equal(HttpStatusCode.Redirect, saved.StatusCode);
+        Assert.Equal(10_000_000m, svc.Saved.Single().FixedFee);
+    }
+
+    private sealed class MemoryServices : S.IServiceCatalogStore
+    {
+        public static readonly Guid Hr = Guid.Parse("a1000000-0000-0000-0000-000000000001"), Staff = Guid.Parse("a2000000-0000-0000-0000-000000000001"),
+            Trade = Guid.Parse("a3000000-0000-0000-0000-000000000001");
+        private const string Pricing = "{\"metrics\":[{\"key\":\"m1\",\"label\":\"Quy mô nhân sự được xử lý trong tháng\",\"unit\":\"nhân sự\"}],\"tiers\":["
+            + "{\"label\":\"Dưới 10 nhân sự\",\"ranges\":{\"m1\":{\"max\":9}},\"fee\":1000000},{\"ranges\":{\"m1\":{\"min\":10,\"max\":14}},\"fee\":1500000},"
+            + "{\"ranges\":{\"m1\":{\"min\":15,\"max\":19}},\"fee\":2000000},{\"ranges\":{\"m1\":{\"min\":20,\"max\":24}},\"fee\":2500000},{\"ranges\":{\"m1\":{\"min\":25,\"max\":29}},\"fee\":3000000}]}";
+        public List<S.ServiceDetail> Saved { get; } = [];
+        private static readonly S.Industry TradeIndustry = new(Trade, "Thương mại - dịch vụ", null, 10, true, 0);
+        public Task<S.ServiceCatalog> ListAsync() => Task.FromResult(new S.ServiceCatalog([new(Hr, "Nhân sự", null, 10, true, 1)],
+            [new(Staff, Hr, "Dịch vụ nhân sự hàng tháng", "TIER", "đồng/tháng", null, S.ServicePricingPolicy.Read(Pricing).Tiers.Count, 5, 10, true)], [TradeIndustry]));
+        public Task<S.ServiceDetail?> GetServiceAsync(Guid id) => Task.FromResult<S.ServiceDetail?>(id == Staff
+            ? new(Staff, Hr, "Dịch vụ nhân sự hàng tháng", null, "TIER", "Phí dịch vụ", "đồng/tháng", null, Pricing, "Tính lương", null, 10, true) : null);
+        public Task<IReadOnlyList<S.Industry>> IndustriesAsync() => Task.FromResult<IReadOnlyList<S.Industry>>([TradeIndustry]);
+        public Task<S.ServiceCatalogResult> SaveServiceAsync(Guid actor, Guid? id, S.ServiceInput input)
+        {
+            var (service, error) = S.ServicePricingPolicy.Check(id ?? Guid.NewGuid(), input, [Trade]);
+            if (service is null) return Task.FromResult(new S.ServiceCatalogResult(S.ServiceCatalogOutcome.Invalid, error));
+            Saved.Add(service);
+            return Task.FromResult(new S.ServiceCatalogResult(S.ServiceCatalogOutcome.Saved, null, service.Id));
+        }
+        public Task<S.ServiceCatalogResult> DeleteServiceAsync(Guid actor, Guid id) => Task.FromResult(new S.ServiceCatalogResult(S.ServiceCatalogOutcome.Saved));
+        public Task<S.ServiceCatalogResult> SaveEntryAsync(Guid actor, S.CatalogKind kind, Guid? id, S.CatalogEntryInput input) => Task.FromResult(new S.ServiceCatalogResult(S.ServiceCatalogOutcome.Saved));
+        public Task<S.ServiceCatalogResult> DeleteEntryAsync(Guid actor, S.CatalogKind kind, Guid id) => Task.FromResult(new S.ServiceCatalogResult(S.ServiceCatalogOutcome.Saved));
+    }
+
+    [Fact]
     public void TaskDocumentsAcceptImagesWordPdfAndExcelByContent()
     {
         Assert.Equal("application/pdf", S.WorkDocumentPolicy.CheckFile("hd.pdf", "%PDF-1.7 x"u8.ToArray()).ContentType);

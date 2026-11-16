@@ -1,0 +1,129 @@
+@model ServiceCatalogVm
+@using TAPortal.Web.Controllers
+@{
+    ViewData["Subtitle"] = "Nhóm dịch vụ, dịch vụ với phạm vi công việc, nguyên tắc tính phí và hạn mức phí; danh mục ngành nghề gắn cho khách hàng.";
+    ViewData["PageIcon"] = "package";
+    var c = Model.Catalog;
+    string? Tab(string key) => Model.Tab == key ? "page" : null;
+}
+@section PageActions {
+    @if (Model.Tab == ServiceCatalogController.ServicesTab && c.Categories.Count > 0)
+    {
+        <a class="btn btn-ta-gold" asp-action="Create">@UiIcon.Render("plus")<span>Thêm dịch vụ</span></a>
+    }
+}
+@if (Model.Unavailable)
+{
+    <div class="ta-alert ta-alert--warning" role="alert">@UiIcon.Render("alert-triangle")<div class="ta-alert__body">Chưa đọc được danh mục dịch vụ (migration 061 chưa chạy).</div></div>
+}
+<nav aria-label="Danh mục dịch vụ">
+    <ul class="ta-tabs">
+        <li><a class="ta-tabs__link" asp-action="Index" asp-route-tab="services" aria-current="@Tab("services")">@UiIcon.Render("package")<span>Dịch vụ (@c.Services.Count)</span></a></li>
+        <li><a class="ta-tabs__link" asp-action="Index" asp-route-tab="categories" aria-current="@Tab("categories")">@UiIcon.Render("list-tree")<span>Nhóm dịch vụ (@c.Categories.Count)</span></a></li>
+        <li><a class="ta-tabs__link" asp-action="Index" asp-route-tab="industries" aria-current="@Tab("industries")">@UiIcon.Render("building")<span>Ngành nghề (@c.Industries.Count)</span></a></li>
+    </ul>
+</nav>
+
+@if (Model.Tab == ServiceCatalogController.ServicesTab)
+{
+    @if (c.Categories.Count == 0)
+    {
+        <section class="card"><div class="ta-empty"><span class="ta-empty__icon">@UiIcon.Render("list-tree")</span><p class="ta-empty__title">Chưa có nhóm dịch vụ</p>
+            <p class="ta-empty__text">Tạo nhóm trước (ví dụ: Kế toán thuế tháng, Kế toán nội bộ, Nhân sự, Pháp lý), rồi thêm dịch vụ vào từng nhóm.</p>
+            <a class="btn btn-ta-gold mt-2" asp-action="Index" asp-route-tab="categories">@UiIcon.Render("plus")<span>Thêm nhóm dịch vụ</span></a></div></section>
+    }
+    @foreach (var cat in c.Categories)
+    {
+        var services = c.Services.Where(s => s.CategoryId == cat.Id).ToList();
+        <section class="card ta-table-card ta-svc-group" aria-label="@cat.Name">
+            <div class="ta-table-toolbar">
+                <h2 class="ta-section-title">@cat.Name @if (!cat.IsActive) {<span class="badge bg-secondary-lt">Đã ẩn</span>}</h2>
+                <a class="btn btn-sm ms-auto" asp-action="Create" asp-route-category="@cat.Id">@UiIcon.Render("plus")<span>Thêm dịch vụ</span></a>
+            </div>
+            @if (services.Count == 0)
+            {
+                <p class="ta-svc-group__empty text-secondary">Chưa có dịch vụ trong nhóm này.</p>
+            }
+            else
+            {
+                <div class="ta-table-wrap">
+                    <table class="ta-table ta-table-stack">
+                        <thead><tr><th scope="col">Dịch vụ</th><th scope="col">Cách tính phí</th><th scope="col">Phí</th><th scope="col">Phạm vi công việc</th><th scope="col">Đang dùng</th><th scope="col" class="ta-col-actions">Thao tác</th></tr></thead>
+                        <tbody>
+                        @foreach (var s in services)
+                        {
+                            <tr class="@(s.IsActive ? null : "text-secondary")">
+                                <td data-label="Dịch vụ"><a class="fw-semibold" asp-action="Edit" asp-route-id="@s.Id">@s.Name</a></td>
+                                <td data-label="Cách tính phí">@ServicePricingPolicy.ModeLabel(s.PricingMode)</td>
+                                <td data-label="Phí">@(s.PricingMode switch
+                                {
+                                    ServicePricingPolicy.Tier => s.TierCount + " bậc hạn mức",
+                                    ServicePricingPolicy.Fixed => ServicePricingPolicy.Money(s.FixedFee) + (s.FeeUnit is { Length: > 0 } u ? " " + u : ""),
+                                    _ => "Thỏa thuận"
+                                })</td>
+                                <td data-label="Phạm vi công việc">@(s.ScopeCount == 0 ? "—" : s.ScopeCount + " mục")</td>
+                                <td data-label="Đang dùng">@(s.IsActive ? "Có" : "Đã ẩn")</td>
+                                <td class="ta-col-actions">
+                                    <div class="ta-actions">
+                                        <a class="ta-icon-btn" asp-action="Edit" asp-route-id="@s.Id" aria-label="Sửa @s.Name" title="Sửa">@UiIcon.Render("pencil")</a>
+                                        <form method="post" asp-action="Delete" asp-route-id="@s.Id" onsubmit="return confirm('Xóa dịch vụ này khỏi danh mục?');"><button class="ta-icon-btn" type="submit" aria-label="Xóa @s.Name" title="Xóa">@UiIcon.Render("trash")</button></form>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </section>
+    }
+}
+else
+{
+    var isCategory = Model.Tab == ServiceCatalogController.CategoriesTab;
+    var saveAction = isCategory ? "SaveCategory" : "SaveIndustry";
+    var deleteAction = isCategory ? "DeleteCategory" : "DeleteIndustry";
+    var what = isCategory ? "nhóm dịch vụ" : "ngành nghề";
+    var rows = isCategory ? c.Categories.Select(x => (x.Id, x.Name, x.Description, x.SortOrder, x.IsActive, Used: x.ServiceCount)).ToList()
+                          : c.Industries.Select(x => (x.Id, x.Name, x.Description, x.SortOrder, x.IsActive, Used: x.CustomerCount)).ToList();
+    var nextSort = (rows.Count == 0 ? 0 : rows.Max(x => x.SortOrder)) + 10;
+    <section class="card ta-table-card" aria-label="@what">
+        <div class="ta-table-toolbar">
+            <p class="text-secondary mb-0">@(isCategory
+                ? "Nhóm dùng để xếp dịch vụ: Kế toán thuế tháng, Kế toán nội bộ, Nhân sự, Pháp lý..."
+                : "Loại hình ngành nghề của khách hàng: Thương mại - dịch vụ, Sản xuất - gia công, Thi công - xây dựng - lắp đặt... Gắn cho từng khách hàng ở trang thông tin khách hàng; dịch vụ có thể tính phí khác nhau theo ngành.")</p>
+        </div>
+        <div class="ta-table-wrap">
+            <table class="ta-table ta-table-stack ta-entry-grid">
+                <thead><tr><th scope="col">Tên</th><th scope="col">Mô tả</th><th scope="col" class="text-end">Thứ tự</th><th scope="col">Đang dùng</th><th scope="col" class="text-end">@(isCategory ? "Số dịch vụ" : "Số khách hàng")</th><th scope="col" class="ta-col-actions">Thao tác</th></tr></thead>
+                <tbody>
+                @foreach (var x in rows)
+                {
+                    var form = "entry" + x.Id.ToString("N");
+                    <tr>
+                        <td data-label="Tên"><div class="ta-input-icon">@UiIcon.Render("pencil")<input class="form-control form-control-sm" form="@form" name="Entry.Name" value="@x.Name" maxlength="@ServicePricingPolicy.CategoryNameMax" required aria-label="Tên @what" /></div></td>
+                        <td data-label="Mô tả"><div class="ta-input-icon">@UiIcon.Render("file-text")<input class="form-control form-control-sm" form="@form" name="Entry.Description" value="@x.Description" maxlength="500" aria-label="Mô tả" /></div></td>
+                        <td data-label="Thứ tự" class="text-end"><div class="ta-input-icon">@UiIcon.Render("hash")<input class="form-control form-control-sm ta-entry-grid__num" form="@form" name="Entry.SortOrder" type="number" min="0" value="@x.SortOrder" aria-label="Thứ tự" /></div></td>
+                        <td data-label="Đang dùng"><label class="form-check form-switch m-0"><input class="form-check-input" type="checkbox" form="@form" name="Entry.IsActive" value="true" checked="@x.IsActive" aria-label="Đang dùng" /></label></td>
+                        <td data-label="@(isCategory ? "Số dịch vụ" : "Số khách hàng")" class="text-end">@x.Used</td>
+                        <td class="ta-col-actions">
+                            <div class="ta-actions">
+                                <form method="post" asp-action="@saveAction" asp-route-id="@x.Id" id="@form"><input type="hidden" name="Entry.IsActive" value="false" form="@form" /><button class="ta-icon-btn" type="submit" aria-label="Lưu @x.Name" title="Lưu">@UiIcon.Render("device-floppy")</button></form>
+                                <form method="post" asp-action="@deleteAction" asp-route-id="@x.Id" onsubmit="return confirm('Xóa @what này?');"><button class="ta-icon-btn" type="submit" aria-label="Xóa @x.Name" title="Xóa">@UiIcon.Render("trash")</button></form>
+                            </div>
+                        </td>
+                    </tr>
+                }
+                <tr class="ta-entry-grid__new">
+                    <td data-label="Thêm mới"><div class="ta-input-icon">@UiIcon.Render("plus")<input class="form-control form-control-sm" form="entryNew" name="Entry.Name" maxlength="@ServicePricingPolicy.CategoryNameMax" required placeholder="Tên @what mới" aria-label="Tên @what mới" /></div></td>
+                    <td data-label="Mô tả"><div class="ta-input-icon">@UiIcon.Render("file-text")<input class="form-control form-control-sm" form="entryNew" name="Entry.Description" maxlength="500" placeholder="Mô tả (không bắt buộc)" aria-label="Mô tả" /></div></td>
+                    <td data-label="Thứ tự" class="text-end"><div class="ta-input-icon">@UiIcon.Render("hash")<input class="form-control form-control-sm ta-entry-grid__num" form="entryNew" name="Entry.SortOrder" type="number" min="0" value="@nextSort" aria-label="Thứ tự" /></div></td>
+                    <td data-label="Đang dùng"><input type="hidden" form="entryNew" name="Entry.IsActive" value="true" />Có</td>
+                    <td></td>
+                    <td class="ta-col-actions"><form method="post" asp-action="@saveAction" id="entryNew"><button class="btn btn-sm btn-primary" type="submit">@UiIcon.Render("plus")<span>Thêm</span></button></form></td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+}
