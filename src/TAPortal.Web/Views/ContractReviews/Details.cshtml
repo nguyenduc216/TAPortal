@@ -3,7 +3,7 @@
     var r = Model.Review;
     var vi = System.Globalization.CultureInfo.GetCultureInfo("vi-VN");
     string When(DateTime d) => d.ToLocalTime().ToString("dd/MM/yyyy HH:mm", vi);
-    ViewData["ParentTitle"] = "Hợp đồng dịch vụ";
+    ViewData["ParentTitle"] = "Hợp đồng chỉnh lý";
     ViewData["ParentController"] = "ContractReviews";
     ViewData["Title"] = r.Code;
     ViewData["Heading"] = r.Title;

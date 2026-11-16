@@ -227,7 +227,7 @@ public static class AdminPermissions
             new(ContractsDelete, "Xóa (mềm) hợp đồng", "DELETE"),
             new(ServiceCatalogManage, "Quản lý danh mục dịch vụ, hạn mức phí và ngành nghề", "MANAGE")
         ]),
-        new(ContractReviewModuleKey, "Hợp đồng dịch vụ",
+        new(ContractReviewModuleKey, "Hợp đồng chỉnh lý",
         [
             new(ContractReviewView, "Xem yêu cầu chỉnh lý hợp đồng, các phiên bản và góp ý", "VIEW"),
             new(ContractReviewCreate, "Tạo yêu cầu chỉnh lý, tải file hợp đồng gốc", "CREATE"),

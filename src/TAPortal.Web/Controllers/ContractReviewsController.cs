@@ -12,7 +12,7 @@ namespace TAPortal.Web.Controllers;
 public sealed class ContractReviewsController(IContractReviewStore reviews, IContractReviewAi ai, ILegalLibraryStore library, ILogger<ContractReviewsController> logger) : Controller
 {
     private const long UploadLimit = ContractReviewPolicy.MaxFileBytes + 1024 * 1024;
-    internal const string StoreUnavailable = "Không đọc được dữ liệu Hợp đồng dịch vụ (migration 044 đã chạy chưa?). Chi tiết đã ghi vào nhật ký ứng dụng.";
+    internal const string StoreUnavailable = "Không đọc được dữ liệu Hợp đồng chỉnh lý (migration 044 đã chạy chưa?). Chi tiết đã ghi vào nhật ký ứng dụng.";
 
     [HttpGet]
     public async Task<IActionResult> Index([FromQuery] ReviewFilter filter)

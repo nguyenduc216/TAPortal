@@ -153,7 +153,7 @@ public sealed class LegalWatchService(ILegalWatchStore store, ILegalWatchWeb web
         "Xin chào {name},\n\n" +
         $"Kỳ kiểm tra văn bản pháp luật tháng {period}: {fresh} văn bản thuế mới và {status} thay đổi hiệu lực của văn bản trong kho. " +
         $"Hiện có {total} mục đang chờ duyệt.\n\n" +
-        "Mở TAPortal → Hợp đồng dịch vụ → Kho văn bản pháp luật → Văn bản mới cần duyệt để nạp vào kho hoặc bỏ qua. " +
+        "Mở TAPortal → Hợp đồng chỉnh lý → Kho văn bản pháp luật → Văn bản mới cần duyệt để nạp vào kho hoặc bỏ qua. " +
         "Văn bản chỉ được AI trích dẫn sau khi đã nạp vào kho.\n\nTư vấn giải pháp T.A";
 
     // The Word file of a NEW entry, read like an upload. Null with a reason when there is none or it cannot be read.
