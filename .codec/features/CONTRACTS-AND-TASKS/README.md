@@ -29,3 +29,4 @@
 | `CONTRACTS-AND-TASKS-CHG-20261116T094307Z-E76F9F` | 2026-11-16 | Lọc công việc theo Ngày tạo; danh sách chọn trong popup; trang chi tiết trải rộng | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |
 | `CONTRACTS-AND-TASKS-CHG-20261116T100405Z-FE449A` | 2026-11-16 | Công việc: ảnh đại diện trong lịch sử, tab Tài liệu (upload ảnh/Word/PDF/Excel kèm ghi chú) | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |
 | `CONTRACTS-AND-TASKS-CHG-20261116T123108Z-D0F409` | 2026-11-16 | Admin portal installable as an app (PWA) and web push notifications on desktop and mobile | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |
+| `CONTRACTS-AND-TASKS-CHG-20261116T132430Z-4D8A1A` | 2026-11-16 | Push notifications for every task change and a daily due reminder | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |

@@ -123,6 +123,49 @@ public sealed class SafeWebPushTests
         Assert.NotEqual(HttpStatusCode.OK, (await c.GetAsync("/push/key")).StatusCode);                          // the rest needs a sign-in
     }
 
+    [Fact]
+    public void TaskChangesBecomeOneNotificationPerPersonAndTask()
+    {
+        Guid task = Guid.NewGuid(), an = Guid.NewGuid(), boss = Guid.NewGuid();
+        var at = new DateTime(2026, 11, 16, 3, 0, 0);
+        S.WorkPushActivity A(string kind, string? body, Guid to, int sec, string? from = null, string? st = null) =>
+            new(Guid.NewGuid(), kind, body, from, st, "Nguyễn Văn An", task, "CV000030", "Lập tờ khai thuế", to, at.AddSeconds(sec));
+
+        var messages = S.WorkPushPolicy.Messages([
+            A("CHECKLIST", "Hoàn thành: Thu thập hóa đơn", boss, 1),
+            A("CHECKLIST", "Đổi thứ tự checklist", boss, 2),                       // not news
+            A("COMMENT", "Đã nộp, anh kiểm tra giúp", boss, 3),
+            A("STATUS", null, an, 4, "NEW", "IN_PROGRESS")]);
+        Assert.Equal(2, messages.Count);
+        var toBoss = messages.Single(m => m.User == boss).Message;
+        Assert.Equal("Nguyễn Văn An · CV000030", toBoss.Title);
+        Assert.Equal("(+1 cập nhật khác) Đã nộp, anh kiểm tra giúp", toBoss.Body);
+        Assert.Equal($"/Work/Details/{task}", toBoss.Url);
+        Assert.Equal("task-" + task.ToString("N"), toBoss.Tag);                                                 // replaces the older one on the phone
+        Assert.StartsWith("CV000030: ", messages.Single(m => m.User == an).Message.Title);
+        Assert.Contains("Việc mới: CV000030", S.WorkPushPolicy.Message(A("CREATED", null, an, 5)).Title);
+
+        var due = S.WorkPushPolicy.Reminder(new(an, 2, 1, 0))!;
+        Assert.Equal("Có việc quá hạn cần xử lý", due.Title);
+        Assert.Equal("2 việc quá hạn · 1 việc đến hạn hôm nay.", due.Body);
+        Assert.Null(S.WorkPushPolicy.Reminder(new(an, 0, 0, 0)));
+        Assert.False(S.WorkPushPolicy.ReminderDue(new DateTime(2026, 11, 16, 0, 59, 0), null));                 // 07:59 in Vietnam
+        Assert.True(S.WorkPushPolicy.ReminderDue(new DateTime(2026, 11, 16, 1, 0, 0), null));                   // 08:00
+        Assert.False(S.WorkPushPolicy.ReminderDue(new DateTime(2026, 11, 16, 5, 0, 0), new DateOnly(2026, 11, 16)));   // once a day
+        Assert.True(S.WorkPushPolicy.ReminderDue(new DateTime(2026, 11, 16, 5, 0, 0), new DateOnly(2026, 11, 15)));
+
+        Assert.Contains("p.UserId<>a.CreatedBy", S.WorkPushSql.Activities);                                    // never to the person who acted
+        Assert.Contains("WebPushSubscriptions s WHERE s.UserId=p.UserId", S.WorkPushSql.Activities);           // only who turned it on
+        Assert.Contains("Status IN ('NEW','IN_PROGRESS')", S.WorkPushSql.Due);
+        var root = RepoRoot();
+        var migration = File.ReadAllText(Path.Combine(root, "database", "migrations", "060-work-push-notifications.sql"));
+        Assert.Contains("IF DB_NAME() <> N'TAPortalSys'", migration);
+        Assert.DoesNotMatch(@"(?im)^\s*(UPDATE|DELETE|DROP)", migration);
+        Assert.True(migration.All(ch => ch < 128));
+        Assert.True(File.Exists(Path.Combine(root, "database", "scripts", "107-verify-work-push-notifications.sql")));
+        Assert.True(File.Exists(Path.Combine(root, "database", "scripts", "108-rollback-work-push-notifications.sql")));
+    }
+
     // Browser side of RFC 8291 / RFC 8188, written out with HMAC-SHA256.
     private static byte[] Decrypt(byte[] body, ECDiffieHellman browser, byte[] browserKey, byte[] auth)
     {
