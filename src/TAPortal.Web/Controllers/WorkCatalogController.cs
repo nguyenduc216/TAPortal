@@ -35,7 +35,8 @@ public sealed class WorkCatalogController(IWorkCatalogStore catalog, IWorkTaskSt
         catch (AuditUnavailableException) { result = new(WorkCatalogOutcome.Invalid, "Không ghi được nhật ký audit nên chưa lưu. Liên hệ quản trị hệ thống."); }
         if (result.Outcome == WorkCatalogOutcome.Forbidden) return Forbid();
         if (result.Outcome == WorkCatalogOutcome.NotFound) return NotFound();
-        if (result.Outcome == WorkCatalogOutcome.Saved) TempData["Success"] = id is null ? $"Đã thêm đầu việc \"{WorkCatalogPolicy.Clean(input.Name)}\"." : "Đã lưu đầu việc.";
+        if (result.Outcome == WorkCatalogOutcome.Saved)
+            TempData["Success"] = (id is null ? $"Đã thêm đầu việc \"{WorkCatalogPolicy.Clean(input.Name)}\"." : "Đã lưu đầu việc.") + (result.Message is null ? "" : " " + result.Message);
         else TempData["Error"] = result.Message;
         return RedirectToAction(nameof(Index));
     }

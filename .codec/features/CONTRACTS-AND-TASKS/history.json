@@ -128,5 +128,15 @@
     "migration_status": "NOT_EXECUTED",
     "publish_status": "NOT_PUBLISHED",
     "merge_status": "PENDING_APPROVAL"
+  },
+  {
+    "change_id": "CONTRACTS-AND-TASKS-CHG-20261116T092358Z-A041C1",
+    "created_at": "2026-11-16T09:23:58.929943+00:00",
+    "title": "Checklist mẫu: lưu là thêm mục còn thiếu vào các việc cùng tên đang làm",
+    "status": "PLANNED",
+    "commit_sha": null,
+    "migration_status": "NOT_EXECUTED",
+    "publish_status": "NOT_PUBLISHED",
+    "merge_status": "PENDING_APPROVAL"
   }
 ]

@@ -13,7 +13,7 @@
 <dialog class="ta-filter-dialog ta-catalog-dialog" id="@dlg" data-ta-catalog-dialog aria-labelledby="@(dlg)Title">
     <form id="@form" method="post" asp-controller="WorkCatalog" asp-action="Save" asp-route-id="@x?.Id" class="ta-catalog-dialog__form" data-ta-catalog-form>
         <div class="ta-filter-dialog__head">
-            <h2 class="ta-filter-dialog__title" id="@(dlg)Title">@UiIcon.Render(x is null ? "plus" : "pencil")@(x is null ? "Thêm đầu việc" : "Sửa đầu việc")</h2>
+            <h2 class="ta-filter-dialog__title" id="@(dlg)Title">@UiIcon.Render(x is null ? "plus" : "pencil")<span>@(x is null ? "Thêm đầu việc" : "Sửa đầu việc:")@if (x is not null) {<span class="ta-catalog-dialog__name">@x.Name</span>}</span></h2>
             <button class="btn btn-icon ta-btn-icon" type="button" data-ta-catalog-cancel aria-label="Đóng" title="Đóng (Esc)">@UiIcon.Render("x")</button>
         </div>
         <div class="ta-catalog-tabs" role="tablist" aria-label="Nội dung đầu việc">
@@ -45,7 +45,7 @@
                 </div>
             </div>
             <div class="ta-catalog-panel" role="tabpanel" id="@(dlg)Checklist" aria-labelledby="@(dlg)TabChecklist" data-ta-tab-panel="checklist" data-ta-steps-root hidden>
-                <p class="small text-secondary mb-0">Tạo việc với tên này sẽ tự có các mục dưới đây; phần diễn giải hiện kèm mục ở từng công việc. Kéo biểu tượng @UiIcon.Render("grip-vertical") để đổi thứ tự (hoặc chọn nó rồi bấm ↑ / ↓).</p>
+                <p class="small text-secondary mb-0">Checklist mẫu của đầu việc này. Bấm Lưu thì các mục dưới đây được thêm vào mọi công việc mang tên này <strong>đang làm</strong> (mới / đang làm, còn thiếu mục nào thêm mục đó) và vào các việc tạo sau; việc đã hoàn thành hoặc đã hủy giữ nguyên. Diễn giải hiện kèm mục ở từng công việc. Kéo @UiIcon.Render("grip-vertical") để đổi thứ tự (hoặc chọn nó rồi bấm ↑ / ↓).</p>
                 <ol class="ta-steps" data-ta-steps>
                     @{ var n = 0; }
                     @foreach (var s in steps)
@@ -78,7 +78,7 @@
                 @if (suggestions.Count > 0)
                 {
                     <div class="ta-step__used">
-                        <p class="small text-secondary mb-1">Mục đang có trong các công việc “@x!.Name”, bấm để thêm vào mẫu:</p>
+                        <p class="small text-secondary mb-1">Mục các công việc “@x!.Name” đang có mà mẫu chưa có, bấm để đưa vào mẫu:</p>
                         @foreach (var u in suggestions)
                         {
                             <button class="btn btn-sm ta-step__chip" type="button" data-ta-step-suggest="@u.Title">@UiIcon.Render("plus")<span>@u.Title</span><small class="text-secondary">· @u.Tasks việc</small></button>

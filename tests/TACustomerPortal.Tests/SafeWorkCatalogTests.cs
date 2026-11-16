@@ -135,5 +135,10 @@ public sealed class SafeWorkCatalogTests
         Assert.Contains("data-ta-inline-active", view);
         Assert.DoesNotContain("<input class=\"form-control", view.Split("<table")[1].Split("</table>")[0]);   // the grid shows text
         Assert.Contains("const dragEnd", js);
+        // Saving the template reaches the tasks of that name still being worked on, never finished or cancelled ones.
+        Assert.Contains("t.Status IN ('NEW','IN_PROGRESS')", S.WorkCatalogSql.ApplyToTasks);
+        Assert.Contains("NOT EXISTS(SELECT 1 FROM dbo.WorkTaskChecklistItems i WHERE i.TaskId=t.Id AND i.IsDeleted=0 AND i.Title=@title)", S.WorkCatalogSql.ApplyToTasks);
+        Assert.Contains("'CHECKLIST',N'Thêm từ checklist mẫu: '+@title", S.WorkCatalogSql.ApplyToTasks);
+        Assert.Contains("ta-catalog-dialog__name", dialog);                       // the popup names the entry being edited
     }
 }

@@ -108,6 +108,7 @@
 .ta-catalog-dialog__form { display: flex; flex-direction: column; min-height: 0; flex: 1 1 auto; }
 .ta-catalog-dialog__body { display: block; min-height: 300px; }
 .ta-catalog-dialog__dirty { display: inline-flex; align-items: center; gap: 4px; }
+.ta-catalog-dialog__name { margin-left: 6px; color: var(--ta-primary, #1565c0); }
 .ta-catalog-dialog__dirty[hidden] { display: none; }
 .ta-catalog-dialog__dirty .ta-icon { width: 14px; height: 14px; }
 .ta-catalog-tabs { display: flex; gap: 4px; padding: 0 var(--ta-sp-4); border-bottom: 1px solid var(--ta-border); }

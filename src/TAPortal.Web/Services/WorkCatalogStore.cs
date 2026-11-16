@@ -194,6 +194,25 @@ UPDATE dbo.WorkTasks SET Title=@name,UpdatedAt=SYSUTCDATETIME(),UpdatedBy=@by WH
 UPDATE dbo.WorkTaskTemplates SET Title=@name,UpdatedAt=SYSUTCDATETIME(),UpdatedBy=@by WHERE IsDeleted=0 AND Title=@old;
 """;
     public const string Delete = "UPDATE dbo.WorkTaskCatalog SET IsDeleted=1,IsActive=0,UpdatedAt=SYSUTCDATETIME(),UpdatedBy=@by WHERE Id=@id AND IsDeleted=0;";
+
+    // Checklist mẫu saved (operator 2026-11-16): an item @title the unfinished tasks of entry @name lack is appended to them
+    // (below their own items), logged on each task, and their progress recomputed. Returns the number of tasks changed.
+    public const string ApplyToTasks = """
+DECLARE @t TABLE(Id uniqueidentifier NOT NULL);
+INSERT dbo.WorkTaskChecklistItems(TaskId,Title,SortOrder,CreatedBy)
+OUTPUT inserted.TaskId INTO @t
+SELECT t.Id,@title,ISNULL((SELECT MAX(x.SortOrder) FROM dbo.WorkTaskChecklistItems x WHERE x.TaskId=t.Id),0)+1,@by
+FROM dbo.WorkTasks t
+WHERE t.IsDeleted=0 AND t.Status IN ('NEW','IN_PROGRESS')
+  AND (t.Title=@name OR LEFT(t.Title,LEN(@name)+3)=@name+N' — ')
+  AND NOT EXISTS(SELECT 1 FROM dbo.WorkTaskChecklistItems i WHERE i.TaskId=t.Id AND i.IsDeleted=0 AND i.Title=@title)
+  AND (SELECT COUNT(1) FROM dbo.WorkTaskChecklistItems i WHERE i.TaskId=t.Id AND i.IsDeleted=0) < @max;
+INSERT dbo.WorkTaskActivities(TaskId,Kind,Body,CreatedBy) SELECT Id,'CHECKLIST',N'Thêm từ checklist mẫu: '+@title,@by FROM @t;
+UPDATE w SET Progress=CASE WHEN c.Total=0 THEN 0 ELSE ISNULL(c.Done,0)*100/c.Total END,LastActivityAt=SYSUTCDATETIME(),UpdatedAt=SYSUTCDATETIME(),UpdatedBy=@by
+FROM dbo.WorkTasks w JOIN @t x ON x.Id=w.Id
+CROSS APPLY (SELECT COUNT(1) AS Total,SUM(CASE WHEN i.IsDone=1 THEN 1 ELSE 0 END) AS Done FROM dbo.WorkTaskChecklistItems i WHERE i.TaskId=w.Id AND i.IsDeleted=0) c;
+SELECT COUNT(1) FROM @t;
+""";
 }
 
 public interface IWorkCatalogStore
@@ -289,11 +308,15 @@ public sealed class SqlWorkCatalogStore(IConfiguration configuration, AdminAudit
             id = Guid.NewGuid();
             await Exec(cn, tx, WorkCatalogSql.Insert, ("@id", id.Value), ("@name", name), ("@desc", (object?)desc ?? DBNull.Value), ("@sort", input.SortOrder), ("@active", input.IsActive), ("@check", (object?)check ?? DBNull.Value), ("@json", (object?)json ?? DBNull.Value), ("@by", actor));
         }
+        // The template reaches the tasks of this name still being worked on (new or in progress); finished ones stay as they are.
+        var added = 0;
+        foreach (var step in steps)
+            added += Convert.ToInt32(await Scalar(cn, tx, WorkCatalogSql.ApplyToTasks, ("@name", name), ("@title", step.Title), ("@by", actor), ("@max", WorkTaskPolicy.ChecklistItemsMax)));
         await AuditSql.WriteOrThrowAsync(cn, tx, audit.RequireDurableAudit, actor, old is null ? "WORK_CATALOG_CREATED" : "WORK_CATALOG_UPDATED", "dbo.WorkTaskCatalog", id.Value.ToString(),
-            old is null ? "{}" : AuditSql.Json(("name", old)), AuditSql.Json(("name", name), ("active", input.IsActive), ("sortOrder", input.SortOrder), ("checklistItems", steps.Count)), null);
+            old is null ? "{}" : AuditSql.Json(("name", old)), AuditSql.Json(("name", name), ("active", input.IsActive), ("sortOrder", input.SortOrder), ("checklistItems", steps.Count), ("addedToTasks", added)), null);
         await tx.CommitAsync();
         cache.Remove(GuideCacheKey);
-        return new(WorkCatalogOutcome.Saved);
+        return new(WorkCatalogOutcome.Saved, added == 0 ? null : $"Đã thêm {added} mục checklist vào các công việc “{name}” đang làm.");
     }
 
     public async Task<WorkCatalogResult> DeleteAsync(Guid actor, Guid id)
