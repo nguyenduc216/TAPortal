@@ -66,118 +66,236 @@
         field.form?.requestSubmit();
     });
 
-    // Danh mục công việc: checklist mẫu item by item (name + explanation). Names are renumbered so the posted list
-    // Input.Items[0..n] follows the order on screen.
-    const renumberSteps = (list) => list.querySelectorAll('[data-ta-step]').forEach((li, i) => {
-        li.querySelectorAll('[name^="Input.Items["]').forEach((f) => { f.name = f.name.replace(/Input\.Items\[[^\]]*\]/, `Input.Items[${i}]`); });
-    });
+    // ---- Danh mục công việc (operator 2026-11-16): add / edit in a popup (Thông tin chung + Checklist), quick edits on the grid
+    // Checklist items are renumbered so the posted Input.Items[0..n] follows the order on screen.
+    const renumberSteps = (list) => {
+        const items = list.querySelectorAll('[data-ta-step]');
+        items.forEach((li, i) => {
+            li.querySelectorAll('[name^="Input.Items["]').forEach((f) => { f.name = f.name.replace(/Input\.Items\[[^\]]*\]/, `Input.Items[${i}]`); });
+        });
+        const root = list.closest('[data-ta-steps-root]');
+        const dialog = list.closest('[data-ta-catalog-dialog]');
+        root?.querySelector('[data-ta-steps-empty]')?.toggleAttribute('hidden', items.length > 0);
+        dialog?.querySelectorAll('[data-ta-step-count]').forEach((c) => { c.textContent = String(items.length); });
+    };
+    const catalogDirty = (dialog, dirty) => {
+        if (!dialog) return;
+        dialog.classList.toggle('is-dirty', dirty);
+        dialog.querySelectorAll('[data-ta-catalog-dirty]').forEach((m) => { m.hidden = !dirty; });
+    };
+    const catalogTab = (dialog, name) => {
+        dialog.querySelectorAll('[data-ta-tab]').forEach((t) => {
+            const on = t.dataset.taTab === name;
+            t.setAttribute('aria-selected', on ? 'true' : 'false');
+            t.tabIndex = on ? 0 : -1;
+        });
+        dialog.querySelectorAll('[data-ta-tab-panel]').forEach((p) => { p.hidden = p.dataset.taTabPanel !== name; });
+    };
+    // The popup's checklist as first loaded, so Hủy can put it back after items were added, moved or removed.
+    const pristine = new WeakMap();
+    const catalogOpen = (dialog, tab) => {
+        const root = dialog.querySelector('[data-ta-steps-root]');
+        if (root && !pristine.has(dialog)) pristine.set(dialog, root.innerHTML);
+        catalogTab(dialog, tab || 'general');
+        if (typeof dialog.showModal === 'function') dialog.showModal(); else dialog.setAttribute('open', '');
+        const first = tab === 'checklist'
+            ? dialog.querySelector('[data-ta-step] input') ?? dialog.querySelector('[data-ta-step-add]')
+            : dialog.querySelector('input[name="Input.Name"]');
+        first?.focus();
+    };
+    const catalogClose = (dialog, ask) => {
+        if (ask && dialog.classList.contains('is-dirty') && !window.confirm('Bỏ các thay đổi chưa lưu?')) return;
+        const root = dialog.querySelector('[data-ta-steps-root]');
+        if (root && pristine.has(dialog)) root.innerHTML = pristine.get(dialog);
+        dialog.querySelector('form')?.reset();
+        const list = dialog.querySelector('[data-ta-steps]');
+        if (list) renumberSteps(list);
+        catalogDirty(dialog, false);
+        if (typeof dialog.close === 'function') dialog.close(); else dialog.removeAttribute('open');
+    };
     document.addEventListener('click', (event) => {
         const target = event.target instanceof Element ? event.target : null;
-        const add = target?.closest('[data-ta-step-add]');
-        const remove = target?.closest('[data-ta-step-remove]');
-        const suggest = target?.closest('[data-ta-step-suggest]');
+        if (!target) return;
+        const open = target.closest('[data-ta-catalog-open]');
+        if (open) {
+            const dialog = document.getElementById(open.dataset.taCatalogOpen);
+            if (dialog) catalogOpen(dialog, open.dataset.taCatalogTab);
+            return;
+        }
+        const dialog = target.closest('[data-ta-catalog-dialog]');
+        if (!dialog) return;
+        const tab = target.closest('[data-ta-tab]');
+        if (tab) { catalogTab(dialog, tab.dataset.taTab); return; }
+        if (target.closest('[data-ta-catalog-cancel]')) { catalogClose(dialog, true); return; }
+        const add = target.closest('[data-ta-step-add]');
+        const remove = target.closest('[data-ta-step-remove]');
+        const suggest = target.closest('[data-ta-step-suggest]');
+        const root = target.closest('[data-ta-steps-root]');
+        const list = root?.querySelector('[data-ta-steps]');
+        if (!list) return;
+        const newStep = () => {
+            list.appendChild(root.querySelector('template[data-ta-step-template]').content.firstElementChild.cloneNode(true));
+            return list.lastElementChild;
+        };
         if (suggest) {
             // An item already used by the tasks of this name: appended to the template (filling an empty row first).
-            const cell = suggest.closest('td');
-            const list = cell.querySelector('[data-ta-steps]');
-            let row = [...list.querySelectorAll('[data-ta-step]')].find((li) => li.querySelector('input').value.trim() === '');
-            if (!row) {
-                list.appendChild(cell.querySelector('template[data-ta-step-template]').content.firstElementChild.cloneNode(true));
-                row = list.lastElementChild;
-            }
+            const row = [...list.querySelectorAll('[data-ta-step]')].find((li) => li.querySelector('input').value.trim() === '') ?? newStep();
             row.querySelector('input').value = suggest.dataset.taStepSuggest;
-            renumberSteps(list);
             const used = suggest.closest('.ta-step__used');
             suggest.remove();
             if (used && !used.querySelector('[data-ta-step-suggest]')) used.remove();
+            renumberSteps(list);
+            catalogDirty(dialog, true);
             row.querySelector('textarea').focus();
         } else if (add) {
-            const cell = add.closest('td');
-            const list = cell.querySelector('[data-ta-steps]');
-            list.appendChild(cell.querySelector('template[data-ta-step-template]').content.firstElementChild.cloneNode(true));
+            const row = newStep();
             renumberSteps(list);
-            list.lastElementChild.querySelector('input').focus();
+            catalogDirty(dialog, true);
+            row.querySelector('input').focus();
         } else if (remove) {
-            const list = remove.closest('[data-ta-steps]');
             remove.closest('[data-ta-step]').remove();
             renumberSteps(list);
+            catalogDirty(dialog, true);
         }
     });
-
-    // Danh mục công việc: an entry being edited (its row or its checklist mẫu) shows "Có thay đổi chưa lưu", a primary
-    // Lưu and a Hủy that puts everything back as loaded. The checklist body is snapshotted before the first change.
-    const entryRows = (id) => ({
-        main: document.querySelector(`[data-ta-entry="${id}"]`),
-        check: document.querySelector(`[data-ta-entry-check="${id}"]`),
-        form: document.getElementById(id)
-    });
-    const entryIdOf = (el) => el?.closest?.('[data-ta-entry]')?.dataset.taEntry || el?.closest?.('[data-ta-entry-check]')?.dataset.taEntryCheck;
-    const snapshots = new WeakMap();
-    const snapshot = (id) => {
-        const body = entryRows(id).check?.querySelector('[data-ta-check-body]');
-        if (body && !snapshots.has(body)) snapshots.set(body, body.innerHTML);
-    };
-    const setDirty = (id, dirty) => {
-        const { main, check } = entryRows(id);
-        if (!main) return;
-        main.classList.toggle('is-dirty', dirty);
-        check?.classList.toggle('is-dirty', dirty);
-        main.querySelector('[data-ta-entry-cancel]').hidden = !dirty && !(check && !check.hidden);
-        const save = main.querySelector('[data-ta-entry-save]');
-        save.classList.toggle('btn-primary', dirty);
-        save.classList.toggle('btn-soft-primary', !dirty);
-        save.querySelector('span').textContent = dirty ? 'Lưu thay đổi' : 'Lưu';
-        check?.querySelectorAll('[data-ta-entry-dirty]').forEach((m) => { m.hidden = !dirty; });
-    };
-    ['pointerdown', 'focusin'].forEach((type) => document.addEventListener(type, (event) => {
-        const id = entryIdOf(event.target);
-        if (id) snapshot(id);
-    }, true));
     ['input', 'change'].forEach((type) => document.addEventListener(type, (event) => {
-        const id = entryIdOf(event.target);
-        if (id && event.target.matches?.('input, textarea, select')) setDirty(id, true);
+        const dialog = event.target?.closest?.('[data-ta-catalog-dialog]');
+        if (dialog && event.target.matches('input, textarea, select')) catalogDirty(dialog, true);
     }));
-    document.addEventListener('click', (event) => {
-        const target = event.target instanceof Element ? event.target : null;
-        if (target?.closest('[data-ta-step-add], [data-ta-step-remove], [data-ta-step-suggest]')) {
-            // Read the entry now: the suggestion chip is removed from the page by its own handler.
-            const id = entryIdOf(target);
-            if (id) setTimeout(() => setDirty(id, true));
-        }
-        const cancel = target?.closest('[data-ta-entry-cancel]');
-        if (!cancel) return;
-        const id = cancel.dataset.taEntryCancel;
-        const { main, check, form } = entryRows(id);
-        const body = check?.querySelector('[data-ta-check-body]');
-        if (body && snapshots.has(body)) { body.innerHTML = snapshots.get(body); snapshots.delete(body); }
-        form?.reset();
-        setDirty(id, false);
-        if (check) check.hidden = true;
-        main?.querySelector('[data-ta-catalog-toggle]')?.setAttribute('aria-expanded', 'false');
-        if (main) main.querySelector('[data-ta-entry-cancel]').hidden = true;
+    // Esc asks before throwing changes away, like Hủy; the backdrop does not close the popup.
+    document.addEventListener('cancel', (event) => {
+        if (!event.target?.matches?.('[data-ta-catalog-dialog]')) return;
+        event.preventDefault();
+        catalogClose(event.target, true);
     }, true);
-    window.addEventListener('beforeunload', (event) => {
-        if (document.querySelector('tr.is-dirty[data-ta-entry]')) { event.preventDefault(); event.returnValue = ''; }
+    // A required field on the hidden tab: show that tab so the browser can point at it.
+    document.addEventListener('invalid', (event) => {
+        const panel = event.target?.closest?.('[data-ta-tab-panel]');
+        const dialog = panel?.closest('[data-ta-catalog-dialog]');
+        if (dialog && panel.hidden) catalogTab(dialog, panel.dataset.taTabPanel);
+    }, true);
+    document.addEventListener('keydown', (event) => {
+        const tab = event.target?.closest?.('[data-ta-tab]');
+        if (!tab || (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight')) return;
+        const tabs = [...tab.parentElement.querySelectorAll('[data-ta-tab]')];
+        const next = tabs[(tabs.indexOf(tab) + (event.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length];
+        catalogTab(tab.closest('[data-ta-catalog-dialog]'), next.dataset.taTab);
+        next.focus();
     });
     document.addEventListener('submit', (event) => {
-        const id = event.target?.id;
-        if (id && document.querySelector(`[data-ta-entry="${id}"]`)) document.querySelectorAll('tr.is-dirty[data-ta-entry]').forEach((r) => r.classList.remove('is-dirty'));
+        const dialog = event.target?.closest?.('[data-ta-catalog-dialog]');
+        if (dialog && !event.defaultPrevented) catalogDirty(dialog, false);
+    });
+    window.addEventListener('beforeunload', (event) => {
+        if (document.querySelector('[data-ta-catalog-dialog][open].is-dirty')) { event.preventDefault(); event.returnValue = ''; }
+    });
+    document.addEventListener('ta:before-swap', () => document.querySelectorAll('[data-ta-catalog-dialog][open]').forEach((d) => d.close?.()));
+
+    // Checklist order: drag an item by its handle (mouse or touch), or focus the handle and press ↑ / ↓.
+    let dragging = null;
+    document.addEventListener('pointerdown', (event) => {
+        const handle = event.target?.closest?.('[data-ta-step-handle]');
+        if (!handle || event.button > 0) return;
+        const li = handle.closest('[data-ta-step]');
+        dragging = { li, list: li.parentElement, moved: false };
+        li.classList.add('is-dragging');
+        handle.setPointerCapture?.(event.pointerId);
+        event.preventDefault();
+    });
+    document.addEventListener('pointermove', (event) => {
+        if (!dragging) return;
+        const { li, list } = dragging;
+        const others = [...list.querySelectorAll('[data-ta-step]')].filter((o) => o !== li);
+        const before = others.find((o) => { const r = o.getBoundingClientRect(); return event.clientY < r.top + r.height / 2; }) ?? null;
+        if (before ? li.nextElementSibling !== before : list.lastElementChild !== li) {
+            list.insertBefore(li, before);
+            dragging.moved = true;
+        }
+    });
+    const dragEnd = () => {
+        if (!dragging) return;
+        const { li, list, moved } = dragging;
+        dragging = null;
+        li.classList.remove('is-dragging');
+        if (moved) { renumberSteps(list); catalogDirty(list.closest('[data-ta-catalog-dialog]'), true); }
+    };
+    document.addEventListener('pointerup', dragEnd);
+    document.addEventListener('pointercancel', dragEnd);
+    document.addEventListener('keydown', (event) => {
+        const handle = event.target?.closest?.('[data-ta-step-handle]');
+        if (!handle || (event.key !== 'ArrowUp' && event.key !== 'ArrowDown')) return;
+        event.preventDefault();
+        const li = handle.closest('[data-ta-step]');
+        const list = li.parentElement;
+        if (event.key === 'ArrowUp' && li.previousElementSibling) list.insertBefore(li, li.previousElementSibling);
+        else if (event.key === 'ArrowDown' && li.nextElementSibling) list.insertBefore(li.nextElementSibling, li);
+        else return;
+        renumberSteps(list);
+        catalogDirty(list.closest('[data-ta-catalog-dialog]'), true);
+        handle.focus();
     });
 
-    // Danh mục công việc: the "Checklist mẫu" button opens the template row under its entry.
-    document.addEventListener('click', (event) => {
-        const toggle = event.target instanceof Element ? event.target.closest('[data-ta-catalog-toggle]') : null;
-        if (!toggle) return;
-        const row = document.getElementById(toggle.dataset.taCatalogToggle + 'Check');
-        row.hidden = !row.hidden;
-        toggle.setAttribute('aria-expanded', row.hidden ? 'false' : 'true');
-        const main = toggle.closest('[data-ta-entry]');
-        if (main && !main.classList.contains('is-dirty')) main.querySelector('[data-ta-entry-cancel]').hidden = row.hidden;
-        if (!row.hidden) {
-            const list = row.querySelector('[data-ta-steps]');
-            if (list && list.children.length === 0 && !row.querySelector('[data-ta-step-suggest]')) row.querySelector('[data-ta-step-add]').click();
-            else row.querySelector('input:not([type=hidden]), textarea')?.focus();
+    // Quick edits on the grid: double-click (or Enter on) a name / description / order to edit it in place; Enter saves
+    // through the entry's popup form, Esc puts the text back. Đang dùng saves as soon as it is switched.
+    const inlineField = (cell) => document.getElementById(cell.dataset.taInlineForm)?.querySelector(`[name="${cell.dataset.taInline}"]`);
+    const inlineStart = (cell) => {
+        if (cell.querySelector('input')) return;
+        const field = inlineField(cell);
+        if (!field) return;
+        const input = document.createElement('input');
+        input.className = 'form-control form-control-sm ta-inline__input';
+        input.type = cell.dataset.taInlineType || 'text';
+        if (field.maxLength > 0) input.maxLength = field.maxLength;
+        input.value = field.value;
+        input.dataset.taInlineOld = cell.textContent;
+        input.setAttribute('aria-label', 'Sửa nhanh: Enter để lưu, Esc để bỏ');
+        cell.textContent = '';
+        cell.appendChild(input);
+        cell.classList.add('is-editing');
+        input.focus();
+        input.select();
+    };
+    const inlineStop = (cell, save) => {
+        const input = cell.querySelector('input');
+        if (!input) return;
+        const field = inlineField(cell);
+        const value = input.value.trim();
+        const changed = field && value !== field.value.trim();
+        if (save && changed && !(cell.hasAttribute('data-ta-inline-required') && value === '')) {
+            field.value = value;
+            input.disabled = true;
+            cell.classList.add('is-saving');
+            field.form.requestSubmit();
+            return;
         }
+        cell.textContent = input.dataset.taInlineOld;
+        cell.classList.remove('is-editing');
+    };
+    document.addEventListener('dblclick', (event) => {
+        const cell = event.target?.closest?.('[data-ta-inline]');
+        if (cell) inlineStart(cell);
+    });
+    document.addEventListener('keydown', (event) => {
+        const cell = event.target?.closest?.('[data-ta-inline]');
+        if (!cell) return;
+        const editing = event.target.matches('input');
+        if (!editing && (event.key === 'Enter' || event.key === 'F2')) { event.preventDefault(); inlineStart(cell); }
+        else if (editing && event.key === 'Enter') { event.preventDefault(); inlineStop(cell, true); }
+        else if (editing && event.key === 'Escape') { event.preventDefault(); inlineStop(cell, false); cell.focus(); }
+    });
+    document.addEventListener('focusout', (event) => {
+        const cell = event.target?.closest?.('[data-ta-inline]');
+        if (cell && event.target.matches('input') && !event.target.disabled) inlineStop(cell, true);
+    });
+    document.addEventListener('change', (event) => {
+        const box = event.target?.closest?.('[data-ta-inline-active]');
+        if (!box) return;
+        const form = document.getElementById(box.dataset.taInlineActive);
+        const field = form?.querySelector('[data-ta-catalog-active]');
+        if (!field) return;
+        field.checked = box.checked;
+        box.disabled = true;
+        form.requestSubmit();
     });
 
     document.addEventListener('click', (event) => {

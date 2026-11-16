@@ -6,6 +6,9 @@ public sealed record WorkDashboardVm(WorkActor? Actor, IReadOnlyList<WorkTaskCar
 
 public sealed record WorkListVm(WorkActor? Actor, IReadOnlyList<WorkTaskRow>? Tasks, WorkTaskFilter Filter, WorkLookups Lookups, DateOnly Today, string? Error);
 
+// Danh mục công việc: the add / edit popup of one entry (Item null = a new entry).
+public sealed record WorkCatalogDialogVm(WorkCatalogItem? Item, int NextSort);
+
 public sealed record WorkDetailsVm(WorkTaskDetail Detail, DateOnly Today, string? Error, bool CanEditCatalog = false);
 
 public sealed record WorkEditVm(Guid? Id, WorkTaskInput Input, WorkActor Actor, WorkLookups Lookups, string? Stamp);

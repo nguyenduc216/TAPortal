@@ -126,6 +126,14 @@ public sealed class SafeWorkCatalogTests
         Assert.Contains("data-ta-combo data-ta-combo-free", view);
         Assert.Contains("aria-controls=\"catalogSearchList\"", view);
         Assert.Contains("[data-ta-combo]:not([data-ta-combo-free])", js);   // a search box never blocks a submit
-        Assert.Contains("main.querySelector('[data-ta-entry-cancel]').hidden = !dirty && !(check && !check.hidden);", js);   // Hủy shows while a row is being edited
+        var dialog = File.ReadAllText(Path.Combine(root, "src", "TAPortal.Web", "Views", "WorkCatalog", "_CatalogDialog.cshtml"));
+        Assert.Contains("data-ta-tab=\"general\"", dialog);                 // popup: Thông tin chung + Checklist tabs
+        Assert.Contains("data-ta-tab=\"checklist\"", dialog);
+        Assert.Contains("data-ta-step-handle", dialog);                         // checklist items reordered by dragging
+        Assert.Contains("data-ta-catalog-cancel", dialog);                      // Hủy puts everything back
+        Assert.Contains("data-ta-inline=\"Input.Name\"", view);               // quick edits on the grid
+        Assert.Contains("data-ta-inline-active", view);
+        Assert.DoesNotContain("<input class=\"form-control", view.Split("<table")[1].Split("</table>")[0]);   // the grid shows text
+        Assert.Contains("const dragEnd", js);
     }
 }

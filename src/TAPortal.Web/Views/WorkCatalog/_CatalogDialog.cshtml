@@ -1,0 +1,96 @@
+@model WorkCatalogDialogVm
+@* Danh mục công việc (operator 2026-11-16): one entry added or edited in a popup with two tabs — Thông tin chung and
+   Checklist (items with an optional explanation, reordered by dragging the handle or with ↑/↓ on it). Hủy / Esc puts
+   everything back as loaded. The grid's quick edits (name, description, order, Đang dùng) post this same form. *@
+@{
+    var x = Model.Item;
+    var key = x is null ? "new" : x.Id.ToString("N");
+    var dlg = "catDlg" + key;
+    var form = "catForm" + key;
+    var steps = x?.Steps ?? [];
+    var suggestions = x?.UsedNotInTemplate.ToList() ?? [];
+}
+<dialog class="ta-filter-dialog ta-catalog-dialog" id="@dlg" data-ta-catalog-dialog aria-labelledby="@(dlg)Title">
+    <form id="@form" method="post" asp-controller="WorkCatalog" asp-action="Save" asp-route-id="@x?.Id" class="ta-catalog-dialog__form" data-ta-catalog-form>
+        <div class="ta-filter-dialog__head">
+            <h2 class="ta-filter-dialog__title" id="@(dlg)Title">@UiIcon.Render(x is null ? "plus" : "pencil")@(x is null ? "Thêm đầu việc" : "Sửa đầu việc")</h2>
+            <button class="btn btn-icon ta-btn-icon" type="button" data-ta-catalog-cancel aria-label="Đóng" title="Đóng (Esc)">@UiIcon.Render("x")</button>
+        </div>
+        <div class="ta-catalog-tabs" role="tablist" aria-label="Nội dung đầu việc">
+            <button class="ta-catalog-tabs__tab" type="button" role="tab" id="@(dlg)TabGeneral" aria-controls="@(dlg)General" aria-selected="true" data-ta-tab="general">@UiIcon.Render("file-text")<span>Thông tin chung</span></button>
+            <button class="ta-catalog-tabs__tab" type="button" role="tab" id="@(dlg)TabChecklist" aria-controls="@(dlg)Checklist" aria-selected="false" tabindex="-1" data-ta-tab="checklist">@UiIcon.Render("checks")<span>Checklist</span><span class="ta-catalog-tabs__count" data-ta-step-count>@steps.Count</span></button>
+        </div>
+        <div class="ta-filter-dialog__body ta-catalog-dialog__body">
+            <div class="ta-catalog-panel" role="tabpanel" id="@(dlg)General" aria-labelledby="@(dlg)TabGeneral" data-ta-tab-panel="general">
+                <div>
+                    <label class="form-label required" for="@(form)Name">Tên đầu việc</label>
+                    <div class="ta-input-icon">@UiIcon.Render("pencil")<input class="form-control" id="@(form)Name" name="Input.Name" value="@x?.Name" maxlength="@WorkCatalogPolicy.NameMax" required placeholder="Ví dụ: Kéo hóa đơn" /></div>
+                    @if (x is not null && x.TaskCount > 0) {<div class="form-hint">Đổi tên thì @x.TaskCount công việc và các việc lặp đang mang tên cũ cũng đổi theo.</div>}
+                </div>
+                <div>
+                    <label class="form-label" for="@(form)Desc">Mô tả</label>
+                    <div class="ta-input-icon ta-input-icon--top">@UiIcon.Render("file-text")<textarea class="form-control" id="@(form)Desc" name="Input.Description" rows="2" maxlength="@WorkCatalogPolicy.DescriptionMax" placeholder="Mô tả ngắn (không bắt buộc), hiện kèm tên khi nhân viên chọn đầu việc" data-ta-voice>@x?.Description</textarea></div>
+                </div>
+                <div class="ta-catalog-panel__row">
+                    <div>
+                        <label class="form-label" for="@(form)Sort">Thứ tự</label>
+                        <div class="ta-input-icon ta-catalog-sort-input">@UiIcon.Render("hash")<input class="form-control" type="number" id="@(form)Sort" name="Input.SortOrder" value="@(x?.SortOrder ?? Model.NextSort)" min="0" max="100000" /></div>
+                        <div class="form-hint">Số nhỏ đứng trước trong danh sách gợi ý.</div>
+                    </div>
+                    <div>
+                        <span class="form-label">Trạng thái</span>
+                        <label class="form-check form-switch m-0 pt-2"><input class="form-check-input" type="checkbox" name="Input.IsActive" value="true" checked="@(x?.IsActive ?? true)" data-ta-catalog-active /><span class="form-check-label">Đang dùng</span><input type="hidden" name="Input.IsActive" value="false" /></label>
+                        <div class="form-hint">Tắt để ẩn khỏi gợi ý mà vẫn giữ lịch sử.</div>
+                    </div>
+                </div>
+            </div>
+            <div class="ta-catalog-panel" role="tabpanel" id="@(dlg)Checklist" aria-labelledby="@(dlg)TabChecklist" data-ta-tab-panel="checklist" data-ta-steps-root hidden>
+                <p class="small text-secondary mb-0">Tạo việc với tên này sẽ tự có các mục dưới đây; phần diễn giải hiện kèm mục ở từng công việc. Kéo biểu tượng @UiIcon.Render("grip-vertical") để đổi thứ tự (hoặc chọn nó rồi bấm ↑ / ↓).</p>
+                <ol class="ta-steps" data-ta-steps>
+                    @{ var n = 0; }
+                    @foreach (var s in steps)
+                    {
+                        <li class="ta-step" data-ta-step>
+                            <button class="ta-step__handle" type="button" data-ta-step-handle aria-label="Đổi vị trí mục (kéo, hoặc ↑ / ↓)" title="Kéo để đổi vị trí">@UiIcon.Render("grip-vertical")</button>
+                            <span class="ta-step__no" aria-hidden="true"></span>
+                            <div class="ta-step__body">
+                                <div class="ta-input-icon">@UiIcon.Render("checks")<input class="form-control form-control-sm" name="Input.Items[@n].Title" value="@s.Title" maxlength="@WorkTaskPolicy.ChecklistMax" placeholder="Tên mục, ví dụ: Đối chiếu với sao kê" aria-label="Tên mục checklist" /></div>
+                                <div class="ta-input-icon ta-input-icon--top">@UiIcon.Render("info-circle")<textarea class="form-control form-control-sm" name="Input.Items[@n].Guide" rows="2" maxlength="@WorkCatalogPolicy.GuideMax" placeholder="Diễn giải (không bắt buộc): quy trình, công thức, ví dụ cách làm..." aria-label="Diễn giải mục checklist" data-ta-voice>@s.Guide</textarea></div>
+                            </div>
+                            <button class="ta-icon-btn" type="button" data-ta-step-remove aria-label="Bỏ mục này" title="Bỏ mục">@UiIcon.Render("trash")</button>
+                        </li>
+                        n++;
+                    }
+                </ol>
+                <template data-ta-step-template>
+                    <li class="ta-step" data-ta-step>
+                        <button class="ta-step__handle" type="button" data-ta-step-handle aria-label="Đổi vị trí mục (kéo, hoặc ↑ / ↓)" title="Kéo để đổi vị trí">@UiIcon.Render("grip-vertical")</button>
+                        <span class="ta-step__no" aria-hidden="true"></span>
+                        <div class="ta-step__body">
+                            <div class="ta-input-icon">@UiIcon.Render("checks")<input class="form-control form-control-sm" name="Input.Items[__i__].Title" maxlength="@WorkTaskPolicy.ChecklistMax" placeholder="Tên mục, ví dụ: Đối chiếu với sao kê" aria-label="Tên mục checklist" /></div>
+                            <div class="ta-input-icon ta-input-icon--top">@UiIcon.Render("info-circle")<textarea class="form-control form-control-sm" name="Input.Items[__i__].Guide" rows="2" maxlength="@WorkCatalogPolicy.GuideMax" placeholder="Diễn giải (không bắt buộc): quy trình, công thức, ví dụ cách làm..." aria-label="Diễn giải mục checklist" data-ta-voice></textarea></div>
+                        </div>
+                        <button class="ta-icon-btn" type="button" data-ta-step-remove aria-label="Bỏ mục này" title="Bỏ mục">@UiIcon.Render("trash")</button>
+                    </li>
+                </template>
+                <p class="small text-secondary mb-0" data-ta-steps-empty hidden="@(steps.Count > 0)">Chưa có mục nào. Bấm “Thêm mục” để soạn.</p>
+                <div><button class="btn btn-sm" type="button" data-ta-step-add>@UiIcon.Render("plus")<span>Thêm mục</span></button></div>
+                @if (suggestions.Count > 0)
+                {
+                    <div class="ta-step__used">
+                        <p class="small text-secondary mb-1">Mục đang có trong các công việc “@x!.Name”, bấm để thêm vào mẫu:</p>
+                        @foreach (var u in suggestions)
+                        {
+                            <button class="btn btn-sm ta-step__chip" type="button" data-ta-step-suggest="@u.Title">@UiIcon.Render("plus")<span>@u.Title</span><small class="text-secondary">· @u.Tasks việc</small></button>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+        <div class="ta-filter-dialog__foot">
+            <span class="me-auto small text-warning-emphasis ta-catalog-dialog__dirty" data-ta-catalog-dirty hidden>@UiIcon.Render("alert-circle")Có thay đổi chưa lưu</span>
+            <button class="btn" type="button" data-ta-catalog-cancel>@UiIcon.Render("x")<span>Hủy</span></button>
+            <button class="btn btn-primary" type="submit">@UiIcon.Render("device-floppy")<span>@(x is null ? "Thêm đầu việc" : "Lưu")</span></button>
+        </div>
+    </form>
+</dialog>

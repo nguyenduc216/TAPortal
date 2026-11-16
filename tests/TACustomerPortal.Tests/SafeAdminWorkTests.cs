@@ -327,6 +327,38 @@ public sealed class SafeAdminWorkTests
 
     private static HttpClient Client(WebApplicationFactory<admin::Program> f) => f.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false, BaseAddress = new Uri("https://localhost") });
 
+    [Fact]
+    public async Task TheCataloguePageListsEntriesAsTextAndEditsThemInATabbedPopup()
+    {
+        var entry = new S.WorkCatalogItem(Guid.Parse("c1000000-0000-0000-0000-000000000001"), "Kéo hóa đơn", "Hóa đơn đầu vào", 10, true, 2, "Tải XML",
+            "[{\"title\":\"Tải XML\",\"guide\":\"Trên cổng thuế\"},{\"title\":\"Đối chiếu\"}]") { Used = [new("Nhập phần mềm", 1)] };
+        using var f = Factory("ADMIN", new MemoryWork(), "TASKS.VIEW", "TASKS.CATALOG.MANAGE").WithWebHostBuilder(b => b.ConfigureTestServices(s =>
+        {
+            s.RemoveAll<S.IWorkCatalogStore>();
+            s.AddSingleton<S.IWorkCatalogStore>(new OneEntryCatalog(entry));
+        }));
+        var r = await Client(f).GetAsync("/WorkCatalog");
+        Assert.Equal(HttpStatusCode.OK, r.StatusCode);
+        var html = WebUtility.HtmlDecode(await r.Content.ReadAsStringAsync());
+        Assert.Contains(">Kéo hóa đơn</span>", html);                                                         // grid shows text
+        Assert.Contains("data-ta-inline-active=\"catFormc1000000000000000000000000000001\"", html);
+        Assert.Contains("id=\"catDlgnew\"", html);                                                           // add popup
+        Assert.Contains("id=\"catDlgc1000000000000000000000000000001\"", html);                              // edit popup
+        Assert.Contains("name=\"Input.Items[1].Title\" value=\"Đối chiếu\"", html);
+        Assert.Contains(">Trên cổng thuế</textarea>", html);
+        Assert.Contains("data-ta-step-suggest=\"Nhập phần mềm\"", html);
+        Assert.Equal(2, Regex.Matches(html, "data-ta-tab=\"checklist\"").Count);
+    }
+
+    private sealed class OneEntryCatalog(S.WorkCatalogItem entry) : S.IWorkCatalogStore
+    {
+        public Task<IReadOnlyList<S.WorkCatalogItem>> ListAsync() => Task.FromResult<IReadOnlyList<S.WorkCatalogItem>>([entry]);
+        public Task<S.WorkCatalogResult> SaveAsync(Guid actor, Guid? id, S.WorkCatalogInput input) => Task.FromResult(new S.WorkCatalogResult(S.WorkCatalogOutcome.Saved));
+        public Task<S.WorkCatalogResult> DeleteAsync(Guid actor, Guid id) => Task.FromResult(new S.WorkCatalogResult(S.WorkCatalogOutcome.Saved));
+        public Task<S.WorkCatalogResult> AppendChecklistAsync(Guid actor, string name, IReadOnlyList<string> items) => Task.FromResult(new S.WorkCatalogResult(S.WorkCatalogOutcome.NoChange));
+        public Task<S.WorkGuideIndex> GuidesAsync() => Task.FromResult(S.WorkGuideIndex.Empty);
+    }
+
     private static WebApplicationFactory<admin::Program> Factory(string role, MemoryWork store, params string[] permissions) =>
         new WebApplicationFactory<admin::Program>().WithWebHostBuilder(b => b.UseEnvironment("Development")
             .ConfigureAppConfiguration((_, c) => c.AddInMemoryCollection(new Dictionary<string, string?> { ["Database:ConnectionString"] = "INVALID: tests must never use SQL" }))

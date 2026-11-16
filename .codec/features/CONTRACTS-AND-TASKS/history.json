@@ -108,5 +108,15 @@
     "migration_status": "NOT_EXECUTED",
     "publish_status": "NOT_PUBLISHED",
     "merge_status": "PENDING_APPROVAL"
+  },
+  {
+    "change_id": "CONTRACTS-AND-TASKS-CHG-20261116T071620Z-30C6CF",
+    "created_at": "2026-11-16T07:16:20.408551+00:00",
+    "title": "Danh mục công việc: lưới dạng chữ, sửa nhanh trên lưới, popup 2 tab, kéo thả checklist",
+    "status": "PLANNED",
+    "commit_sha": null,
+    "migration_status": "NOT_EXECUTED",
+    "publish_status": "NOT_PUBLISHED",
+    "merge_status": "PENDING_APPROVAL"
   }
 ]
