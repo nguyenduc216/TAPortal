@@ -72,25 +72,11 @@
                 </form>
             </div>
         </div>
-        @* Cài ứng dụng (operator 2026-11-16; wwwroot/js/ta-app.js fills the state). Hidden once opened as the installed app. *@
-        <section class="ta-login-app" data-ta-app data-ta-app-hide-installed aria-label="Cài ứng dụng T.A Portal">
-            <div class="ta-login-app__head">
-                <img src="~/images/app-icon-192.png" alt="" width="44" height="44" class="ta-login-app__icon" />
-                <div class="ta-login-app__text">
-                    <strong>Cài ứng dụng T.A Portal</strong>
-                    <span data-ta-app-status>Thêm biểu tượng T.A Portal lên điện thoại hoặc máy tính để mở nhanh và nhận thông báo.</span>
-                </div>
-                <button type="button" class="btn btn-sm btn-primary ta-login-app__btn" data-ta-app-install hidden>@UiIcon.Render("download")<span>Cài đặt</span></button>
-            </div>
-            <ol class="ta-app-steps" data-ta-app-ios hidden>
-                <li>Mở trang này bằng <strong>Safari</strong>.</li>
-                <li>Bấm nút <strong>Chia sẻ</strong> (ô vuông có mũi tên lên).</li>
-                <li>Chọn <strong>Thêm vào MH chính</strong>, rồi bấm <strong>Thêm</strong>.</li>
-            </ol>
-            <ul class="ta-app-steps" data-ta-app-manual hidden>
-                <li><strong>Chrome trên Android:</strong> menu <strong>⋮</strong> &gt; <strong>Thêm vào màn hình chính</strong> &gt; <strong>Cài đặt</strong>.</li>
-                <li><strong>Chrome / Edge trên máy tính:</strong> biểu tượng cài đặt ở cuối thanh địa chỉ, hoặc menu &gt; <strong>Cài đặt T.A Portal</strong>.</li>
-            </ul>
-        </section>
+        @* Cài ứng dụng (operator 2026-11-16): one small icon. wwwroot/js/ta-app.js opens the browser's install prompt, or shows
+           how to add it (iPhone: Safari > Chia sẻ); hidden once opened as the installed app. *@
+        <div class="ta-login-app" data-ta-app-login>
+            <button type="button" class="ta-login-app__btn" data-ta-app-get title="Cài ứng dụng T.A Portal" aria-label="Cài ứng dụng T.A Portal">@UiIcon.Render("download")</button>
+            <p class="ta-login-app__hint" data-ta-app-hint role="status" hidden></p>
+        </div>
     </main>
 </div>

@@ -53,3 +53,4 @@ Operator 2026-11-16: "Thêm phần cài đặt app để tạo icon của T.A po
 - Smoke (prod, browser pane): /manifest.webmanifest OK (3 icons), /sw.js registered with scope /, /push/key 200 (VAPID pair created), Hồ sơ cá nhân shows "Ứng dụng T.A Portal" and "Thông báo đẩy". Real notification on a phone NOT_VERIFIED (the pane blocks notifications; operator to test on Chrome Android / iPhone).
 - invoice (TACustomerPortal.Web): commit 89ef74e (UiIcon.cs shared change), DEPLOYED 2026-11-16.
 - 2026-11-16 operator: install block under the sign-in form (Views/Account/Login.cshtml, hidden when opened as the app) and, on phones/tablets, the T.A logo above the form (images/ta-logo-wide.png, cropped from ta-logo.png). Checked at 375x812 in a local preview.
+- 2026-11-16 operator: sign-in page install reduced to one icon button (prompt, or a one-line hint for iPhone / other browsers); heading centred and smaller on phones, logo 180px.
