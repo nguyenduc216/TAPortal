@@ -71,8 +71,8 @@
             @if (creating)
             {
                 <div class="ta-span-2">
-                    <label class="form-label" for="wChecklist">Checklist cần làm</label>
-                    <div class="ta-input-icon ta-input-icon--top">@UiIcon.Render("checks")<textarea class="form-control" id="wChecklist" name="Input.ChecklistText" rows="4" placeholder="Mỗi dòng một mục, ví dụ:&#10;Thu thập hóa đơn đầu vào&#10;Lập tờ khai&#10;Nộp tờ khai" data-ta-voice>@i.ChecklistText</textarea></div>
+                    <label class="form-label" for="wChecklist">Checklist cần làm</label><span class="form-hint d-block">Chọn tên việc trong danh mục thì checklist mẫu của đầu việc tự điền vào đây; sửa thêm bớt tùy việc.</span>
+                    <div class="ta-input-icon ta-input-icon--top">@UiIcon.Render("checks")<textarea class="form-control" id="wChecklist" name="Input.ChecklistText" rows="4" data-ta-catalog-checklist placeholder="Mỗi dòng một mục, ví dụ:&#10;Thu thập hóa đơn đầu vào&#10;Lập tờ khai&#10;Nộp tờ khai" data-ta-voice>@i.ChecklistText</textarea></div>
                     <div class="form-hint">Mỗi dòng là một mục. Người làm có thể thêm mục sau; công việc chỉ chuyển sang “Hoàn thành” khi mọi mục đã được tích.</div>
                 </div>
             }

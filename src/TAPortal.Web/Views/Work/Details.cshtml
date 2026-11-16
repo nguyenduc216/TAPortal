@@ -91,6 +91,12 @@
                     <button class="btn" type="submit">@UiIcon.Render("plus")<span>Thêm</span></button>
                 </form>
             }
+            @if (Model.CanEditCatalog && d.Checklist.Count > 0)
+            {
+                <form class="mt-2" method="post" asp-controller="WorkCatalog" asp-action="FromTask" asp-route-id="@t.Id">
+                    <button class="btn btn-sm btn-soft-primary" type="submit" title="Thêm các mục checklist của việc này (mục nào chưa có) vào checklist mẫu của đầu việc “@t.Title”">@UiIcon.Render("list-tree")<span>Bổ sung vào checklist mẫu của đầu việc</span></button>
+                </form>
+            }
         </div>
     </section>
     <section class="card ta-ws-span-all" aria-labelledby="threadTitle">

@@ -56,11 +56,13 @@ public sealed class WorkController(IWorkTaskStore work, ILogger<WorkController> 
 
     [HttpGet]
     [Authorize(Policy = AdminPermissions.Policy.TasksView)]
-    public async Task<IActionResult> Details(Guid id)
+    public async Task<IActionResult> Details(Guid id, [FromServices] IAuthorizationService authz)
     {
         if (UsersController.ActorId(User) is not Guid actor) return Forbid();
         var detail = await work.GetAsync(actor, id);
-        return detail is null ? NotFound() : View(new WorkDetailsVm(detail, Today, null));
+        if (detail is null) return NotFound();
+        var canCatalog = (await authz.AuthorizeAsync(User, AdminPermissions.Policy.TaskCatalogManage)).Succeeded;
+        return View(new WorkDetailsVm(detail, Today, null, canCatalog));
     }
 
     [HttpGet]

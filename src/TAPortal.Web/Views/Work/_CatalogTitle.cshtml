@@ -14,7 +14,7 @@ else
         <ul class="ta-combo__list" id="@listId" role="listbox" hidden>
             @foreach (var c in Model.Catalog)
             {
-                <li class="ta-combo__option" role="option" aria-selected="false" data-value="@c.Name"><span class="ta-combo__name">@c.Name</span>@if (!string.IsNullOrWhiteSpace(c.Description)) {<small class="ta-combo__desc">@c.Description</small>}</li>
+                <li class="ta-combo__option" role="option" aria-selected="false" data-value="@c.Name" data-checklist="@c.ChecklistText"><span class="ta-combo__name">@c.Name</span>@if (!string.IsNullOrWhiteSpace(c.Description)) {<small class="ta-combo__desc">@c.Description</small>}</li>
             }
             <li class="ta-combo__empty" data-ta-combo-empty hidden>Không có đầu việc phù hợp. Cần đầu việc mới thì nhờ người quản lý danh mục thêm.</li>
         </ul>

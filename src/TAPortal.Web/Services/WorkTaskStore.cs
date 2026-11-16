@@ -43,7 +43,7 @@ public sealed record WorkLookupContract(Guid Id, Guid CustomerId, string Contrac
 public sealed record WorkLookupLink(Guid EmployeeId, Guid CustomerId, string Source);
 
 // Catalog: the active entries of Danh mục công việc (empty = task names are free).
-public sealed record WorkCatalogEntry(string Name, string? Description);
+public sealed record WorkCatalogEntry(string Name, string? Description, string? ChecklistText = null);
 
 public sealed record WorkLookups(IReadOnlyList<WorkLookupEmployee> Employees, IReadOnlyList<WorkLookupCustomer> Customers, IReadOnlyList<WorkLookupContract> Contracts,
     IReadOnlyList<WorkLookupLink>? Links = null, IReadOnlyList<WorkCatalogEntry>? Catalog = null)
@@ -502,7 +502,7 @@ public sealed class SqlWorkTaskStore(IConfiguration configuration, ILogger<SqlWo
             while (await r.ReadAsync()) links.Add(new(r.GetGuid(0), r.GetGuid(1), r.GetString(2)));
         var catalog = new List<WorkCatalogEntry>();
         if (await r.NextResultAsync())
-            while (await r.ReadAsync()) catalog.Add(new(r.GetString(0), S(r, 1)));
+            while (await r.ReadAsync()) catalog.Add(new(r.GetString(0), S(r, 1), S(r, 2)));
         return new(employees, customers, contracts, links, catalog);
     }
 

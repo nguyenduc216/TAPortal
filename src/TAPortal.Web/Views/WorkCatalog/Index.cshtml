@@ -16,6 +16,7 @@
         <div class="ta-input-icon ta-catalog-add__sort">@UiIcon.Render("hash")<input class="form-control" type="number" name="Input.SortOrder" value="@((Model.Count == 0 ? 0 : Model.Max(x => x.SortOrder)) + 10)" min="0" max="100000" aria-label="Thứ tự" title="Thứ tự hiển thị" /></div>
         <input type="hidden" name="Input.IsActive" value="true" />
         <button class="btn btn-ta-gold" type="submit">@UiIcon.Render("plus")<span>Thêm</span></button>
+        <div class="ta-input-icon ta-input-icon--top ta-catalog-add__check">@UiIcon.Render("checks")<textarea class="form-control" name="Input.ChecklistText" rows="2" maxlength="@WorkCatalogPolicy.ChecklistTextMax" placeholder="Checklist mẫu (không bắt buộc), mỗi dòng một mục" aria-label="Checklist mẫu"></textarea></div>
     </form>
 </section>
 <section class="card ta-table-card" aria-label="Danh sách đầu việc">
@@ -31,7 +32,7 @@
     {
         <div class="ta-table-wrap">
             <table class="ta-table ta-table-stack" id="catalogTable">
-                <thead><tr><th scope="col">Đầu việc</th><th scope="col">Mô tả</th><th scope="col">Thứ tự</th><th scope="col">Đang dùng</th><th scope="col" class="text-end">Số việc</th><th scope="col" class="ta-col-actions">Thao tác</th></tr></thead>
+                <thead><tr><th scope="col">Đầu việc</th><th scope="col">Mô tả</th><th scope="col">Thứ tự</th><th scope="col">Đang dùng</th><th scope="col">Checklist mẫu</th><th scope="col" class="text-end">Số việc</th><th scope="col" class="ta-col-actions">Thao tác</th></tr></thead>
                 <tbody>
                 @foreach (var x in Model)
                 {
@@ -41,6 +42,7 @@
                         <td data-label="Mô tả"><div class="ta-input-icon">@UiIcon.Render("file-text")<input form="@formId" class="form-control form-control-sm" name="Input.Description" value="@x.Description" maxlength="@WorkCatalogPolicy.DescriptionMax" aria-label="Mô tả" /></div></td>
                         <td data-label="Thứ tự" class="ta-catalog-sort"><div class="ta-input-icon">@UiIcon.Render("hash")<input form="@formId" class="form-control form-control-sm" type="number" name="Input.SortOrder" value="@x.SortOrder" min="0" max="100000" aria-label="Thứ tự" /></div></td>
                         <td data-label="Đang dùng"><label class="form-check form-switch m-0"><input form="@formId" class="form-check-input" type="checkbox" name="Input.IsActive" value="true" checked="@x.IsActive" aria-label="Đang dùng" /><input form="@formId" type="hidden" name="Input.IsActive" value="false" /></label></td>
+                        <td data-label="Checklist mẫu"><button class="btn btn-sm" type="button" data-ta-catalog-toggle="@formId" aria-expanded="false" aria-controls="@(formId)Check">@UiIcon.Render("checks")<span>@(x.ChecklistCount == 0 ? "Thêm" : x.ChecklistCount + " mục")</span></button></td>
                         <td class="text-end" data-label="Số việc">@x.TaskCount</td>
                         <td class="ta-col-actions">
                             <div class="ta-actions">
@@ -49,11 +51,18 @@
                             </div>
                         </td>
                     </tr>
+                    <tr class="ta-catalog-check" id="@(formId)Check" hidden>
+                        <td colspan="7">
+                            <label class="form-label" for="@(formId)Text">Checklist mẫu của “@x.Name” <span class="text-secondary small">· mỗi dòng một mục; tạo việc với tên này sẽ tự có các mục này</span></label>
+                            <div class="ta-input-icon ta-input-icon--top">@UiIcon.Render("checks")<textarea form="@formId" class="form-control" id="@(formId)Text" name="Input.ChecklistText" rows="5" maxlength="@WorkCatalogPolicy.ChecklistTextMax" placeholder="Ví dụ:&#10;Thu thập hóa đơn đầu vào&#10;Đối chiếu với sao kê&#10;Lưu hồ sơ" data-ta-voice>@x.ChecklistText</textarea></div>
+                            <div class="mt-2"><button form="@formId" class="btn btn-sm btn-soft-primary" type="submit">@UiIcon.Render("device-floppy")<span>Lưu checklist</span></button></div>
+                        </td>
+                    </tr>
                 }
                 </tbody>
             </table>
         </div>
         <div class="ta-empty d-none" data-ta-no-results><span class="ta-empty__icon">@UiIcon.Render("search-off")</span><p class="ta-empty__title">Không tìm thấy đầu việc</p></div>
-        <div class="card-footer text-secondary small">Đổi tên một đầu việc thì các công việc và việc lặp đang mang tên cũ cũng đổi theo. Tắt "Đang dùng" để ẩn khỏi gợi ý mà vẫn giữ lịch sử.</div>
+        <div class="card-footer text-secondary small">Đổi tên một đầu việc thì các công việc và việc lặp đang mang tên cũ cũng đổi theo. Tắt "Đang dùng" để ẩn khỏi gợi ý mà vẫn giữ lịch sử. Checklist mẫu cũng bổ sung được từ trang chi tiết một công việc đang làm.</div>
     }
 </section>

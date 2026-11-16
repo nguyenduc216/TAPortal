@@ -66,6 +66,16 @@
         field.form?.requestSubmit();
     });
 
+    // Danh mục công việc: the "Checklist mẫu" button opens the template row under its entry.
+    document.addEventListener('click', (event) => {
+        const toggle = event.target instanceof Element ? event.target.closest('[data-ta-catalog-toggle]') : null;
+        if (!toggle) return;
+        const row = document.getElementById(toggle.dataset.taCatalogToggle + 'Check');
+        row.hidden = !row.hidden;
+        toggle.setAttribute('aria-expanded', row.hidden ? 'false' : 'true');
+        if (!row.hidden) row.querySelector('textarea').focus();
+    });
+
     document.addEventListener('click', (event) => {
         const cancel = event.target instanceof Element ? event.target.closest('[data-ta-done-cancel]') : null;
         if (!cancel) return;
@@ -332,6 +342,14 @@
         input.setCustomValidity('');
         comboShow(combo, false);
         input.dispatchEvent(new Event('change', { bubbles: true }));
+        // Checklist mẫu (operator 2026-11-16): fill the form's checklist with the entry's template, unless the user
+        // already typed their own (a box still holding the previous template is replaced).
+        const box = input.form?.querySelector('textarea[data-ta-catalog-checklist]');
+        const template = option.dataset.checklist || '';
+        if (box && (box.value.trim() === '' || box.value === box.dataset.taAutofill)) {
+            box.value = template;
+            box.dataset.taAutofill = template;
+        }
     };
 
     const comboMove = (combo, step) => {

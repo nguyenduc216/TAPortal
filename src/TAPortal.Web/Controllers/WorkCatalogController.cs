@@ -10,7 +10,7 @@ namespace TAPortal.Web.Controllers;
 // Công việc > Danh mục công việc (operator 2026-11-14): the names a task may take. Staff pick from it while typing
 // (Work/Edit, Work/TemplateEdit); only holders of TASKS.CATALOG.MANAGE add, rename, hide or remove entries.
 [Authorize(Policy = AdminPermissions.Policy.TaskCatalogManage)]
-public sealed class WorkCatalogController(IWorkCatalogStore catalog, ILogger<WorkCatalogController> logger) : Controller
+public sealed class WorkCatalogController(IWorkCatalogStore catalog, IWorkTaskStore work, ILogger<WorkCatalogController> logger) : Controller
 {
     [HttpGet]
     public async Task<IActionResult> Index()
@@ -53,5 +53,22 @@ public sealed class WorkCatalogController(IWorkCatalogStore catalog, ILogger<Wor
         if (result.Outcome == WorkCatalogOutcome.Saved) TempData["Success"] = "Đã xóa đầu việc khỏi danh mục. Các công việc đã tạo vẫn giữ tên cũ.";
         else TempData["Error"] = result.Message ?? "Không tìm thấy đầu việc.";
         return RedirectToAction(nameof(Index));
+    }
+
+    // From a task being worked on (Work/Details): its checklist items the template lacks are added to the entry's template.
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [Authorize(Policy = AdminPermissions.Policy.TaskCatalogManage)]
+    public async Task<IActionResult> FromTask(Guid id)
+    {
+        if (UsersController.ActorId(User) is not Guid actor) return Forbid();
+        var detail = await work.GetAsync(actor, id);
+        if (detail is null) return NotFound();
+        WorkCatalogResult result;
+        try { result = await catalog.AppendChecklistAsync(actor, detail.Task.Title, detail.Checklist.Select(i => i.Title).ToList()); }
+        catch (AuditUnavailableException) { result = new(WorkCatalogOutcome.Invalid, "Không ghi được nhật ký audit nên chưa lưu."); }
+        if (result.Outcome == WorkCatalogOutcome.Forbidden) return Forbid();
+        TempData[result.Outcome is WorkCatalogOutcome.Saved or WorkCatalogOutcome.NoChange ? "Success" : "Error"] = result.Message;
+        return RedirectToAction("Details", "Work", new { id });
     }
 }

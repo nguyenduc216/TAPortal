@@ -92,6 +92,8 @@
 .ta-task__done-note { flex: 1 1 100%; display: grid; gap: var(--ta-sp-2); }
 .ta-task__done-note[hidden] { display: none; }
 .ta-task__done-actions { display: flex; gap: var(--ta-sp-2); }
+.ta-catalog-add__check { grid-column: 1 / -1; }
+.ta-catalog-check > td { background: var(--ta-surface-2, #f7f9fc); }
 .ta-task__inline { display: flex; gap: var(--ta-sp-2); align-items: flex-start; margin-top: var(--ta-sp-2); }
 .ta-task__inline > .form-control, .ta-task__inline > .ta-voice, .ta-task__inline > .ta-input-icon { flex: 1 1 auto; min-width: 0; }
 .ta-progress { height: 6px; border-radius: 99px; background: var(--ta-surface-2); border: 1px solid var(--ta-border); overflow: hidden; }

@@ -41,3 +41,12 @@
 - `WorkTaskStore.SetStatusAsync(..., note)`: thiếu ghi chú → Invalid; ghi chú lưu thành trao đổi "Hoàn thành: ..." cùng transaction với đổi trạng thái.
 - UI (_TaskCard, Details): chọn "Hoàn thành" mở ô "Ghi chú kết quả" + nút "Xác nhận hoàn thành"/"Hủy" thay vì gửi ngay (ta-work.js); CSS `.ta-task__done-note`.
 - Tests: SafeAdminWorkTests cập nhật (CheckDone(0,0)=Saved, DoneNote, thẻ có ô ghi chú). Safe 779/779 pass. Không đổi DB.
+
+## Checklist mẫu của đầu việc (cùng change)
+- Operator 2026-11-16: "danh mục công việc phải có cài đặt danh sách checklist, khi tạo mới công việc tự kéo các checklist đó ra, và bổ sung checklist mới được từ chi tiết 1 công việc đang làm hoặc trong danh mục công việc".
+- Migration 056-work-catalog-checklist.sql (+099 verify, 100 rollback): `dbo.WorkTaskCatalog.ChecklistText nvarchar(4000) NULL`.
+- `WorkCatalogPolicy.NormalizeChecklist`/`Append`; `WorkCatalogStore` lưu checklist mẫu khi thêm/sửa đầu việc, `AppendChecklistAsync` (cần TASKS.CATALOG.MANAGE, audit WORK_CATALOG_CHECKLIST_ADDED).
+- Danh mục công việc: cột "Checklist mẫu" (nút mở ô soạn, mỗi dòng một mục) + ô checklist ở form thêm.
+- Tạo công việc / việc lặp: chọn đầu việc trong gợi ý thì checklist mẫu tự điền vào ô Checklist (không đè nội dung người dùng tự gõ).
+- Chi tiết công việc: người có quyền quản lý danh mục thấy nút "Bổ sung vào checklist mẫu của đầu việc" (WorkCatalog/FromTask) – thêm các mục của việc này mà mẫu chưa có.
+- Tests: SafeWorkCatalogTests.EachEntryCarriesAChecklistTemplate. Safe 780/780 pass.

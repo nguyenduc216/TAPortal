@@ -60,4 +60,24 @@ public sealed class SafeWorkCatalogTests
         Assert.True(File.Exists(Path.Combine(root, "database", "scripts", "075-verify-work-task-catalog.sql")));
         Assert.True(File.Exists(Path.Combine(root, "database", "scripts", "076-rollback-work-task-catalog.sql")));
     }
+
+    [Fact]
+    public void EachEntryCarriesAChecklistTemplate()
+    {
+        // Operator 2026-11-16: an entry's checklist fills a new task's checklist; a running task can add to it.
+        Assert.Equal("Thu thập hóa đơn\nLập tờ khai", S.WorkCatalogPolicy.NormalizeChecklist("- Thu thập hóa đơn\n\n• Lập tờ khai\nthu thập hóa đơn"));
+        Assert.Null(S.WorkCatalogPolicy.NormalizeChecklist("  \n "));
+        var (text, added) = S.WorkCatalogPolicy.Append("Thu thập hóa đơn", ["THU THẬP HÓA ĐƠN", "Nộp tờ khai", " "]);
+        Assert.Equal(1, added);
+        Assert.Equal("Thu thập hóa đơn\nNộp tờ khai", text);
+        Assert.Contains("ChecklistText", S.WorkCatalogSql.Active);
+        Assert.Contains("ChecklistText=@check", S.WorkCatalogSql.Update);
+        Assert.Contains(typeof(AdminControllers.WorkCatalogController).GetMethod("FromTask")!.GetCustomAttributes<AuthorizeAttribute>(true), a => a.Policy == "PERM:TASKS.CATALOG.MANAGE");
+        var root = AppContext.BaseDirectory[..AppContext.BaseDirectory.IndexOf($"{Path.DirectorySeparatorChar}tests{Path.DirectorySeparatorChar}", StringComparison.Ordinal)];
+        var sql = File.ReadAllText(Path.Combine(root, "database", "migrations", "056-work-catalog-checklist.sql"));
+        Assert.Contains("IF DB_NAME() <> N'TAPortalSys'", sql);
+        Assert.Contains("ADD ChecklistText nvarchar(4000) NULL", sql);
+        Assert.True(File.Exists(Path.Combine(root, "database", "scripts", "099-verify-work-catalog-checklist.sql")));
+        Assert.True(File.Exists(Path.Combine(root, "database", "scripts", "100-rollback-work-catalog-checklist.sql")));
+    }
 }
