@@ -115,6 +115,7 @@
   function paintInstall() {
     const installed = standalone();
     document.querySelectorAll('[data-ta-app-install]').forEach(b => show(b, !!installPrompt && !installed));
+    document.querySelectorAll('[data-ta-app-login]').forEach(b => show(b, !installed));
     document.querySelectorAll('[data-ta-app]').forEach(root => {
       if (root.hasAttribute('data-ta-app-hide-installed')) { root.hidden = installed; if (installed) return; }
       const status = root.querySelector('[data-ta-app-status]');
@@ -181,6 +182,24 @@
       installPrompt = null;
       p.prompt();
       p.userChoice.finally(paintInstall);
+      return;
+    }
+    const get = e.target.closest('[data-ta-app-get]');
+    if (get) {
+      e.preventDefault();
+      if (installPrompt) {
+        const p = installPrompt;
+        installPrompt = null;
+        p.prompt();
+        p.userChoice.finally(paintInstall);
+        return;
+      }
+      const hint = get.parentElement.querySelector('[data-ta-app-hint]');
+      if (hint) {
+        hint.textContent = isIos ? 'Mở trang này bằng Safari > nút Chia sẻ > Thêm vào MH chính.'
+          : 'Mở menu của trình duyệt (⋮) > Thêm vào màn hình chính hoặc Cài đặt ứng dụng.';
+        hint.hidden = !hint.hidden;
+      }
       return;
     }
     const on = e.target.closest('[data-ta-push-on]');
