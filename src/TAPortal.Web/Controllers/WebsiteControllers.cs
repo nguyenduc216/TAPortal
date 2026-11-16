@@ -382,7 +382,7 @@ public sealed class WebsitePostsController(IWebsiteAdminStore store, IConfigurat
         if (PostLibrary.Find(slug) is not { } post) return NotFound();
         var now = clock.GetUtcNow().UtcDateTime;
         var model = new WebsitePostEdit(Guid.Empty, post.Slug, post.Title, post.Summary, post.BodyHtml, null, null, PostLibrary.Author, post.Tags, 0, null, false,
-            post.SeoTitle, post.SeoDescription, 0, now, now, []);
+            post.SeoTitle, post.SeoDescription, 0, now, now, [], post.Origin);
         ViewData["LibraryPost"] = post;
         Response.Headers.CacheControl = "no-store";
         return View("Preview", model);
@@ -433,6 +433,7 @@ public sealed class WebsitePostsController(IWebsiteAdminStore store, IConfigurat
                 Title = post.Title, Slug = post.Slug, Summary = post.Summary, BodyHtml = post.BodyHtml, Tags = post.Tags, AuthorName = PostLibrary.Author,
                 SeoTitle = post.SeoTitle, SeoDescription = post.SeoDescription, CategoryId = categoryId == Guid.Empty ? null : categoryId, Publish = publish
             };
+            input.SetSource(post.Origin);
             if (input.Normalize().Count > 0) { failed++; continue; }
             var result = await store.SavePostAsync(actor, ip, null, input, clock.GetUtcNow().UtcDateTime);
             if (result.Outcome == WebsiteOutcome.Saved) added++; else failed++;
