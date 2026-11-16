@@ -245,6 +245,9 @@ public sealed class SafeAdminWorkTests
             Assert.Contains("data-value=\"Kéo hóa đơn\"", html);
             Assert.Contains("data-value=\"Nhập sao kê ngân hàng\"", html);
             Assert.Contains("Chọn tên trong danh mục công việc", html);
+            Assert.Contains("data-ta-new-checklist", html);                                                // template items to tick + add one by one
+            Assert.Contains("type=\"hidden\" name=\"Input.ChecklistText\"", html);
+            Assert.Contains("ta-form-grid--pair", html);                                                   // start and due on one row on phones
         }
     }
 

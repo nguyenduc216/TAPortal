@@ -37,5 +37,5 @@ public sealed class WorkTaskScheduler(IServiceScopeFactory scopes, ILogger<WorkT
 // Admin-only response headers that differ from TAPortal.Shared.SecurityHeaders.
 public static class AdminHeaders
 {
-    public const string PermissionsPolicy = "camera=(), microphone=(self), geolocation=()";
+    public const string PermissionsPolicy = "camera=(self), microphone=(self), geolocation=()";
 }

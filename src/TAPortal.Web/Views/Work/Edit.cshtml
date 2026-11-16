@@ -64,16 +64,28 @@
                     @foreach (var p in WorkTaskPolicy.Priorities) {<option value="@p" selected="@(p == i.Priority)">@WorkTaskPolicy.PriorityLabel(p)</option>}
                 </select>
             </div>
-            <div class="ta-form-grid">
+            @* Phones keep the two dates on one row (operator 2026-11-16). *@
+            <div class="ta-form-grid ta-form-grid--pair">
                 <div><label class="form-label" for="wStart">Ngày bắt đầu</label><div class="ta-input-icon">@UiIcon.Render("calendar")<input class="form-control" type="date" id="wStart" name="Input.StartDate" value="@i.StartDate?.ToString("yyyy-MM-dd")" /></div></div>
                 <div><label class="form-label" for="wDue">Hạn hoàn thành</label><div class="ta-input-icon">@UiIcon.Render("calendar")<input class="form-control" type="date" id="wDue" name="Input.DueDate" value="@i.DueDate?.ToString("yyyy-MM-dd")" /></div></div>
             </div>
             @if (creating)
             {
                 <div class="ta-span-2">
-                    <label class="form-label" for="wChecklist">Checklist cần làm</label><span class="form-hint d-block">Chọn tên việc trong danh mục thì checklist mẫu của đầu việc tự điền vào đây; sửa thêm bớt tùy việc.</span>
-                    <div class="ta-input-icon ta-input-icon--top">@UiIcon.Render("checks")<textarea class="form-control" id="wChecklist" name="Input.ChecklistText" rows="4" data-ta-catalog-checklist placeholder="Mỗi dòng một mục, ví dụ:&#10;Thu thập hóa đơn đầu vào&#10;Lập tờ khai&#10;Nộp tờ khai" data-ta-voice>@i.ChecklistText</textarea></div>
-                    <div class="form-hint">Mỗi dòng là một mục. Người làm có thể thêm mục sau; công việc chỉ chuyển sang “Hoàn thành” khi mọi mục đã được tích.</div>
+                    @* Checklist (operator 2026-11-16): the catalogue entry's template items are listed to tick; more items are added one name
+                       at a time. ta-work.js writes the ticked names, one per line, into Input.ChecklistText. *@
+                    <span class="form-label" id="wChecklistLabel">Checklist cần làm</span>
+                    <span class="form-hint d-block">Chọn tên việc trong danh mục để hiện checklist mẫu; bỏ tích mục không cần, hoặc thêm mục mới.</span>
+                    <div class="ta-new-checklist" data-ta-new-checklist role="group" aria-labelledby="wChecklistLabel">
+                        <ul class="ta-new-checklist__list" data-ta-nc-list></ul>
+                        <p class="ta-new-checklist__empty form-hint" data-ta-nc-empty>Chưa có mục nào.</p>
+                        <div class="ta-new-checklist__add">
+                            <div class="ta-input-icon">@UiIcon.Render("plus")<input class="form-control" type="text" maxlength="@WorkTaskPolicy.ChecklistMax" placeholder="Thêm mục checklist" aria-label="Tên mục checklist mới" data-ta-nc-input /></div>
+                            <button type="button" class="btn" data-ta-nc-add>@UiIcon.Render("plus")<span>Thêm</span></button>
+                        </div>
+                        <input type="hidden" name="Input.ChecklistText" value="@i.ChecklistText" data-ta-catalog-checklist />
+                    </div>
+                    <div class="form-hint">Người làm có thể thêm mục sau; công việc chỉ chuyển sang “Hoàn thành” khi mọi mục đã được tích.</div>
                 </div>
             }
         </div>
