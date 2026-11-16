@@ -44,3 +44,7 @@ Operator 2026-11-16: "Tất cả các thông báo" (after web push in CONTRACTS-
 
 ## Migration execution
 - 060-work-push-notifications.sql: PRECHECK NOT_APPLIED; DRYRUN PASS/NOT_APPLIED (trancount 0); gates PASS (792); REAL RUN VERIFY_STATUS=PASS => EXECUTED 2026-11-16T13:28:13Z
+
+## Deploy
+- portal (TAPortal.Web): commit d0f03f3, artifact a641332868455b5dc43d3e626d39fa6747dd650107856776d24872c8db66ea9b, package 3664409307DFBC1A862CD6F151E29C96583D2E734AE17E26D2BD7980E827C14C, DEPLOYED 2026-11-16T13:33:51Z, health 200.
+- Smoke (read-only query): dbo.WebPushState created by the worker at 13:34:10Z and advancing; reminder day 2026-11-16 claimed (0 devices registered yet). Delivery to a real phone NOT_VERIFIED (operator to enable on a device).
