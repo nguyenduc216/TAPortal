@@ -61,6 +61,10 @@ builder.Services.AddScoped<ICustomerStaffStore, SqlCustomerStaffStore>();
 builder.Services.AddScoped<IImpersonationStore, SqlImpersonationStore>();
 builder.Services.AddScoped<IWorkCatalogStore, SqlWorkCatalogStore>();
 builder.Services.AddScoped<IWorkDocumentStore, SqlWorkDocumentStore>();
+// Cài ứng dụng + thông báo đẩy (wwwroot/sw.js, PushController, migration 059).
+builder.Services.AddSingleton<IWebPushStore, SqlWebPushStore>();
+builder.Services.AddScoped<IWebPushSender, WebPushSender>();
+builder.Services.AddHttpClient(WebPushSender.ClientName, c => c.Timeout = TimeSpan.FromSeconds(15));
 builder.Services.AddScoped<IEmployeePhotoStore, SqlEmployeePhotoStore>(); // Ảnh đại diện nhân viên (migration 051) // Danh mục công việc (operator 2026-11-14) // "Truy cập hộ" (operator 2026-11-14)
 builder.Services.AddScoped<IWebsiteAdminStore, SqlWebsiteAdminStore>(); // Website TA (WEBSITE-TA)
 builder.Services.AddSingleton<TAPortal.Shared.IPortalContentStore, TAPortal.Shared.SqlPortalContentStore>(); // Hóa đơn tự động emails and terms

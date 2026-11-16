@@ -355,3 +355,17 @@
 .ta-combo__name { font-weight: 600; }
 .ta-combo__desc { color: var(--tblr-secondary, #667382); }
 .ta-combo__empty { padding: 8px 10px; color: var(--tblr-secondary, #667382); font-size: .8125rem; }
+
+/* ---- Cài ứng dụng + thông báo đẩy (operator 2026-11-16; wwwroot/js/ta-app.js) ---------------------------------------- */
+.ta-topbar__end{display:flex;align-items:center;gap:.5rem;min-width:0}
+.ta-app-install{display:inline-flex;align-items:center;gap:.35rem;white-space:nowrap}
+.ta-app-install[hidden]{display:none}
+.ta-app-card .ta-section-title{margin-bottom:.5rem}
+.ta-app-card .ta-section-title .icon{color:var(--tblr-primary,#082746)}
+.ta-app-steps{margin:.5rem 0 0;padding-left:1.25rem;color:var(--tblr-secondary,#475569)}
+.ta-app-steps li{margin:.25rem 0}
+.ta-push__msg{margin:.75rem 0 0}
+.ta-app-devices__title{font-size:.875rem;font-weight:600;margin:1rem 0 .5rem}
+.ta-app-devices{list-style:none;margin:0;padding:0;display:grid;gap:.375rem}
+.ta-app-devices li{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap}
+@media (max-width:575.98px){.ta-app-install span{display:none}.ta-app-install{padding-inline:.5rem}}

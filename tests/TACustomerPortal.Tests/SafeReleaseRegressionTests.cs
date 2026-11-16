@@ -87,7 +87,9 @@ public sealed class SafeReleaseRegressionTests
     {
         using var f = Admin();
         var anonymous = Inventory(f.Services).Where(e => e.Anonymous).Select(e => e.Name).ToHashSet();
-        Assert.Equal(new HashSet<string> { "Account.Login:GET", "Account.Login:POST", "Account.AccessDenied:ANY", "Home.Error:ANY" }, anonymous);
+        Assert.Equal(new HashSet<string> { "Account.Login:GET", "Account.Login:POST", "Account.AccessDenied:ANY", "Home.Error:ANY",
+            // Web app manifest (operator 2026-11-16; reviewed: static JSON, no data; browsers fetch it without cookies).
+            "Push.Manifest:GET" }, anonymous);
         Assert.All(Inventory(f.Services).Where(e => !e.Anonymous), e => Assert.True(e.Protected, $"{e.Name} has no authorization metadata"));
         Assert.All(Inventory(f.Services).Where(e => e.Name.EndsWith(":POST") && e.Name != "Account.Login:POST"), e => Assert.True(e.Protected, e.Name));
     }

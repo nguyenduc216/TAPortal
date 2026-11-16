@@ -119,9 +119,10 @@ public sealed partial class AccountController(PortalDb db, IAdminAuthStore auth,
 
     [Authorize]
     [HttpGet]
-    public async Task<IActionResult> Profile()
+    public async Task<IActionResult> Profile([FromServices] IWebPushStore push)
     {
         var user = await db.GetAuthUserAsync(User.Identity!.Name!);
+        if (user is not null && Impersonation.Read(User) is null) ViewBag.PushDevices = await push.ForUserAsync(user.Id);
         // Show role names, never role codes.
         if (user is not null)
             ViewBag.RoleNames = (await db.GetRolesAsync()).Where(r => user.Roles.Contains(r.Code, StringComparer.OrdinalIgnoreCase)).Select(r => r.Name).ToList();

@@ -16,4 +16,45 @@
     </div>
     <div class="card-footer ta-form-actions"><a asp-action="ChangePassword" class="btn btn-primary">@UiIcon.Render("key")<span>Đổi mật khẩu</span></a><a asp-action="Zalo" class="btn">@UiIcon.Render("qrcode")<span>Zalo Mini App</span></a></div>
 </section>
+</div>
+<div class="col-xl-5">
+@* Cài ứng dụng + thông báo đẩy (wwwroot/js/ta-app.js). The state depends on this browser, so the script fills it in. *@
+<section class="card ta-app-card" id="app" data-ta-app>
+    <div class="card-body">
+        <h2 class="ta-section-title">@UiIcon.Render("device-mobile")<span>Ứng dụng T.A Portal</span></h2>
+        <p class="text-secondary mb-2" data-ta-app-status>Đang kiểm tra trình duyệt...</p>
+        <button type="button" class="btn btn-primary" data-ta-app-install hidden>@UiIcon.Render("download")<span>Cài ứng dụng</span></button>
+        <ol class="ta-app-steps" data-ta-app-ios hidden>
+            <li>Mở <strong>portal.tuvangiaiphapta.vn</strong> bằng <strong>Safari</strong>.</li>
+            <li>Bấm nút <strong>Chia sẻ</strong> (ô vuông có mũi tên lên).</li>
+            <li>Chọn <strong>Thêm vào MH chính</strong>, rồi bấm <strong>Thêm</strong>.</li>
+        </ol>
+        <ul class="ta-app-steps" data-ta-app-manual hidden>
+            <li><strong>Chrome trên Android:</strong> menu <strong>⋮</strong> &gt; <strong>Thêm vào màn hình chính</strong> &gt; <strong>Cài đặt</strong>.</li>
+            <li><strong>Chrome / Edge trên máy tính:</strong> biểu tượng cài đặt ở cuối thanh địa chỉ, hoặc menu &gt; <strong>Cài đặt T.A Portal</strong>.</li>
+        </ul>
+    </div>
+    <div class="card-body border-top" data-ta-push>
+        <h2 class="ta-section-title">@UiIcon.Render("bell")<span>Thông báo đẩy</span></h2>
+        <p class="text-secondary mb-2">Nhận thông báo của T.A Portal ngay trên điện thoại hoặc máy tính, kể cả khi không mở trang. Bật riêng trên từng thiết bị.</p>
+        <p class="mb-2"><strong data-ta-push-status>Đang kiểm tra...</strong></p>
+        <div class="ta-form-actions">
+            <button type="button" class="btn btn-primary" data-ta-push-on hidden>@UiIcon.Render("bell")<span>Bật thông báo</span></button>
+            <button type="button" class="btn" data-ta-push-test hidden>@UiIcon.Render("send")<span>Gửi thử</span></button>
+            <button type="button" class="btn" data-ta-push-off hidden>@UiIcon.Render("bell-off")<span>Tắt trên thiết bị này</span></button>
+        </div>
+        <p class="ta-push__msg" data-ta-push-msg role="status" hidden></p>
+        @if (ViewBag.PushDevices is IReadOnlyList<WebPushSubscription> devices && devices.Count > 0)
+        {
+            <h3 class="ta-app-devices__title">Thiết bị đã bật (@devices.Count)</h3>
+            <ul class="ta-app-devices">
+                @foreach (var d in devices)
+                {
+                    <li>@UiIcon.Render("device-mobile")<span>@(d.Device ?? "Trình duyệt khác")</span><span class="text-secondary">dùng gần nhất @d.LastSeenAt.AddHours(7).ToString("dd/MM/yyyy")</span></li>
+                }
+            </ul>
+        }
+        @Html.AntiForgeryToken()
+    </div>
+</section>
 </div></div>

@@ -328,6 +328,66 @@ public sealed class SafeAdminWorkTests
     private static HttpClient Client(WebApplicationFactory<admin::Program> f) => f.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false, BaseAddress = new Uri("https://localhost") });
 
     [Fact]
+    public async Task EachDeviceTurnsPushNotificationsOnForTheSignedInUser()
+    {
+        var push = new MemoryPush();
+        using var f = Factory("STAFF", new MemoryWork(), "TASKS.VIEW").WithWebHostBuilder(b => b.ConfigureTestServices(s =>
+        {
+            s.RemoveAll<S.IWebPushStore>(); s.AddSingleton<S.IWebPushStore>(push);
+            s.RemoveAll<S.IWebPushSender>(); s.AddSingleton<S.IWebPushSender>(push);
+        }));
+        var c = Client(f);
+        var html = WebUtility.HtmlDecode(await c.GetStringAsync("/work"));
+        Assert.Contains("data-ta-app-install", html);                                                          // "Cài ứng dụng" in the top bar
+        Assert.Contains("data-ta-logout", html);
+        var token = Token(html);
+
+        using var ec = System.Security.Cryptography.ECDiffieHellman.Create(System.Security.Cryptography.ECCurve.NamedCurves.nistP256);
+        var q = ec.ExportParameters(false).Q;
+        var key = S.WebPushCrypto.Encode(new byte[] { 4 }.Concat(q.X!).Concat(q.Y!).ToArray());
+        var auth = S.WebPushCrypto.Encode(new byte[16]);
+        const string endpoint = "https://fcm.googleapis.com/fcm/send/device-1";
+
+        var bad = await c.PostAsync("/push/subscribe", Form(token, ("endpoint", "https://10.0.0.5/x"), ("p256dh", key), ("auth", auth)));
+        Assert.Equal(HttpStatusCode.BadRequest, bad.StatusCode);
+        Assert.Empty(push.Devices);
+        Assert.Equal(HttpStatusCode.BadRequest, (await c.PostAsync("/push/subscribe", new FormUrlEncodedContent([new("endpoint", endpoint)]))).StatusCode);   // antiforgery
+
+        var ok = await c.PostAsync("/push/subscribe", Form(token, ("endpoint", endpoint), ("p256dh", key), ("auth", auth)));
+        Assert.Equal(HttpStatusCode.OK, ok.StatusCode);
+        Assert.Equal((Actor, endpoint), (push.Devices.Single().User, push.Devices.Single().Endpoint));
+
+        var test = await c.PostAsync("/push/test", Form(token));
+        Assert.Equal(HttpStatusCode.OK, test.StatusCode);
+        Assert.Contains("\"sent\":1", await test.Content.ReadAsStringAsync());
+        Assert.Equal(Actor, push.Sent.Single().User);
+
+        Assert.Equal(HttpStatusCode.OK, (await c.PostAsync("/push/unsubscribe", Form(token, ("endpoint", endpoint)))).StatusCode);
+        Assert.Empty(push.Devices);
+    }
+
+    private sealed class MemoryPush : S.IWebPushStore, S.IWebPushSender
+    {
+        public List<(Guid User, string Endpoint)> Devices { get; } = [];
+        public List<(Guid User, S.WebPushMessage Message)> Sent { get; } = [];
+        public Task<S.WebPushVapid?> VapidAsync(string subject) => Task.FromResult<S.WebPushVapid?>(new("BKey", new byte[32], subject));
+        public Task<bool> SaveAsync(Guid user, string endpoint, string p256dh, string auth, string? device)
+        {
+            Devices.RemoveAll(d => d.Endpoint == endpoint);
+            Devices.Add((user, endpoint));
+            return Task.FromResult(true);
+        }
+        public Task RemoveAsync(Guid user, string endpoint) { Devices.RemoveAll(d => d.User == user && d.Endpoint == endpoint); return Task.CompletedTask; }
+        public Task<IReadOnlyList<S.WebPushSubscription>?> ForUserAsync(Guid user) => Task.FromResult<IReadOnlyList<S.WebPushSubscription>?>([]);
+        public Task MarkAsync(Guid subscription, bool sent, bool gone) => Task.CompletedTask;
+        public Task<S.WebPushSendResult> SendAsync(Guid user, S.WebPushMessage message, CancellationToken ct = default)
+        {
+            Sent.Add((user, message));
+            return Task.FromResult(new S.WebPushSendResult(Devices.Count(d => d.User == user), 0, 0));
+        }
+    }
+
+    [Fact]
     public void TaskDocumentsAcceptImagesWordPdfAndExcelByContent()
     {
         Assert.Equal("application/pdf", S.WorkDocumentPolicy.CheckFile("hd.pdf", "%PDF-1.7 x"u8.ToArray()).ContentType);
