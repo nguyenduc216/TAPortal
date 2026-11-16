@@ -374,6 +374,35 @@ public sealed class WebsitePostsController(IWebsiteAdminStore store, IConfigurat
         catch (SqlException ex) { logger.LogError(ex, "WEBSITE_ADMIN_UNAVAILABLE"); return View(new WebsitePostLibraryVm(PostLibrary.All, new Dictionary<string, Guid>(), WebsiteController.StoreUnavailable)); }
     }
 
+    // "Soạn bài bằng AI": staff give a topic or the link of an article to summarise; WebsiteAiWorker writes it in the background
+    // (Claude API, 79AI fallback) and saves a draft. Which provider answered is only in the server usage log.
+    [HttpGet]
+    [Authorize(Policy = AdminPermissions.Policy.WebsitePostsEdit)]
+    public IActionResult AiCreate([FromServices] WebsiteAiOptions ai) => View(new WebsiteAiCreateVm(ai.IsConfigured, new WebsiteAiForm(), null));
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [Authorize(Policy = AdminPermissions.Policy.WebsitePostsEdit)]
+    public IActionResult AiCreate([FromServices] WebsiteAiOptions ai, [FromServices] WebsiteAiJobs jobs, [Bind(Prefix = "Form")] WebsiteAiForm form)
+    {
+        if (UsersController.ActorId(User) is not Guid actor) return Forbid();
+        if (!ai.IsConfigured) return View(new WebsiteAiCreateVm(false, form, "Chưa cấu hình khóa AI trên máy chủ."));
+        var error = form.Validate();
+        if (error is not null) { Response.StatusCode = StatusCodes.Status400BadRequest; return View(new WebsiteAiCreateVm(true, form, error)); }
+        var job = jobs.Enqueue(actor, HttpContext.Connection.RemoteIpAddress?.ToString(),
+            new WebsiteAiRequest(form.Kind, form.Topic?.Trim(), form.SourceUrl?.Trim(), form.Notes?.Trim(), form.Category));
+        return RedirectToAction(nameof(AiStatus), new { id = job.Id });
+    }
+
+    [HttpGet]
+    [Authorize(Policy = AdminPermissions.Policy.WebsitePostsEdit)]
+    public IActionResult AiStatus([FromServices] WebsiteAiJobs jobs, Guid id)
+    {
+        if (jobs.Find(id) is not { } job || UsersController.ActorId(User) is not Guid actor || job.Actor != actor) return NotFound();
+        Response.Headers.CacheControl = "no-store";
+        return View(job);
+    }
+
     // Preview of a ready-written article as the website would show it, with its sources, before anything is saved.
     [HttpGet]
     [Authorize(Policy = AdminPermissions.Policy.WebsitePostsEdit)]

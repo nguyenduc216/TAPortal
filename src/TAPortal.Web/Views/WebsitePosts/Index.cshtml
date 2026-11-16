@@ -11,7 +11,7 @@
 }
 @section PageActions {
     <a class="btn" href="@(Model.PublicUrl)/tin-tuc" target="_blank" rel="noopener">@UiIcon.Render("external-link")<span>Xem trang Tin tức</span></a>
-    @if (canEdit) {<a class="btn" asp-action="Library">@UiIcon.Render("file-text")<span>Bài soạn sẵn</span></a>}
+    @if (canEdit) {<a class="btn" asp-action="AiCreate">@UiIcon.Render("pencil")<span>Soạn bài bằng AI</span></a><a class="btn" asp-action="Library">@UiIcon.Render("file-text")<span>Bài soạn sẵn</span></a>}
     @if (canEdit) {<a class="btn btn-ta-gold" asp-action="Create">@UiIcon.Render("plus")<span>Viết bài mới</span></a>}
 }
 @if (Model.Error is not null) {<div class="ta-alert ta-alert--danger" role="alert">@UiIcon.Render("alert-circle")<div class="ta-alert__body">@Model.Error</div></div>}

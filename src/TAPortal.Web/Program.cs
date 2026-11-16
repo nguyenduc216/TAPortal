@@ -57,6 +57,17 @@ builder.Services.AddSingleton(ContractReviewAiOptions.From(builder.Configuration
 builder.Services.AddSingleton<IContractReviewAi, AnthropicContractReviewAi>();
 if (!string.IsNullOrWhiteSpace(builder.Configuration["Database:ConnectionString"]))
     builder.Services.AddHostedService<ContractReviewWorker>();
+// Website TA → "Soạn bài bằng AI": Claude API first, 79AI fallback; usage per provider in logs/website-ai-usage.log.
+builder.Services.AddSingleton(WebsiteAiOptions.From(builder.Configuration, builder.Environment.ContentRootPath));
+builder.Services.AddSingleton<IWebsiteAiProvider, AnthropicWebsiteAiProvider>();
+builder.Services.AddSingleton<IWebsiteAiProvider, GommoWebsiteAiProvider>();
+builder.Services.AddSingleton<WebsiteAiUsageLog>();
+builder.Services.AddSingleton<WebsiteAiJobs>();
+builder.Services.AddSingleton<WebsiteAiWriter>();
+builder.Services.AddHostedService<WebsiteAiWorker>();
+builder.Services.AddHttpClient(nameof(GommoWebsiteAiProvider), c => c.Timeout = TimeSpan.FromMinutes(12));
+builder.Services.AddHttpClient(nameof(WebsiteAiWriter), c => { c.Timeout = TimeSpan.FromSeconds(30); c.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (compatible; TAPortal/1.0)"); })
+    .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { MaxAutomaticRedirections = 3 });
 builder.Services.AddScoped<ICustomerStaffStore, SqlCustomerStaffStore>();
 builder.Services.AddScoped<IImpersonationStore, SqlImpersonationStore>();
 builder.Services.AddScoped<IWorkCatalogStore, SqlWorkCatalogStore>();

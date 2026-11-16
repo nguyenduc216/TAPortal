@@ -495,6 +495,146 @@ public sealed class SafeWebsiteTests
         Assert.NotEqual(HttpStatusCode.OK, (await AdminClient(viewer).GetAsync("/WebsitePosts/LibraryPreview?slug=" + first.Slug)).StatusCode);
     }
 
+    // ---- Soạn bài bằng AI ----------------------------------------------------------------------------------------
+    private const string AiArticleJson = """
+{"title":"Hạn nộp tờ khai thuế quý 4/2026","slug":"han-nop-to-khai-quy-4-2026","summary":"Tóm tắt hạn nộp.","category":"thue","tags":"thuế, hạn nộp",
+ "seoTitle":"Hạn nộp tờ khai quý 4/2026","seoDescription":"Các mốc nộp tờ khai thuế quý 4/2026 doanh nghiệp nhỏ cần biết để tránh bị phạt chậm nộp.",
+ "bodyHtml":"<p class=\"lead\">Mở đầu.</p><h2>Hạn nộp</h2><p>Nội dung <script>x</script></p><p><a href=\"/lien-he\">liên hệ T.A</a></p>",
+ "sourceName":"Báo Điện tử Chính phủ","sourceAuthor":"","sourcePublishedOn":"2026-11-10","sources":["Nghị định 126/2020 – https://chinhphu.vn/a"],"uncertain":["Kiểm tra ngày nghỉ lễ"]}
+""";
+
+    private sealed class FakeAiProvider(string name, Func<int, string?> answer) : S.IWebsiteAiProvider
+    {
+        public int Calls;
+        public string Name => name;
+        public bool IsConfigured => true;
+        public Task<(string Json, S.WebsiteAiUsage Usage)> WriteAsync(string system, string user, CancellationToken ct)
+        {
+            Calls++;
+            var usage = new S.WebsiteAiUsage(name, name + "-model", true, 1000, 500, 0, 2, 1, 0.02m, false, 10, null);
+            var json = answer(Calls);
+            if (json is null) throw new S.WebsiteAiProviderException(usage with { Ok = false, Error = "credit balance too low" }, "Gọi Claude API không thành công.");
+            return Task.FromResult((json, usage));
+        }
+    }
+
+    private static (S.WebsiteAiWriter Writer, string LogPath) AiWriter(params S.IWebsiteAiProvider[] providers)
+    {
+        var log = Path.Combine(Path.GetTempPath(), "ta-ai-usage-" + Guid.NewGuid().ToString("N") + ".log");
+        var options = new S.WebsiteAiOptions { UsageLogPath = log, GommoToken = "test" };
+        var usage = new S.WebsiteAiUsageLog(options, Microsoft.Extensions.Logging.Abstractions.NullLogger<S.WebsiteAiUsageLog>.Instance);
+        return (new S.WebsiteAiWriter(providers, usage, new NoHttp(), TimeProvider.System, Microsoft.Extensions.Logging.Abstractions.NullLogger<S.WebsiteAiWriter>.Instance), log);
+    }
+
+    private sealed class NoHttp : IHttpClientFactory
+    {
+        public HttpClient CreateClient(string name) => throw new InvalidOperationException("tests must not call the network");
+    }
+
+    [Fact]
+    public async Task AiWriterFallsBackTo79AiAndLogsEachProviderCall()
+    {
+        var store = new MemoryAdminStore();
+        var claude = new FakeAiProvider("claude", _ => null);              // Claude API fails (e.g. no credit left)
+        var gommo = new FakeAiProvider("79ai", _ => "```json\n" + AiArticleJson + "\n```");
+        var (writer, log) = AiWriter(claude, gommo);
+        var job = new S.WebsiteAiJobs().Enqueue(Actor, null, new S.WebsiteAiRequest(PostSource.Own, "Hạn nộp tờ khai quý 4/2026", null, null, null));
+        await writer.RunAsync(job, store, CancellationToken.None);
+
+        Assert.Equal(S.WebsiteAiJobState.Done, job.State);
+        Assert.Equal((1, 1), (claude.Calls, gommo.Calls));
+        var saved = Assert.Single(store.Posts.Values).Input;
+        Assert.False(saved.Publish);                                        // AI never publishes
+        Assert.Equal("han-nop-to-khai-quy-4-2026", saved.Slug);
+        Assert.DoesNotContain("<script", saved.BodyHtml);
+        Assert.Equal(PostSource.Own, saved.SourceKind);                     // topic article: no source box
+        Assert.Equal(["Kiểm tra ngày nghỉ lễ"], job.Uncertain);
+        var lines = File.ReadAllLines(log);
+        Assert.Equal(2, lines.Length);
+        Assert.Contains("\"provider\":\"claude\"", lines[0]);
+        Assert.Contains("\"ok\":false", lines[0]);
+        Assert.Contains("\"provider\":\"79ai\"", lines[1]);
+        Assert.Contains("\"ok\":true", lines[1]);
+        Assert.Contains("\"input_tokens\":1000", lines[1]);
+        File.Delete(log);
+
+        // Claude answers: 79AI is not called; a second article on the same topic gets its own slug.
+        var claudeOk = new FakeAiProvider("claude", _ => AiArticleJson);
+        var unused = new FakeAiProvider("79ai", _ => AiArticleJson);
+        (writer, log) = AiWriter(claudeOk, unused);
+        var second = new S.WebsiteAiJobs().Enqueue(Actor, null, new S.WebsiteAiRequest(PostSource.Own, "Hạn nộp tờ khai quý 4/2026", null, null, null));
+        await writer.RunAsync(second, store, CancellationToken.None);
+        Assert.Equal(S.WebsiteAiJobState.Done, second.State);
+        Assert.Equal(0, unused.Calls);
+        Assert.Contains(store.Posts.Values, p => p.Input.Slug == "han-nop-to-khai-quy-4-2026-2");
+        Assert.Single(File.ReadAllLines(log));
+        File.Delete(log);
+
+        // Both fail: the job fails with a readable message and nothing is saved.
+        (writer, log) = AiWriter(new FakeAiProvider("claude", _ => null), new FakeAiProvider("79ai", _ => "xin lỗi, không có JSON"));
+        var failed = new S.WebsiteAiJobs().Enqueue(Actor, null, new S.WebsiteAiRequest(PostSource.Own, "Chủ đề bất kỳ dài hơn mười ký tự", null, null, null));
+        await writer.RunAsync(failed, store, CancellationToken.None);
+        Assert.Equal(S.WebsiteAiJobState.Failed, failed.State);
+        Assert.Contains("JSON", failed.Error);
+        Assert.Equal(2, store.Posts.Count);
+        File.Delete(log);
+    }
+
+    [Fact]
+    public void AiHelpersParseAnswersTokensAndRefusePrivateAddresses()
+    {
+        var a = S.WebsiteAiPrompt.Parse("Đây là bài:\n" + AiArticleJson);
+        Assert.Equal("thue", a.Category);
+        Assert.Equal(new DateTime(2026, 11, 10), a.SourcePublishedOn);
+        Assert.Null(a.SourceAuthor);
+        Assert.Throws<S.WebsiteAiException>(() => S.WebsiteAiPrompt.Parse("{\"title\":\"\"}"));
+        Assert.Contains("Nội dung chính", S.WebsiteAiPrompt.PageText("<html><script>bad()</script><nav>menu</nav><h1>Tiêu đề</h1><p>Nội dung chính &amp; phụ</p></html>"));
+        Assert.DoesNotContain("bad()", S.WebsiteAiPrompt.PageText("<script>bad()</script><p>x</p>"));
+        Assert.Equal((1200L, 340L, true), S.GommoWebsiteAiProvider.ReportedTokens(System.Text.Json.JsonDocument.Parse("""{"data":{"usage":{"prompt_tokens":1200,"completion_tokens":340}}}""").RootElement));
+        Assert.False(S.GommoWebsiteAiProvider.ReportedTokens(System.Text.Json.JsonDocument.Parse("""{"data":{"text":"x"}}""").RootElement).Reported);
+        foreach (var ip in new[] { "127.0.0.1", "10.1.2.3", "192.168.1.5", "172.20.0.1", "169.254.1.1", "::1" }) Assert.True(S.WebsiteAiWriter.IsPrivate(IPAddress.Parse(ip)), ip);
+        Assert.False(S.WebsiteAiWriter.IsPrivate(IPAddress.Parse("113.160.249.61")));
+        Assert.Contains("thue", S.WebsiteAiPrompt.System(new DateTime(2026, 11, 17)));
+        var opt = new S.WebsiteAiOptions();   // Opus 5.5 list price: $4 / $20 per million tokens, $10 per 1,000 searches
+        Assert.Equal(4m, opt.Cost(1_000_000, 0));
+        Assert.Equal(20m, opt.Cost(0, 1_000_000));
+        Assert.Equal(0.02m, opt.Cost(0, 0, 0, 2));
+    }
+
+    [Fact]
+    public async Task AiCreatePageQueuesAJobForTheEditorOnly()
+    {
+        var store = new MemoryAdminStore();
+        await using var f = AdminFactory(store, s =>
+        {
+            s.RemoveAll<S.WebsiteAiOptions>();
+            s.AddSingleton(new S.WebsiteAiOptions { GommoToken = "test", UsageLogPath = "" });
+            s.RemoveAll<S.IWebsiteAiProvider>();
+            s.AddSingleton<S.IWebsiteAiProvider>(new FakeAiProvider("claude", _ => AiArticleJson));
+        }, "WEBSITE.VIEW", "WEBSITE.POSTS.EDIT");
+        var client = AdminClient(f);
+        Assert.Contains("Soạn bài bằng AI", WebUtility.HtmlDecode(await client.GetStringAsync("/WebsitePosts")));
+        var page = await client.GetStringAsync("/WebsitePosts/AiCreate");
+        Assert.Contains("Tóm tắt có trích nguồn", WebUtility.HtmlDecode(page));
+        var token = Token(page);
+        Assert.Equal(HttpStatusCode.BadRequest, (await client.PostAsync("/WebsitePosts/AiCreate", Form(token, ("Form.Kind", "0"), ("Form.Topic", "ngắn")))).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await client.PostAsync("/WebsitePosts/AiCreate", Form(token, ("Form.Kind", "1"), ("Form.SourceUrl", "javascript:alert(1)")))).StatusCode);
+        var queued = await client.PostAsync("/WebsitePosts/AiCreate", Form(token, ("Form.Kind", "0"), ("Form.Topic", "Hạn nộp tờ khai thuế quý 4/2026")));
+        Assert.Equal(HttpStatusCode.Redirect, queued.StatusCode);
+        var status = queued.Headers.Location!.ToString();
+        Assert.Contains("/WebsitePosts/AiStatus/", status);
+        string html = "";
+        for (var i = 0; i < 50 && !html.Contains("Đã soạn xong"); i++) { await Task.Delay(100); html = WebUtility.HtmlDecode(await client.GetStringAsync(status)); }
+        Assert.Contains("Đã soạn xong bản nháp", html);
+        Assert.Contains("Kiểm tra ngày nghỉ lễ", html);
+        Assert.DoesNotContain("claude", html, StringComparison.OrdinalIgnoreCase);   // which provider answered stays in the server log
+        Assert.Single(store.Posts);
+        Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync("/WebsitePosts/AiStatus/" + Guid.NewGuid())).StatusCode);
+
+        await using var viewer = AdminFactory(new MemoryAdminStore(), "WEBSITE.VIEW");
+        Assert.NotEqual(HttpStatusCode.OK, (await AdminClient(viewer).GetAsync("/WebsitePosts/AiCreate")).StatusCode);
+    }
+
     // ---- Public website (fake reader) -----------------------------------------------------------------------------
     [Fact]
     public async Task PublicSiteRendersPagesFromContentAndKeepsLinksSafe()
@@ -732,7 +872,9 @@ public sealed class SafeWebsiteTests
     private static HttpClient AdminClient(WebApplicationFactory<admin::Program> f) =>
         f.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false, BaseAddress = new Uri("https://localhost") });
 
-    private static WebApplicationFactory<admin::Program> AdminFactory(MemoryAdminStore store, params string[] permissions) =>
+    private static WebApplicationFactory<admin::Program> AdminFactory(MemoryAdminStore store, params string[] permissions) => AdminFactory(store, _ => { }, permissions);
+
+    private static WebApplicationFactory<admin::Program> AdminFactory(MemoryAdminStore store, Action<IServiceCollection> extra, params string[] permissions) =>
         new WebApplicationFactory<admin::Program>().WithWebHostBuilder(b => b.UseEnvironment("Development")
             .ConfigureAppConfiguration((_, c) => c.AddInMemoryCollection(new Dictionary<string, string?> { ["Database:ConnectionString"] = "INVALID: tests must never use SQL" }))
             .ConfigureTestServices(s =>
@@ -743,6 +885,7 @@ public sealed class SafeWebsiteTests
                 s.AddSingleton(new TestPrincipal("STAFF", permissions));
                 s.AddAuthentication().AddScheme<AuthenticationSchemeOptions, TestAuthHandler>(TestScheme, _ => { });
                 s.PostConfigure<AuthenticationOptions>(o => { o.DefaultScheme = TestScheme; o.DefaultAuthenticateScheme = TestScheme; o.DefaultChallengeScheme = TestScheme; o.DefaultForbidScheme = TestScheme; });
+                extra(s);
             }));
 
     private static WebApplicationFactory<website::Program> SiteFactory(MemoryReader reader) =>

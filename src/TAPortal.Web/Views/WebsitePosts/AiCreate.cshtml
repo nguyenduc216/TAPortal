@@ -1,0 +1,57 @@
+@model WebsiteAiCreateVm
+@{
+    var f = Model.Form;
+    ViewData["ParentTitle"] = "Bài viết";
+    ViewData["ParentController"] = "WebsitePosts";
+    ViewData["Title"] = "Soạn bài bằng AI";
+    ViewData["Heading"] = "Soạn bài bằng AI";
+    ViewData["Subtitle"] = "AI tra cứu và soạn một bài theo khung của T.A, lưu thành bản nháp để chuyên viên đọc lại rồi mới xuất bản.";
+    ViewData["PageIcon"] = "file-text";
+}
+@section PageActions {
+    <a class="btn" asp-action="Index">@UiIcon.Render("arrow-left")<span>Về danh sách bài viết</span></a>
+}
+@if (!Model.Configured)
+{
+    <div class="ta-alert ta-alert--warning" role="alert">@UiIcon.Render("alert-circle")<div class="ta-alert__body">Chưa cấu hình khóa AI trên máy chủ. Liên hệ quản trị hệ thống.</div></div>
+}
+@if (Model.Error is not null) {<div class="ta-alert ta-alert--danger" role="alert">@UiIcon.Render("alert-circle")<div class="ta-alert__body">@Model.Error</div></div>}
+<div class="ta-alert ta-alert--info" role="note">@UiIcon.Render("info-circle")<div class="ta-alert__body">Mất khoảng 1–4 phút. Bài luôn là <b>bản nháp</b>, kèm danh sách nguồn đã đọc và các điểm "Cần T.A rà lại". AI có thể sai số liệu: đọc kỹ trước khi xuất bản.</div></div>
+<form asp-action="AiCreate" method="post" class="card" style="max-width: 860px">
+    <div class="card-body">
+        <label class="form-label required" for="Form_Kind">Loại bài</label>
+        <select class="form-select" id="Form_Kind" name="Form.Kind" data-ta-ai-kind>
+            <option value="0" selected="@(f.Kind == 0)">Tự biên soạn – AI tra cứu và viết theo chủ đề</option>
+            <option value="1" selected="@(f.Kind == 1)">Tóm tắt có trích nguồn – AI tóm tắt một bài trên website khác</option>
+        </select>
+
+        <div class="mt-3" data-ta-ai-url hidden="@(f.Kind != 1)">
+            <label class="form-label required" for="Form_SourceUrl">Đường dẫn bài gốc</label>
+            <div class="ta-input-icon">@UiIcon.Render("link")<input class="form-control" id="Form_SourceUrl" name="Form.SourceUrl" type="url" maxlength="500" value="@f.SourceUrl" placeholder="https://baochinhphu.vn/…" /></div>
+            <small class="form-hint">Nên dùng trang nhà nước, tạp chí ngành. Trang cần đăng nhập hoặc chặn truy cập sẽ không đọc được.</small>
+        </div>
+
+        <label class="form-label mt-3" for="Form_Topic" data-ta-ai-topic-label>Chủ đề bài viết</label>
+        <div class="ta-input-icon ta-input-icon--top">@UiIcon.Render("file-text")<textarea class="form-control" id="Form_Topic" name="Form.Topic" rows="2" maxlength="500" placeholder="Ví dụ: Hạn nộp tờ khai thuế quý 4/2026 và các việc doanh nghiệp nhỏ cần làm">@f.Topic</textarea></div>
+        <small class="form-hint" data-ta-ai-topic-hint>Bài tự biên soạn: bắt buộc. Bài tóm tắt: có thể để trống, hoặc ghi góc nhìn muốn nhấn mạnh.</small>
+
+        <label class="form-label mt-3" for="Form_Category">Chuyên mục</label>
+        <select class="form-select" id="Form_Category" name="Form.Category">
+            <option value="">Để AI chọn</option>
+            @foreach (var c in PostLibrary.Categories) {<option value="@c.Slug" selected="@(c.Slug == f.Category)">@c.Name</option>}
+        </select>
+
+        <label class="form-label mt-3" for="Form_Notes">Yêu cầu thêm (không bắt buộc)</label>
+        <div class="ta-input-icon ta-input-icon--top">@UiIcon.Render("pencil")<textarea class="form-control" id="Form_Notes" name="Form.Notes" rows="2" maxlength="1000" placeholder="Ví dụ: nhấn mạnh hộ kinh doanh ở Khánh Hòa, có bảng so sánh">@f.Notes</textarea></div>
+    </div>
+    <div class="card-footer d-flex justify-content-end">
+        <button class="btn btn-ta-gold" type="submit" disabled="@(!Model.Configured)">@UiIcon.Render("file-text")<span>Soạn bài</span></button>
+    </div>
+</form>
+<script>
+    document.addEventListener('change', (e) => {
+        const kind = e.target.closest?.('[data-ta-ai-kind]');
+        if (!kind) return;
+        document.querySelector('[data-ta-ai-url]').hidden = kind.value !== '1';
+    });
+</script>

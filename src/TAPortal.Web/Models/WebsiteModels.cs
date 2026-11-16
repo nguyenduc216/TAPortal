@@ -20,6 +20,29 @@ public sealed record WebsiteMediaVm(IReadOnlyList<WebsiteMediaItem> Items, strin
 public sealed record WebsitePostsVm(IReadOnlyList<WebsitePostListItem> Items, IReadOnlyList<PostCategory> Categories, string? Status, Guid? Category,
     string? Search, DateTime NowUtc, string PublicUrl, string? Error);
 
+public sealed record WebsiteAiCreateVm(bool Configured, WebsiteAiForm Form, string? Error);
+
+/// <summary>The "Soạn bài bằng AI" form. Kind 0 = tự biên soạn (Topic required), 1 = tóm tắt có trích nguồn (SourceUrl required).</summary>
+public sealed class WebsiteAiForm
+{
+    public byte Kind { get; set; }
+    public string? Topic { get; set; }
+    public string? SourceUrl { get; set; }
+    public string? Notes { get; set; }
+    public string? Category { get; set; }
+
+    public string? Validate()
+    {
+        if (Kind != TAWebsite.Core.Data.PostSource.Own && Kind != TAWebsite.Core.Data.PostSource.Summary) Kind = TAWebsite.Core.Data.PostSource.Own;
+        if (!string.IsNullOrWhiteSpace(Category) && !PostLibrary.Categories.Any(c => c.Slug == Category)) Category = null;
+        if (Topic?.Length > 500 || Notes?.Length > 1000) return "Chủ đề tối đa 500 ký tự, yêu cầu thêm tối đa 1000 ký tự.";
+        if (Kind == TAWebsite.Core.Data.PostSource.Own)
+            return string.IsNullOrWhiteSpace(Topic) || Topic.Trim().Length < 10 ? "Nhập chủ đề bài viết (ít nhất 10 ký tự)." : null;
+        return string.IsNullOrWhiteSpace(SourceUrl) || SourceUrl.Trim().Length > 500 || !TAWebsite.Core.Data.PostSource.IsHttpUrl(SourceUrl.Trim())
+            ? "Dán đường dẫn bài gốc bắt đầu bằng http:// hoặc https://." : null;
+    }
+}
+
 public sealed record WebsitePostLibraryVm(IReadOnlyList<LibraryPost> Posts, IReadOnlyDictionary<string, Guid> Existing, string? Error,
     IReadOnlySet<string>? Drafts = null)
 {

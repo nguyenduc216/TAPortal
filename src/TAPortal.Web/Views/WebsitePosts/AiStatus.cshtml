@@ -1,0 +1,57 @@
+@model WebsiteAiJob
+@{
+    var running = Model.State is not (WebsiteAiJobState.Done or WebsiteAiJobState.Failed);
+    ViewData["ParentTitle"] = "Bài viết";
+    ViewData["ParentController"] = "WebsitePosts";
+    ViewData["Title"] = "Soạn bài bằng AI";
+    ViewData["Heading"] = running ? "Đang soạn bài…" : Model.State == WebsiteAiJobState.Done ? "Đã soạn xong bản nháp" : "Chưa soạn được bài";
+    ViewData["Subtitle"] = Model.Request.Kind == TAWebsite.Core.Data.PostSource.Summary ? "Tóm tắt có trích nguồn: " + Model.Request.SourceUrl : "Chủ đề: " + Model.Request.Topic;
+    ViewData["PageIcon"] = "file-text";
+    var step = Model.State switch
+    {
+        WebsiteAiJobState.Queued => "Đang chờ đến lượt (mỗi lần soạn một bài).",
+        WebsiteAiJobState.Fetching => "Đang tải bài gốc.",
+        WebsiteAiJobState.Writing => "AI đang tra cứu và viết bài. Thường mất 1–4 phút, trang tự cập nhật.",
+        WebsiteAiJobState.Saving => "Đang lưu bản nháp.",
+        _ => null
+    };
+}
+@section PageActions {
+    <a class="btn" asp-action="AiCreate">@UiIcon.Render("plus")<span>Soạn bài khác</span></a>
+    <a class="btn" asp-action="Index">@UiIcon.Render("arrow-left")<span>Về danh sách bài viết</span></a>
+}
+@if (running)
+{
+    <meta http-equiv="refresh" content="5" />
+    <div class="ta-alert ta-alert--info" role="status">@UiIcon.Render("info-circle")<div class="ta-alert__body">@step Có thể rời trang này; bài vẫn được lưu vào danh sách bài viết khi xong.</div></div>
+}
+else if (Model.State == WebsiteAiJobState.Failed)
+{
+    <div class="ta-alert ta-alert--danger" role="alert">@UiIcon.Render("alert-circle")<div class="ta-alert__body">@Model.Error</div></div>
+}
+else
+{
+    <div class="ta-alert ta-alert--success" role="status">@UiIcon.Render("info-circle")<div class="ta-alert__body"><b>@Model.Title</b> đã lưu dạng <b>bản nháp</b>. Đọc lại các điểm bên dưới, sửa nếu cần rồi mới xuất bản.</div></div>
+    <div class="d-flex flex-wrap gap-2 mb-3">
+        <a class="btn btn-ta-gold" asp-action="Edit" asp-route-id="@Model.PostId">@UiIcon.Render("pencil")<span>Mở bản nháp</span></a>
+        <a class="btn" href="/WebsitePosts/Preview/@Model.PostId" target="_blank" rel="noopener">@UiIcon.Render("eye")<span>Xem trước</span></a>
+    </div>
+    <section class="card mb-3" aria-label="Cần T.A rà lại">
+        <div class="card-header"><h2 class="card-title text-danger">Cần T.A rà lại (@Model.Uncertain.Count điểm)</h2></div>
+        <div class="card-body">
+            <p class="ta-cell-sub">Danh sách này chỉ hiện ở đây, không lưu vào bài. Hãy ghi lại nếu cần.</p>
+            @if (Model.Uncertain.Count == 0) {<p class="mb-0">AI không ghi điểm nào; vẫn nên đối chiếu số liệu và văn bản được dẫn.</p>}
+            else {<ol class="mb-0">@foreach (var u in Model.Uncertain) {<li>@u</li>}</ol>}
+        </div>
+    </section>
+    <section class="card" aria-label="Nguồn đã tham khảo">
+        <div class="card-header"><h2 class="card-title">Nguồn AI đã tham khảo (@Model.Sources.Count)</h2></div>
+        <div class="card-body">
+            @if (Model.Sources.Count == 0) {<p class="mb-0">AI không ghi nguồn.</p>}
+            else
+            {
+                <ol class="mb-0">@foreach (var s in Model.Sources) { var (label, url) = PostLibrary.SplitSource(s); <li>@if (url is not null) {<a href="@url" target="_blank" rel="noopener noreferrer">@label</a>} else {@label}</li> }</ol>
+            }
+        </div>
+    </section>
+}
