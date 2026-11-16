@@ -3,6 +3,8 @@
     ViewData["Site"] = Model.Site;
     var p = Model.Post;
     var minutes = PostHtml.ReadMinutes(p.BodyHtml);
+    var src = p.Source is { HasSource: true } s ? s : null;
+    var republished = src?.Kind == PostSource.Republished;
 }
 <div class="ar-progress" aria-hidden="true"></div>
 <main class="dv-main" id="top">
@@ -12,7 +14,8 @@
         @if (p.CategoryName is not null) {<span class="nw-tag">@p.CategoryName.ToUpperInvariant()</span>}
         <h1>@p.Title</h1>
         @if (p.Summary is not null) {<p class="ar-lead">@p.Summary</p>}
-        <div class="ar-byline"><img alt="" src="/site-assets/ta-logo.png" /><span>Biên soạn: <b>@(p.AuthorName ?? "Ban chuyên môn T.A")</b></span><span>Đăng: @SiteHtml.Date(p.PublishedAt)</span><span>@minutes phút đọc</span></div>
+        @if (src is not null) {<p class="ar-origin">@(republished ? "Đăng lại từ" : "Tổng hợp từ") <b>@src.Name</b>@if (src.SafeUrl is not null) {<text> · </text><a href="@src.SafeUrl" target="_blank" rel="noopener nofollow">Xem bài gốc ↗</a>}</p>}
+        <div class="ar-byline"><img alt="" src="/site-assets/ta-logo.png" /><span>@(src is null ? "Biên soạn" : republished ? "Đăng lại" : "Tổng hợp"): <b>@(p.AuthorName ?? "Ban chuyên môn T.A")</b></span><span>Đăng: @SiteHtml.Date(p.PublishedAt)</span><span>@minutes phút đọc</span></div>
     </div></div></header>
     <div class="wrap">
         @if (p.CoverMediaId is not null) {<figure class="ar-cover"><img alt="@(p.CoverAlt ?? p.Title)" src="@SiteContext.Img(p.CoverMediaId)" /></figure>}
@@ -23,6 +26,15 @@
             </nav>
             <div class="ar-body">
                 @Html.Raw(Model.BodyHtml)
+                @if (src is not null)
+                {
+                    <aside class="ar-source" aria-label="Nguồn bài viết">
+                        <b>Nguồn</b>
+                        <p>@(republished ? "Bài đăng lại với sự đồng ý của" : "Bài tóm tắt và trích dẫn từ") <b>@src.Name</b>@if (!string.IsNullOrWhiteSpace(src.Author)) {<text>, tác giả @src.Author</text>}@if (src.PublishedOn is DateTime on) {<text>, đăng ngày @on.ToString("dd/MM/yyyy")</text>}.</p>
+                        @if (src.SafeUrl is not null) {<a href="@src.SafeUrl" target="_blank" rel="noopener nofollow">Xem bài gốc ↗</a>}
+                        @if (!republished) {<small>Nội dung đã được T.A tóm tắt, diễn giải lại; trích nguyên văn đặt trong ngoặc kép. Bản quyền bài gốc thuộc về nơi đăng.</small>}
+                    </aside>
+                }
                 @if (p.TagList.Count > 0) {<div class="ar-tags">@foreach (var t in p.TagList) {<a href="/tin-tuc?q=@Uri.EscapeDataString(t)">#@t</a>}</div>}
                 <div class="ar-author"><img alt="" src="/site-assets/ta-logo.png" /><div><b>@(p.AuthorName ?? "Ban chuyên môn T.A")</b><p>Đội ngũ kế toán viên và chuyên gia thuế của T.A biên soạn, rà soát nội dung cẩm nang cho doanh nghiệp. Nội dung mang tính tham khảo; hãy liên hệ để được tư vấn theo hồ sơ thực tế.</p></div></div>
                 @if (Model.Previous is not null || Model.Next is not null)

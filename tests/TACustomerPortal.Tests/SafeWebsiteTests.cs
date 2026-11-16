@@ -517,6 +517,71 @@ public sealed class SafeWebsiteTests
         Assert.Contains("href=\"#muc-1\"", html);
         Assert.DoesNotContain("<script>alert", html);
         Assert.Contains("\"@type\":\"Article\"", html);
+        Assert.DoesNotContain("ar-source", html); // T.A's own article: no source box
+    }
+
+    [Fact]
+    public async Task SummarisedArticleShowsItsSourceAndNeverAnUnsafeLink()
+    {
+        var reader = new MemoryReader();
+        reader.Post = new PostDetail(Guid.NewGuid(), "bai-tom-tat", "Bài tóm tắt", null, "<p>Nội dung tóm tắt</p>", null, null, null, null, null,
+            null, null, DateTime.UtcNow.AddDays(-1), DateTime.UtcNow, null, null, 0,
+            new PostSource(PostSource.Summary, "Tạp chí Thuế", "https://thuenhanuoc.vn/bai-goc", "Nguyễn Văn A", new DateTime(2026, 11, 10)));
+        await using var f = SiteFactory(reader);
+        var client = f.CreateClient();
+        var html = WebUtility.HtmlDecode(await client.GetStringAsync("/tin-tuc/bai-tom-tat"));
+        Assert.Contains("Tổng hợp từ <b>Tạp chí Thuế</b>", html);
+        Assert.Contains("class=\"ar-source\"", html);
+        Assert.Contains("href=\"https://thuenhanuoc.vn/bai-goc\" target=\"_blank\" rel=\"noopener nofollow\"", html);
+        Assert.Contains("tác giả Nguyễn Văn A, đăng ngày 10/11/2026", html);
+
+        reader.Post = reader.Post with { Source = new PostSource(PostSource.Republished, "Báo X", "javascript:alert(1)", null, null) };
+        html = WebUtility.HtmlDecode(await client.GetStringAsync("/tin-tuc/bai-tom-tat"));
+        Assert.Contains("Đăng lại từ <b>Báo X</b>", html);
+        Assert.DoesNotContain("javascript:", html);
+    }
+
+    [Fact]
+    public void PostSourceFieldsAreRequiredOnlyForSummariesAndRepublished()
+    {
+        var own = new S.WebsitePostInput { Title = "A", SourceKind = PostSource.Own, SourceName = "x", SourceUrl = "bad" };
+        Assert.Empty(own.Normalize());
+        Assert.Null(own.SourceName); // cleared for T.A's own articles
+        var missing = new S.WebsitePostInput { Title = "A", SourceKind = PostSource.Summary };
+        Assert.Contains(missing.Normalize(), e => e.Field == "SourceName");
+        Assert.Contains(missing.Normalize(), e => e.Field == "SourceUrl");
+        var badUrl = new S.WebsitePostInput { Title = "A", SourceKind = PostSource.Summary, SourceName = "Tạp chí Thuế", SourceUrl = "javascript:alert(1)" };
+        Assert.Contains(badUrl.Normalize(), e => e.Field == "SourceUrl");
+        var ok = new S.WebsitePostInput { Title = "A", SourceKind = PostSource.Republished, SourceName = " Tạp chí Thuế ", SourceUrl = "https://thuenhanuoc.vn/a", SourceAuthor = " " };
+        Assert.Empty(ok.Normalize());
+        Assert.Equal("Tạp chí Thuế", ok.SourceName);
+        Assert.Null(ok.SourceAuthor);
+        var unknown = new S.WebsitePostInput { Title = "A", SourceKind = 9, SourceName = "x" };
+        Assert.Empty(unknown.Normalize());
+        Assert.Equal(PostSource.Own, unknown.SourceKind);
+    }
+
+    [Fact]
+    public async Task PostEditorSavesAndReloadsTheSource()
+    {
+        var store = new MemoryAdminStore();
+        await using var f = AdminFactory(store, "WEBSITE.VIEW", "WEBSITE.POSTS.EDIT");
+        var client = AdminClient(f);
+        var form = await client.GetStringAsync("/WebsitePosts/Create");
+        Assert.Contains("Tóm tắt có trích nguồn", WebUtility.HtmlDecode(form));
+        var refused = await client.PostAsync("/WebsitePosts/Create", Form(Token(form), ("Input.Title", "Tóm tắt công văn"), ("Input.SourceKind", "1")));
+        Assert.Equal(HttpStatusCode.BadRequest, refused.StatusCode);
+        Assert.Empty(store.Posts);
+        var saved = await client.PostAsync("/WebsitePosts/Create", Form(Token(form), ("Input.Title", "Tóm tắt công văn"), ("Input.BodyHtml", "<p>x</p>"),
+            ("Input.SourceKind", "1"), ("Input.SourceName", "Cục Thuế"), ("Input.SourceUrl", "https://gdt.gov.vn/cv"), ("Input.SourcePublishedOn", "2026-11-12")));
+        Assert.Equal(HttpStatusCode.Redirect, saved.StatusCode);
+        var post = store.Posts.Values.Single().Input;
+        Assert.Equal(PostSource.Summary, post.SourceKind);
+        Assert.Equal(new DateTime(2026, 11, 12), post.SourcePublishedOn);
+        var edit = WebUtility.HtmlDecode(await client.GetStringAsync(saved.Headers.Location!.ToString()));
+        Assert.Contains("value=\"https://gdt.gov.vn/cv\"", edit);
+        var preview = WebUtility.HtmlDecode(await client.GetStringAsync("/WebsitePosts/Preview/" + store.Posts.Keys.Single()));
+        Assert.Contains("Tổng hợp từ <b>Cục Thuế</b>", preview);
     }
 
     [Fact]
@@ -724,7 +789,8 @@ public sealed class SafeWebsiteTests
                 (byte)(p.Value.Input.Publish ? 1 : 0), null, false, 0, DateTime.UtcNow, null)).ToList());
         public Task<S.WebsitePostEdit?> PostAsync(Guid id) => Task.FromResult(Posts.TryGetValue(id, out var p)
             ? new S.WebsitePostEdit(id, p.Input.Slug!, p.Input.Title!, p.Input.Summary, p.Input.BodyHtml, null, null, null, null, (byte)(p.Input.Publish ? 1 : 0), null, false,
-                null, null, 0, DateTime.UtcNow, DateTime.UtcNow, p.Stamp) : null);
+                null, null, 0, DateTime.UtcNow, DateTime.UtcNow, p.Stamp,
+                PostSource.From(p.Input.SourceKind, p.Input.SourceName, p.Input.SourceUrl, p.Input.SourceAuthor, p.Input.SourcePublishedOn)) : null);
         public Task<S.WebsiteResult> SavePostAsync(Guid actor, string? ip, Guid? id, S.WebsitePostInput input, DateTime nowUtc)
         {
             var key = id ?? Guid.NewGuid();

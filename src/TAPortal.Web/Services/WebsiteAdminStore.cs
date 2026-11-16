@@ -23,7 +23,7 @@ public sealed record WebsitePostListItem(Guid Id, string Slug, string Title, str
 
 public sealed record WebsitePostEdit(Guid Id, string Slug, string Title, string? Summary, string? BodyHtml, Guid? CoverMediaId, Guid? CategoryId,
     string? AuthorName, string? Tags, byte Status, DateTime? PublishedAt, bool IsFeatured, string? SeoTitle, string? SeoDescription, int ViewCount,
-    DateTime CreatedAt, DateTime UpdatedAt, byte[] Stamp);
+    DateTime CreatedAt, DateTime UpdatedAt, byte[] Stamp, PostSource? Source = null);
 
 public sealed record WebsiteLeadItem(Guid Id, DateTime CreatedAt, string FullName, string Phone, string? Email, string? CompanyName, string? Services,
     string? CompanyType, string? Scale, string? ContactTime, string? Message, string? SourcePage, byte Status, string? Note, DateTime? UpdatedAt, byte[] Stamp);
@@ -49,6 +49,18 @@ public sealed class WebsitePostInput
     public string? SeoTitle { get; set; }
     public string? SeoDescription { get; set; }
     public string? Stamp { get; set; }
+    // Loại bài: 0 tự biên soạn, 1 tóm tắt có trích nguồn, 2 đăng lại có cho phép (PostSource.Kinds).
+    public byte SourceKind { get; set; }
+    public string? SourceName { get; set; }
+    public string? SourceUrl { get; set; }
+    public string? SourceAuthor { get; set; }
+    public DateTime? SourcePublishedOn { get; set; }
+
+    public void SetSource(PostSource? source)
+    {
+        SourceKind = source?.Kind ?? PostSource.Own;
+        SourceName = source?.Name; SourceUrl = source?.Url; SourceAuthor = source?.Author; SourcePublishedOn = source?.PublishedOn;
+    }
 
     public static readonly TimeSpan VietnamOffset = TimeSpan.FromHours(7);
 
@@ -73,6 +85,19 @@ public sealed class WebsitePostInput
         if (SeoTitle?.Length > 200) errors.Add(("SeoTitle", "Tiêu đề SEO tối đa 200 ký tự."));
         if (SeoDescription?.Length > 400) errors.Add(("SeoDescription", "Mô tả SEO tối đa 400 ký tự."));
         if (Publish && string.IsNullOrWhiteSpace(PostHtml.PlainText(BodyHtml))) errors.Add(("BodyHtml", "Bài viết cần có nội dung trước khi xuất bản."));
+        if (PostSource.Kinds.All(k => k.Kind != SourceKind)) SourceKind = PostSource.Own;
+        if (SourceKind == PostSource.Own) { SourceName = SourceUrl = SourceAuthor = null; SourcePublishedOn = null; }
+        else
+        {
+            SourceName = SourceName?.Trim(); SourceUrl = SourceUrl?.Trim(); SourceAuthor = SourceAuthor?.Trim();
+            if (string.IsNullOrWhiteSpace(SourceName)) errors.Add(("SourceName", "Nhập tên nơi đăng bài gốc (ví dụ Tạp chí Thuế)."));
+            else if (SourceName.Length > 200) errors.Add(("SourceName", "Tên nguồn tối đa 200 ký tự."));
+            if (string.IsNullOrWhiteSpace(SourceUrl)) errors.Add(("SourceUrl", "Dán đường dẫn bài gốc."));
+            else if (SourceUrl.Length > 500 || !PostSource.IsHttpUrl(SourceUrl)) errors.Add(("SourceUrl", "Đường dẫn bài gốc phải bắt đầu bằng http:// hoặc https://, tối đa 500 ký tự."));
+            if (SourceAuthor?.Length > 200) errors.Add(("SourceAuthor", "Tên tác giả gốc tối đa 200 ký tự."));
+            if (string.IsNullOrEmpty(SourceAuthor)) SourceAuthor = null;
+            SourcePublishedOn = SourcePublishedOn?.Date;
+        }
         return errors;
     }
 
@@ -192,17 +217,20 @@ ORDER BY p.UpdatedAt DESC;
 
     public const string PostDetail = """
 SELECT Id, Slug, Title, Summary, BodyHtml, CoverMediaId, CategoryId, AuthorName, Tags, Status, PublishedAt, IsFeatured, SeoTitle, SeoDescription,
- ViewCount, CreatedAt, UpdatedAt, RowVersion FROM dbo.WebsitePosts WHERE Id=@id AND IsDeleted=0;
+ ViewCount, CreatedAt, UpdatedAt, RowVersion, SourceKind, SourceName, SourceUrl, SourceAuthor, SourcePublishedOn FROM dbo.WebsitePosts WHERE Id=@id AND IsDeleted=0;
 """;
 
     public const string PostInsert = """
-INSERT dbo.WebsitePosts(Id, Slug, Title, Summary, BodyHtml, CoverMediaId, CategoryId, AuthorName, Tags, Status, PublishedAt, IsFeatured, SeoTitle, SeoDescription, CreatedBy, UpdatedBy)
-VALUES(@id, @slug, @title, @summary, @body, @cover, @category, @author, @tags, @status, @published, @featured, @seoTitle, @seoDescription, @by, @by);
+INSERT dbo.WebsitePosts(Id, Slug, Title, Summary, BodyHtml, CoverMediaId, CategoryId, AuthorName, Tags, Status, PublishedAt, IsFeatured, SeoTitle, SeoDescription, CreatedBy, UpdatedBy,
+ SourceKind, SourceName, SourceUrl, SourceAuthor, SourcePublishedOn)
+VALUES(@id, @slug, @title, @summary, @body, @cover, @category, @author, @tags, @status, @published, @featured, @seoTitle, @seoDescription, @by, @by,
+ @sourceKind, @sourceName, @sourceUrl, @sourceAuthor, @sourceOn);
 """;
 
     public const string PostUpdate = """
 UPDATE dbo.WebsitePosts SET Slug=@slug, Title=@title, Summary=@summary, BodyHtml=@body, CoverMediaId=@cover, CategoryId=@category, AuthorName=@author,
  Tags=@tags, Status=@status, PublishedAt=@published, IsFeatured=@featured, SeoTitle=@seoTitle, SeoDescription=@seoDescription,
+ SourceKind=@sourceKind, SourceName=@sourceName, SourceUrl=@sourceUrl, SourceAuthor=@sourceAuthor, SourcePublishedOn=@sourceOn,
  UpdatedAt=SYSUTCDATETIME(), UpdatedBy=@by
 WHERE Id=@id AND IsDeleted=0 AND RowVersion=@stamp;
 """;
@@ -483,7 +511,8 @@ public sealed class SqlWebsiteAdminStore(IConfiguration configuration, AdminAudi
         if (!await r.ReadAsync()) return null;
         return new(r.GetGuid(0), r.GetString(1), r.GetString(2), Str(r, 3), Str(r, 4), r.IsDBNull(5) ? null : r.GetGuid(5), r.IsDBNull(6) ? null : r.GetGuid(6),
             Str(r, 7), Str(r, 8), r.GetByte(9), r.IsDBNull(10) ? null : r.GetDateTime(10), r.GetBoolean(11), Str(r, 12), Str(r, 13), r.GetInt32(14),
-            r.GetDateTime(15), r.GetDateTime(16), (byte[])r.GetValue(17));
+            r.GetDateTime(15), r.GetDateTime(16), (byte[])r.GetValue(17),
+            PostSource.From(r.IsDBNull(18) ? null : r.GetByte(18), Str(r, 19), Str(r, 20), Str(r, 21), r.IsDBNull(22) ? null : r.GetDateTime(22)));
     }
 
     public Task<WebsiteResult> SavePostAsync(Guid actor, string? ip, Guid? id, WebsitePostInput input, DateTime nowUtc) =>
@@ -496,7 +525,9 @@ public sealed class SqlWebsiteAdminStore(IConfiguration configuration, AdminAudi
                 ("@cover", (object?)input.CoverMediaId ?? DBNull.Value), ("@category", (object?)input.CategoryId ?? DBNull.Value),
                 ("@author", Db(input.AuthorName)), ("@tags", Db(input.Tags)), ("@status", (byte)(input.Publish ? 1 : 0)),
                 ("@published", (object?)input.PublishedAtUtc(nowUtc) ?? DBNull.Value), ("@featured", input.IsFeatured),
-                ("@seoTitle", Db(input.SeoTitle)), ("@seoDescription", Db(input.SeoDescription)), ("@by", actor)
+                ("@seoTitle", Db(input.SeoTitle)), ("@seoDescription", Db(input.SeoDescription)), ("@by", actor),
+                ("@sourceKind", input.SourceKind), ("@sourceName", Db(input.SourceName)), ("@sourceUrl", Db(input.SourceUrl)),
+                ("@sourceAuthor", Db(input.SourceAuthor)), ("@sourceOn", (object?)input.SourcePublishedOn ?? DBNull.Value)
             ];
             if (id is null) await Exec(cn, tx, WebsiteAdminSql.PostInsert, values);
             else

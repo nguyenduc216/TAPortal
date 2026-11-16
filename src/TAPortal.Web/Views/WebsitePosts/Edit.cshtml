@@ -1,4 +1,5 @@
 @model WebsitePostEditVm
+@using TAWebsite.Core.Data
 @{
     var i = Model.Input;
     ViewData["ParentTitle"] = "Bài viết";
@@ -71,6 +72,29 @@
                     }
                 </div>
                 <div class="card-footer"><button class="btn btn-ta-gold w-100" type="submit">@UiIcon.Render("device-floppy")<span>Lưu bài viết</span></button></div>
+            </div>
+            <div class="card" data-ta-source>
+                <div class="card-header"><h2 class="card-title">@UiIcon.Render("link")Loại bài và nguồn</h2></div>
+                <div class="card-body">
+                    <label asp-for="Input.SourceKind" class="form-label">Loại bài</label>
+                    <select asp-for="Input.SourceKind" class="form-select" data-ta-source-kind>
+                        @foreach (var k in PostSource.Kinds) {<option value="@k.Kind" selected="@(k.Kind == i.SourceKind)" data-hint="@k.Hint">@k.Label</option>}
+                    </select>
+                    <small class="form-hint" data-ta-source-hint>@PostSource.Kinds.First(k => k.Kind == i.SourceKind).Hint</small>
+                    <div data-ta-source-fields hidden="@(i.SourceKind == PostSource.Own)">
+                        <label asp-for="Input.SourceName" class="form-label mt-2 required">Nơi đăng bài gốc</label>
+                        <div class="ta-input-icon">@UiIcon.Render("file-text")<input asp-for="Input.SourceName" class="form-control" maxlength="200" placeholder="Tạp chí Thuế, Cục Thuế…" /></div>
+                        <span asp-validation-for="Input.SourceName" class="invalid-feedback d-block"></span>
+                        <label asp-for="Input.SourceUrl" class="form-label mt-2 required">Đường dẫn bài gốc</label>
+                        <div class="ta-input-icon">@UiIcon.Render("link")<input asp-for="Input.SourceUrl" class="form-control" type="url" maxlength="500" placeholder="https://…" /></div>
+                        <span asp-validation-for="Input.SourceUrl" class="invalid-feedback d-block"></span>
+                        <label asp-for="Input.SourceAuthor" class="form-label mt-2">Tác giả gốc</label>
+                        <div class="ta-input-icon">@UiIcon.Render("user")<input asp-for="Input.SourceAuthor" class="form-control" maxlength="200" /></div>
+                        <label asp-for="Input.SourcePublishedOn" class="form-label mt-2">Ngày đăng gốc</label>
+                        <div class="ta-input-icon">@UiIcon.Render("calendar")<input asp-for="Input.SourcePublishedOn" class="form-control" type="date" /></div>
+                        <small class="form-hint">Website hiện “Tổng hợp từ …” dưới tiêu đề và khung Nguồn cuối bài, có liên kết bài gốc. Viết bằng lời của T.A; câu trích nguyên văn để trong ngoặc kép hoặc khối ❝ Trích dẫn.</small>
+                    </div>
+                </div>
             </div>
             <div class="card">
                 <div class="card-header"><h2 class="card-title">@UiIcon.Render("photo")Ảnh bìa</h2></div>

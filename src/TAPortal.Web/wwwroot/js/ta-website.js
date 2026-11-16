@@ -405,6 +405,17 @@
     };
     document.addEventListener('input', (event) => { if (event.target.matches?.('[data-ta-count]')) updateCount(event.target); });
 
+    // ---- Article type: the source fields appear only for summaries / republished articles ------------------------------
+    document.addEventListener('change', (event) => {
+        const select = event.target.closest?.('[data-ta-source-kind]');
+        if (!select) return;
+        const card = select.closest('[data-ta-source]');
+        const fields = card?.querySelector('[data-ta-source-fields]');
+        if (fields) fields.hidden = select.value === '0';
+        const hint = card?.querySelector('[data-ta-source-hint]');
+        if (hint) hint.textContent = select.selectedOptions[0]?.dataset.hint ?? '';
+    });
+
     const init = () => {
         initRte(document);
         initVisual(document);

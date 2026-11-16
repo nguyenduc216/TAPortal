@@ -37,9 +37,34 @@ public sealed record PostCard(Guid Id, string Slug, string Title, string? Summar
 
 public sealed record PostDetail(Guid Id, string Slug, string Title, string? Summary, string BodyHtml, Guid? CoverMediaId, string? CoverAlt,
     Guid? CategoryId, string? CategorySlug, string? CategoryName, string? AuthorName, string? Tags, DateTime? PublishedAt, DateTime UpdatedAt,
-    string? SeoTitle, string? SeoDescription, int ViewCount)
+    string? SeoTitle, string? SeoDescription, int ViewCount, PostSource? Source = null)
 {
     public IReadOnlyList<string> TagList => (Tags ?? "").Split(',').Select(t => t.Trim()).Where(t => t.Length > 0).ToList();
+}
+
+/// <summary>Where an article comes from (WebsitePosts.Source*, migration 064). Kind 0 = T.A's own article (no source box).</summary>
+public sealed record PostSource(byte Kind, string? Name, string? Url, string? Author, DateTime? PublishedOn)
+{
+    public const byte Own = 0, Summary = 1, Republished = 2;
+
+    public static readonly IReadOnlyList<(byte Kind, string Label, string Hint)> Kinds =
+    [
+        (Own, "Tự biên soạn", "T.A tự viết. Không hiện khung nguồn."),
+        (Summary, "Tóm tắt có trích nguồn", "T.A tóm tắt bằng lời của mình, trích nguyên văn ngắn trong ngoặc kép. Website hiện “Tổng hợp từ …” và liên kết bài gốc."),
+        (Republished, "Đăng lại có cho phép", "Chỉ khi nơi đăng gốc đã đồng ý bằng văn bản cho T.A đăng lại. Website ghi rõ đăng lại và liên kết bài gốc.")
+    ];
+
+    public bool HasSource => Kind != Own && !string.IsNullOrWhiteSpace(Name);
+    public string Label => Kinds.FirstOrDefault(k => k.Kind == Kind).Label ?? Kinds[0].Label;
+
+    /// <summary>The original link when it is a safe http(s) URL; otherwise null (never rendered).</summary>
+    public string? SafeUrl => IsHttpUrl(Url) ? Url : null;
+
+    public static bool IsHttpUrl(string? url) =>
+        Uri.TryCreate(url, UriKind.Absolute, out var u) && (u.Scheme == Uri.UriSchemeHttps || u.Scheme == Uri.UriSchemeHttp);
+
+    public static PostSource? From(byte? kind, string? name, string? url, string? author, DateTime? publishedOn) =>
+        kind is null or Own ? null : new PostSource(kind.Value, name, url, author, publishedOn);
 }
 
 public sealed record PostQuery(string? CategorySlug, string? Search, int Page, int PageSize = 9);

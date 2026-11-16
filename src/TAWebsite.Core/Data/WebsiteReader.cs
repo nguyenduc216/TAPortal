@@ -86,7 +86,7 @@ ORDER BY p.PublishedAt, p.Id;
 
     public const string DetailColumns = """
 p.Id, p.Slug, p.Title, p.Summary, ISNULL(p.BodyHtml, N''), p.CoverMediaId, m.AltText, p.CategoryId, c.Slug, c.Name, p.AuthorName, p.Tags,
-p.PublishedAt, p.UpdatedAt, p.SeoTitle, p.SeoDescription, p.ViewCount
+p.PublishedAt, p.UpdatedAt, p.SeoTitle, p.SeoDescription, p.ViewCount, p.SourceKind, p.SourceName, p.SourceUrl, p.SourceAuthor, p.SourcePublishedOn
 """;
 
     public const string Detail = "SELECT " + DetailColumns + """
@@ -216,7 +216,8 @@ public sealed class SqlWebsiteReader(IConfiguration configuration, IMemoryCache 
     public static PostDetail ReadDetail(SqlDataReader r) => new(r.GetGuid(0), r.GetString(1), r.GetString(2), WebsiteSql.Str(r, 3), r.GetString(4),
         r.IsDBNull(5) ? null : r.GetGuid(5), WebsiteSql.Str(r, 6), r.IsDBNull(7) ? null : r.GetGuid(7), WebsiteSql.Str(r, 8), WebsiteSql.Str(r, 9),
         WebsiteSql.Str(r, 10), WebsiteSql.Str(r, 11), r.IsDBNull(12) ? null : r.GetDateTime(12), r.GetDateTime(13), WebsiteSql.Str(r, 14),
-        WebsiteSql.Str(r, 15), r.GetInt32(16));
+        WebsiteSql.Str(r, 15), r.GetInt32(16),
+        PostSource.From(r.IsDBNull(17) ? null : r.GetByte(17), WebsiteSql.Str(r, 18), WebsiteSql.Str(r, 19), WebsiteSql.Str(r, 20), r.IsDBNull(21) ? null : r.GetDateTime(21)));
 
     public Task<IReadOnlyList<PostCard>> RelatedAsync(PostDetail post, int count) =>
         Cards(WebsiteSql.Related, ("@take", count), ("@id", post.Id), ("@category", (object?)post.CategoryId ?? DBNull.Value));

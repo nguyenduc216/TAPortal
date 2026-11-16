@@ -284,6 +284,7 @@ public sealed class WebsitePostsController(IWebsiteAdminStore store, IConfigurat
             SeoDescription = post.SeoDescription, Stamp = Convert.ToBase64String(post.Stamp),
             PublishedAtLocal = post.PublishedAt is DateTime p ? WebsiteUi.Local(p) : null
         };
+        input.SetSource(post.Source);
         return View(new WebsitePostEditVm(id, input, post, await SafeCategories(), PublicUrl));
     }
 
@@ -413,6 +414,7 @@ public sealed class WebsitePostsController(IWebsiteAdminStore store, IConfigurat
                     AuthorName = post.AuthorName, Tags = post.Tags, Publish = true, IsFeatured = post.IsFeatured, SeoTitle = post.SeoTitle,
                     SeoDescription = post.SeoDescription, Stamp = Convert.ToBase64String(post.Stamp)
                 };
+                edit.SetSource(post.Source);
                 if (edit.Normalize().Count > 0) { failed++; continue; }
                 var saved = await store.SavePostAsync(actor, ip, post.Id, edit, clock.GetUtcNow().UtcDateTime);
                 if (saved.Outcome == WebsiteOutcome.Saved) published++; else failed++;
