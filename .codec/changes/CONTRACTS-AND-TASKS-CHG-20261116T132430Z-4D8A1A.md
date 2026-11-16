@@ -48,3 +48,4 @@ Operator 2026-11-16: "Tất cả các thông báo" (after web push in CONTRACTS-
 ## Deploy
 - portal (TAPortal.Web): commit d0f03f3, artifact a641332868455b5dc43d3e626d39fa6747dd650107856776d24872c8db66ea9b, package 3664409307DFBC1A862CD6F151E29C96583D2E734AE17E26D2BD7980E827C14C, DEPLOYED 2026-11-16T13:33:51Z, health 200.
 - Smoke (read-only query): dbo.WebPushState created by the worker at 13:34:10Z and advancing; reminder day 2026-11-16 claimed (0 devices registered yet). Delivery to a real phone NOT_VERIFIED (operator to enable on a device).
+- portal: commit 10674c3 (worker once a minute), artifact 82532188b4517fcfc80d4d6e1091bcc7d5a269f62fce4db20282d260e8a723a9, package B0988677F0FF4A7219689F9731E1BEFEA772C7584C9A9C86D0FB1A0C5F458DDE, DEPLOYED 2026-11-16T13:46:17Z, health 200.
