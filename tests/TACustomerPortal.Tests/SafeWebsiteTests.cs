@@ -397,10 +397,21 @@ public sealed class SafeWebsiteTests
     public void PostLibraryArticlesAreValidAndSurviveTheSanitizer()
     {
         var posts = S.PostLibrary.All;
-        Assert.Equal(20, posts.Count);
+        Assert.Equal(30, posts.Count);
+        Assert.Equal(20, posts.Count(p => p.Origin is null));                       // T.A's own articles
+        Assert.Equal(10, posts.Count(p => p.Origin?.Kind == PostSource.Summary));   // summaries citing another site
         Assert.Equal(posts.Count, posts.Select(p => p.Slug).Distinct().Count());
         foreach (var p in posts)
         {
+            if (p.Origin is { } origin)
+            {
+                var source = new S.WebsitePostInput { Title = p.Title };
+                source.SetSource(origin);
+                Assert.Empty(source.Normalize());                     // name + http(s) link of the original present
+                Assert.NotNull(origin.PublishedOn);
+                Assert.Contains(p.Sources!, s => s.Contains(origin.Url!));
+                Assert.DoesNotContain("href=\"http", p.BodyHtml);    // the original is linked by the source box, not the body
+            }
             Assert.True(Slug.IsValid(p.Slug), p.Slug);
             Assert.Contains(S.PostLibrary.Categories, c => c.Slug == p.Category);
             Assert.InRange(p.Title.Length, 10, 120);
@@ -410,7 +421,7 @@ public sealed class SafeWebsiteTests
             var input = new S.WebsitePostInput { Title = p.Title, Slug = p.Slug, Summary = p.Summary, BodyHtml = p.BodyHtml, Tags = p.Tags, SeoTitle = p.SeoTitle, SeoDescription = p.SeoDescription };
             Assert.Empty(input.Normalize());
             Assert.Equal(p.Slug, input.Slug);
-            Assert.True(PostHtml.PlainText(input.BodyHtml, int.MaxValue).Length > 3000, p.Slug);
+            Assert.True(PostHtml.PlainText(input.BodyHtml, int.MaxValue).Length > (p.Origin is null ? 3000 : 2000), p.Slug);
             Assert.Contains("ar-callout", input.BodyHtml);
         }
     }
@@ -439,8 +450,9 @@ public sealed class SafeWebsiteTests
         Assert.Contains("luatvietnam.vn", library); // sources visible on the list, not only in the review notes
 
         // "Xem thử": the article as the website shows it, plus its sources (links) and review points for staff.
-        // Every source is a link, or says plainly it was only a search result (no direct link to show).
-        Assert.All(S.PostLibrary.All, p => Assert.All(p.Sources!, s => Assert.True(S.PostLibrary.SplitSource(s).Url is not null || s.Contains("tra cứu"), s)));
+        // Every article has at least one linked source; plain entries (laws cited by name, search results) are listed as text.
+        Assert.All(S.PostLibrary.All, p => Assert.Contains(p.Sources!, s => S.PostLibrary.SplitSource(s).Url is not null));
+        Assert.Equal(("Bài gốc: X", "https://a.vn/x"), S.PostLibrary.SplitSource("Bài gốc: X - https://a.vn/x"));
         var previewResponse = await client.GetAsync("/WebsitePosts/LibraryPreview?slug=" + first.Slug);
         Assert.Equal(HttpStatusCode.OK, previewResponse.StatusCode);
         var preview = WebUtility.HtmlDecode(await previewResponse.Content.ReadAsStringAsync());
@@ -465,6 +477,17 @@ public sealed class SafeWebsiteTests
             await c2.PostAsync("/WebsitePosts/ImportLibrary", Form(t2, ("publish", "true")));
             Assert.Equal(S.PostLibrary.All.Count, fresh.Posts.Count);
             Assert.All(fresh.Posts.Values, p => Assert.True(p.Input.Publish));
+            // Cited summaries keep their source when added, so the website shows "Tổng hợp từ …" and the source box.
+            foreach (var lib in S.PostLibrary.All.Where(p => p.Origin is not null))
+            {
+                var saved = fresh.Posts.Values.Single(p => p.Input.Slug == lib.Slug).Input;
+                Assert.Equal(lib.SourceKind, saved.SourceKind);
+                Assert.Equal(lib.SourceUrl, saved.SourceUrl);
+            }
+            var cited = S.PostLibrary.All.First(p => p.Origin is not null);
+            var citedPreview = WebUtility.HtmlDecode(await c2.GetStringAsync("/WebsitePosts/LibraryPreview?slug=" + cited.Slug));
+            Assert.Contains("Tổng hợp từ <b>" + cited.SourceName + "</b>", citedPreview);
+            Assert.Contains("Tóm tắt có trích nguồn", WebUtility.HtmlDecode(await c2.GetStringAsync("/WebsitePosts/Library")));
         }
 
         await using var viewer = AdminFactory(new MemoryAdminStore(), "WEBSITE.VIEW");

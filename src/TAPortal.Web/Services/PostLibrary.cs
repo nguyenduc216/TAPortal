@@ -7,7 +7,12 @@ namespace TAPortal.Web.Services;
 // drafts from "Bài viết → Bài soạn sẵn", review, then publish; nothing reaches the public site without that review.
 // Sources and Uncertain are for the reviewer only (shown on the library page, never saved to the article).
 public sealed record LibraryPost(int Order, string Slug, string Title, string Summary, string Category, string Tags, string SeoTitle, string SeoDescription,
-    string BodyHtml, IReadOnlyList<string>? Sources = null, IReadOnlyList<string>? Uncertain = null);
+    string BodyHtml, IReadOnlyList<string>? Sources = null, IReadOnlyList<string>? Uncertain = null,
+    byte SourceKind = 0, string? SourceName = null, string? SourceUrl = null, string? SourceAuthor = null, DateTime? SourcePublishedOn = null)
+{
+    /// <summary>The source shown on the website ("Tổng hợp từ …"); null for T.A's own articles.</summary>
+    public TAWebsite.Core.Data.PostSource? Origin => TAWebsite.Core.Data.PostSource.From(SourceKind, SourceName, SourceUrl, SourceAuthor, SourcePublishedOn);
+}
 
 public static class PostLibrary
 {
@@ -35,6 +40,7 @@ public static class PostLibrary
     public static (string Label, string? Url) SplitSource(string source)
     {
         var at = source.LastIndexOf(" – http", StringComparison.Ordinal);
+        if (at < 0) at = source.LastIndexOf(" - http", StringComparison.Ordinal);
         if (at < 0) return (source, null);
         var url = source[(at + 3)..].Trim();
         return Uri.TryCreate(url, UriKind.Absolute, out var u) && (u.Scheme == Uri.UriSchemeHttps || u.Scheme == Uri.UriSchemeHttp)

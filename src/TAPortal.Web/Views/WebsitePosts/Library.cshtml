@@ -31,7 +31,8 @@
                     var hosts = (p.Sources ?? []).Select(s => PostLibrary.Host(PostLibrary.SplitSource(s).Url)).Where(h => h.Length > 0).Distinct().ToList();
                     <tr>
                         <td>@p.Order</td>
-                        <td class="ta-cell-strong">@p.Title<span class="ta-cell-sub d-block">@p.Summary</span>
+                        <td class="ta-cell-strong">@if (p.Origin is { } origin) {<span class="ta-badge ta-badge--info me-1">@origin.Label</span>}@p.Title<span class="ta-cell-sub d-block">@p.Summary</span>
+                            @if (p.Origin is { } o) {<span class="ta-cell-sub d-block">Bài gốc: @if (o.SafeUrl is not null) {<a href="@o.SafeUrl" target="_blank" rel="noopener noreferrer">@o.Name</a>} else {@o.Name}@if (o.PublishedOn is DateTime d) {<text>, @d.ToString("dd/MM/yyyy")</text>}</span>}
                             @if (p.Uncertain is { Count: > 0 })
                             {
                                 <details class="ta-web-cat mt-1"><summary class="text-danger">Cần T.A rà lại (@p.Uncertain.Count điểm)</summary>
