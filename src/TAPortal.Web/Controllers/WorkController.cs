@@ -56,13 +56,13 @@ public sealed class WorkController(IWorkTaskStore work, ILogger<WorkController> 
 
     [HttpGet]
     [Authorize(Policy = AdminPermissions.Policy.TasksView)]
-    public async Task<IActionResult> Details(Guid id, [FromServices] IAuthorizationService authz)
+    public async Task<IActionResult> Details(Guid id, [FromServices] IAuthorizationService authz, [FromServices] IWorkDocumentStore docs)
     {
         if (UsersController.ActorId(User) is not Guid actor) return Forbid();
         var detail = await work.GetAsync(actor, id);
         if (detail is null) return NotFound();
         var canCatalog = (await authz.AuthorizeAsync(User, AdminPermissions.Policy.TaskCatalogManage)).Succeeded;
-        return View(new WorkDetailsVm(detail, Today, null, canCatalog));
+        return View(new WorkDetailsVm(detail, Today, null, canCatalog, await docs.ListAsync(id), actor));
     }
 
     [HttpGet]
@@ -176,6 +176,96 @@ public sealed class WorkController(IWorkTaskStore work, ILogger<WorkController> 
     [ValidateAntiForgeryToken]
     [Authorize(Policy = AdminPermissions.Policy.TasksView)]
     public Task<IActionResult> Comment(Guid id, string body, string? returnUrl) => Quick(id, returnUrl, actor => work.CommentAsync(actor, id, body ?? ""));
+
+    // ---- Tài liệu (operator 2026-11-16, migration 058) -------------------------------------------------------------------
+    // Anyone who sees the task adds and reads its documents; the uploader or a task editor changes the note or removes one.
+    private const long DocumentUploadLimit = WorkDocumentPolicy.MaxBytes + 1024 * 1024;
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [Authorize(Policy = AdminPermissions.Policy.TasksView)]
+    [RequestSizeLimit(DocumentUploadLimit)]
+    [RequestFormLimits(MultipartBodyLengthLimit = DocumentUploadLimit)]
+    public async Task<IActionResult> DocumentUpload(Guid id, IFormFile? file, string? note, [FromServices] IWorkDocumentStore docs)
+    {
+        if (UsersController.ActorId(User) is not Guid actor) return Forbid();
+        var task = await work.GetAsync(actor, id);
+        if (task is null) return NotFound();
+        if (task.Task.Status == WorkTaskPolicy.Cancelled) return DocumentsBack(id, "Công việc đã hủy, không thêm tài liệu được.");
+        if (file is null || file.Length == 0) return DocumentsBack(id, "Chọn file cần tải lên.");
+        if (file.Length > WorkDocumentPolicy.MaxBytes) return DocumentsBack(id, "File vượt quá 10 MB.");
+        byte[] data;
+        await using (var stream = file.OpenReadStream())
+        using (var buffer = new MemoryStream((int)file.Length))
+        {
+            await stream.CopyToAsync(buffer, HttpContext.RequestAborted);
+            data = buffer.ToArray();
+        }
+        var (type, error) = WorkDocumentPolicy.CheckFile(file.FileName, data);
+        if (type is null) return DocumentsBack(id, error ?? "File không hợp lệ.");
+        var name = ContractPolicy.SafeFileName(file.FileName);
+        try { error = await docs.AddAsync(actor, id, name, type, data, WorkDocumentPolicy.Note(note)); }
+        catch (SqlException ex) { logger.LogError(ex, "WORK_DOCUMENT_UPLOAD_FAILED task {TaskId}", id); error = StoreUnavailable; }
+        if (error is null) logger.LogInformation("Work document added. Actor {ActorId}, task {TaskId}, {Size} bytes.", actor, id, data.Length);
+        return DocumentsBack(id, error, error is null ? $"Đã tải lên \"{name}\"." : null);
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [Authorize(Policy = AdminPermissions.Policy.TasksView)]
+    public async Task<IActionResult> DocumentNote(Guid id, Guid doc, string? note, [FromServices] IWorkDocumentStore docs)
+    {
+        if (UsersController.ActorId(User) is not Guid actor) return Forbid();
+        if (await DocumentAccess(actor, id, doc, docs) is not { } allowed) return NotFound();
+        if (!allowed) return Forbid();
+        var saved = await docs.SetNoteAsync(actor, id, doc, WorkDocumentPolicy.Note(note));
+        return DocumentsBack(id, saved ? null : "Không tìm thấy tài liệu.", saved ? "Đã lưu ghi chú tài liệu." : null);
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [Authorize(Policy = AdminPermissions.Policy.TasksView)]
+    public async Task<IActionResult> DocumentDelete(Guid id, Guid doc, [FromServices] IWorkDocumentStore docs)
+    {
+        if (UsersController.ActorId(User) is not Guid actor) return Forbid();
+        if (await DocumentAccess(actor, id, doc, docs) is not { } allowed) return NotFound();
+        if (!allowed) return Forbid();
+        var deleted = await docs.DeleteAsync(actor, id, doc);
+        return DocumentsBack(id, deleted ? null : "Không tìm thấy tài liệu.", deleted ? "Đã xóa tài liệu." : null);
+    }
+
+    // Download (attachment, nosniff); ?view=1 shows an image inline (the only type rendered in the page).
+    [HttpGet]
+    [Authorize(Policy = AdminPermissions.Policy.TasksView)]
+    public async Task<IActionResult> Document(Guid id, Guid doc, bool view, [FromServices] IWorkDocumentStore docs)
+    {
+        if (UsersController.ActorId(User) is not Guid actor) return Forbid();
+        if (await work.GetAsync(actor, id) is null) return NotFound();
+        var file = await docs.ContentAsync(id, doc);
+        if (file is null) return NotFound();
+        Response.Headers.XContentTypeOptions = "nosniff";
+        Response.Headers.CacheControl = "private, max-age=600";
+        if (view && file.ContentType.StartsWith("image/", StringComparison.Ordinal)) return File(file.Data, file.ContentType);
+        return File(file.Data, file.ContentType, ContractPolicy.SafeFileName(file.FileName));
+    }
+
+    // null: task or document not found for this actor; false: seen but neither uploader nor task editor.
+    private async Task<bool?> DocumentAccess(Guid actor, Guid id, Guid doc, IWorkDocumentStore docs)
+    {
+        var task = await work.GetAsync(actor, id);
+        if (task is null) return null;
+        var found = (await docs.ListAsync(id))?.FirstOrDefault(d => d.Id == doc);
+        if (found is null) return null;
+        return task.CanEdit || found.CreatedBy == actor;
+    }
+
+    private IActionResult DocumentsBack(Guid id, string? error, string? success = null)
+    {
+        if (error is not null) TempData["Error"] = error;
+        if (success is not null) TempData["Success"] = success;
+        TempData["TaskTab"] = "documents";
+        return LocalRedirect(Url.Action(nameof(Details), new { id })! + "#documents");
+    }
 
     private async Task<IActionResult> Quick(Guid id, string? returnUrl, Func<Guid, Task<WorkResult>> act)
     {

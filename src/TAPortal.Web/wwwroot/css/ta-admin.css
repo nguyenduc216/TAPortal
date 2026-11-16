@@ -174,7 +174,37 @@
 .ta-comments__who { font-weight: 600; font-size: var(--ta-fs-small); }
 .ta-comments__body, .ta-prewrap { white-space: pre-wrap; overflow-wrap: anywhere; }
 .ta-timeline { list-style: none; margin: 0 0 var(--ta-sp-3); padding: 0; display: flex; flex-direction: column; gap: var(--ta-sp-2); }
-.ta-timeline > li { padding: 8px 12px; border-left: 3px solid var(--ta-border); }
+.ta-timeline > li { padding: 8px 12px; border-left: 3px solid var(--ta-border); display: flex; gap: 10px; align-items: flex-start; }
+.ta-timeline__avatar { flex: 0 0 auto; margin-top: 2px; }
+.ta-timeline__main { flex: 1 1 auto; min-width: 0; }
+/* Công việc: Trao đổi và lịch sử | Tài liệu tabs, document list (operator 2026-11-16). */
+.ta-task-tabs__bar { padding-top: 4px; }
+.ta-task-tabs [data-ta-tabpanel][hidden] { display: none; }
+.ta-doc-upload { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 3fr) auto; gap: var(--ta-sp-3); align-items: end; padding-bottom: var(--ta-sp-3); margin-bottom: var(--ta-sp-3); border-bottom: 1px solid var(--ta-border); }
+.ta-doc-upload .form-hint { margin-top: 2px; }
+.ta-docs { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--ta-sp-2); }
+.ta-doc { display: grid; grid-template-columns: 56px minmax(0, 1fr) auto; gap: var(--ta-sp-3); align-items: start; padding: 10px; border: 1px solid var(--ta-border); border-radius: 10px; }
+.ta-doc__thumb, .ta-doc__icon { display: grid; place-items: center; width: 56px; height: 56px; border-radius: 8px; overflow: hidden; background: var(--ta-surface-2, #eef3fa); }
+.ta-doc__thumb img { width: 100%; height: 100%; object-fit: cover; }
+.ta-doc__icon { align-content: center; gap: 2px; color: var(--ta-text-2); }
+.ta-doc__icon small { font-size: .6875rem; font-weight: 700; }
+.ta-doc__icon--pdf { color: #c62828; background: #fdecea; }
+.ta-doc__icon--word { color: #1565c0; background: #e8f0fe; }
+.ta-doc__icon--excel { color: #2e7d32; background: #e8f5e9; }
+.ta-doc__main { min-width: 0; display: grid; gap: 4px; }
+.ta-doc__name { font-weight: 600; overflow-wrap: anywhere; }
+.ta-doc__meta { display: flex; align-items: center; gap: 6px; color: var(--ta-text-2); font-size: var(--ta-fs-small, .8125rem); }
+.ta-doc__note { padding: 6px 8px; border-radius: 6px; background: var(--ta-surface-2, #f7f9fc); }
+.ta-doc__edit summary { display: inline-flex; align-items: center; gap: 4px; color: var(--ta-primary, #1565c0); font-size: var(--ta-fs-small, .8125rem); cursor: pointer; }
+.ta-doc__edit summary .ta-icon { width: 14px; height: 14px; }
+.ta-doc__edit form { display: grid; gap: 6px; margin-top: 6px; justify-items: start; }
+.ta-doc__actions { display: flex; gap: 4px; }
+@media (max-width: 767.98px) {
+    .ta-doc-upload { grid-template-columns: 1fr; }
+    .ta-doc { grid-template-columns: 44px minmax(0, 1fr); }
+    .ta-doc__thumb, .ta-doc__icon { width: 44px; height: 44px; }
+    .ta-doc__actions { grid-column: 2; }
+}
 .ta-timeline > li.is-comment { border-left-color: var(--ta-blue); background: var(--ta-surface-2); border-radius: 0 var(--ta-radius-sm) var(--ta-radius-sm) 0; }
 /* Employee picker (Views/Work/_PeoplePicker): avatar + name tiles, tick to choose. */
 .ta-people__search { max-width: 360px; margin-bottom: 8px; }

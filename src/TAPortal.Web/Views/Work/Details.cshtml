@@ -1,7 +1,13 @@
 @model WorkDetailsVm
 @inject IWorkCatalogStore WorkCatalog
+@inject IEmployeePhotoStore AvatarPhotos
 @{
     var guides = await WorkCatalog.GuidesAsync();
+    var avatars = await AvatarPhotos.IndexAsync();
+    var docs = Model.Documents;
+    var docTab = TempData["TaskTab"] as string == "documents";
+    string Size(int bytes) => bytes >= 1024 * 1024 ? $"{bytes / 1024d / 1024d:0.#} MB" : $"{Math.Max(1, bytes / 1024)} KB";
+    string DocIcon(WorkDocument x) => x.Kind switch { "PDF" => "file-text", "Word" => "file-text", "Excel" => "report-money", _ => "photo" };
     var d = Model.Detail;
     var t = d.Task;
     ViewData["Title"] = t.TaskNo;
@@ -109,15 +115,22 @@
             }
         </div>
     </section>
-    <section class="card ta-ws-span-all" aria-labelledby="threadTitle">
-        <div class="card-header"><h2 class="card-title" id="threadTitle">@UiIcon.Render("history")Trao đổi và lịch sử</h2></div>
-        <div class="card-body">
+    @* Trao đổi và lịch sử | Tài liệu (operator 2026-11-16): tabs; #documents in the address opens Tài liệu (after an upload). *@
+    <section class="card ta-ws-span-all ta-task-tabs" data-ta-tabs aria-label="Trao đổi, lịch sử và tài liệu">
+        <div class="ta-catalog-tabs ta-task-tabs__bar" role="tablist">
+            <button class="ta-catalog-tabs__tab" type="button" role="tab" id="tabThread" aria-controls="thread" aria-selected="@(docTab ? "false" : "true")" tabindex="@(docTab ? "-1" : "0")" data-ta-tabbtn="thread">@UiIcon.Render("history")<span>Trao đổi và lịch sử</span></button>
+            <button class="ta-catalog-tabs__tab" type="button" role="tab" id="tabDocuments" aria-controls="documents" aria-selected="@(docTab ? "true" : "false")" tabindex="@(docTab ? "0" : "-1")" data-ta-tabbtn="documents">@UiIcon.Render("file-text")<span>Tài liệu</span><span class="ta-catalog-tabs__count">@(docs?.Count ?? 0)</span></button>
+        </div>
+        <div class="card-body" role="tabpanel" id="thread" aria-labelledby="tabThread" data-ta-tabpanel="thread" hidden="@docTab">
             <ul class="ta-timeline">
                 @foreach (var a in d.Activities)
                 {
                     <li class="@(a.Kind == "COMMENT" ? "is-comment" : "is-event")">
-                        <div class="ta-timeline__head"><strong>@(a.ActorName ?? "Hệ thống")</strong> <time class="text-secondary small" datetime="@a.CreatedAt.ToString("o")">@Local(a.CreatedAt)</time></div>
-                        @if (a.Kind == "COMMENT") {<div class="ta-comments__body">@a.Body</div>} else {<div class="text-secondary small">@Event(a)</div>}
+                        @Avatar.Render(avatars, a.ActorName, userId: a.ActorId, cssClass: "ta-avatar--sm ta-timeline__avatar")
+                        <div class="ta-timeline__main">
+                            <div class="ta-timeline__head"><strong>@(a.ActorName ?? "Hệ thống")</strong> <time class="text-secondary small" datetime="@a.CreatedAt.ToString("o")">@Local(a.CreatedAt)</time></div>
+                            @if (a.Kind == "COMMENT") {<div class="ta-comments__body">@a.Body</div>} else {<div class="text-secondary small">@Event(a)</div>}
+                        </div>
                     </li>
                 }
             </ul>
@@ -126,6 +139,83 @@
                 <div class="ta-input-icon ta-input-icon--top">@UiIcon.Render("file-text")<textarea class="form-control" name="body" rows="3" maxlength="@WorkTaskPolicy.CommentMax" required placeholder="Ghi chú / trao đổi về công việc..." aria-label="Ghi chú hoặc trao đổi" data-ta-voice></textarea></div>
                 <button class="btn btn-primary" type="submit">@UiIcon.Render("send")<span>Gửi</span></button>
             </form>
+        </div>
+        <div class="card-body" role="tabpanel" id="documents" aria-labelledby="tabDocuments" data-ta-tabpanel="documents" hidden="@(!docTab)">
+            @if (docs is null)
+            {
+                <p class="text-secondary mb-0">Chưa dùng được tài liệu (bảng dbo.WorkTaskDocuments chưa sẵn sàng).</p>
+            }
+            else
+            {
+                @if (!closed)
+                {
+                    <form class="ta-doc-upload" method="post" enctype="multipart/form-data" asp-action="DocumentUpload" asp-route-id="@t.Id">
+                        <div>
+                            <label class="form-label required" for="docFile">File</label>
+                            <div class="ta-input-icon">@UiIcon.Render("upload")<input class="form-control" type="file" id="docFile" name="file" required accept="@WorkDocumentPolicy.Accept" /></div>
+                            <div class="form-hint">Nhận @WorkDocumentPolicy.AllowedText.</div>
+                        </div>
+                        <div>
+                            <label class="form-label" for="docNote">Ghi chú nội dung</label>
+                            <div class="ta-input-icon ta-input-icon--top">@UiIcon.Render("file-text")<textarea class="form-control" id="docNote" name="note" rows="2" maxlength="@WorkDocumentPolicy.NoteMax" placeholder="Tài liệu này là gì, dùng để làm gì... (không bắt buộc)" data-ta-voice></textarea></div>
+                        </div>
+                        <div><button class="btn btn-primary" type="submit">@UiIcon.Render("upload")<span>Tải lên</span></button></div>
+                    </form>
+                }
+                @if (docs.Count == 0)
+                {
+                    <p class="text-secondary mb-0">Chưa có tài liệu nào.</p>
+                }
+                else
+                {
+                    <ul class="ta-docs">
+                        @foreach (var x in docs)
+                        {
+                            var canChange = d.CanEdit || x.CreatedBy == Model.ActorId;
+                            var href = Url.Action("Document", new { id = t.Id, doc = x.Id });
+                            <li class="ta-doc">
+                                @if (x.IsImage)
+                                {
+                                    <a class="ta-doc__thumb" href="@Url.Action("Document", new { id = t.Id, doc = x.Id, view = true })" target="_blank" rel="noopener" title="Xem ảnh"><img src="@Url.Action("Document", new { id = t.Id, doc = x.Id, view = true })" alt="" loading="lazy" /></a>
+                                }
+                                else
+                                {
+                                    <span class="ta-doc__icon ta-doc__icon--@x.Kind.ToLowerInvariant()" aria-hidden="true">@UiIcon.Render(DocIcon(x))<small>@x.Kind</small></span>
+                                }
+                                <div class="ta-doc__main">
+                                    <a class="ta-doc__name" href="@href" title="Tải về">@x.FileName</a>
+                                    <div class="ta-doc__meta">
+                                        @Avatar.Render(avatars, x.CreatedByName, userId: x.CreatedBy, cssClass: "ta-avatar--sm")
+                                        <span>@(x.CreatedByName ?? "—") · @Local(x.CreatedAt) · @x.Kind · @Size(x.SizeBytes)</span>
+                                    </div>
+                                    @if (x.Note is not null) {<div class="ta-doc__note ta-prewrap">@x.Note</div>}
+                                    @if (canChange)
+                                    {
+                                        <details class="ta-doc__edit">
+                                            <summary>@UiIcon.Render("pencil")<span>@(x.Note is null ? "Thêm ghi chú" : "Sửa ghi chú")</span></summary>
+                                            <form method="post" asp-action="DocumentNote" asp-route-id="@t.Id">
+                                                <input type="hidden" name="doc" value="@x.Id" />
+                                                <div class="ta-input-icon ta-input-icon--top w-100">@UiIcon.Render("file-text")<textarea class="form-control form-control-sm" name="note" rows="2" maxlength="@WorkDocumentPolicy.NoteMax" aria-label="Ghi chú nội dung tài liệu" data-ta-voice>@x.Note</textarea></div>
+                                                <button class="btn btn-sm btn-primary" type="submit">@UiIcon.Render("device-floppy")<span>Lưu ghi chú</span></button>
+                                            </form>
+                                        </details>
+                                    }
+                                </div>
+                                <div class="ta-doc__actions">
+                                    <a class="ta-icon-btn" href="@href" aria-label="Tải về @x.FileName" title="Tải về">@UiIcon.Render("external-link")</a>
+                                    @if (canChange)
+                                    {
+                                        <form method="post" asp-action="DocumentDelete" asp-route-id="@t.Id" onsubmit="return confirm('Xóa tài liệu này?');">
+                                            <input type="hidden" name="doc" value="@x.Id" />
+                                            <button class="ta-icon-btn" type="submit" aria-label="Xóa @x.FileName" title="Xóa">@UiIcon.Render("trash")</button>
+                                        </form>
+                                    }
+                                </div>
+                            </li>
+                        }
+                    </ul>
+                }
+            }
         </div>
     </section>
 </div>

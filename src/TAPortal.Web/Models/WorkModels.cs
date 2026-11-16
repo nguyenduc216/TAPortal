@@ -9,7 +9,8 @@ public sealed record WorkListVm(WorkActor? Actor, IReadOnlyList<WorkTaskRow>? Ta
 // Danh mục công việc: the add / edit popup of one entry (Item null = a new entry).
 public sealed record WorkCatalogDialogVm(WorkCatalogItem? Item, int NextSort);
 
-public sealed record WorkDetailsVm(WorkTaskDetail Detail, DateOnly Today, string? Error, bool CanEditCatalog = false);
+// Documents: null when the documents table is not available (migration 058). ActorId: who may change a document's note.
+public sealed record WorkDetailsVm(WorkTaskDetail Detail, DateOnly Today, string? Error, bool CanEditCatalog = false, IReadOnlyList<WorkDocument>? Documents = null, Guid? ActorId = null);
 
 public sealed record WorkEditVm(Guid? Id, WorkTaskInput Input, WorkActor Actor, WorkLookups Lookups, string? Stamp);
 

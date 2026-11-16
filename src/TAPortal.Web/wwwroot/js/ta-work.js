@@ -191,6 +191,35 @@
     });
     document.addEventListener('ta:before-swap', () => document.querySelectorAll('[data-ta-catalog-dialog][open]').forEach((d) => d.close?.()));
 
+    // Tabs of a task page (Trao đổi và lịch sử | Tài liệu): a click or ←/→ switches; #documents in the address opens that tab.
+    const showTab = (box, name) => {
+        box.querySelectorAll('[data-ta-tabbtn]').forEach((b) => { const on = b.dataset.taTabbtn === name; b.setAttribute('aria-selected', on ? 'true' : 'false'); b.tabIndex = on ? 0 : -1; });
+        box.querySelectorAll('[data-ta-tabpanel]').forEach((p) => { p.hidden = p.dataset.taTabpanel !== name; });
+    };
+    document.addEventListener('click', (event) => {
+        const btn = event.target instanceof Element ? event.target.closest('[data-ta-tabbtn]') : null;
+        const box = btn?.closest('[data-ta-tabs]');
+        if (!box) return;
+        showTab(box, btn.dataset.taTabbtn);
+        try { history.replaceState(history.state, '', btn.dataset.taTabbtn === 'documents' ? '#documents' : location.pathname + location.search); } catch { /* ignore */ }
+    });
+    document.addEventListener('keydown', (event) => {
+        const btn = event.target?.closest?.('[data-ta-tabbtn]');
+        const box = btn?.closest('[data-ta-tabs]');
+        if (!box || (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight')) return;
+        const all = [...box.querySelectorAll('[data-ta-tabbtn]')];
+        const next = all[(all.indexOf(btn) + (event.key === 'ArrowRight' ? 1 : -1) + all.length) % all.length];
+        showTab(box, next.dataset.taTabbtn);
+        next.focus();
+    });
+    const tabFromHash = () => {
+        if (location.hash !== '#documents') return;
+        document.querySelectorAll('[data-ta-tabs]').forEach((box) => { if (box.querySelector('[data-ta-tabbtn="documents"]')) { showTab(box, 'documents'); box.scrollIntoView({ block: 'start' }); } });
+    };
+    tabFromHash();
+    document.addEventListener('ta:load', tabFromHash);
+    window.addEventListener('hashchange', tabFromHash);
+
     // Checklist order: drag an item by its handle (mouse or touch), or focus the handle and press ↑ / ↓.
     // A task's checklist (ul[data-ta-order] = its order form) is saved in the background; the catalogue popup on Lưu.
     const orderTimers = new WeakMap();

@@ -328,6 +328,88 @@ public sealed class SafeAdminWorkTests
     private static HttpClient Client(WebApplicationFactory<admin::Program> f) => f.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false, BaseAddress = new Uri("https://localhost") });
 
     [Fact]
+    public void TaskDocumentsAcceptImagesWordPdfAndExcelByContent()
+    {
+        Assert.Equal("application/pdf", S.WorkDocumentPolicy.CheckFile("hd.pdf", "%PDF-1.7 x"u8.ToArray()).ContentType);
+        Assert.Equal("image/png", S.WorkDocumentPolicy.CheckFile("a.PNG", [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 1]).ContentType);
+        Assert.Equal("application/msword", S.WorkDocumentPolicy.CheckFile("cv.doc", [0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1, 0]).ContentType);
+        Assert.Equal("application/vnd.ms-excel", S.WorkDocumentPolicy.CheckFile("bang.xls", [0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1, 0]).ContentType);
+        Assert.Equal("image/webp", S.WorkDocumentPolicy.CheckFile("x.webp", "RIFF\0\0\0\0WEBPVP8 "u8.ToArray()).ContentType);
+        Assert.NotNull(S.WorkDocumentPolicy.CheckFile("fake.doc", "%PDF-1.7"u8.ToArray()).Error);       // content must match
+        Assert.StartsWith("Chỉ nhận ảnh", S.WorkDocumentPolicy.CheckFile("run.exe", [0x4D, 0x5A]).Error);
+        Assert.Null(S.WorkDocumentPolicy.Note("   "));
+        Assert.Equal(S.WorkDocumentPolicy.NoteMax, S.WorkDocumentPolicy.Note(new string('a', 2000))!.Length);
+        Assert.Contains("INSERT dbo.WorkTaskActivities(TaskId,Kind,Body,CreatedBy) VALUES(@task,'EDIT',N'Tải lên tài liệu: '+@name,@by)", S.WorkDocumentSql.Insert);
+        Assert.Contains("SET IsDeleted=1", S.WorkDocumentSql.Delete);                                         // soft delete
+        var sql = File.ReadAllText(Path.Combine(RepoRoot(), "database", "migrations", "058-work-task-documents.sql"));
+        Assert.Contains("CONSTRAINT CK_WorkTaskDocuments_Size CHECK (SizeBytes > 0 AND SizeBytes <= 10485760)", sql);
+        Assert.True(File.Exists(Path.Combine(RepoRoot(), "database", "scripts", "103-verify-work-task-documents.sql")));
+        Assert.True(File.Exists(Path.Combine(RepoRoot(), "database", "scripts", "104-rollback-work-task-documents.sql")));
+    }
+
+    [Fact]
+    public async Task TaskPageHasDocumentsBesideTheHistoryAndUploadsThem()
+    {
+        var store = new MemoryWork();
+        var docs = new MemoryDocs();
+        using var f = Factory("STAFF", store, "TASKS.VIEW").WithWebHostBuilder(b => b.ConfigureTestServices(s =>
+        {
+            s.RemoveAll<S.IWorkDocumentStore>();
+            s.AddSingleton<S.IWorkDocumentStore>(docs);
+        }));
+        var c = Client(f);
+        var first = await c.GetStringAsync($"/work/details/{MemoryWork.T1}");
+        await c.PostAsync($"/work/comment/{MemoryWork.T1}", Form(Token(first), ("body", "Đã nhận"), ("returnUrl", $"/work/details/{MemoryWork.T1}")));
+        var html = WebUtility.HtmlDecode(await c.GetStringAsync($"/work/details/{MemoryWork.T1}"));
+        Assert.Contains("data-ta-tabbtn=\"documents\"", html);
+        Assert.Contains("data-ta-tabbtn=\"thread\"", html);
+        Assert.Contains("ta-timeline__avatar", html);                                                         // who wrote each entry
+        Assert.Contains("Chưa có tài liệu nào.", html);
+
+        var form = new MultipartFormDataContent
+        {
+            { new StringContent(Token(html)), "__RequestVerificationToken" },
+            { new StringContent("Hóa đơn tháng 10"), "note" },
+            { new ByteArrayContent("%PDF-1.7 test"u8.ToArray()), "file", "hoa-don.pdf" }
+        };
+        var r = await c.PostAsync($"/work/documentupload/{MemoryWork.T1}", form);
+        Assert.Equal(HttpStatusCode.Redirect, r.StatusCode);
+        var saved = Assert.Single(docs.Items);
+        Assert.Equal(("hoa-don.pdf", "application/pdf", "Hóa đơn tháng 10"), (saved.Doc.FileName, saved.Doc.ContentType, saved.Doc.Note));
+
+        var page = WebUtility.HtmlDecode(await c.GetStringAsync($"/work/details/{MemoryWork.T1}"));
+        Assert.Contains(">hoa-don.pdf</a>", page);
+        Assert.Contains("Hóa đơn tháng 10", page);
+        var file = await c.GetAsync($"/work/document/{MemoryWork.T1}?doc={saved.Doc.Id}");
+        Assert.Equal(HttpStatusCode.OK, file.StatusCode);
+        Assert.Equal("attachment", file.Content.Headers.ContentDisposition?.DispositionType);
+        Assert.Equal(HttpStatusCode.NotFound, (await c.GetAsync($"/work/document/{MemoryWork.Hidden}?doc={saved.Doc.Id}")).StatusCode);   // someone else's task
+
+        var bad = new MultipartFormDataContent
+        {
+            { new StringContent(Token(page)), "__RequestVerificationToken" },
+            { new ByteArrayContent([0x4D, 0x5A, 0, 0]), "file", "virus.exe" }
+        };
+        Assert.Equal(HttpStatusCode.Redirect, (await c.PostAsync($"/work/documentupload/{MemoryWork.T1}", bad)).StatusCode);
+        Assert.Single(docs.Items);                                                                             // refused
+    }
+
+    private sealed class MemoryDocs : S.IWorkDocumentStore
+    {
+        public List<(Guid Task, S.WorkDocument Doc, byte[] Data)> Items { get; } = [];
+        public Task<IReadOnlyList<S.WorkDocument>?> ListAsync(Guid taskId) => Task.FromResult<IReadOnlyList<S.WorkDocument>?>(Items.Where(i => i.Task == taskId).Select(i => i.Doc).ToList());
+        public Task<string?> AddAsync(Guid actor, Guid taskId, string fileName, string contentType, byte[] data, string? note)
+        {
+            Items.Add((taskId, new S.WorkDocument(Guid.NewGuid(), fileName, contentType, data.Length, note, DateTime.UtcNow, actor, "An"), data));
+            return Task.FromResult<string?>(null);
+        }
+        public Task<bool> SetNoteAsync(Guid actor, Guid taskId, Guid docId, string? note) => Task.FromResult(false);
+        public Task<bool> DeleteAsync(Guid actor, Guid taskId, Guid docId) => Task.FromResult(Items.RemoveAll(i => i.Doc.Id == docId) > 0);
+        public Task<S.WorkDocumentContent?> ContentAsync(Guid taskId, Guid docId) =>
+            Task.FromResult(Items.Where(i => i.Task == taskId && i.Doc.Id == docId).Select(i => new S.WorkDocumentContent(i.Doc.FileName, i.Doc.ContentType, i.Data)).FirstOrDefault());
+    }
+
+    [Fact]
     public async Task ChecklistItemsOfATaskAreReorderedByDragging()
     {
         var store = new MemoryWork();

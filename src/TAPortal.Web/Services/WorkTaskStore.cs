@@ -24,7 +24,7 @@ public sealed record WorkTaskRow(
 
 public sealed record WorkChecklistItem(Guid Id, string Title, bool IsDone, DateTime? DoneAt, string? DoneByName);
 
-public sealed record WorkActivity(Guid Id, string Kind, string? Body, string? StatusFrom, string? StatusTo, DateTime CreatedAt, string? ActorName);
+public sealed record WorkActivity(Guid Id, string Kind, string? Body, string? StatusFrom, string? StatusTo, DateTime CreatedAt, string? ActorName, Guid? ActorId = null);
 
 public sealed record WorkTaskCard(WorkTaskRow Task, IReadOnlyList<WorkChecklistItem> Checklist, IReadOnlyList<WorkActivity> Recent, bool CanEdit, bool IsOwner);
 
@@ -232,7 +232,7 @@ WHERE t.Id=@id;
 SELECT e.Id,e.EmployeeCode,e.FullName FROM dbo.WorkTaskMembers m JOIN dbo.Employees e ON e.Id=m.EmployeeId WHERE m.TaskId=@id AND m.IsActive=1 ORDER BY e.FullName;
 SELECT i.Id,i.Title,i.IsDone,i.DoneAt,du.DisplayName FROM dbo.WorkTaskChecklistItems i LEFT JOIN dbo.Users du ON du.Id=i.DoneBy
 WHERE i.TaskId=@id AND i.IsDeleted=0 ORDER BY i.SortOrder,i.CreatedAt;
-SELECT a.Id,a.Kind,a.Body,a.StatusFrom,a.StatusTo,a.CreatedAt,u.DisplayName FROM dbo.WorkTaskActivities a LEFT JOIN dbo.Users u ON u.Id=a.CreatedBy
+SELECT a.Id,a.Kind,a.Body,a.StatusFrom,a.StatusTo,a.CreatedAt,u.DisplayName,a.CreatedBy FROM dbo.WorkTaskActivities a LEFT JOIN dbo.Users u ON u.Id=a.CreatedBy
 WHERE a.TaskId=@id ORDER BY a.CreatedAt;
 IF COL_LENGTH(N'dbo.WorkTaskActivities', N'ImpersonatorUserId') IS NOT NULL
  EXEC sp_executesql N'SELECT a.Id,iu.DisplayName FROM dbo.WorkTaskActivities a JOIN dbo.Users iu ON iu.Id=a.ImpersonatorUserId WHERE a.TaskId=@id', N'@id uniqueidentifier', @id=@id;
@@ -477,7 +477,7 @@ public sealed class SqlWorkTaskStore(IConfiguration configuration, ILogger<SqlWo
         while (await r.ReadAsync()) items.Add(new(r.GetGuid(0), r.GetString(1), r.GetBoolean(2), D(r, 3), S(r, 4)));
         var activities = new List<WorkActivity>();
         await r.NextResultAsync();
-        while (await r.ReadAsync()) activities.Add(new(r.GetGuid(0), r.GetString(1), S(r, 2), S(r, 3), S(r, 4), r.GetDateTime(5), S(r, 6)));
+        while (await r.ReadAsync()) activities.Add(new(r.GetGuid(0), r.GetString(1), S(r, 2), S(r, 3), S(r, 4), r.GetDateTime(5), S(r, 6), r.IsDBNull(7) ? null : r.GetGuid(7)));
         // Events made during "Truy cập hộ": "<actor> (truy cập hộ <account>)".
         var actedBy = new Dictionary<Guid, string>();
         if (await r.NextResultAsync())
