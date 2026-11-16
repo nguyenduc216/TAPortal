@@ -64,3 +64,9 @@
 
 ## Gợi ý mục từ các công việc đang có (cùng change)
 - Operator 2026-11-16 ("làm sao để tôi thấy danh sách checklist"): ô Checklist mẫu của một đầu việc hiện các mục checklist mà các công việc mang tên đó (cả việc lặp) đang dùng, kèm số việc; bấm để thêm vào mẫu. `WorkCatalogSql.List` thêm result set thứ hai; `WorkCatalogItem.Used/UsedNotInTemplate`. Truy vấn đã chạy thử read-only trên TAPortalSys (2 dòng). Không đổi DB.
+
+## Lưu / Hủy rõ ràng ở Danh mục công việc (cùng change)
+- Operator 2026-11-16: "khi vào edit thì chưa biết cách cancel / save bản edit đó, kể cả thêm mới cũng tương tự".
+- Mỗi đầu việc: sửa bất kỳ ô nào (dòng hoặc checklist mẫu) → dòng tô vàng, nút "Lưu thay đổi" nổi, hiện nút "Hủy"; trong ô checklist có "Có thay đổi chưa lưu", "Hủy" (khôi phục nguyên trạng và đóng) và "Lưu checklist". Rời trang khi còn thay đổi chưa lưu thì trình duyệt hỏi lại.
+- Form thêm: nút "Thêm đầu việc" + "Hủy" (xóa các ô vừa nhập). Nút checklist khi chưa có mục ghi "Soạn". Gợi ý dùng hết thì ẩn dòng hướng dẫn.
+- Safe 781/781 pass. Không đổi DB.

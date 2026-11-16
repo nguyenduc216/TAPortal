@@ -15,7 +15,10 @@
         <div class="ta-input-icon">@UiIcon.Render("file-text")<input class="form-control" name="Input.Description" maxlength="@WorkCatalogPolicy.DescriptionMax" placeholder="Mô tả ngắn (không bắt buộc)" aria-label="Mô tả" /></div>
         <div class="ta-input-icon ta-catalog-add__sort">@UiIcon.Render("hash")<input class="form-control" type="number" name="Input.SortOrder" value="@((Model.Count == 0 ? 0 : Model.Max(x => x.SortOrder)) + 10)" min="0" max="100000" aria-label="Thứ tự" title="Thứ tự hiển thị" /></div>
         <input type="hidden" name="Input.IsActive" value="true" />
-        <button class="btn btn-ta-gold" type="submit">@UiIcon.Render("plus")<span>Thêm</span></button>
+        <div class="ta-catalog-add__actions">
+            <button class="btn btn-ta-gold" type="submit">@UiIcon.Render("plus")<span>Thêm đầu việc</span></button>
+            <button class="btn" type="reset" title="Xóa các ô vừa nhập">@UiIcon.Render("x")<span>Hủy</span></button>
+        </div>
         <div class="ta-input-icon ta-input-icon--top ta-catalog-add__check">@UiIcon.Render("checks")<textarea class="form-control" name="Input.ChecklistText" rows="2" maxlength="@WorkCatalogPolicy.ChecklistTextMax" placeholder="Checklist mẫu (không bắt buộc), mỗi dòng một mục" aria-label="Checklist mẫu"></textarea></div>
     </form>
 </section>
@@ -37,23 +40,25 @@
                 @foreach (var x in Model)
                 {
                     var formId = "cat" + x.Id.ToString("N");
-                    <tr data-ta-row class="@(x.IsActive ? null : "text-secondary")">
+                    <tr data-ta-row data-ta-entry="@formId" class="@(x.IsActive ? null : "text-secondary")">
                         <td data-label="Đầu việc"><div class="ta-input-icon">@UiIcon.Render("pencil")<input form="@formId" class="form-control form-control-sm" name="Input.Name" value="@x.Name" maxlength="@WorkCatalogPolicy.NameMax" required aria-label="Tên đầu việc" /></div><span class="d-none">@x.Name</span></td>
                         <td data-label="Mô tả"><div class="ta-input-icon">@UiIcon.Render("file-text")<input form="@formId" class="form-control form-control-sm" name="Input.Description" value="@x.Description" maxlength="@WorkCatalogPolicy.DescriptionMax" aria-label="Mô tả" /></div></td>
                         <td data-label="Thứ tự" class="ta-catalog-sort"><div class="ta-input-icon">@UiIcon.Render("hash")<input form="@formId" class="form-control form-control-sm" type="number" name="Input.SortOrder" value="@x.SortOrder" min="0" max="100000" aria-label="Thứ tự" /></div></td>
                         <td data-label="Đang dùng"><label class="form-check form-switch m-0"><input form="@formId" class="form-check-input" type="checkbox" name="Input.IsActive" value="true" checked="@x.IsActive" aria-label="Đang dùng" /><input form="@formId" type="hidden" name="Input.IsActive" value="false" /></label></td>
-                        <td data-label="Checklist mẫu"><button class="btn btn-sm" type="button" data-ta-catalog-toggle="@formId" aria-expanded="false" aria-controls="@(formId)Check">@UiIcon.Render("checks")<span>@(x.ChecklistCount == 0 ? "Thêm" : x.ChecklistCount + " mục")</span></button></td>
+                        <td data-label="Checklist mẫu"><button class="btn btn-sm" type="button" data-ta-catalog-toggle="@formId" aria-expanded="false" aria-controls="@(formId)Check">@UiIcon.Render("checks")<span>@(x.ChecklistCount == 0 ? "Soạn" : x.ChecklistCount + " mục")</span></button></td>
                         <td class="text-end" data-label="Số việc">@if (x.TaskCount > 0) {<a class="ta-catalog-count" asp-controller="Work" asp-action="Tasks" asp-route-q="@x.Name" title="Xem các công việc “@x.Name”">@x.TaskCount</a>} else {<span class="text-secondary">0</span>}</td>
                         <td class="ta-col-actions">
                             <div class="ta-actions">
-                                <form id="@formId" method="post" asp-action="Save" asp-route-id="@x.Id"><button class="btn btn-sm btn-soft-primary" type="submit">@UiIcon.Render("device-floppy")<span>Lưu</span></button></form>
+                                <form id="@formId" method="post" asp-action="Save" asp-route-id="@x.Id"><button class="btn btn-sm btn-soft-primary" type="submit" data-ta-entry-save title="Lưu đầu việc và checklist mẫu">@UiIcon.Render("device-floppy")<span>Lưu</span></button></form>
+                                <button class="btn btn-sm" type="button" data-ta-entry-cancel="@formId" hidden title="Bỏ các thay đổi chưa lưu">@UiIcon.Render("x")<span>Hủy</span></button>
                                 <form method="post" asp-action="Delete" asp-route-id="@x.Id" onsubmit="return confirm('Xóa đầu việc này khỏi danh mục? Các công việc đã tạo vẫn giữ tên.');"><button class="ta-icon-btn" type="submit" aria-label="Xóa @x.Name" title="Xóa">@UiIcon.Render("trash")</button></form>
                             </div>
                         </td>
                     </tr>
-                    <tr class="ta-catalog-check" id="@(formId)Check" hidden>
+                    <tr class="ta-catalog-check" id="@(formId)Check" data-ta-entry-check="@formId" hidden>
                         <td colspan="7">
                             <p class="form-label mb-1">Checklist mẫu của “@x.Name” <span class="text-secondary small">· tạo việc với tên này sẽ tự có các mục này; phần diễn giải hiện kèm mục ở từng công việc</span></p>
+                            <div data-ta-check-body>
                             <ol class="ta-steps" data-ta-steps>
                                 @{ var n = 0; }
                                 @foreach (var s in x.Steps)
@@ -94,9 +99,12 @@
                             {
                                 <p class="small text-secondary mb-2">Chưa có mục nào, và các công việc mang tên này cũng chưa có checklist. Bấm “Thêm mục” để soạn.</p>
                             }
+                            </div>
                             <div class="ta-step__actions">
                                 <button class="btn btn-sm" type="button" data-ta-step-add>@UiIcon.Render("plus")<span>Thêm mục</span></button>
-                                <button form="@formId" class="btn btn-sm btn-soft-primary" type="submit">@UiIcon.Render("device-floppy")<span>Lưu checklist</span></button>
+                                <span class="ms-auto small text-warning-emphasis" data-ta-entry-dirty hidden>@UiIcon.Render("alert-circle")Có thay đổi chưa lưu</span>
+                                <button class="btn btn-sm" type="button" data-ta-entry-cancel="@formId" title="Bỏ các thay đổi chưa lưu và đóng">@UiIcon.Render("x")<span>Hủy</span></button>
+                                <button form="@formId" class="btn btn-sm btn-primary" type="submit">@UiIcon.Render("device-floppy")<span>Lưu checklist</span></button>
                             </div>
                         </td>
                     </tr>
@@ -105,6 +113,6 @@
             </table>
         </div>
         <div class="ta-empty d-none" data-ta-no-results><span class="ta-empty__icon">@UiIcon.Render("search-off")</span><p class="ta-empty__title">Không tìm thấy đầu việc</p></div>
-        <div class="card-footer text-secondary small">Đổi tên một đầu việc thì các công việc và việc lặp đang mang tên cũ cũng đổi theo. Tắt "Đang dùng" để ẩn khỏi gợi ý mà vẫn giữ lịch sử. Checklist mẫu cũng bổ sung được từ trang chi tiết một công việc đang làm.</div>
+        <div class="card-footer text-secondary small">Đổi tên một đầu việc thì các công việc và việc lặp đang mang tên cũ cũng đổi theo. Tắt "Đang dùng" để ẩn khỏi gợi ý mà vẫn giữ lịch sử. Sửa xong một dòng (kể cả checklist mẫu) bấm Lưu; bấm Hủy để bỏ thay đổi. Checklist mẫu cũng bổ sung được từ trang chi tiết một công việc đang làm.</div>
     }
 </section>

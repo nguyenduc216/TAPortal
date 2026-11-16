@@ -87,7 +87,9 @@
             }
             row.querySelector('input').value = suggest.dataset.taStepSuggest;
             renumberSteps(list);
+            const used = suggest.closest('.ta-step__used');
             suggest.remove();
+            if (used && !used.querySelector('[data-ta-step-suggest]')) used.remove();
             row.querySelector('textarea').focus();
         } else if (add) {
             const cell = add.closest('td');
@@ -100,6 +102,64 @@
             remove.closest('[data-ta-step]').remove();
             renumberSteps(list);
         }
+    });
+
+    // Danh mục công việc: an entry being edited (its row or its checklist mẫu) shows "Có thay đổi chưa lưu", a primary
+    // Lưu and a Hủy that puts everything back as loaded. The checklist body is snapshotted before the first change.
+    const entryRows = (id) => ({
+        main: document.querySelector(`[data-ta-entry="${id}"]`),
+        check: document.querySelector(`[data-ta-entry-check="${id}"]`),
+        form: document.getElementById(id)
+    });
+    const entryIdOf = (el) => el?.closest?.('[data-ta-entry]')?.dataset.taEntry || el?.closest?.('[data-ta-entry-check]')?.dataset.taEntryCheck;
+    const snapshots = new WeakMap();
+    const snapshot = (id) => {
+        const body = entryRows(id).check?.querySelector('[data-ta-check-body]');
+        if (body && !snapshots.has(body)) snapshots.set(body, body.innerHTML);
+    };
+    const setDirty = (id, dirty) => {
+        const { main, check } = entryRows(id);
+        if (!main) return;
+        main.classList.toggle('is-dirty', dirty);
+        check?.classList.toggle('is-dirty', dirty);
+        main.querySelector('[data-ta-entry-cancel]').hidden = !dirty;
+        const save = main.querySelector('[data-ta-entry-save]');
+        save.classList.toggle('btn-primary', dirty);
+        save.classList.toggle('btn-soft-primary', !dirty);
+        save.querySelector('span').textContent = dirty ? 'Lưu thay đổi' : 'Lưu';
+        check?.querySelectorAll('[data-ta-entry-dirty]').forEach((m) => { m.hidden = !dirty; });
+    };
+    ['pointerdown', 'focusin'].forEach((type) => document.addEventListener(type, (event) => {
+        const id = entryIdOf(event.target);
+        if (id) snapshot(id);
+    }, true));
+    ['input', 'change'].forEach((type) => document.addEventListener(type, (event) => {
+        const id = entryIdOf(event.target);
+        if (id && event.target.matches?.('input, textarea, select')) setDirty(id, true);
+    }));
+    document.addEventListener('click', (event) => {
+        const target = event.target instanceof Element ? event.target : null;
+        if (target?.closest('[data-ta-step-add], [data-ta-step-remove], [data-ta-step-suggest]')) {
+            const id = entryIdOf(target);
+            if (id) queueMicrotask(() => setDirty(id, true));
+        }
+        const cancel = target?.closest('[data-ta-entry-cancel]');
+        if (!cancel) return;
+        const id = cancel.dataset.taEntryCancel;
+        const { main, check, form } = entryRows(id);
+        const body = check?.querySelector('[data-ta-check-body]');
+        if (body && snapshots.has(body)) { body.innerHTML = snapshots.get(body); snapshots.delete(body); }
+        form?.reset();
+        setDirty(id, false);
+        if (check) check.hidden = true;
+        main?.querySelector('[data-ta-catalog-toggle]')?.setAttribute('aria-expanded', 'false');
+    });
+    window.addEventListener('beforeunload', (event) => {
+        if (document.querySelector('tr.is-dirty[data-ta-entry]')) { event.preventDefault(); event.returnValue = ''; }
+    });
+    document.addEventListener('submit', (event) => {
+        const id = event.target?.id;
+        if (id && document.querySelector(`[data-ta-entry="${id}"]`)) document.querySelectorAll('tr.is-dirty[data-ta-entry]').forEach((r) => r.classList.remove('is-dirty'));
     });
 
     // Danh mục công việc: the "Checklist mẫu" button opens the template row under its entry.
