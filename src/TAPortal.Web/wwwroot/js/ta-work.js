@@ -75,7 +75,21 @@
         const target = event.target instanceof Element ? event.target : null;
         const add = target?.closest('[data-ta-step-add]');
         const remove = target?.closest('[data-ta-step-remove]');
-        if (add) {
+        const suggest = target?.closest('[data-ta-step-suggest]');
+        if (suggest) {
+            // An item already used by the tasks of this name: appended to the template (filling an empty row first).
+            const cell = suggest.closest('td');
+            const list = cell.querySelector('[data-ta-steps]');
+            let row = [...list.querySelectorAll('[data-ta-step]')].find((li) => li.querySelector('input').value.trim() === '');
+            if (!row) {
+                list.appendChild(cell.querySelector('template[data-ta-step-template]').content.firstElementChild.cloneNode(true));
+                row = list.lastElementChild;
+            }
+            row.querySelector('input').value = suggest.dataset.taStepSuggest;
+            renumberSteps(list);
+            suggest.remove();
+            row.querySelector('textarea').focus();
+        } else if (add) {
             const cell = add.closest('td');
             const list = cell.querySelector('[data-ta-steps]');
             list.appendChild(cell.querySelector('template[data-ta-step-template]').content.firstElementChild.cloneNode(true));
@@ -97,7 +111,7 @@
         toggle.setAttribute('aria-expanded', row.hidden ? 'false' : 'true');
         if (!row.hidden) {
             const list = row.querySelector('[data-ta-steps]');
-            if (list && list.children.length === 0) row.querySelector('[data-ta-step-add]').click();
+            if (list && list.children.length === 0 && !row.querySelector('[data-ta-step-suggest]')) row.querySelector('[data-ta-step-add]').click();
             else row.querySelector('input:not([type=hidden]), textarea')?.focus();
         }
     });

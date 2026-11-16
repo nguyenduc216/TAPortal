@@ -79,6 +79,21 @@
                                     <button class="ta-icon-btn" type="button" data-ta-step-remove aria-label="Bỏ mục này" title="Bỏ mục">@UiIcon.Render("trash")</button>
                                 </li>
                             </template>
+                            @{ var suggestions = x.UsedNotInTemplate.ToList(); }
+                            @if (suggestions.Count > 0)
+                            {
+                                <div class="ta-step__used">
+                                    <p class="small text-secondary mb-1">Mục checklist đang có trong các công việc “@x.Name” — bấm để thêm vào mẫu (nhớ bấm Lưu checklist):</p>
+                                    @foreach (var u in suggestions)
+                                    {
+                                        <button class="btn btn-sm ta-step__chip" type="button" data-ta-step-suggest="@u.Title">@UiIcon.Render("plus")<span>@u.Title</span><small class="text-secondary">· @u.Tasks việc</small></button>
+                                    }
+                                </div>
+                            }
+                            else if (x.ChecklistCount == 0)
+                            {
+                                <p class="small text-secondary mb-2">Chưa có mục nào, và các công việc mang tên này cũng chưa có checklist. Bấm “Thêm mục” để soạn.</p>
+                            }
                             <div class="ta-step__actions">
                                 <button class="btn btn-sm" type="button" data-ta-step-add>@UiIcon.Render("plus")<span>Thêm mục</span></button>
                                 <button form="@formId" class="btn btn-sm btn-soft-primary" type="submit">@UiIcon.Render("device-floppy")<span>Lưu checklist</span></button>

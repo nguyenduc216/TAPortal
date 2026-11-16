@@ -12,7 +12,14 @@ public sealed record WorkCatalogItem(Guid Id, string Name, string? Description, 
 {
     public IReadOnlyList<WorkChecklistStep> Steps => WorkCatalogPolicy.Steps(ChecklistJson, ChecklistText);
     public int ChecklistCount => Steps.Count;
+
+    // Checklist items the tasks of this name already use (most used first), for adding to the template in one click.
+    public IReadOnlyList<WorkCatalogUsedItem> Used { get; init; } = [];
+    public IEnumerable<WorkCatalogUsedItem> UsedNotInTemplate =>
+        Used.Where(u => !Steps.Any(s => string.Equals(s.Title, WorkCatalogPolicy.Clean(u.Title), StringComparison.OrdinalIgnoreCase)));
 }
+
+public sealed record WorkCatalogUsedItem(string Title, int Tasks);
 
 // One item of an entry's checklist template; Guide explains how to do it (procedure, formula, example) — operator 2026-11-16.
 public sealed record WorkChecklistStep(string Title, string? Guide);
@@ -166,6 +173,12 @@ ELSE SELECT TOP 0 CAST(NULL AS nvarchar(200)),CAST(NULL AS nvarchar(500)),CAST(N
 SELECT c.Id,c.Name,c.Description,c.SortOrder,c.IsActive,
  (SELECT COUNT(1) FROM dbo.WorkTasks t WHERE t.IsDeleted=0 AND (t.Title=c.Name OR LEFT(t.Title,LEN(c.Name)+3)=c.Name+N' — ')),c.ChecklistText,c.ChecklistJson
 FROM dbo.WorkTaskCatalog c WHERE c.IsDeleted=0 ORDER BY c.IsActive DESC,c.SortOrder,c.Name;
+SELECT c.Id,i.Title,COUNT(DISTINCT t.Id)
+FROM dbo.WorkTaskCatalog c
+JOIN dbo.WorkTasks t ON t.IsDeleted=0 AND (t.Title=c.Name OR LEFT(t.Title,LEN(c.Name)+3)=c.Name+N' — ')
+JOIN dbo.WorkTaskChecklistItems i ON i.TaskId=t.Id AND i.IsDeleted=0
+WHERE c.IsDeleted=0
+GROUP BY c.Id,i.Title ORDER BY c.Id,COUNT(DISTINCT t.Id) DESC,i.Title;
 """;
 
     public const string Taken = "SELECT COUNT(1) FROM dbo.WorkTaskCatalog WITH (UPDLOCK, HOLDLOCK) WHERE IsDeleted=0 AND Name=@name AND (@id IS NULL OR Id<>@id);";
@@ -236,7 +249,14 @@ public sealed class SqlWorkCatalogStore(IConfiguration configuration, AdminAudit
         await using var r = await cmd.ExecuteReaderAsync();
         var list = new List<WorkCatalogItem>();
         while (await r.ReadAsync()) list.Add(new(r.GetGuid(0), r.GetString(1), r.IsDBNull(2) ? null : r.GetString(2), r.GetInt32(3), r.GetBoolean(4), r.GetInt32(5), r.IsDBNull(6) ? null : r.GetString(6), r.IsDBNull(7) ? null : r.GetString(7)));
-        return list;
+        var used = new Dictionary<Guid, List<WorkCatalogUsedItem>>();
+        if (await r.NextResultAsync())
+            while (await r.ReadAsync())
+            {
+                if (!used.TryGetValue(r.GetGuid(0), out var items)) used[r.GetGuid(0)] = items = [];
+                if (items.Count < WorkTaskPolicy.ChecklistItemsMax) items.Add(new(r.GetString(1), r.GetInt32(2)));
+            }
+        return list.Select(x => used.TryGetValue(x.Id, out var items) ? x with { Used = items } : x).ToList();
     }
 
     public async Task<WorkCatalogResult> SaveAsync(Guid actor, Guid? id, WorkCatalogInput input)

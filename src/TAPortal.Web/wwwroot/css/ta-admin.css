@@ -103,6 +103,9 @@ tr:has(> td > [data-ta-catalog-toggle][aria-expanded="true"]) > td { background:
 .ta-step__no::before { content: counter(ta-step) "."; display: block; padding-top: 6px; font-weight: 600; color: var(--ta-text-2); text-align: right; }
 .ta-step__body { display: grid; gap: 4px; }
 .ta-step__actions { display: flex; gap: var(--ta-sp-2); }
+.ta-step__used { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: var(--ta-sp-2); }
+.ta-step__used > p { flex: 1 1 100%; }
+.ta-step__chip { border-style: dashed; }
 .ta-checklist > li { flex-wrap: wrap; }
 .ta-checklist__guide { flex: 1 1 100%; margin: -2px 0 4px 36px; font-size: var(--ta-fs-small); }
 .ta-checklist__guide > summary { display: inline-flex; align-items: center; gap: 4px; cursor: pointer; color: var(--ta-primary, #1565c0); }

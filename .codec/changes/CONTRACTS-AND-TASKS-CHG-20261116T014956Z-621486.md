@@ -61,3 +61,6 @@
 - Thẻ công việc và chi tiết công việc: mục có diễn giải hiện "Hướng dẫn" (mở/đóng) ngay dưới mục; tra theo tên đầu việc (cả việc lặp) và tên mục.
 - Tests: SafeWorkCatalogTests.EachTemplateItemMayCarryAnExplanation. Safe 781/781 pass.
 - Migration 057: pre-check NOT_APPLIED; dry-run PASS/NOT_APPLIED trancount0=True; gates PASS (781); real run 2026-11-16 02:23:39Z VERIFY_STATUS=PASS ⇒ EXECUTED.
+
+## Gợi ý mục từ các công việc đang có (cùng change)
+- Operator 2026-11-16 ("làm sao để tôi thấy danh sách checklist"): ô Checklist mẫu của một đầu việc hiện các mục checklist mà các công việc mang tên đó (cả việc lặp) đang dùng, kèm số việc; bấm để thêm vào mẫu. `WorkCatalogSql.List` thêm result set thứ hai; `WorkCatalogItem.Used/UsedNotInTemplate`. Truy vấn đã chạy thử read-only trên TAPortalSys (2 dòng). Không đổi DB.

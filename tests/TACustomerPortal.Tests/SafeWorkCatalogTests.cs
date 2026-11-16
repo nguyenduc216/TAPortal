@@ -105,6 +105,9 @@ public sealed class SafeWorkCatalogTests
         Assert.Equal("công thức", index.For("Kê khai thuế — kỳ T10/2026", "Tính thuế GTGT"));      // recurring task name
         Assert.Null(index.For("Kê khai thuế", "Nộp tờ khai"));
         Assert.Contains("ChecklistJson=@json", S.WorkCatalogSql.Update);
+        Assert.Contains("JOIN dbo.WorkTaskChecklistItems i ON i.TaskId=t.Id AND i.IsDeleted=0", S.WorkCatalogSql.List);   // items used by its tasks
+        var entry = new S.WorkCatalogItem(Guid.NewGuid(), "Kê khai thuế", null, 0, true, 2, "Tính thuế GTGT") { Used = [new("tính thuế gtgt", 2), new("Nộp tờ khai", 1)] };
+        Assert.Equal(["Nộp tờ khai"], entry.UsedNotInTemplate.Select(u => u.Title));
 
         var root = AppContext.BaseDirectory[..AppContext.BaseDirectory.IndexOf($"{Path.DirectorySeparatorChar}tests{Path.DirectorySeparatorChar}", StringComparison.Ordinal)];
         var sql = File.ReadAllText(Path.Combine(root, "database", "migrations", "057-work-catalog-checklist-guides.sql"));
