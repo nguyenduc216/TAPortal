@@ -42,3 +42,6 @@ Operator 2026-11-16: each measure ("chỉ số hạn mức") of a service gets a
 
 ## Migration execution
 - 063-work-catalog-unit-metric.sql: PRECHECK NOT_APPLIED; DRYRUN PASS/NOT_APPLIED (trancount 0); gates PASS (801); REAL RUN VERIFY_STATUS=PASS => EXECUTED 2026-11-16T16:54:20Z
+
+## Deploy
+- portal: deployed by the WEBSITE-TA session as ad5ed30 (contains a01068d), health 200. Smoke (prod, read only): Danh mục công việc has Đơn vị tính, Mã hạn mức chi phí (5 measures suggested: DTN, DTT, QMNSDX, SLBHSC, SLCT) and the grid column.
