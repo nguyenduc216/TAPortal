@@ -8,6 +8,9 @@
             <label class="btn btn-sm btn-soft-primary mb-0">@UiIcon.Render("photo")<span>@(Model.HasPhoto ? "Đổi ảnh đại diện" : "Tải ảnh đại diện")</span>
                 <input class="visually-hidden" type="file" name="photo" accept="image/jpeg,image/png,image/webp" data-ta-photo-input aria-label="Chọn ảnh đại diện" />
             </label>
+            @* Chụp ảnh (operator 2026-11-16): phones open the front camera; computers show the webcam in a dialog (ta-portal.js). *@
+            <button type="button" class="btn btn-sm mb-0 ms-1" data-ta-photo-camera>@UiIcon.Render("camera")<span>Chụp ảnh</span></button>
+            <input class="visually-hidden" type="file" accept="image/*" capture="user" data-ta-photo-capture tabindex="-1" aria-hidden="true" />
         </form>
         @if (Model.HasPhoto)
         {
@@ -17,6 +20,6 @@
                 <button class="btn btn-sm" type="submit">@UiIcon.Render("trash")<span>Xóa ảnh</span></button>
             </form>
         }
-        <div class="form-hint">JPG, PNG hoặc WebP; ảnh được cắt vuông và thu nhỏ trước khi gửi.</div>
+        <div class="form-hint">Chọn ảnh JPG, PNG, WebP hoặc chụp bằng camera; ảnh được cắt vuông và thu nhỏ trước khi gửi.</div>
     </div>
 </div>

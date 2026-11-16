@@ -416,4 +416,58 @@ document.addEventListener('submit', (event) => {
         }
         form.requestSubmit ? form.requestSubmit() : form.submit();
     });
+
+    // Chụp ảnh: the picture goes into the photo input, whose change handler above shrinks and sends it.
+    const use = (form, file) => {
+        const input = form.querySelector('[data-ta-photo-input]');
+        const data = new DataTransfer();
+        data.items.add(file);
+        input.files = data.files;
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+    };
+    document.addEventListener('change', (event) => {
+        const input = event.target;
+        if (input instanceof HTMLInputElement && input.matches('[data-ta-photo-capture]') && input.files?.length)
+            use(input.closest('form'), input.files[0]);
+    });
+
+    // Phones and tablets: the native camera (capture="user"). Computers: the webcam in a dialog.
+    const touch = () => window.matchMedia('(pointer: coarse)').matches;
+    const webcam = async (form) => {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false });
+        const dialog = document.createElement('dialog');
+        dialog.className = 'ta-camera-dialog';
+        dialog.innerHTML = '<div class="ta-camera-dialog__body"><video autoplay playsinline muted></video></div>'
+            + '<div class="ta-camera-dialog__actions"><button type="button" class="btn" data-cam-cancel>Hủy</button>'
+            + '<button type="button" class="btn btn-primary" data-cam-shot>Chụp</button></div>';
+        document.body.appendChild(dialog);
+        const video = dialog.querySelector('video');
+        video.srcObject = stream;
+        const close = () => { stream.getTracks().forEach(t => t.stop()); dialog.close(); dialog.remove(); };
+        dialog.addEventListener('cancel', close);
+        dialog.querySelector('[data-cam-cancel]').addEventListener('click', close);
+        dialog.querySelector('[data-cam-shot]').addEventListener('click', () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.translate(canvas.width, 0); ctx.scale(-1, 1);              // as seen in the preview (mirror)
+            ctx.drawImage(video, 0, 0);
+            canvas.toBlob((blob) => { close(); if (blob) use(form, new File([blob], 'camera.jpg', { type: 'image/jpeg' })); }, 'image/jpeg', 0.92);
+        });
+        dialog.showModal();
+    };
+    document.addEventListener('click', async (event) => {
+        const button = event.target?.closest?.('[data-ta-photo-camera]');
+        if (!button) return;
+        event.preventDefault();
+        const form = button.closest('form');
+        const native = form.querySelector('[data-ta-photo-capture]');
+        if (touch() || !navigator.mediaDevices?.getUserMedia) { native.click(); return; }
+        try { await webcam(form); }
+        catch (e) {
+            if (e && (e.name === 'NotAllowedError' || e.name === 'SecurityError')) alert('Trình duyệt chưa cho phép dùng camera. Mở cài đặt trang (biểu tượng cạnh thanh địa chỉ) > Camera > Cho phép.');
+            else if (e && e.name === 'NotFoundError') alert('Không tìm thấy camera trên máy này. Hãy chọn ảnh có sẵn.');
+            else native.click();
+        }
+    });
 })();

@@ -619,8 +619,10 @@
         input.dispatchEvent(new Event('change', { bubbles: true }));
         // Checklist mẫu (operator 2026-11-16): fill the form's checklist with the entry's template, unless the user
         // already typed their own (a box still holding the previous template is replaced).
-        const box = input.form?.querySelector('textarea[data-ta-catalog-checklist]');
+        const box = input.form?.querySelector('[data-ta-catalog-checklist]');
         const template = option.dataset.checklist || '';
+        // The new-task checklist (a list to tick) shows the template itself.
+        if (box && box.closest('[data-ta-new-checklist]')) { box.dispatchEvent(new CustomEvent('ta:checklist-template', { bubbles: true, detail: template })); return; }
         if (box && (box.value.trim() === '' || box.value === box.dataset.taAutofill)) {
             box.value = template;
             box.dataset.taAutofill = template;
@@ -688,4 +690,77 @@
             if (!comboValid(combo)) { event.preventDefault(); event.stopImmediatePropagation(); comboInput(combo).reportValidity(); comboInput(combo).focus(); return; }
         }
     }, true);
+})();
+
+// Checklist khi tạo công việc (operator 2026-11-16): template items to tick + new items one name at a time. The ticked names go
+// one per line into the hidden Input.ChecklistText (WorkTaskPolicy.ChecklistLines on the server).
+(() => {
+    'use strict';
+    const MAX = 50;                                   // WorkTaskPolicy.ChecklistItemsMax
+    const rootOf = (el) => el.closest('[data-ta-new-checklist]');
+    const sync = (root) => {
+        const items = [...root.querySelectorAll('[data-ta-nc-item]')];
+        root.querySelector('[data-ta-catalog-checklist]').value = items.filter(li => li.querySelector('input').checked).map(li => li.dataset.name).join('\n');
+        root.querySelector('[data-ta-nc-empty]').hidden = items.length > 0;
+    };
+    const item = (name, auto) => {
+        const li = document.createElement('li');
+        li.className = 'ta-new-checklist__item';
+        li.dataset.taNcItem = '';
+        li.dataset.name = name;
+        if (auto) li.dataset.auto = '1';
+        const label = document.createElement('label');
+        label.className = 'form-check mb-0';
+        const box = document.createElement('input');
+        box.type = 'checkbox'; box.className = 'form-check-input'; box.checked = true;
+        const text = document.createElement('span');
+        text.className = 'form-check-label'; text.textContent = name;
+        label.append(box, text);
+        const remove = document.createElement('button');
+        remove.type = 'button'; remove.className = 'ta-new-checklist__remove'; remove.dataset.taNcRemove = '';
+        remove.setAttribute('aria-label', 'Xóa mục ' + name); remove.title = 'Xóa mục'; remove.textContent = '×';
+        li.append(label, remove);
+        return li;
+    };
+    const lines = (text) => (text || '').split('\n').map(l => l.trim().replace(/^[-*•]\s*/, '')).filter(Boolean);
+    const add = (root, name, auto) => {
+        const list = root.querySelector('[data-ta-nc-list]');
+        const clean = name.trim().slice(0, 500);
+        if (!clean || list.children.length >= MAX) return false;
+        if ([...list.children].some(li => li.dataset.name.toLowerCase() === clean.toLowerCase())) return false;
+        list.appendChild(item(clean, auto));
+        return true;
+    };
+    const init = () => document.querySelectorAll('[data-ta-new-checklist]:not([data-ready])').forEach(root => {
+        root.dataset.ready = '1';
+        lines(root.querySelector('[data-ta-catalog-checklist]').value).forEach(n => add(root, n, false));
+        sync(root);
+    });
+    document.addEventListener('ta:checklist-template', (e) => {
+        const root = rootOf(e.target);
+        if (!root) return;
+        root.querySelectorAll('[data-ta-nc-item][data-auto]').forEach(li => li.remove());   // the previous entry's template
+        const list = root.querySelector('[data-ta-nc-list]');
+        const manual = [...list.children];
+        lines(e.detail).forEach(n => add(root, n, true));
+        manual.forEach(li => list.appendChild(li));                                         // template first, own items after
+        sync(root);
+    });
+    const addFromInput = (root) => {
+        const input = root.querySelector('[data-ta-nc-input]');
+        if (add(root, input.value, false)) { input.value = ''; sync(root); }
+        input.focus();
+    };
+    document.addEventListener('click', (e) => {
+        const addBtn = e.target.closest?.('[data-ta-nc-add]');
+        if (addBtn) { e.preventDefault(); addFromInput(rootOf(addBtn)); return; }
+        const remove = e.target.closest?.('[data-ta-nc-remove]');
+        if (remove) { e.preventDefault(); const root = rootOf(remove); remove.closest('li').remove(); sync(root); }
+    });
+    document.addEventListener('change', (e) => { const root = e.target.closest?.('[data-ta-new-checklist]'); if (root) sync(root); });
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && e.target.matches?.('[data-ta-nc-input]')) { e.preventDefault(); addFromInput(rootOf(e.target)); }
+    });
+    document.addEventListener('ta:load', init);
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
 })();
