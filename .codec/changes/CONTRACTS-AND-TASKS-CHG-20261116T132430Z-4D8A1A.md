@@ -8,7 +8,7 @@
 
 ## Yêu cầu và phạm vi
 Operator 2026-11-16: "Tất cả các thông báo" (after web push in CONTRACTS-AND-TASKS-CHG-20261116T123108Z-D0F409).
-- `WorkPushWorker` (hosted service in TAPortal.Web, every 15 s): reads new `dbo.WorkTaskActivities` rows (created, assign, status, comment, checklist except reorder, edit/documents) and pushes one notification per person and task (owner, active co-workers, creator; never the actor; only users with a device). Watermark in `dbo.WebPushState`; 10 s settle window; rows older than 1 h skipped.
+- `WorkPushWorker` (hosted service in TAPortal.Web, every 15 s; operator 2026-11-16: changed to once a minute): reads new `dbo.WorkTaskActivities` rows (created, assign, status, comment, checklist except reorder, edit/documents) and pushes one notification per person and task (owner, active co-workers, creator; never the actor; only users with a device). Watermark in `dbo.WebPushState`; 10 s settle window; rows older than 1 h skipped.
 - Daily from 08:00 Vietnam time: one reminder per person (overdue / due today / due tomorrow, open tasks), claimed once per day in `dbo.WebPushState`.
 - IIS note (read-only check): pool TA.Portal startMode OnDemand, idleTimeout 20 min, preload off. Task changes come from requests, so the worker is awake then; the 08:00 reminder waits for the first visit if the pool slept. AlwaysRunning + preload is an operator change (not done by the agent).
 

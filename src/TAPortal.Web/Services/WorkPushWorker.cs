@@ -5,7 +5,7 @@ namespace TAPortal.Web.Services;
 // Thông báo đẩy cho công việc (operator 2026-11-16: "Tất cả các thông báo", migration 060).
 // Every change of a task is already written to dbo.WorkTaskActivities (created, assigned, status, comment, checklist, edit,
 // documents - from the pages, the recurring templates and the catalogue). This worker, running inside the portal, reads the
-// new rows every few seconds and pushes them to the people of the task (owner, co-workers, creator), never to the person
+// new rows once a minute (operator 2026-11-16) and pushes them to the people of the task (owner, co-workers, creator), never to the person
 // who made the change and only to users who turned notifications on. Once a day (from 08:00 Vietnam time) each person gets
 // one reminder of their overdue / due today / due tomorrow tasks. dbo.WebPushState remembers where it stopped, so a
 // restart neither repeats nor floods (rows older than an hour are skipped).
@@ -15,7 +15,7 @@ public sealed record WorkPushDue(Guid Recipient, int Overdue, int DueToday, int 
 
 public static class WorkPushPolicy
 {
-    public static readonly TimeSpan Interval = TimeSpan.FromSeconds(15), Settle = TimeSpan.FromSeconds(10), MaxAge = TimeSpan.FromHours(1);
+    public static readonly TimeSpan Interval = TimeSpan.FromMinutes(1), Settle = TimeSpan.FromSeconds(10), MaxAge = TimeSpan.FromHours(1);
     public const int ReminderHour = 8;
 
     // One notification per person and task for each batch; the newest change is shown, earlier ones are counted.
