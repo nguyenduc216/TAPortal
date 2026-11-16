@@ -438,6 +438,7 @@ public sealed class SafeAdminWorkTests
         public Task<S.ServiceDetail?> GetServiceAsync(Guid id) => Task.FromResult<S.ServiceDetail?>(id == Staff
             ? new(Staff, Hr, "Dịch vụ nhân sự hàng tháng", null, "TIER", "Phí dịch vụ", "đồng/tháng", null, Pricing, "Tính lương", null, 10, true) : null);
         public Task<IReadOnlyList<S.Industry>> IndustriesAsync() => Task.FromResult<IReadOnlyList<S.Industry>>([TradeIndustry]);
+        public Task<IReadOnlyList<S.ServiceMetricOption>> MetricsAsync() => Task.FromResult<IReadOnlyList<S.ServiceMetricOption>>([]);
         public Task<S.ServiceCatalogResult> SaveServiceAsync(Guid actor, Guid? id, S.ServiceInput input)
         {
             var (service, error) = S.ServicePricingPolicy.Check(id ?? Guid.NewGuid(), input, [Trade]);

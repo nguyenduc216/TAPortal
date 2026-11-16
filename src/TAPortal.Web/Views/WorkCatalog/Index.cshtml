@@ -1,11 +1,21 @@
 @model IReadOnlyList<WorkCatalogItem>
+@inject IServiceCatalogStore ServiceCatalog
 @{
     ViewData["Title"] = "Danh mục công việc";
     ViewData["Subtitle"] = "Tên các đầu việc nhân viên được chọn khi tạo việc. Gõ vài chữ là gợi ý; không nhập tên tự do được. Chi tiết từng việc ghi ở phần Mô tả.";
     ViewData["PageIcon"] = "list-tree";
     var active = Model.Count(x => x.IsActive);
     var nextSort = (Model.Count == 0 ? 0 : Model.Max(x => x.SortOrder)) + 10;
+    // Measures of the service tier tables (code + name), suggested in the "Mã hạn mức chi phí" field of every popup.
+    var metrics = await ServiceCatalog.MetricsAsync();
+    var metricNames = metrics.GroupBy(m => m.Code).ToDictionary(g => g.Key, g => string.Join("; ", g.Select(m => m.Label)));
+    var units = new[] { "hóa đơn", "chứng từ", "lần", "bộ hồ sơ", "nhân sự", "tờ khai", "giao dịch", "hợp đồng" }
+        .Concat(Model.Select(x => x.Unit).OfType<string>()).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
 }
+<datalist id="catMetricList">
+    @foreach (var m in metrics) {<option value="@m.Code" label="@m.Label@(m.Unit is null ? "" : " (" + m.Unit + ")") · @string.Join(", ", m.Services)"></option>}
+</datalist>
+<datalist id="catUnitList">@foreach (var u in units) {<option value="@u"></option>}</datalist>
 @section PageActions {
     <button class="btn btn-ta-gold" type="button" data-ta-catalog-open="catDlgnew">@UiIcon.Render("plus")<span>Thêm đầu việc</span></button>
 }
@@ -40,7 +50,7 @@
     {
         <div class="ta-table-wrap">
             <table class="ta-table ta-table-stack ta-catalog-grid" id="catalogTable">
-                <thead><tr><th scope="col">Đầu việc</th><th scope="col">Mô tả</th><th scope="col" class="text-end">Thứ tự</th><th scope="col">Đang dùng</th><th scope="col">Checklist</th><th scope="col" class="text-end">Số việc</th><th scope="col" class="ta-col-actions">Thao tác</th></tr></thead>
+                <thead><tr><th scope="col">Đầu việc</th><th scope="col">Mô tả</th><th scope="col" class="text-end">Thứ tự</th><th scope="col">Đang dùng</th><th scope="col">Đơn vị · Mã hạn mức</th><th scope="col">Checklist</th><th scope="col" class="text-end">Số việc</th><th scope="col" class="ta-col-actions">Thao tác</th></tr></thead>
                 <tbody>
                 @foreach (var x in Model)
                 {
@@ -52,6 +62,7 @@
                         <td data-label="Mô tả"><span class="ta-inline" tabindex="0" data-ta-inline="Input.Description" data-ta-inline-form="@form" title="Bấm đúp để sửa nhanh">@x.Description</span></td>
                         <td data-label="Thứ tự" class="text-end"><span class="ta-inline ta-inline--num" tabindex="0" data-ta-inline="Input.SortOrder" data-ta-inline-form="@form" data-ta-inline-type="number" title="Bấm đúp để sửa nhanh">@x.SortOrder</span></td>
                         <td data-label="Đang dùng"><label class="form-check form-switch m-0" title="Bật / tắt là lưu ngay"><input class="form-check-input" type="checkbox" checked="@x.IsActive" data-ta-inline-active="@form" aria-label="Đang dùng: @x.Name" /></label></td>
+                        <td data-label="Đơn vị · Mã hạn mức">@if (x.Unit is null && x.MetricCode is null) {<span class="text-secondary">—</span>} else {<span>@(x.Unit ?? "—")</span>@if (x.MetricCode is not null) {<span class="ta-code ms-1" title="@(metricNames.TryGetValue(x.MetricCode, out var mn) ? mn : "Chưa có chỉ số hạn mức nào mang mã này")">@x.MetricCode</span>}}</td>
                         <td data-label="Checklist"><button class="btn btn-sm btn-ghost-secondary ta-catalog-steps" type="button" data-ta-catalog-open="@dlg" data-ta-catalog-tab="checklist" title="Xem / sửa checklist">@UiIcon.Render("checks")<span>@(x.ChecklistCount == 0 ? "Chưa có" : x.ChecklistCount + " mục")</span></button></td>
                         <td class="text-end" data-label="Số việc">@if (x.TaskCount > 0) {<a class="ta-catalog-count" asp-controller="Work" asp-action="Tasks" asp-route-q="@x.Name" title="Xem các công việc “@x.Name”">@x.TaskCount</a>} else {<span class="text-secondary">0</span>}</td>
                         <td class="ta-col-actions">

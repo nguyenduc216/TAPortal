@@ -95,6 +95,43 @@ public sealed class SafeServiceCatalogTests
     }
 
     [Fact]
+    public void MeasuresGetShortCodesThatWorkTypesPointTo()
+    {
+        Assert.Equal("SLCT", S.ServicePricingPolicy.AutoCode("Số lượng chứng từ"));
+        Assert.Equal("DTT", S.ServicePricingPolicy.AutoCode("Doanh thu tháng"));
+        Assert.Equal("QMNSDX", S.ServicePricingPolicy.AutoCode("Quy mô nhân sự được xử lý trong tháng"));      // at most 6
+        Assert.Equal("SLBHS", S.ServicePricingPolicy.AutoCode("Số lượng bộ hồ sơ"));
+        Assert.Equal("SL_CT2", S.ServicePricingPolicy.CleanCode(" sl_ct-2 "));
+        Assert.Null(S.ServicePricingPolicy.CleanCode(" - "));
+
+        // Empty codes come from the names; a repeated automatic code gets a number; a repeated typed code is refused.
+        var (p, error) = S.ServicePricingPolicy.Validate("""{"metrics":[{"key":"a","label":"Doanh thu tháng"},{"key":"b","label":"Đơn thuần tháng","code":""}],"tiers":[{"ranges":{"a":{"max":1}},"fee":1}]}""", []);
+        Assert.Null(error);
+        Assert.Equal(["DTT", "DTT2"], p!.Metrics.Select(m => m.Code));
+        Assert.Contains("bị trùng", S.ServicePricingPolicy.Validate("""{"metrics":[{"key":"a","label":"A","code":"X1"},{"key":"b","label":"B","code":"x1"}],"tiers":[{"ranges":{"a":{"max":1}},"fee":1}]}""", []).Error);
+        Assert.Equal("SLCT", S.ServicePricingPolicy.Read("""{"metrics":[{"key":"m1","label":"Số lượng chứng từ"}]}""").Metrics[0].Code);   // saved before codes
+
+        // The same measure in two services is offered once, with both services.
+        var options = S.ServicePricingPolicy.Options([
+            (new S.ServiceMetric { Code = "SLCT", Label = "Số lượng chứng từ", Unit = "chứng từ" }, "Kế toán thuế"),
+            (new S.ServiceMetric { Code = "SLCT", Label = "Số lượng chứng từ" }, "Kế toán nội bộ"),
+            (new S.ServiceMetric { Code = "QMNS", Label = "Quy mô nhân sự", Unit = "nhân sự" }, "Nhân sự")]);
+        Assert.Equal(2, options.Count);
+        Assert.Equal(("SLCT", "chứng từ"), (options[1].Code, options[1].Unit));
+        Assert.Equal(["Kế toán thuế", "Kế toán nội bộ"], options[1].Services);
+
+        Assert.Contains("Unit=@unit,MetricCode=@metric", S.WorkCatalogSql.Update);
+        Assert.Contains("c.Unit,c.MetricCode", S.WorkCatalogSql.List);
+        var root = new DirectoryInfo(AppContext.BaseDirectory);
+        while (!File.Exists(Path.Combine(root.FullName, "TAPortal.sln"))) root = root.Parent!;
+        var migration = File.ReadAllText(Path.Combine(root.FullName, "database", "migrations", "063-work-catalog-unit-metric.sql"));
+        Assert.Contains("ALTER TABLE dbo.WorkTaskCatalog ADD MetricCode varchar(20) NULL", migration);
+        Assert.DoesNotMatch(@"(?im)^\s*(UPDATE|DELETE|DROP)", migration);
+        Assert.True(migration.All(ch => ch < 128));
+        Assert.True(File.Exists(Path.Combine(root.FullName, "database", "scripts", "114-rollback-work-catalog-unit-metric.sql")));
+    }
+
+    [Fact]
     public void Migration061AddsTheCatalogueAndTheCustomerIndustry()
     {
         var root = new DirectoryInfo(AppContext.BaseDirectory);

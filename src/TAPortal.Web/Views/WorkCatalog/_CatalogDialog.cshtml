@@ -31,6 +31,20 @@
                     <label class="form-label" for="@(form)Desc">Mô tả</label>
                     <div class="ta-input-icon ta-input-icon--top">@UiIcon.Render("file-text")<textarea class="form-control" id="@(form)Desc" name="Input.Description" rows="2" maxlength="@WorkCatalogPolicy.DescriptionMax" placeholder="Mô tả ngắn (không bắt buộc), hiện kèm tên khi nhân viên chọn đầu việc" data-ta-voice>@x?.Description</textarea></div>
                 </div>
+                @* Đơn vị tính + mã hạn mức chi phí (operator 2026-11-16): the quantity staff enter for this work each day, totalled
+                   monthly against the tiers of the measure with this code (Hợp đồng > Danh mục dịch vụ). Lists: Views/WorkCatalog/Index. *@
+                <div class="ta-catalog-panel__row">
+                    <div>
+                        <label class="form-label" for="@(form)Unit">Đơn vị tính</label>
+                        <div class="ta-input-icon">@UiIcon.Render("hash")<input class="form-control" id="@(form)Unit" name="Input.Unit" value="@x?.Unit" maxlength="@WorkCatalogPolicy.UnitMax" list="catUnitList" placeholder="Ví dụ: hóa đơn, lần" /></div>
+                        <div class="form-hint">Đơn vị của số lượng nhập khi làm việc này.</div>
+                    </div>
+                    <div>
+                        <label class="form-label" for="@(form)Metric">Mã hạn mức chi phí</label>
+                        <div class="ta-input-icon">@UiIcon.Render("report-money")<input class="form-control ta-catalog-metric" id="@(form)Metric" name="Input.MetricCode" value="@x?.MetricCode" maxlength="@ServicePricingPolicy.CodeMax" list="catMetricList" placeholder="Gõ mã hoặc tên chỉ số, ví dụ SLCT" autocomplete="off" /></div>
+                        <div class="form-hint">Chỉ số hạn mức của dịch vụ mà số lượng này được cộng vào để tính phí cuối tháng.</div>
+                    </div>
+                </div>
                 <div class="ta-catalog-panel__row">
                     <div>
                         <label class="form-label" for="@(form)Sort">Thứ tự</label>

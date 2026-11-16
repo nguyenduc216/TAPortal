@@ -62,9 +62,15 @@ public sealed record ServiceCatalogResult(ServiceCatalogOutcome Outcome, string?
 public sealed class ServiceMetric
 {
     public string Key { get; set; } = "";
+    // Mã chỉ số (operator 2026-11-16): short, e.g. SLCT for "Số lượng chứng từ". The same measure in several services carries
+    // the same code; work catalogue entries point at it (dbo.WorkTaskCatalog.MetricCode) so daily quantities can be priced.
+    public string? Code { get; set; }
     public string Label { get; set; } = "";
     public string? Unit { get; set; }
 }
+
+// A measure as offered to the work catalogue: its code, name, unit and the services using it.
+public sealed record ServiceMetricOption(string Code, string Label, string? Unit, IReadOnlyList<string> Services);
 
 public sealed class ServiceRange
 {
@@ -124,11 +130,35 @@ public static class ServicePricingPolicy
         return (v, null);
     }
 
+    public const int CodeMax = 10, AutoCodeMax = 6;
+
     public static ServicePricing Read(string? json)
     {
         if (string.IsNullOrWhiteSpace(json)) return new();
-        try { return JsonSerializer.Deserialize<ServicePricing>(json, Json) ?? new(); }
+        ServicePricing pricing;
+        try { pricing = JsonSerializer.Deserialize<ServicePricing>(json, Json) ?? new(); }
         catch (JsonException) { return new(); }
+        foreach (var m in pricing.Metrics) m.Code = CleanCode(m.Code) ?? AutoCode(m.Label);   // tables saved before codes existed
+        return pricing;
+    }
+
+    // "Số lượng chứng từ" -> "SLCT": first letter of each word, without accents (đ -> D), at most 6 characters.
+    public static string AutoCode(string? label)
+    {
+        var plain = new string((label ?? "").Replace('đ', 'd').Replace('Đ', 'D').Normalize(System.Text.NormalizationForm.FormD)
+            .Where(c => CharUnicodeInfo.GetUnicodeCategory(c) != UnicodeCategory.NonSpacingMark).ToArray());
+        var code = new string(plain.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries)
+            .Select(w => w.FirstOrDefault(char.IsLetterOrDigit)).Where(c => c != default).Select(char.ToUpperInvariant).Take(AutoCodeMax).ToArray());
+        return code.Length == 0 ? "CS" : code;
+    }
+
+    // Letters A-Z, digits and "_" only, upper case, at most 10; null when empty.
+    public static string? CleanCode(string? code)
+    {
+        var plain = new string((code ?? "").Replace('đ', 'd').Replace('Đ', 'D').Normalize(System.Text.NormalizationForm.FormD)
+            .Where(c => CharUnicodeInfo.GetUnicodeCategory(c) != UnicodeCategory.NonSpacingMark).ToArray()).ToUpperInvariant();
+        var clean = new string(plain.Where(c => c is (>= 'A' and <= 'Z') or (>= '0' and <= '9') or '_').ToArray());
+        return clean.Length == 0 ? null : clean.Length > CodeMax ? clean[..CodeMax] : clean;
     }
 
     public static string Write(ServicePricing pricing) => JsonSerializer.Serialize(pricing, Json);
@@ -155,7 +185,16 @@ public static class ServicePricingPolicy
             if (unit?.Length > UnitMax) return (null, $"Đơn vị tính tối đa {UnitMax} ký tự.");
             var key = "m" + (i + 1);
             if (!string.IsNullOrEmpty(m.Key)) keys[m.Key] = key;
-            clean.Metrics.Add(new() { Key = key, Label = label, Unit = unit });
+            // Codes may repeat across services (same measure), never inside one service.
+            var code = CleanCode(m.Code) ?? AutoCode(label);
+            if (clean.Metrics.Any(x => x.Code == code))
+            {
+                if (CleanCode(m.Code) is not null) return (null, $"Mã chỉ số \"{code}\" bị trùng trong dịch vụ này.");
+                var n = 2;
+                while (clean.Metrics.Any(x => x.Code == code + n)) n++;
+                code += n;
+            }
+            clean.Metrics.Add(new() { Key = key, Code = code, Label = label, Unit = unit });
         }
         if (raw.ByIndustry && industries.Count == 0) return (null, "Chưa có ngành nghề nào đang dùng; thêm ở tab Ngành nghề trước khi chia phí theo ngành.");
 
@@ -215,6 +254,14 @@ public static class ServicePricingPolicy
         return string.Join("; ", parts) is { Length: > 0 } text ? text : "—";
     }
 
+    // One option per code + name; a code shared by measures of different names is listed once per name.
+    public static IReadOnlyList<ServiceMetricOption> Options(IEnumerable<(ServiceMetric Metric, string Service)> metrics) =>
+        metrics.Where(x => !string.IsNullOrWhiteSpace(x.Metric.Code))
+            .GroupBy(x => (Code: x.Metric.Code!, Label: x.Metric.Label.Trim()), x => x)
+            .Select(g => new ServiceMetricOption(g.Key.Code, g.Key.Label, g.Select(x => x.Metric.Unit).FirstOrDefault(u => !string.IsNullOrWhiteSpace(u)),
+                g.Select(x => x.Service).Distinct().ToList()))
+            .OrderBy(o => o.Code, StringComparer.Ordinal).ThenBy(o => o.Label, StringComparer.CurrentCulture).ToList();
+
     public static IReadOnlyList<string> Lines(string? text) =>
         (text ?? "").Replace("\r\n", "\n").Split('\n').Select(l => l.Trim().TrimStart('-', '*', '•').Trim()).Where(l => l.Length > 0).ToList();
 
@@ -272,6 +319,7 @@ FROM dbo.Services WHERE IsDeleted=0 ORDER BY SortOrder,Name;
 SELECT Id,CategoryId,Name,Description,PricingMode,FeeLabel,FeeUnit,FixedFee,PricingJson,ScopeText,RulesText,SortOrder,IsActive
 FROM dbo.Services WHERE Id=@id AND IsDeleted=0;
 """;
+    public const string Metrics = "SELECT Name,PricingJson FROM dbo.Services WHERE IsDeleted=0 AND IsActive=1 AND PricingMode='TIER' AND PricingJson IS NOT NULL ORDER BY SortOrder,Name;";
     public const string ActiveIndustryIds = "SELECT Id FROM dbo.Industries WHERE IsDeleted=0 AND IsActive=1;";
     public const string CategoryExists = "SELECT COUNT(1) FROM dbo.ServiceCategories WHERE Id=@id AND IsDeleted=0;";
     public const string ServiceTaken = "SELECT COUNT(1) FROM dbo.Services WITH (UPDLOCK, HOLDLOCK) WHERE CategoryId=@category AND Name=@name AND IsDeleted=0 AND (@id IS NULL OR Id<>@id);";
@@ -303,6 +351,8 @@ public interface IServiceCatalogStore
     Task<ServiceDetail?> GetServiceAsync(Guid id);
     // Active industries, for the customer form and the industry fee columns. Empty when migration 061 is not applied.
     Task<IReadOnlyList<Industry>> IndustriesAsync();
+    // Every measure of the active tier tables, one per code + name (empty when unavailable).
+    Task<IReadOnlyList<ServiceMetricOption>> MetricsAsync();
     Task<ServiceCatalogResult> SaveServiceAsync(Guid actor, Guid? id, ServiceInput input);
     Task<ServiceCatalogResult> DeleteServiceAsync(Guid actor, Guid id);
     Task<ServiceCatalogResult> SaveEntryAsync(Guid actor, CatalogKind kind, Guid? id, CatalogEntryInput input);
@@ -354,6 +404,26 @@ public sealed class SqlServiceCatalogStore(IConfiguration configuration, AdminAu
         catch (Exception ex) when (ex is SqlException or InvalidOperationException or ArgumentException)
         {
             logger.LogWarning(ex, "Industries unavailable.");
+            return [];
+        }
+    }
+
+    public async Task<IReadOnlyList<ServiceMetricOption>> MetricsAsync()
+    {
+        try
+        {
+            await using var cn = Connection();
+            await cn.OpenAsync();
+            await using var cmd = new SqlCommand(ServiceCatalogSql.Metrics, cn);
+            await using var r = await cmd.ExecuteReaderAsync();
+            var all = new List<(ServiceMetric Metric, string Service)>();
+            while (await r.ReadAsync())
+                all.AddRange(ServicePricingPolicy.Read(S(r, 1)).Metrics.Select(m => (m, r.GetString(0))));
+            return ServicePricingPolicy.Options(all);
+        }
+        catch (Exception ex) when (ex is SqlException or InvalidOperationException or ArgumentException)
+        {
+            logger.LogWarning(ex, "Service metrics unavailable.");
             return [];
         }
     }

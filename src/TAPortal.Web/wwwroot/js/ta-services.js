@@ -19,6 +19,11 @@
   }
   const show = (n) => (n == null || Number.isNaN(n) ? '' : nf.format(n));
 
+  // Same rule as ServicePricingPolicy.AutoCode: "Số lượng chứng từ" -> "SLCT".
+  const plain = (s) => String(s || '').replace(/đ/g, 'd').replace(/Đ/g, 'D').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  const autoCode = (label) => plain(label).split(/\s+/).map((w) => (w.match(/[A-Za-z0-9]/) || [''])[0]).join('').toUpperCase().slice(0, 6) || 'CS';
+  const cleanCode = (code) => plain(code).toUpperCase().replace(/[^A-Z0-9_]/g, '').slice(0, 10);
+
   function el(tag, attrs, children) {
     const e = document.createElement(tag);
     Object.entries(attrs || {}).forEach(([k, v]) => {
@@ -38,8 +43,8 @@
   function load(root) {
     let data = {};
     try { data = JSON.parse(root.querySelector('[data-ta-pricing-json]').value || '{}') || {}; } catch (e) { data = {}; }
-    const metrics = (data.metrics || []).map((m) => ({ key: m.key || 'k' + (++seq), label: m.label || '', unit: m.unit || '' }));
-    if (!metrics.length) metrics.push({ key: 'k' + (++seq), label: '', unit: '' });
+    const metrics = (data.metrics || []).map((m) => ({ key: m.key || 'k' + (++seq), code: m.code || '', label: m.label || '', unit: m.unit || '' }));
+    if (!metrics.length) metrics.push({ key: 'k' + (++seq), code: '', label: '', unit: '' });
     const tiers = (data.tiers || []).map((t) => ({ label: t.label || '', ranges: t.ranges || {}, fee: t.fee == null ? null : Number(t.fee), fees: t.fees || {} }));
     if (!tiers.length) tiers.push({ label: '', ranges: {}, fee: null, fees: {} });
     let industries = [];
@@ -50,7 +55,7 @@
   function save(root) {
     const s = states.get(root);
     const out = {
-      metrics: s.metrics.map((m) => ({ key: m.key, label: m.label.trim(), unit: m.unit.trim() || null })),
+      metrics: s.metrics.map((m) => ({ key: m.key, code: cleanCode(m.code) || autoCode(m.label), label: m.label.trim(), unit: m.unit.trim() || null })),
       byIndustry: s.byIndustry,
       tiers: s.tiers.map((t) => {
         const ranges = {};
@@ -67,6 +72,7 @@
     const box = root.querySelector('[data-ta-pricing-metrics]');
     box.replaceChildren(...s.metrics.map((m, i) => el('div', { class: 'ta-pricing__metric', dataset: { key: m.key } }, [
       el('span', { class: 'ta-pricing__metric-no', text: String(i + 1) }),
+      el('input', { class: 'form-control form-control-sm ta-pricing__code', value: m.code, maxlength: '10', placeholder: autoCode(m.label), title: 'Mã chỉ số: để trống thì lấy chữ đầu của từng từ', 'aria-label': 'Mã chỉ số ' + (i + 1), dataset: { taMetric: 'code' } }),
       el('input', { class: 'form-control form-control-sm', value: m.label, maxlength: '150', placeholder: 'Tên chỉ số, ví dụ: Số lượng chứng từ', 'aria-label': 'Tên chỉ số ' + (i + 1), dataset: { taMetric: 'label' } }),
       el('input', { class: 'form-control form-control-sm ta-pricing__unit', value: m.unit, maxlength: '50', placeholder: 'Đơn vị, ví dụ: chứng từ', 'aria-label': 'Đơn vị chỉ số ' + (i + 1), dataset: { taMetric: 'unit' } }),
       el('button', { type: 'button', class: 'ta-icon-btn', title: 'Bỏ chỉ số', 'aria-label': 'Bỏ chỉ số ' + (i + 1), dataset: { taMetricRemove: '' }, text: '×', disabled: s.metrics.length === 1 })
@@ -83,7 +89,7 @@
     const feeCols = s.byIndustry ? s.industries : [{ id: '', name: feeLabel + (feeUnit ? ' (' + feeUnit + ')' : '') }];
     const head1 = el('tr', {}, [
       el('th', { scope: 'col', rowspan: '2', text: 'Mô tả bậc' }),
-      ...s.metrics.map((m) => el('th', { scope: 'colgroup', colspan: '2', class: 'ta-pricing__metric-head', text: (m.label.trim() || 'Chỉ số') + (m.unit.trim() ? ' (' + m.unit.trim() + ')' : '') })),
+      ...s.metrics.map((m) => el('th', { scope: 'colgroup', colspan: '2', class: 'ta-pricing__metric-head', text: (m.label.trim() || 'Chỉ số') + (m.unit.trim() ? ' (' + m.unit.trim() + ')' : '') + ' · ' + (cleanCode(m.code) || autoCode(m.label)) })),
       el('th', { scope: 'colgroup', colspan: String(feeCols.length), class: 'ta-pricing__fee-head', text: s.byIndustry ? feeLabel + (feeUnit ? ' (' + feeUnit + ')' : '') + ' theo ngành nghề' : feeCols[0].name }),
       el('th', { scope: 'col', rowspan: '2', class: 'ta-pricing__actions' }, [el('span', { class: 'visually-hidden', text: 'Thao tác' })])
     ]);
@@ -135,8 +141,11 @@
     if (!root || !states.has(root)) return;
     const s = states.get(root);
     if (t.dataset.taMetric) {
-      const m = s.metrics.find((x) => x.key === t.closest('[data-key]').dataset.key);
+      const row = t.closest('[data-key]');
+      const m = s.metrics.find((x) => x.key === row.dataset.key);
       m[t.dataset.taMetric] = t.value;
+      if (t.dataset.taMetric === 'label') row.querySelector('[data-ta-metric="code"]').placeholder = autoCode(t.value);
+      if (t.dataset.taMetric === 'code') { const c = cleanCode(t.value); if (c !== t.value) t.value = c; m.code = c; }
     } else if (t.dataset.taTier) {
       const tier = s.tiers[Number(t.closest('tr').dataset.row)];
       if (t.dataset.taTier === 'label') tier.label = t.value;
@@ -170,7 +179,7 @@
     const root = t.closest('[data-ta-pricing]');
     if (!root || !states.has(root)) return;
     const s = states.get(root);
-    if (t.matches('[data-ta-pricing-add-metric]') && s.metrics.length < MAX_METRICS) s.metrics.push({ key: 'k' + (++seq), label: '', unit: '' });
+    if (t.matches('[data-ta-pricing-add-metric]') && s.metrics.length < MAX_METRICS) s.metrics.push({ key: 'k' + (++seq), code: '', label: '', unit: '' });
     else if (t.matches('[data-ta-metric-remove]') && s.metrics.length > 1) s.metrics = s.metrics.filter((m) => m.key !== t.closest('[data-key]').dataset.key);
     else if (t.matches('[data-ta-pricing-add-tier]')) s.tiers.push({ label: '', ranges: {}, fee: null, fees: {} });
     else if (t.matches('[data-ta-tier-remove]')) { s.tiers.splice(Number(t.closest('tr').dataset.row), 1); if (!s.tiers.length) s.tiers.push({ label: '', ranges: {}, fee: null, fees: {} }); }
