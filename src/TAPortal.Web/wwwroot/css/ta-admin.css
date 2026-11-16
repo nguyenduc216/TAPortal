@@ -26,6 +26,11 @@
 .ta-ws-grid > .card { margin: 0; }
 .ta-ws-span-2 { grid-column: span 2; }
 .ta-ws-span-all { grid-column: 1 / -1; }
+.ta-ws-grid.ta-task-detail { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); }
+.ta-task-detail .ta-dl { grid-template-columns: minmax(120px, 28%) minmax(0, 1fr); }
+.ta-task-detail .ta-dl dd { min-width: 0; }
+@media (max-width: 991.98px) { .ta-ws-grid.ta-task-detail { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 767.98px) { .ta-task-detail .ta-dl { grid-template-columns: 1fr; } }
 .ta-form-grid--3 > .ta-ws-span-2 { grid-column: span 2; }
 .ta-metric__value { font-size: 1.125rem; font-weight: 750; line-height: 1.2; color: var(--ta-text); }
 

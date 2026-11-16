@@ -68,7 +68,7 @@
         popup.hidden = true;
         popup.innerHTML = `<div class="ta-input-icon">${iconHtml('taIconSearch')}<input type="text" class="form-control form-control-sm" role="combobox" aria-autocomplete="list" aria-expanded="true" aria-controls="${uid}List" autocomplete="off" placeholder="Tìm kiếm..." aria-label="Tìm trong danh sách" /></div><ul class="ta-select__list" role="listbox" id="${uid}List"></ul><div class="ta-select__empty" hidden>Không tìm thấy kết quả</div>`;
         popup.dataset.taTransient = 'true';
-        (select.closest('.modal') || document.body).appendChild(popup);
+        (select.closest('.modal, dialog') || document.body).appendChild(popup);
         const search = popup.querySelector('input');
         const list = popup.querySelector('ul');
         const empty = popup.querySelector('.ta-select__empty');

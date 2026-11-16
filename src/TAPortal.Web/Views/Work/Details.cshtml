@@ -29,7 +29,7 @@
         <form method="post" asp-action="Delete" asp-route-id="@t.Id" class="d-inline" onsubmit="return confirm('Xóa công việc này?');"><button class="btn btn-outline-danger" type="submit">@UiIcon.Render("trash")<span>Xóa</span></button></form>
     }
 }
-<div class="ta-ws-grid">
+<div class="ta-ws-grid ta-task-detail">
     <section class="card" aria-labelledby="infoTitle">
         <div class="card-header"><h2 class="card-title" id="infoTitle">@UiIcon.Render("info-circle")Thông tin</h2></div>
         <div class="card-body">

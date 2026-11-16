@@ -63,12 +63,12 @@ public sealed class WorkTaskFilter
     public List<string> Statuses { get; set; } = [];
     public List<Guid> Employees { get; set; } = [];
     public List<Guid> Customers { get; set; } = [];
-    public string? DateField { get; set; }     // start | due | done
+    public string? DateField { get; set; }     // due | start | created | done
     public DateTime? From { get; set; }
     public DateTime? To { get; set; }
 
-    public static readonly string[] DateFields = ["due", "start", "done"];
-    public static string DateFieldLabel(string? f) => f switch { "start" => "Ngày bắt đầu", "done" => "Ngày hoàn thành", _ => "Hạn hoàn thành" };
+    public static readonly string[] DateFields = ["due", "start", "created", "done"];
+    public static string DateFieldLabel(string? f) => f switch { "start" => "Ngày bắt đầu", "created" => "Ngày tạo", "done" => "Ngày hoàn thành", _ => "Hạn hoàn thành" };
 
     /// <summary>The effective filter values: old single-value parameters folded in, unknown values dropped.</summary>
     public (List<string> Statuses, List<Guid> Employees, List<Guid> Customers, string DateField) Normalized()
@@ -76,7 +76,7 @@ public sealed class WorkTaskFilter
         var statuses = Statuses.Append(Status ?? "").Where(x => WorkTaskPolicy.Statuses.Contains(x) || x is "open" or "overdue").Distinct().ToList();
         var employees = Employees.Append(Owner ?? Guid.Empty).Where(x => x != Guid.Empty).Distinct().ToList();
         var customers = Customers.Append(Customer ?? Guid.Empty).Where(x => x != Guid.Empty).Distinct().ToList();
-        return (statuses, employees, customers, DateField is "start" or "done" ? DateField : "due");
+        return (statuses, employees, customers, DateField is "start" or "created" or "done" ? DateField : "due");
     }
 
     /// <summary>How many filters of the popup are in use (the badge on the "Bộ lọc" button).</summary>
@@ -218,8 +218,8 @@ SELECT x.TaskId,x.Id,x.Kind,x.Body,x.StatusFrom,x.StatusTo,x.CreatedAt,x.Display
  AND (@employees IS NULL OR @employees LIKE '%,'+CONVERT(varchar(36),t.OwnerEmployeeId)+',%'
       OR EXISTS(SELECT 1 FROM dbo.WorkTaskMembers fm WHERE fm.TaskId=t.Id AND fm.IsActive=1 AND @employees LIKE '%,'+CONVERT(varchar(36),fm.EmployeeId)+',%'))
  AND (@customers IS NULL OR (t.CustomerId IS NOT NULL AND @customers LIKE '%,'+CONVERT(varchar(36),t.CustomerId)+',%'))
- AND (@from IS NULL OR CASE @dateField WHEN 'start' THEN t.StartDate WHEN 'done' THEN CAST(DATEADD(HOUR,7,t.CompletedAt) AS date) ELSE t.DueDate END>=@from)
- AND (@to IS NULL OR CASE @dateField WHEN 'start' THEN t.StartDate WHEN 'done' THEN CAST(DATEADD(HOUR,7,t.CompletedAt) AS date) ELSE t.DueDate END<=@to)
+ AND (@from IS NULL OR CASE @dateField WHEN 'start' THEN t.StartDate WHEN 'created' THEN CAST(DATEADD(HOUR,7,t.CreatedAt) AS date) WHEN 'done' THEN CAST(DATEADD(HOUR,7,t.CompletedAt) AS date) ELSE t.DueDate END>=@from)
+ AND (@to IS NULL OR CASE @dateField WHEN 'start' THEN t.StartDate WHEN 'created' THEN CAST(DATEADD(HOUR,7,t.CreatedAt) AS date) WHEN 'done' THEN CAST(DATEADD(HOUR,7,t.CompletedAt) AS date) ELSE t.DueDate END<=@to)
  AND (@q IS NULL OR t.Title LIKE @q ESCAPE '\' OR t.TaskNo LIKE @q ESCAPE '\')
 ORDER BY CASE WHEN t.Status IN ('NEW','IN_PROGRESS') THEN 0 ELSE 1 END, CASE WHEN t.DueDate IS NULL THEN 1 ELSE 0 END, t.DueDate, t.LastActivityAt DESC;
 """;

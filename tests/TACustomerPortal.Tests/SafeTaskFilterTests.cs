@@ -40,7 +40,10 @@ public sealed class SafeTaskFilterTests
         Assert.Contains("@statuses LIKE '%,'+t.Status+',%'", WorkTaskSql.List);
         Assert.Contains("fm.EmployeeId", WorkTaskSql.List);
         Assert.Contains("@customers LIKE", WorkTaskSql.List);
-        Assert.Contains("CASE @dateField WHEN 'start' THEN t.StartDate WHEN 'done'", WorkTaskSql.List);
+        Assert.Contains("CASE @dateField WHEN 'start' THEN t.StartDate WHEN 'created' THEN CAST(DATEADD(HOUR,7,t.CreatedAt) AS date) WHEN 'done'", WorkTaskSql.List);
+        Assert.Equal(["due", "start", "created", "done"], WorkTaskFilter.DateFields);                    // Ngày tạo too
+        Assert.Equal("created", new WorkTaskFilter { DateField = "created" }.Normalized().DateField);
+        Assert.Equal("Ngày tạo", WorkTaskFilter.DateFieldLabel("created"));
         Assert.DoesNotContain("@owner", WorkTaskSql.List);
     }
 
