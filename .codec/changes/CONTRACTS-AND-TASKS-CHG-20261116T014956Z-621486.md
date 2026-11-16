@@ -60,3 +60,4 @@
 - Danh mục công việc: ô soạn checklist mẫu từng mục (tên + diễn giải nhiều dòng, thêm/bỏ mục, đánh số); nút Checklist mẫu đang mở có màu nổi; "Số việc" là link sang Danh sách công việc lọc theo tên đầu việc (đếm cả việc lặp "tên — kỳ ...").
 - Thẻ công việc và chi tiết công việc: mục có diễn giải hiện "Hướng dẫn" (mở/đóng) ngay dưới mục; tra theo tên đầu việc (cả việc lặp) và tên mục.
 - Tests: SafeWorkCatalogTests.EachTemplateItemMayCarryAnExplanation. Safe 781/781 pass.
+- Migration 057: pre-check NOT_APPLIED; dry-run PASS/NOT_APPLIED trancount0=True; gates PASS (781); real run 2026-11-16 02:23:39Z VERIFY_STATUS=PASS ⇒ EXECUTED.
