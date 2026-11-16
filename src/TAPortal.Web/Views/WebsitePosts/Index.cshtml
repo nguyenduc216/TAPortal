@@ -11,6 +11,7 @@
 }
 @section PageActions {
     <a class="btn" href="@(Model.PublicUrl)/tin-tuc" target="_blank" rel="noopener">@UiIcon.Render("external-link")<span>Xem trang Tin tức</span></a>
+    @if (canEdit) {<a class="btn" asp-action="Library">@UiIcon.Render("file-text")<span>Bài soạn sẵn</span></a>}
     @if (canEdit) {<a class="btn btn-ta-gold" asp-action="Create">@UiIcon.Render("plus")<span>Viết bài mới</span></a>}
 }
 @if (Model.Error is not null) {<div class="ta-alert ta-alert--danger" role="alert">@UiIcon.Render("alert-circle")<div class="ta-alert__body">@Model.Error</div></div>}
@@ -32,7 +33,7 @@
     </form>
     @if (Model.Items.Count == 0)
     {
-        <div class="ta-empty"><span class="ta-empty__icon">@UiIcon.Render("file-text")</span><p class="ta-empty__title">Chưa có bài viết phù hợp</p><p class="ta-empty__text">Bấm "Viết bài mới" để đăng bài đầu tiên lên mục Tin tức.</p></div>
+        <div class="ta-empty"><span class="ta-empty__icon">@UiIcon.Render("file-text")</span><p class="ta-empty__title">Chưa có bài viết phù hợp</p><p class="ta-empty__text">Bấm "Viết bài mới" để đăng bài đầu tiên lên mục Tin tức, hoặc "Bài soạn sẵn" để thêm các bài T.A đã chuẩn bị.</p></div>
     }
     else
     {

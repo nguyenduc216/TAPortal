@@ -358,6 +358,54 @@ public sealed class WebsitePostsController(IWebsiteAdminStore store, IConfigurat
         return RedirectToAction(nameof(Index));
     }
 
+    // "Bài soạn sẵn": articles shipped with the Portal; staff add them as drafts, review, then publish.
+    [HttpGet]
+    [Authorize(Policy = AdminPermissions.Policy.WebsitePostsEdit)]
+    public async Task<IActionResult> Library()
+    {
+        try
+        {
+            var existing = (await store.PostsAsync(null, null, null)).ToDictionary(p => p.Slug, p => p.Id, StringComparer.Ordinal);
+            return View(new WebsitePostLibraryVm(PostLibrary.All, existing, null));
+        }
+        catch (SqlException ex) { logger.LogError(ex, "WEBSITE_ADMIN_UNAVAILABLE"); return View(new WebsitePostLibraryVm(PostLibrary.All, new Dictionary<string, Guid>(), WebsiteController.StoreUnavailable)); }
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [Authorize(Policy = AdminPermissions.Policy.WebsitePostsEdit)]
+    public async Task<IActionResult> ImportLibrary(string[]? slugs)
+    {
+        if (UsersController.ActorId(User) is not Guid actor) return Forbid();
+        var ip = HttpContext.Connection.RemoteIpAddress?.ToString();
+        var wanted = slugs is { Length: > 0 } ? new HashSet<string>(slugs, StringComparer.Ordinal) : null;
+        var existing = (await store.PostsAsync(null, null, null)).Select(p => p.Slug).ToHashSet(StringComparer.Ordinal);
+        var picks = PostLibrary.All.Where(p => (wanted is null || wanted.Contains(p.Slug)) && !existing.Contains(p.Slug)).ToList();
+        var categories = (await store.CategoriesAsync()).ToDictionary(c => c.Slug, c => c.Id, StringComparer.Ordinal);
+        int added = 0, failed = 0;
+        foreach (var post in picks)
+        {
+            if (!categories.TryGetValue(post.Category, out var categoryId))
+            {
+                var order = PostLibrary.Categories.Select(c => c.Slug).ToList().IndexOf(post.Category) + 1;
+                var created = await store.SaveCategoryAsync(actor, ip, null, PostLibrary.CategoryName(post.Category), post.Category, order);
+                if (created is { Outcome: WebsiteOutcome.Saved, Id: Guid newId }) categories[post.Category] = categoryId = newId;
+            }
+            var input = new WebsitePostInput
+            {
+                Title = post.Title, Slug = post.Slug, Summary = post.Summary, BodyHtml = post.BodyHtml, Tags = post.Tags, AuthorName = PostLibrary.Author,
+                SeoTitle = post.SeoTitle, SeoDescription = post.SeoDescription, CategoryId = categoryId == Guid.Empty ? null : categoryId, Publish = false
+            };
+            if (input.Normalize().Count > 0) { failed++; continue; }
+            var result = await store.SavePostAsync(actor, ip, null, input, clock.GetUtcNow().UtcDateTime);
+            if (result.Outcome == WebsiteOutcome.Saved) added++; else failed++;
+        }
+        if (added > 0) TempData["Success"] = $"Đã thêm {added} bài dưới dạng bản nháp. Đọc lại từng bài rồi bấm Xuất bản.";
+        if (failed > 0) TempData["Error"] = $"{failed} bài chưa thêm được, thử lại sau.";
+        if (added == 0 && failed == 0) TempData["Success"] = "Các bài soạn sẵn đã có trong danh sách bài viết.";
+        return RedirectToAction(nameof(Library));
+    }
+
     private async Task<IReadOnlyList<TAWebsite.Core.Data.PostCategory>> SafeCategories()
     {
         try { return await store.CategoriesAsync(); }

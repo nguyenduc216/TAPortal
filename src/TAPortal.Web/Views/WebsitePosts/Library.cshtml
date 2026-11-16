@@ -1,0 +1,46 @@
+@model WebsitePostLibraryVm
+@{
+    ViewData["ParentTitle"] = "Bài viết";
+    ViewData["ParentController"] = "WebsitePosts";
+    ViewData["Title"] = "Bài soạn sẵn";
+    ViewData["Heading"] = "Bài soạn sẵn";
+    ViewData["Subtitle"] = "Bài kiến thức kế toán – thuế đã soạn sẵn. Thêm vào danh sách dưới dạng bản nháp, đọc lại, chỉnh theo thực tế rồi mới xuất bản.";
+    ViewData["PageIcon"] = "file-text";
+}
+@section PageActions {
+    <a class="btn" asp-action="Index">@UiIcon.Render("arrow-left")<span>Về danh sách bài viết</span></a>
+}
+@if (Model.Error is not null) {<div class="ta-alert ta-alert--danger" role="alert">@UiIcon.Render("alert-circle")<div class="ta-alert__body">@Model.Error</div></div>}
+<div class="ta-alert ta-alert--info" role="note">@UiIcon.Render("info-circle")<div class="ta-alert__body">Bài được soạn theo quy định đến tháng 11/2026. Trước khi xuất bản, chuyên viên T.A nên đối chiếu lại số liệu, thời hạn và văn bản pháp luật được dẫn trong bài.</div></div>
+<section class="card ta-table-card" aria-label="Danh sách bài soạn sẵn">
+    <form method="post" asp-action="ImportLibrary">
+        <div class="ta-table-toolbar d-flex flex-wrap gap-2 align-items-center justify-content-between">
+            <span>@Model.Posts.Count bài · <b>@Model.Missing</b> bài chưa thêm</span>
+            @if (Model.Missing > 0) {<button class="btn btn-ta-gold" type="submit">@UiIcon.Render("plus")<span>Thêm @Model.Missing bài chưa có (bản nháp)</span></button>}
+        </div>
+        <div class="ta-table-wrap">
+            <table class="ta-table ta-table-stack">
+                <thead><tr><th scope="col">#</th><th scope="col">Bài viết</th><th scope="col">Chuyên mục</th><th scope="col">Trạng thái</th></tr></thead>
+                <tbody>
+                @foreach (var p in Model.Posts)
+                {
+                    var has = Model.Existing.TryGetValue(p.Slug, out var id);
+                    <tr>
+                        <td>@p.Order</td>
+                        <td class="ta-cell-strong">@p.Title<span class="ta-cell-sub d-block">@p.Summary</span>
+                            @if (p.Uncertain is { Count: > 0 })
+                            {
+                                <details class="ta-web-cat mt-1"><summary class="text-danger">Cần T.A rà lại (@p.Uncertain.Count điểm)</summary><ul class="ta-cell-sub mb-1">@foreach (var u in p.Uncertain) {<li>@u</li>}</ul>
+                                    @if (p.Sources is { Count: > 0 }) {<b class="ta-cell-sub">Nguồn đã tham khảo</b><ul class="ta-cell-sub">@foreach (var s in p.Sources) {<li>@s</li>}</ul>}
+                                </details>
+                            }
+                        </td>
+                        <td data-label="Chuyên mục">@PostLibrary.CategoryName(p.Category)</td>
+                        <td data-label="Trạng thái">@if (has) {<a class="ta-badge ta-badge--success" asp-action="Edit" asp-route-id="@id">Đã thêm – mở bài</a>} else {<span class="ta-badge ta-badge--neutral">Chưa thêm</span>}</td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    </form>
+</section>

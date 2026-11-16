@@ -20,6 +20,11 @@ public sealed record WebsiteMediaVm(IReadOnlyList<WebsiteMediaItem> Items, strin
 public sealed record WebsitePostsVm(IReadOnlyList<WebsitePostListItem> Items, IReadOnlyList<PostCategory> Categories, string? Status, Guid? Category,
     string? Search, DateTime NowUtc, string PublicUrl, string? Error);
 
+public sealed record WebsitePostLibraryVm(IReadOnlyList<LibraryPost> Posts, IReadOnlyDictionary<string, Guid> Existing, string? Error)
+{
+    public int Missing => Posts.Count(p => !Existing.ContainsKey(p.Slug));
+}
+
 public sealed record WebsitePostEditVm(Guid? Id, WebsitePostInput Input, WebsitePostEdit? Current, IReadOnlyList<PostCategory> Categories, string PublicUrl)
 {
     public bool IsCreate => Id is null;

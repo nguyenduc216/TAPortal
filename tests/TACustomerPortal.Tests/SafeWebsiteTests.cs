@@ -385,6 +385,51 @@ public sealed class SafeWebsiteTests
         Assert.Single(store.Posts);
     }
 
+    [Fact]
+    public void PostLibraryArticlesAreValidAndSurviveTheSanitizer()
+    {
+        var posts = S.PostLibrary.All;
+        Assert.Equal(20, posts.Count);
+        Assert.Equal(posts.Count, posts.Select(p => p.Slug).Distinct().Count());
+        foreach (var p in posts)
+        {
+            Assert.True(Slug.IsValid(p.Slug), p.Slug);
+            Assert.Contains(S.PostLibrary.Categories, c => c.Slug == p.Category);
+            Assert.InRange(p.Title.Length, 10, 120);
+            Assert.InRange(p.SeoDescription.Length, 50, 200);
+            Assert.Contains("<h2", p.BodyHtml);
+            Assert.Contains("/lien-he", p.BodyHtml);
+            var input = new S.WebsitePostInput { Title = p.Title, Slug = p.Slug, Summary = p.Summary, BodyHtml = p.BodyHtml, Tags = p.Tags, SeoTitle = p.SeoTitle, SeoDescription = p.SeoDescription };
+            Assert.Empty(input.Normalize());
+            Assert.Equal(p.Slug, input.Slug);
+            Assert.True(PostHtml.PlainText(input.BodyHtml, int.MaxValue).Length > 3000, p.Slug);
+            Assert.Contains("ar-callout", input.BodyHtml);
+        }
+    }
+
+    [Fact]
+    public async Task PostLibraryImportsMissingArticlesAsDraftsOnlyOnce()
+    {
+        var store = new MemoryAdminStore();
+        await using var f = AdminFactory(store, "WEBSITE.VIEW", "WEBSITE.POSTS.EDIT");
+        var client = AdminClient(f);
+        var page = await client.GetStringAsync("/WebsitePosts/Library");
+        Assert.Contains("Chưa thêm", WebUtility.HtmlDecode(page));
+        var token = Token(page);
+        var first = S.PostLibrary.All[0];
+        Assert.Equal(HttpStatusCode.Redirect, (await client.PostAsync("/WebsitePosts/ImportLibrary", Form(token, ("slugs", first.Slug)))).StatusCode);
+        Assert.Single(store.Posts);
+        Assert.Equal(HttpStatusCode.Redirect, (await client.PostAsync("/WebsitePosts/ImportLibrary", Form(token))).StatusCode);
+        Assert.Equal(S.PostLibrary.All.Count, store.Posts.Count);
+        Assert.All(store.Posts.Values, p => Assert.False(p.Input.Publish));
+        Assert.All(store.Posts.Values, p => Assert.Equal(S.PostLibrary.Author, p.Input.AuthorName));
+        await client.PostAsync("/WebsitePosts/ImportLibrary", Form(token));
+        Assert.Equal(S.PostLibrary.All.Count, store.Posts.Count);
+
+        await using var viewer = AdminFactory(new MemoryAdminStore(), "WEBSITE.VIEW");
+        Assert.NotEqual(HttpStatusCode.OK, (await AdminClient(viewer).GetAsync("/WebsitePosts/Library")).StatusCode);
+    }
+
     // ---- Public website (fake reader) -----------------------------------------------------------------------------
     [Fact]
     public async Task PublicSiteRendersPagesFromContentAndKeepsLinksSafe()
