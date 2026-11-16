@@ -438,3 +438,14 @@
 .ta-pricing__fee{min-width:110px}
 @media (max-width:767.98px){.ta-svc-modes{grid-template-columns:1fr}.ta-pricing__metric{grid-template-columns:24px minmax(0,1fr) 36px}.ta-pricing__unit{grid-column:2}}
 .ta-pricing__actions{white-space:nowrap;width:1%}
+/* Danh mục dịch vụ: khoảng cách giữa các nhóm; cột thẳng hàng giữa các nhóm (operator 2026-11-16). */
+.ta-svc-group + .ta-svc-group{margin-top:var(--ta-sp-5,1.25rem)}
+@media (min-width:768px){
+  .ta-svc-group .ta-table{table-layout:fixed;width:100%}
+  .ta-svc-group .ta-table th:nth-child(1){width:34%}
+  .ta-svc-group .ta-table th:nth-child(2){width:14%}
+  .ta-svc-group .ta-table th:nth-child(3){width:18%}
+  .ta-svc-group .ta-table th:nth-child(4){width:14%}
+  .ta-svc-group .ta-table th:nth-child(5){width:10%}
+  .ta-svc-group .ta-table th:nth-child(6){width:120px}
+}
