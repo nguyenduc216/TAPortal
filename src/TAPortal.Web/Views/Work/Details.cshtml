@@ -1,5 +1,7 @@
 @model WorkDetailsVm
+@inject IWorkCatalogStore WorkCatalog
 @{
+    var guides = await WorkCatalog.GuidesAsync();
     var d = Model.Detail;
     var t = d.Task;
     ViewData["Title"] = t.TaskNo;
@@ -72,6 +74,7 @@
                             <button type="submit" class="ta-check" role="checkbox" aria-checked="@(i.IsDone ? "true" : "false")" aria-label="@(i.IsDone ? "Bỏ hoàn thành" : "Đánh dấu hoàn thành"): @i.Title" disabled="@closed">@if (i.IsDone) {@UiIcon.Render("check")}</button>
                         </form>
                         <span class="ta-checklist__text">@i.Title</span>
+                        @if (guides.For(t.Title, i.Title) is string guide) {<details class="ta-checklist__guide"><summary>@UiIcon.Render("info-circle")<span>Hướng dẫn</span></summary><div class="ta-prewrap">@guide</div></details>}
                         @if (i.IsDone && i.DoneAt is DateTime doneAt) {<time class="ta-checklist__time" datetime="@doneAt.ToString("o")">@UiIcon.Render("clock")@Local(doneAt)@(i.DoneByName is null ? "" : " · " + i.DoneByName)</time>}
                         @if (!closed)
                         {

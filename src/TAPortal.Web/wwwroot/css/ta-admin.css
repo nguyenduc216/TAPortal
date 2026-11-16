@@ -93,7 +93,21 @@
 .ta-task__done-note[hidden] { display: none; }
 .ta-task__done-actions { display: flex; gap: var(--ta-sp-2); }
 .ta-catalog-add__check { grid-column: 1 / -1; }
+[data-ta-catalog-toggle][aria-expanded="true"] { background: var(--ta-primary, #1565c0); border-color: var(--ta-primary, #1565c0); color: #fff; }
+tr:has(> td > [data-ta-catalog-toggle][aria-expanded="true"]) > td { background: var(--ta-surface-2, #f7f9fc); }
+.ta-catalog-count { display: inline-block; min-width: 28px; padding: 2px 8px; border-radius: 999px; font-weight: 600; text-decoration: none; background: var(--ta-surface-2, #eef3fa); }
+.ta-catalog-count:hover { text-decoration: underline; }
 .ta-catalog-check > td { background: var(--ta-surface-2, #f7f9fc); }
+.ta-steps { list-style: none; margin: 0 0 var(--ta-sp-2); padding: 0; display: grid; gap: var(--ta-sp-2); counter-reset: ta-step; }
+.ta-step { display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; gap: var(--ta-sp-2); align-items: start; counter-increment: ta-step; }
+.ta-step__no::before { content: counter(ta-step) "."; display: block; padding-top: 6px; font-weight: 600; color: var(--ta-text-2); text-align: right; }
+.ta-step__body { display: grid; gap: 4px; }
+.ta-step__actions { display: flex; gap: var(--ta-sp-2); }
+.ta-checklist > li { flex-wrap: wrap; }
+.ta-checklist__guide { flex: 1 1 100%; margin: -2px 0 4px 36px; font-size: var(--ta-fs-small); }
+.ta-checklist__guide > summary { display: inline-flex; align-items: center; gap: 4px; cursor: pointer; color: var(--ta-primary, #1565c0); }
+.ta-checklist__guide > summary .ta-icon { width: 14px; height: 14px; }
+.ta-checklist__guide > div { margin-top: 4px; padding: 8px 10px; border-left: 3px solid var(--ta-primary, #1565c0); background: var(--ta-surface-2, #f7f9fc); border-radius: 4px; }
 .ta-task__inline { display: flex; gap: var(--ta-sp-2); align-items: flex-start; margin-top: var(--ta-sp-2); }
 .ta-task__inline > .form-control, .ta-task__inline > .ta-voice, .ta-task__inline > .ta-input-icon { flex: 1 1 auto; min-width: 0; }
 .ta-progress { height: 6px; border-radius: 99px; background: var(--ta-surface-2); border: 1px solid var(--ta-border); overflow: hidden; }

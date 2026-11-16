@@ -66,6 +66,28 @@
         field.form?.requestSubmit();
     });
 
+    // Danh mục công việc: checklist mẫu item by item (name + explanation). Names are renumbered so the posted list
+    // Input.Items[0..n] follows the order on screen.
+    const renumberSteps = (list) => list.querySelectorAll('[data-ta-step]').forEach((li, i) => {
+        li.querySelectorAll('[name^="Input.Items["]').forEach((f) => { f.name = f.name.replace(/Input\.Items\[[^\]]*\]/, `Input.Items[${i}]`); });
+    });
+    document.addEventListener('click', (event) => {
+        const target = event.target instanceof Element ? event.target : null;
+        const add = target?.closest('[data-ta-step-add]');
+        const remove = target?.closest('[data-ta-step-remove]');
+        if (add) {
+            const cell = add.closest('td');
+            const list = cell.querySelector('[data-ta-steps]');
+            list.appendChild(cell.querySelector('template[data-ta-step-template]').content.firstElementChild.cloneNode(true));
+            renumberSteps(list);
+            list.lastElementChild.querySelector('input').focus();
+        } else if (remove) {
+            const list = remove.closest('[data-ta-steps]');
+            remove.closest('[data-ta-step]').remove();
+            renumberSteps(list);
+        }
+    });
+
     // Danh mục công việc: the "Checklist mẫu" button opens the template row under its entry.
     document.addEventListener('click', (event) => {
         const toggle = event.target instanceof Element ? event.target.closest('[data-ta-catalog-toggle]') : null;
@@ -73,7 +95,11 @@
         const row = document.getElementById(toggle.dataset.taCatalogToggle + 'Check');
         row.hidden = !row.hidden;
         toggle.setAttribute('aria-expanded', row.hidden ? 'false' : 'true');
-        if (!row.hidden) row.querySelector('textarea').focus();
+        if (!row.hidden) {
+            const list = row.querySelector('[data-ta-steps]');
+            if (list && list.children.length === 0) row.querySelector('[data-ta-step-add]').click();
+            else row.querySelector('input:not([type=hidden]), textarea')?.focus();
+        }
     });
 
     document.addEventListener('click', (event) => {

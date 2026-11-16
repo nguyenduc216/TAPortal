@@ -52,3 +52,11 @@
 - Tests: SafeWorkCatalogTests.EachEntryCarriesAChecklistTemplate. Safe 780/780 pass.
 - Migration 056: pre-check NOT_APPLIED; dry-run (rolled back) afterMigration=PASS afterRollback=NOT_APPLIED trancount0=True; gates PASS (780 Safe); real run 2026-11-16 02:00:17Z VERIFY_STATUS=PASS ⇒ EXECUTED.
 - Deploy 1 (quy tắc ghi chú hoàn thành, 62477f7): portal DEPLOYED, merge main.
+
+## Diễn giải từng mục checklist mẫu (cùng change)
+- Operator 2026-11-16: "thêm diễn giải cho checklist ... quy trình/công thức", chọn "Gắn từng mục".
+- Migration 057-work-catalog-checklist-guides.sql (+101 verify, 102 rollback): `dbo.WorkTaskCatalog.ChecklistJson nvarchar(max) NULL` = [{"title","guide"}]; ChecklistText (056) vẫn giữ tên mục cho form tạo việc.
+- `WorkCatalogPolicy.Steps/CleanSteps/ToJson/ToText/Append`; `WorkGuideIndex` + `IWorkCatalogStore.GuidesAsync` (cache 5 phút, xóa cache khi lưu/xóa/bổ sung; lỗi DB → rỗng).
+- Danh mục công việc: ô soạn checklist mẫu từng mục (tên + diễn giải nhiều dòng, thêm/bỏ mục, đánh số); nút Checklist mẫu đang mở có màu nổi; "Số việc" là link sang Danh sách công việc lọc theo tên đầu việc (đếm cả việc lặp "tên — kỳ ...").
+- Thẻ công việc và chi tiết công việc: mục có diễn giải hiện "Hướng dẫn" (mở/đóng) ngay dưới mục; tra theo tên đầu việc (cả việc lặp) và tên mục.
+- Tests: SafeWorkCatalogTests.EachTemplateItemMayCarryAnExplanation. Safe 781/781 pass.
