@@ -46,3 +46,7 @@ Operator 2026-11-16 (start of the contract / customer / task rework after the ne
 
 ## Migration execution
 - 061-service-catalog.sql: PRECHECK NOT_APPLIED; DRYRUN PASS/NOT_APPLIED (trancount 0); gates PASS (800); REAL RUN VERIFY_STATUS=PASS => EXECUTED 2026-11-16T15:31:25Z
+
+## Deploy
+- portal: commit 11c0eb3, artifact f3eb630517b9d4f54c91d35140749e2b395d6bf59fafb767ee9448bf0c9dac62, package 64BAF6DBC5CDF5BAADDE53D00B6D786FD8947EB380F969E51792F095EA6EB48A, DEPLOYED 2026-11-16T15:35:02Z, health 200. Smoke: /ServiceCatalog (3 tabs, empty catalogue), industries tab add row, customer edit shows Ngành nghề; nothing saved.
+- Note: portal had been overwritten at 21:28 by the WEBSITE-TA deploy (d998c53); redeployed from b02bcd4 (main with both) at 22:11 before this change.
