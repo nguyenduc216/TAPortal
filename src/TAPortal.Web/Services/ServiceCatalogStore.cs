@@ -22,6 +22,7 @@ public sealed record Industry(Guid Id, string Name, string? Description, int Sor
 public sealed record ServiceRow(Guid Id, Guid CategoryId, string Name, string PricingMode, string? FeeUnit, decimal? FixedFee, int TierCount, int ScopeCount, int SortOrder, bool IsActive);
 public sealed record ServiceDetail(Guid Id, Guid CategoryId, string Name, string? Description, string PricingMode, string? FeeLabel, string? FeeUnit, decimal? FixedFee,
     string? PricingJson, string? ScopeText, string? RulesText, int SortOrder, bool IsActive);
+public sealed record ServiceTaskItem(Guid CatalogId, string Name, string? Unit, string? MetricCode, int ChecklistCount, bool IsActive);
 public sealed record ServiceCatalog(IReadOnlyList<ServiceCategory> Categories, IReadOnlyList<ServiceRow> Services, IReadOnlyList<Industry> Industries);
 
 public sealed class ServiceInput
@@ -38,6 +39,10 @@ public sealed class ServiceInput
     public string? RulesText { get; set; }
     public int SortOrder { get; set; }
     public bool IsActive { get; set; } = true;
+    // Danh sách công việc of the service (migration 065): work catalogue entries in order. TasksPosted tells an emptied list
+    // from a form without the tab.
+    public List<Guid>? TaskIds { get; set; }
+    public bool TasksPosted { get; set; }
 
     public static ServiceInput From(ServiceDetail d) => new()
     {
@@ -98,7 +103,7 @@ public static class ServicePricingPolicy
     public const string Tier = "TIER", Fixed = "FIXED", Quote = "QUOTE";
     public static readonly string[] Modes = [Tier, Fixed, Quote];
     public const int NameMax = 200, CategoryNameMax = 150, DescriptionMax = 1000, LabelMax = 150, UnitMax = 50, FeeLabelMax = 100,
-        TextMax = 8000, MetricsMax = 3, TiersMax = 60;
+        TextMax = 8000, MetricsMax = 3, TiersMax = 60, TasksMax = 100;
     public const decimal ValueMax = 1_000_000_000_000m;
     public static readonly CultureInfo Vi = CultureInfo.GetCultureInfo("vi-VN");
 
@@ -319,6 +324,13 @@ FROM dbo.Services WHERE IsDeleted=0 ORDER BY SortOrder,Name;
 SELECT Id,CategoryId,Name,Description,PricingMode,FeeLabel,FeeUnit,FixedFee,PricingJson,ScopeText,RulesText,SortOrder,IsActive
 FROM dbo.Services WHERE Id=@id AND IsDeleted=0;
 """;
+    public const string ServiceTasks = """
+SELECT k.Id,k.Name,k.Unit,k.MetricCode,k.ChecklistText,k.ChecklistJson,k.IsActive
+FROM dbo.ServiceTasks st JOIN dbo.WorkTaskCatalog k ON k.Id=st.CatalogId AND k.IsDeleted=0 WHERE st.ServiceId=@id ORDER BY st.SortOrder,k.Name;
+""";
+    public const string ClearTasks = "DELETE FROM dbo.ServiceTasks WHERE ServiceId=@id;";
+    // Only entries still in the work catalogue.
+    public const string AddTask = "INSERT dbo.ServiceTasks(ServiceId,CatalogId,SortOrder,CreatedBy) SELECT @id,Id,@sort,@by FROM dbo.WorkTaskCatalog WHERE Id=@entry AND IsDeleted=0;";
     public const string Metrics = "SELECT Name,PricingJson FROM dbo.Services WHERE IsDeleted=0 AND IsActive=1 AND PricingMode='TIER' AND PricingJson IS NOT NULL ORDER BY SortOrder,Name;";
     public const string ActiveIndustryIds = "SELECT Id FROM dbo.Industries WHERE IsDeleted=0 AND IsActive=1;";
     public const string CategoryExists = "SELECT COUNT(1) FROM dbo.ServiceCategories WHERE Id=@id AND IsDeleted=0;";
@@ -353,6 +365,8 @@ public interface IServiceCatalogStore
     Task<IReadOnlyList<Industry>> IndustriesAsync();
     // Every measure of the active tier tables, one per code + name (empty when unavailable).
     Task<IReadOnlyList<ServiceMetricOption>> MetricsAsync();
+    // The service's task list in order (empty when unavailable).
+    Task<IReadOnlyList<ServiceTaskItem>> ServiceTasksAsync(Guid serviceId);
     Task<ServiceCatalogResult> SaveServiceAsync(Guid actor, Guid? id, ServiceInput input);
     Task<ServiceCatalogResult> DeleteServiceAsync(Guid actor, Guid id);
     Task<ServiceCatalogResult> SaveEntryAsync(Guid actor, CatalogKind kind, Guid? id, CatalogEntryInput input);
@@ -428,6 +442,27 @@ public sealed class SqlServiceCatalogStore(IConfiguration configuration, AdminAu
         }
     }
 
+    public async Task<IReadOnlyList<ServiceTaskItem>> ServiceTasksAsync(Guid serviceId)
+    {
+        try
+        {
+            await using var cn = Connection();
+            await cn.OpenAsync();
+            await using var cmd = new SqlCommand(ServiceCatalogSql.ServiceTasks, cn);
+            cmd.Parameters.AddWithValue("@id", serviceId);
+            await using var r = await cmd.ExecuteReaderAsync();
+            var list = new List<ServiceTaskItem>();
+            while (await r.ReadAsync())
+                list.Add(new(r.GetGuid(0), r.GetString(1), S(r, 2), S(r, 3), WorkCatalogPolicy.Steps(S(r, 5), S(r, 4)).Count, r.GetBoolean(6)));
+            return list;
+        }
+        catch (Exception ex) when (ex is SqlException or InvalidOperationException or ArgumentException)
+        {
+            logger.LogWarning(ex, "Service task list unavailable.");
+            return [];
+        }
+    }
+
     public async Task<ServiceCatalogResult> SaveServiceAsync(Guid actor, Guid? id, ServiceInput input)
     {
         await using var cn = Connection();
@@ -447,6 +482,13 @@ public sealed class SqlServiceCatalogStore(IConfiguration configuration, AdminAu
             ("@scope", Db(service.ScopeText)), ("@rules", Db(service.RulesText)), ("@sort", service.SortOrder), ("@active", service.IsActive), ("@by", actor)
         };
         if (await Exec(cn, tx, id is null ? ServiceCatalogSql.InsertService : ServiceCatalogSql.UpdateService, args) != 1) return new(ServiceCatalogOutcome.NotFound);
+        if (input.TasksPosted)
+        {
+            await Exec(cn, tx, ServiceCatalogSql.ClearTasks, ("@id", service.Id));
+            var order = 0;
+            foreach (var entry in (input.TaskIds ?? []).Where(x => x != Guid.Empty).Distinct().Take(ServicePricingPolicy.TasksMax))
+                await Exec(cn, tx, ServiceCatalogSql.AddTask, ("@id", service.Id), ("@entry", entry), ("@sort", ++order * 10), ("@by", actor));
+        }
         await AuditSql.WriteOrThrowAsync(cn, tx, audit.RequireDurableAudit, actor, id is null ? "SERVICE_CREATED" : "SERVICE_UPDATED", "dbo.Services", service.Id.ToString(), "{}",
             AuditSql.Json(("name", service.Name), ("categoryId", service.CategoryId), ("pricingMode", service.PricingMode), ("fixedFee", service.FixedFee),
                 ("tiers", ServicePricingPolicy.Read(service.PricingJson).Tiers.Count), ("active", service.IsActive)), null);

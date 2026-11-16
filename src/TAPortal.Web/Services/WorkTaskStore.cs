@@ -32,7 +32,17 @@ public sealed record WorkMember(Guid EmployeeId, string Code, string Name);
 
 public sealed record WorkTaskDetail(
     WorkTaskRow Task, string? Description, Guid? CustomerId, Guid? ContractId, string? ContractLabel, string? CreatedByName, IReadOnlyList<WorkMember> Members,
-    IReadOnlyList<WorkChecklistItem> Checklist, IReadOnlyList<WorkActivity> Activities, bool CanEdit, bool IsOwner, string Stamp, string? TemplateTitle);
+    IReadOnlyList<WorkChecklistItem> Checklist, IReadOnlyList<WorkActivity> Activities, bool CanEdit, bool IsOwner, string Stamp, string? TemplateTitle)
+{
+    // Unit, fee measure and service month of the task (migration 065); empty for tasks made outside a service.
+    public WorkTaskService Service { get; init; } = WorkTaskService.None;
+}
+
+public sealed record WorkTaskService(string? Unit, string? MetricCode, Guid? PeriodId, string? ServiceName, DateOnly? Month)
+{
+    public static readonly WorkTaskService None = new(null, null, null, null, null);
+    public string? PeriodLabel => ServiceName is null || Month is null ? null : $"{ServiceName} — {ServicePeriodPolicy.MonthLabel(Month.Value)}";
+}
 
 public sealed record WorkLookupEmployee(Guid Id, string Code, string Name, bool HasAccount);
 public sealed record WorkLookupCustomer(Guid Id, string Code, string Name);
@@ -226,8 +236,10 @@ ORDER BY CASE WHEN t.Status IN ('NEW','IN_PROGRESS') THEN 0 ELSE 1 END, CASE WHE
 
     public const string Detail = "SELECT" + RowColumns + "WHERE t.Id=@id AND t.IsDeleted=0 AND " + Visible + """
 ;
-SELECT t.Description,t.CustomerId,t.ContractId,k.ContractNo,k.Title,cu.DisplayName,tp.Title,t.RowVersion FROM dbo.WorkTasks t
+SELECT t.Description,t.CustomerId,t.ContractId,k.ContractNo,k.Title,cu.DisplayName,tp.Title,t.RowVersion,t.Unit,t.MetricCode,t.ServicePeriodId,sv.Name,sp.PeriodMonth
+FROM dbo.WorkTasks t
 LEFT JOIN dbo.CustomerContracts k ON k.Id=t.ContractId LEFT JOIN dbo.Users cu ON cu.Id=t.CreatedBy LEFT JOIN dbo.WorkTaskTemplates tp ON tp.Id=t.TemplateId
+LEFT JOIN dbo.ServicePeriods sp ON sp.Id=t.ServicePeriodId LEFT JOIN dbo.Services sv ON sv.Id=sp.ServiceId
 WHERE t.Id=@id;
 SELECT e.Id,e.EmployeeCode,e.FullName FROM dbo.WorkTaskMembers m JOIN dbo.Employees e ON e.Id=m.EmployeeId WHERE m.TaskId=@id AND m.IsActive=1 ORDER BY e.FullName;
 SELECT i.Id,i.Title,i.IsDone,i.DoneAt,du.DisplayName FROM dbo.WorkTaskChecklistItems i LEFT JOIN dbo.Users du ON du.Id=i.DoneBy
@@ -276,6 +288,9 @@ OUTPUT inserted.Prefix,inserted.CurrentValue,inserted.Padding
 WHERE Code=@seq AND ScopeId IS NULL AND IsActive=1;
 """;
     public const string TaskNoTaken = "SELECT COUNT(1) FROM dbo.WorkTasks WHERE TaskNo=@no;";
+    public const string UnitFromCatalog = """
+UPDATE t SET t.Unit=c.Unit,t.MetricCode=c.MetricCode FROM dbo.WorkTasks t JOIN dbo.WorkTaskCatalog c ON c.Name=@title AND c.IsDeleted=0 WHERE t.Id=@id;
+""";
 
     public const string Insert = """
 INSERT dbo.WorkTasks(Id,TaskNo,Title,Description,CustomerId,ContractId,OwnerEmployeeId,Priority,Status,Progress,StartDate,DueDate,TemplateId,PeriodKey,CreatedBy)
@@ -469,6 +484,7 @@ public sealed class SqlWorkTaskStore(IConfiguration configuration, ILogger<SqlWo
         await r.ReadAsync();
         var (desc, customer, contract, contractLabel, createdBy, template, stamp) = (S(r, 0), G(r, 1), G(r, 2),
             r.IsDBNull(3) ? null : $"{r.GetString(3)} — {r.GetString(4)}", S(r, 5), S(r, 6), Convert.ToHexString((byte[])r[7]));
+        var service = new WorkTaskService(S(r, 8), S(r, 9), G(r, 10), S(r, 11), r.IsDBNull(12) ? null : DateOnly.FromDateTime(r.GetDateTime(12)));
         var members = new List<WorkMember>();
         await r.NextResultAsync();
         while (await r.ReadAsync()) members.Add(new(r.GetGuid(0), r.GetString(1), r.GetString(2)));
@@ -485,7 +501,7 @@ public sealed class SqlWorkTaskStore(IConfiguration configuration, ILogger<SqlWo
         if (actedBy.Count > 0)
             activities = activities.Select(x => actedBy.TryGetValue(x.Id, out var who) ? x with { ActorName = WorkTaskPolicy.ActedUnder(who, x.ActorName) } : x).ToList();
         return new(row, desc, customer, contract, contractLabel, createdBy, members, items, activities,
-            WorkTaskPolicy.CanEdit(a.ViewAll, a.CanAssign, row.CreatedBy == a.UserId), row.OwnerId == a.EmployeeId, stamp, template);
+            WorkTaskPolicy.CanEdit(a.ViewAll, a.CanAssign, row.CreatedBy == a.UserId), row.OwnerId == a.EmployeeId, stamp, template) { Service = service };
     }
 
     public async Task<WorkLookups> LookupsAsync()
@@ -526,6 +542,7 @@ public sealed class SqlWorkTaskStore(IConfiguration configuration, ILogger<SqlWo
             ("@start", Date(input.StartDate)), ("@due", Date(input.DueDate)), ("@template", DBNull.Value), ("@period", DBNull.Value), ("@by", actor));
         foreach (var m in Members(input)) await Exec(cn, tx, WorkTaskSql.AddMember, ("@id", id), ("@e", m), ("@by", actor));
         foreach (var line in WorkTaskPolicy.ChecklistLines(input.ChecklistText)) await Exec(cn, tx, WorkTaskSql.AddChecklist, ("@id", id), ("@title", line), ("@by", actor));
+        await Exec(cn, tx, WorkTaskSql.UnitFromCatalog, ("@id", id), ("@title", input.Title));
         await Log(cn, tx, id, "CREATED", null, null, null, actor);
         return new(WorkOutcome.Saved, id);
     });

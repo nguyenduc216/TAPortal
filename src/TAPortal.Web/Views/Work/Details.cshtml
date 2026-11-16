@@ -5,7 +5,15 @@
     var guides = await WorkCatalog.GuidesAsync();
     var avatars = await AvatarPhotos.IndexAsync();
     var docs = Model.Documents;
-    var docTab = TempData["TaskTab"] as string == "documents";
+    var taskTab = TempData["TaskTab"] as string;
+    var docTab = taskTab == "documents";
+    var qty = Model.Quantities;
+    var svc = Model.Detail.Service;
+    // Số lượng (migration 065): for tasks with a unit, of a service month, or that already have entries.
+    var showQty = qty is not null && (svc.Unit is not null || svc.PeriodId is not null || qty.Count > 0);
+    var qtyTab = showQty && taskTab == "quantities";
+    var threadTab = !docTab && !qtyTab;
+    var qtyTotal = qty?.Sum(x => x.Quantity) ?? 0m;
     string Size(int bytes) => bytes >= 1024 * 1024 ? $"{bytes / 1024d / 1024d:0.#} MB" : $"{Math.Max(1, bytes / 1024)} KB";
     string DocIcon(WorkDocument x) => x.Kind switch { "PDF" => "file-text", "Word" => "file-text", "Excel" => "report-money", _ => "photo" };
     var d = Model.Detail;
@@ -118,10 +126,11 @@
     @* Trao đổi và lịch sử | Tài liệu (operator 2026-11-16): tabs; #documents in the address opens Tài liệu (after an upload). *@
     <section class="card ta-ws-span-all ta-task-tabs" data-ta-tabs aria-label="Trao đổi, lịch sử và tài liệu">
         <div class="ta-catalog-tabs ta-task-tabs__bar" role="tablist">
-            <button class="ta-catalog-tabs__tab" type="button" role="tab" id="tabThread" aria-controls="thread" aria-selected="@(docTab ? "false" : "true")" tabindex="@(docTab ? "-1" : "0")" data-ta-tabbtn="thread">@UiIcon.Render("history")<span>Trao đổi và lịch sử</span></button>
+            <button class="ta-catalog-tabs__tab" type="button" role="tab" id="tabThread" aria-controls="thread" aria-selected="@(threadTab ? "true" : "false")" tabindex="@(threadTab ? "0" : "-1")" data-ta-tabbtn="thread">@UiIcon.Render("history")<span>Trao đổi và lịch sử</span></button>
             <button class="ta-catalog-tabs__tab" type="button" role="tab" id="tabDocuments" aria-controls="documents" aria-selected="@(docTab ? "true" : "false")" tabindex="@(docTab ? "0" : "-1")" data-ta-tabbtn="documents">@UiIcon.Render("file-text")<span>Tài liệu</span><span class="ta-catalog-tabs__count">@(docs?.Count ?? 0)</span></button>
+            @if (showQty) {<button class="ta-catalog-tabs__tab" type="button" role="tab" id="tabQuantities" aria-controls="quantities" aria-selected="@(qtyTab ? "true" : "false")" tabindex="@(qtyTab ? "0" : "-1")" data-ta-tabbtn="quantities">@UiIcon.Render("hash")<span>Số lượng</span><span class="ta-catalog-tabs__count">@ServicePeriodPolicy.Number(qtyTotal)</span></button>}
         </div>
-        <div class="card-body" role="tabpanel" id="thread" aria-labelledby="tabThread" data-ta-tabpanel="thread" hidden="@docTab">
+        <div class="card-body" role="tabpanel" id="thread" aria-labelledby="tabThread" data-ta-tabpanel="thread" hidden="@(!threadTab)">
             <ul class="ta-timeline">
                 @foreach (var a in d.Activities)
                 {
@@ -217,5 +226,66 @@
                 }
             }
         </div>
+        @if (showQty)
+        {
+            <div class="card-body" role="tabpanel" id="quantities" aria-labelledby="tabQuantities" data-ta-tabpanel="quantities" hidden="@(!qtyTab)">
+                @if (svc.PeriodLabel is string periodLabel) {<p class="mb-2">Thuộc dịch vụ: <a asp-controller="ServicePeriods" asp-action="Details" asp-route-id="@svc.PeriodId">@periodLabel</a></p>}
+                <div class="ta-qty-total">
+                    <span class="text-secondary">Tổng đã nhập</span>
+                    <strong>@ServicePeriodPolicy.Number(qtyTotal)@(svc.Unit is null ? "" : " " + svc.Unit)</strong>
+                    @if (svc.MetricCode is not null) {<span class="ta-code" title="Mã hạn mức chi phí: số lượng này được cộng vào chỉ số mang mã này để tính phí cuối tháng">@svc.MetricCode</span>}
+                    <span class="text-secondary small">@(qty!.Count) lần nhập</span>
+                </div>
+                @if (closed || t.Status == WorkTaskPolicy.Done)
+                {
+                    <p class="text-secondary mt-2 mb-0">Công việc đã @(closed ? "hủy" : "hoàn thành") nên không nhập thêm số lượng.</p>
+                }
+                else
+                {
+                    <form method="post" asp-action="QuantityAdd" asp-route-id="@t.Id" class="ta-qty-form">
+                        <div>
+                            <label class="form-label" for="qtyValue">Số lượng@(svc.Unit is null ? "" : " (" + svc.Unit + ")")</label>
+                            <div class="ta-input-icon">@UiIcon.Render("plus")<input class="form-control" id="qtyValue" name="quantity" inputmode="decimal" required autocomplete="off" placeholder="Ví dụ: 10" /></div>
+                        </div>
+                        <div>
+                            <label class="form-label" for="qtyDate">Ngày</label>
+                            <div class="ta-input-icon">@UiIcon.Render("calendar")<input class="form-control" id="qtyDate" name="date" type="date" value="@Model.Today.ToString("yyyy-MM-dd")" max="@Model.Today.ToString("yyyy-MM-dd")" /></div>
+                        </div>
+                        <div class="ta-qty-form__note">
+                            <label class="form-label" for="qtyNote">Ghi chú</label>
+                            <div class="ta-input-icon">@UiIcon.Render("file-text")<input class="form-control" id="qtyNote" name="note" maxlength="@ServicePeriodPolicy.QuantityNoteMax" placeholder="Không bắt buộc" /></div>
+                        </div>
+                        <button class="btn btn-primary" type="submit" data-ta-loading data-ta-loading-text="Đang lưu...">@UiIcon.Render("device-floppy")<span>Nhập</span></button>
+                    </form>
+                    <div class="form-hint">Mỗi lần làm thêm thì nhập phần làm thêm (ví dụ hôm nay kéo 10, mai kéo 20); tổng là cộng các lần nhập. Nhập nhầm thì xóa lần đó hoặc nhập số âm để trừ.</div>
+                }
+                <h3 class="ta-qty-history__title">Lịch sử nhập</h3>
+                @if (qty.Count == 0)
+                {
+                    <p class="text-secondary mb-0">Chưa có lần nhập nào.</p>
+                }
+                else
+                {
+                    <div class="ta-table-wrap">
+                        <table class="ta-table ta-table-stack ta-qty-history">
+                            <thead><tr><th scope="col">Ngày</th><th scope="col" class="text-end">Số lượng</th><th scope="col">Ghi chú</th><th scope="col">Người nhập</th><th scope="col">Lúc</th><th scope="col" class="ta-col-actions"><span class="visually-hidden">Thao tác</span></th></tr></thead>
+                            <tbody>
+                            @foreach (var e in qty)
+                            {
+                                <tr>
+                                    <td data-label="Ngày">@e.EntryDate.ToString("dd/MM/yyyy")</td>
+                                    <td data-label="Số lượng" class="text-end fw-semibold @(e.Quantity < 0 ? "text-danger" : null)">@(e.Quantity > 0 ? "+" : "")@ServicePeriodPolicy.Number(e.Quantity)</td>
+                                    <td data-label="Ghi chú">@(e.Note ?? "—")</td>
+                                    <td data-label="Người nhập">@(e.CreatedByName ?? "—")</td>
+                                    <td data-label="Lúc">@Local(e.CreatedAt)</td>
+                                    <td class="ta-col-actions">@if (d.CanEdit || e.CreatedBy == Model.ActorId) {<form method="post" asp-action="QuantityDelete" asp-route-id="@t.Id" asp-route-entry="@e.Id" onsubmit="return confirm('Xóa lần nhập này?');"><button class="ta-icon-btn" type="submit" title="Xóa lần nhập" aria-label="Xóa lần nhập @ServicePeriodPolicy.Number(e.Quantity) ngày @e.EntryDate.ToString("dd/MM/yyyy")">@UiIcon.Render("trash")</button></form>}</td>
+                                </tr>
+                            }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        }
     </section>
 </div>

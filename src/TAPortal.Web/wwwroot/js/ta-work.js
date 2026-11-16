@@ -201,7 +201,7 @@
         const box = btn?.closest('[data-ta-tabs]');
         if (!box) return;
         showTab(box, btn.dataset.taTabbtn);
-        try { history.replaceState(history.state, '', btn.dataset.taTabbtn === 'documents' ? '#documents' : location.pathname + location.search); } catch { /* ignore */ }
+        try { history.replaceState(history.state, '', ['documents', 'quantities'].includes(btn.dataset.taTabbtn) ? '#' + btn.dataset.taTabbtn : location.pathname + location.search); } catch { /* ignore */ }
     });
     document.addEventListener('keydown', (event) => {
         const btn = event.target?.closest?.('[data-ta-tabbtn]');
@@ -213,8 +213,9 @@
         next.focus();
     });
     const tabFromHash = () => {
-        if (location.hash !== '#documents') return;
-        document.querySelectorAll('[data-ta-tabs]').forEach((box) => { if (box.querySelector('[data-ta-tabbtn="documents"]')) { showTab(box, 'documents'); box.scrollIntoView({ block: 'start' }); } });
+        const name = location.hash.slice(1);
+        if (name !== 'documents' && name !== 'quantities') return;
+        document.querySelectorAll('[data-ta-tabs]').forEach((box) => { if (box.querySelector('[data-ta-tabbtn="' + name + '"]')) { showTab(box, name); box.scrollIntoView({ block: 'start' }); } });
     };
     tabFromHash();
     document.addEventListener('ta:load', tabFromHash);

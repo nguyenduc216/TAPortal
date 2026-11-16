@@ -56,13 +56,13 @@ public sealed class WorkController(IWorkTaskStore work, ILogger<WorkController> 
 
     [HttpGet]
     [Authorize(Policy = AdminPermissions.Policy.TasksView)]
-    public async Task<IActionResult> Details(Guid id, [FromServices] IAuthorizationService authz, [FromServices] IWorkDocumentStore docs)
+    public async Task<IActionResult> Details(Guid id, [FromServices] IAuthorizationService authz, [FromServices] IWorkDocumentStore docs, [FromServices] IServicePeriodStore periods)
     {
         if (UsersController.ActorId(User) is not Guid actor) return Forbid();
         var detail = await work.GetAsync(actor, id);
         if (detail is null) return NotFound();
         var canCatalog = (await authz.AuthorizeAsync(User, AdminPermissions.Policy.TaskCatalogManage)).Succeeded;
-        return View(new WorkDetailsVm(detail, Today, null, canCatalog, await docs.ListAsync(id), actor));
+        return View(new WorkDetailsVm(detail, Today, null, canCatalog, await docs.ListAsync(id), actor, await periods.QuantitiesAsync(id)));
     }
 
     [HttpGet]
@@ -259,12 +259,52 @@ public sealed class WorkController(IWorkTaskStore work, ILogger<WorkController> 
         return task.CanEdit || found.CreatedBy == actor;
     }
 
-    private IActionResult DocumentsBack(Guid id, string? error, string? success = null)
+    private IActionResult DocumentsBack(Guid id, string? error, string? success = null) => TabBack(id, "documents", error, success);
+
+    private IActionResult TabBack(Guid id, string tab, string? error, string? success = null)
     {
         if (error is not null) TempData["Error"] = error;
         if (success is not null) TempData["Success"] = success;
-        TempData["TaskTab"] = "documents";
-        return LocalRedirect(Url.Action(nameof(Details), new { id })! + "#documents");
+        TempData["TaskTab"] = tab;
+        return LocalRedirect(Url.Action(nameof(Details), new { id })! + "#" + tab);
+    }
+
+    // ---- Số lượng (operator 2026-11-16, migration 065) --------------------------------------------------------------------
+    // Whoever sees the task enters quantities in its unit, as many times as needed until it is done (Kéo hóa đơn: +10 today,
+    // +20 tomorrow...); every entry is kept and logged. An entry is removed by its author or a task editor.
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [Authorize(Policy = AdminPermissions.Policy.TasksView)]
+    public async Task<IActionResult> QuantityAdd(Guid id, DateTime? date, string? quantity, string? note, [FromServices] IServicePeriodStore periods)
+    {
+        if (UsersController.ActorId(User) is not Guid actor) return Forbid();
+        var task = await work.GetAsync(actor, id);
+        if (task is null) return NotFound();
+        if (task.Task.Status is WorkTaskPolicy.Done or WorkTaskPolicy.Cancelled)
+            return TabBack(id, "quantities", "Công việc đã hoàn thành hoặc đã hủy, không nhập thêm số lượng. Mở lại công việc nếu cần nhập.");
+        var (value, error) = ServicePeriodPolicy.ParseQuantity(quantity);
+        if (value is null) return TabBack(id, "quantities", error);
+        var day = date is DateTime d ? DateOnly.FromDateTime(d) : Today;
+        if (day > Today) return TabBack(id, "quantities", "Ngày nhập không được sau hôm nay.");
+        if (day < Today.AddYears(-1)) return TabBack(id, "quantities", "Ngày nhập quá xa.");
+        var text = ServicePricingPolicy.CleanText(note, ServicePeriodPolicy.QuantityNoteMax);
+        try { error = await periods.AddQuantityAsync(actor, id, day, value.Value, task.Service.Unit, text); }
+        catch (SqlException ex) { logger.LogError(ex, "WORK_QUANTITY_FAILED task {TaskId}", id); error = StoreUnavailable; }
+        return TabBack(id, "quantities", error, error is null ? $"Đã nhập {ServicePeriodPolicy.Number(value.Value)}{(task.Service.Unit is null ? "" : " " + task.Service.Unit)}." : null);
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [Authorize(Policy = AdminPermissions.Policy.TasksView)]
+    public async Task<IActionResult> QuantityDelete(Guid id, Guid entry, [FromServices] IServicePeriodStore periods)
+    {
+        if (UsersController.ActorId(User) is not Guid actor) return Forbid();
+        var task = await work.GetAsync(actor, id);
+        if (task is null) return NotFound();
+        string? error;
+        try { error = await periods.DeleteQuantityAsync(actor, id, entry, task.CanEdit); }
+        catch (SqlException ex) { logger.LogError(ex, "WORK_QUANTITY_DELETE_FAILED task {TaskId}", id); error = StoreUnavailable; }
+        return TabBack(id, "quantities", error, error is null ? "Đã xóa lần nhập." : null);
     }
 
     private async Task<IActionResult> Quick(Guid id, string? returnUrl, Func<Guid, Task<WorkResult>> act)

@@ -132,6 +132,38 @@ public sealed class SafeServiceCatalogTests
     }
 
     [Fact]
+    public void ServiceMonthsAndQuantitiesFollowTheRules()
+    {
+        Assert.Equal(new DateOnly(2026, 11, 1), S.ServicePeriodPolicy.ParseMonth("2026-11"));
+        Assert.Null(S.ServicePeriodPolicy.ParseMonth("11/2026"));
+        Assert.Equal("T11/2026", S.ServicePeriodPolicy.MonthLabel(new DateOnly(2026, 11, 1)));
+        var today = new DateOnly(2026, 11, 20);
+        Assert.Equal("EMPTY", S.ServicePeriodPolicy.State(0, 0, 0, null, today));
+        Assert.Equal("NEW", S.ServicePeriodPolicy.State(3, 0, 0, today, today));
+        Assert.Equal("IN_PROGRESS", S.ServicePeriodPolicy.State(3, 1, 0, null, today));
+        Assert.Equal("OVERDUE", S.ServicePeriodPolicy.State(3, 1, 1, today.AddDays(-1), today));
+        Assert.Equal("DONE", S.ServicePeriodPolicy.State(3, 3, 0, today.AddDays(-1), today));
+        Assert.Equal(1200m, S.ServicePeriodPolicy.ParseQuantity("1.200").Value);
+        Assert.Equal(2.5m, S.ServicePeriodPolicy.ParseQuantity("2,5").Value);
+        Assert.Equal(-2m, S.ServicePeriodPolicy.ParseQuantity("-2").Value);                                      // a correction
+        Assert.NotNull(S.ServicePeriodPolicy.ParseQuantity("0").Error);
+        Assert.NotNull(S.ServicePeriodPolicy.ParseQuantity("mười").Error);
+        Assert.Contains("WHERE st.ServiceId=@service ORDER BY st.SortOrder", S.ServicePeriodSql.ServiceTasks);    // tasks in the service's order
+        Assert.Contains("t.Status<>'NEW' OR EXISTS(SELECT 1 FROM dbo.WorkTaskQuantities", S.ServicePeriodSql.Started);
+        Assert.Contains("t.Unit=c.Unit,t.MetricCode=c.MetricCode", S.WorkTaskSql.UnitFromCatalog);
+        Assert.Contains("e.Id=p.OwnerEmployeeId WHERE p.IsDeleted=0", S.ServicePeriodSql.List);                  // pieces joined with a space
+        Assert.Contains("e.Id=p.OwnerEmployeeId WHERE p.Id=@id", S.ServicePeriodSql.Detail);
+        var root = new DirectoryInfo(AppContext.BaseDirectory);
+        while (!File.Exists(Path.Combine(root.FullName, "TAPortal.sln"))) root = root.Parent!;
+        var migration = File.ReadAllText(Path.Combine(root.FullName, "database", "migrations", "065-service-periods.sql"));
+        Assert.Contains("CREATE UNIQUE INDEX UX_ServicePeriods_CustomerServiceMonth", migration);
+        Assert.Contains("CHECK (Quantity <> 0", migration);
+        Assert.DoesNotMatch(@"(?im)^\s*(UPDATE|DELETE|DROP)\b", migration);
+        Assert.True(migration.All(ch => ch < 128));
+        Assert.True(File.Exists(Path.Combine(root.FullName, "database", "scripts", "118-rollback-service-periods.sql")));
+    }
+
+    [Fact]
     public void Migration061AddsTheCatalogueAndTheCustomerIndustry()
     {
         var root = new DirectoryInfo(AppContext.BaseDirectory);

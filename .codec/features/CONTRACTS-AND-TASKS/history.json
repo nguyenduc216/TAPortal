@@ -198,5 +198,15 @@
     "migration_status": "NOT_EXECUTED",
     "publish_status": "NOT_PUBLISHED",
     "merge_status": "PENDING_APPROVAL"
+  },
+  {
+    "change_id": "CONTRACTS-AND-TASKS-CHG-20261116T182219Z-63F8D7",
+    "created_at": "2026-11-16T18:22:19.848361+00:00",
+    "title": "Service task lists, services by customer and month (Danh sách dịch vụ), quantities with history on tasks",
+    "status": "PLANNED",
+    "commit_sha": null,
+    "migration_status": "NOT_EXECUTED",
+    "publish_status": "NOT_PUBLISHED",
+    "merge_status": "PENDING_APPROVAL"
   }
 ]

@@ -20,6 +20,7 @@
         <div class="ta-catalog-tabs" role="tablist" aria-label="Thông tin dịch vụ">
             <button class="ta-catalog-tabs__tab" type="button" role="tab" aria-selected="true" tabindex="0" data-ta-tabbtn="general">@UiIcon.Render("file-text")<span>Thông tin chung</span></button>
             <button class="ta-catalog-tabs__tab" type="button" role="tab" aria-selected="false" tabindex="-1" data-ta-tabbtn="pricing">@UiIcon.Render("report-money")<span>Hạn mức &amp; phí</span></button>
+            <button class="ta-catalog-tabs__tab" type="button" role="tab" aria-selected="false" tabindex="-1" data-ta-tabbtn="tasks">@UiIcon.Render("list-tree")<span>Danh sách công việc</span><span class="ta-catalog-tabs__count" data-ta-svc-task-count>@(Model.Tasks?.Count ?? 0)</span></button>
             <button class="ta-catalog-tabs__tab" type="button" role="tab" aria-selected="false" tabindex="-1" data-ta-tabbtn="scope">@UiIcon.Render("checks")<span>Phạm vi công việc</span></button>
             <button class="ta-catalog-tabs__tab" type="button" role="tab" aria-selected="false" tabindex="-1" data-ta-tabbtn="rules">@UiIcon.Render("info-circle")<span>Nguyên tắc &amp; ghi chú</span></button>
         </div>
@@ -92,6 +93,56 @@
                     <button type="button" class="btn btn-sm mt-2" data-ta-pricing-add-tier>@UiIcon.Render("plus")<span>Thêm bậc</span></button>
                     <input type="hidden" name="Input.PricingJson" value="@pricing" data-ta-pricing-json />
                 </div>
+            </div>
+        </div>
+
+        @* Danh sách công việc (operator 2026-11-16, migration 065): the task types done for a customer each month under this service,
+           in this order; a new service month (Danh sách dịch vụ) creates one task per line. *@
+        <div data-ta-tabpanel="tasks" hidden>
+            <div data-ta-svc-tasks>
+                <p class="form-hint">Các đầu việc (từ Danh mục công việc) làm cho khách hàng mỗi tháng khi dùng dịch vụ này. Kéo biểu tượng ⋮⋮ hoặc bấm ↑ ↓ để sắp thứ tự ưu tiên; khi tạo dịch vụ cho khách hàng theo tháng, mỗi dòng thành một công việc.</p>
+                <input type="hidden" name="Input.TasksPosted" value="true" />
+                <ol class="ta-svc-tasks" data-ta-svc-task-list>
+                    @foreach (var t in Model.Tasks ?? [])
+                    {
+                        <li class="ta-svc-task" draggable="true" data-id="@t.CatalogId">
+                            <span class="ta-svc-task__handle" title="Kéo để đổi thứ tự" aria-hidden="true">@UiIcon.Render("grip-vertical")</span>
+                            <span class="ta-svc-task__no"></span>
+                            <span class="ta-svc-task__main"><strong>@t.Name</strong>@if (!t.IsActive) {<span class="badge bg-secondary-lt ms-1">đã ẩn</span>}
+                                <small class="text-secondary d-block">@(t.Unit is null ? "Chưa có đơn vị" : "Đơn vị: " + t.Unit)@(t.MetricCode is null ? "" : " · Mã hạn mức: " + t.MetricCode)@(t.ChecklistCount > 0 ? " · Checklist " + t.ChecklistCount + " mục" : "")</small></span>
+                            <span class="ta-actions">
+                                <button type="button" class="ta-icon-btn" data-ta-svc-task-move="-1" title="Lên" aria-label="Đưa @t.Name lên">↑</button>
+                                <button type="button" class="ta-icon-btn" data-ta-svc-task-move="1" title="Xuống" aria-label="Đưa @t.Name xuống">↓</button>
+                                <button type="button" class="ta-icon-btn" data-ta-svc-task-remove title="Bỏ khỏi dịch vụ" aria-label="Bỏ @t.Name khỏi dịch vụ">@UiIcon.Render("x")</button>
+                            </span>
+                            <input type="hidden" name="Input.TaskIds" value="@t.CatalogId" />
+                        </li>
+                    }
+                </ol>
+                <p class="text-secondary" data-ta-svc-task-empty hidden="@((Model.Tasks?.Count ?? 0) > 0)">Chưa có công việc nào trong dịch vụ này.</p>
+                <div class="ta-svc-tasks__add">
+                    <select class="form-select" data-ta-svc-task-pick aria-label="Chọn đầu việc để thêm">
+                        <option value="">— Chọn đầu việc trong Danh mục công việc —</option>
+                        @foreach (var e in (Model.WorkCatalog ?? []).Where(e => e.IsActive))
+                        {
+                            <option value="@e.Id" data-name="@e.Name" data-meta="@((e.Unit is null ? "Chưa có đơn vị" : "Đơn vị: " + e.Unit) + (e.MetricCode is null ? "" : " · Mã hạn mức: " + e.MetricCode) + (e.ChecklistCount > 0 ? " · Checklist " + e.ChecklistCount + " mục" : ""))">@e.Name@(e.Unit is null ? "" : " (" + e.Unit + ")")</option>
+                        }
+                    </select>
+                    <button type="button" class="btn" data-ta-svc-task-add>@UiIcon.Render("plus")<span>Thêm vào dịch vụ</span></button>
+                </div>
+                <template data-ta-svc-task-template>
+                    <li class="ta-svc-task" draggable="true" data-id="">
+                        <span class="ta-svc-task__handle" title="Kéo để đổi thứ tự" aria-hidden="true">@UiIcon.Render("grip-vertical")</span>
+                        <span class="ta-svc-task__no"></span>
+                        <span class="ta-svc-task__main"><strong data-name></strong><small class="text-secondary d-block" data-meta></small></span>
+                        <span class="ta-actions">
+                            <button type="button" class="ta-icon-btn" data-ta-svc-task-move="-1" title="Lên" aria-label="Đưa lên">↑</button>
+                            <button type="button" class="ta-icon-btn" data-ta-svc-task-move="1" title="Xuống" aria-label="Đưa xuống">↓</button>
+                            <button type="button" class="ta-icon-btn" data-ta-svc-task-remove title="Bỏ khỏi dịch vụ" aria-label="Bỏ khỏi dịch vụ">@UiIcon.Render("x")</button>
+                        </span>
+                        <input type="hidden" name="Input.TaskIds" value="" />
+                    </li>
+                </template>
             </div>
         </div>
 
