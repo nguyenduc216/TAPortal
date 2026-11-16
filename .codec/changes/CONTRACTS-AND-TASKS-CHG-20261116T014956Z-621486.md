@@ -50,3 +50,5 @@
 - Tạo công việc / việc lặp: chọn đầu việc trong gợi ý thì checklist mẫu tự điền vào ô Checklist (không đè nội dung người dùng tự gõ).
 - Chi tiết công việc: người có quyền quản lý danh mục thấy nút "Bổ sung vào checklist mẫu của đầu việc" (WorkCatalog/FromTask) – thêm các mục của việc này mà mẫu chưa có.
 - Tests: SafeWorkCatalogTests.EachEntryCarriesAChecklistTemplate. Safe 780/780 pass.
+- Migration 056: pre-check NOT_APPLIED; dry-run (rolled back) afterMigration=PASS afterRollback=NOT_APPLIED trancount0=True; gates PASS (780 Safe); real run 2026-11-16 02:00:17Z VERIFY_STATUS=PASS ⇒ EXECUTED.
+- Deploy 1 (quy tắc ghi chú hoàn thành, 62477f7): portal DEPLOYED, merge main.
