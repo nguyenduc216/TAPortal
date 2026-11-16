@@ -42,3 +42,6 @@ Operator 2026-11-16: a service gets a task list (work catalogue entries, ordered
 - Merge SHA:
 
 ## Rủi ro, quyết định và việc còn lại
+
+## Migration execution
+- 065-service-periods.sql: PRECHECK NOT_APPLIED; DRYRUN PASS/NOT_APPLIED (trancount 0); gates PASS (806); REAL RUN VERIFY_STATUS=PASS => EXECUTED 2026-11-16T18:25:16Z
