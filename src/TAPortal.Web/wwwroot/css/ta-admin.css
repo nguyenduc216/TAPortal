@@ -450,3 +450,30 @@
   .ta-svc-group .ta-table th:nth-child(5){width:10%}
   .ta-svc-group .ta-table th:nth-child(6){width:120px}
 }
+/* Danh mục dịch vụ > Danh sách công việc (operator 2026-11-16). */
+.ta-svc-tasks{list-style:none;margin:.5rem 0;padding:0;display:grid;gap:.375rem}
+.ta-svc-task{display:flex;align-items:center;gap:.625rem;padding:.5rem .75rem;border:1px solid var(--ta-border,#e2e8f0);border-radius:8px;background:#fff}
+.ta-svc-task.is-dragging{opacity:.5;border-style:dashed}
+.ta-svc-task__handle{cursor:grab;color:var(--ta-text-3,#94a3b8);display:inline-flex}
+.ta-svc-task__no{flex:none;width:24px;height:24px;border-radius:50%;background:var(--ta-surface-2,#f1f5f9);display:inline-flex;align-items:center;justify-content:center;font-size:.8125rem;font-weight:600}
+.ta-svc-task__main{flex:1;min-width:0}
+.ta-svc-tasks__add{display:flex;gap:.5rem;align-items:center;margin-top:.75rem;max-width:640px}
+.ta-svc-tasks__add .form-select{flex:1;min-width:0}
+/* Công việc > Số lượng (operator 2026-11-16). */
+.ta-qty-total{display:flex;align-items:baseline;gap:.625rem;flex-wrap:wrap;margin-bottom:.75rem}
+.ta-qty-total strong{font-size:1.5rem;line-height:1.2}
+.ta-qty-form{display:grid;grid-template-columns:minmax(120px,1fr) minmax(150px,1fr) minmax(0,2fr) auto;gap:.75rem;align-items:end}
+.ta-qty-history__title{font-size:1rem;font-weight:650;margin:1.25rem 0 .5rem}
+@media (max-width:767.98px){.ta-qty-form{grid-template-columns:1fr 1fr}.ta-qty-form__note{grid-column:1/-1}.ta-qty-form .btn{grid-column:1/-1}}
+/* Danh sách dịch vụ (operator 2026-11-16). */
+.ta-sp-filter{flex-wrap:wrap;gap:.5rem}
+.ta-sp-filter .form-select{width:auto;min-width:150px;max-width:240px}
+.ta-sp-progress{min-width:140px}
+.ta-sp-progress .progress{margin-bottom:.25rem}
+.ta-sp-detail{grid-template-columns:minmax(0,3fr) minmax(0,2fr)}
+.ta-sp-metrics{list-style:none;margin:0 0 .5rem;padding:0;display:grid;gap:.375rem}
+.ta-sp-metrics li{display:flex;align-items:baseline;gap:.5rem}
+.ta-sp-metrics strong{font-size:1.25rem}
+.ta-sp-add{display:flex;gap:.5rem;align-items:center;padding:var(--ta-sp-4,1rem) var(--ta-sp-5,1.25rem);border-top:1px solid var(--ta-border,#e2e8f0);max-width:720px}
+.ta-sp-add .form-select{flex:1;min-width:0}
+@media (max-width:991.98px){.ta-sp-detail{grid-template-columns:1fr}}

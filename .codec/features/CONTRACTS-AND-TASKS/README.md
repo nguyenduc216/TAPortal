@@ -32,3 +32,4 @@
 | `CONTRACTS-AND-TASKS-CHG-20261116T132430Z-4D8A1A` | 2026-11-16 | Push notifications for every task change and a daily due reminder | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |
 | `CONTRACTS-AND-TASKS-CHG-20261116T152855Z-678CFB` | 2026-11-16 | Service catalogue: service groups, services with scope, fee rules and pricing tiers; industries on customers | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |
 | `CONTRACTS-AND-TASKS-CHG-20261116T165132Z-A6E1C4` | 2026-11-16 | Measure codes in service tiers; unit and fee measure code on work catalogue entries | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |
+| `CONTRACTS-AND-TASKS-CHG-20261116T182219Z-63F8D7` | 2026-11-16 | Service task lists, services by customer and month (Danh sách dịch vụ), quantities with history on tasks | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |

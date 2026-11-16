@@ -413,6 +413,7 @@ public sealed class SafeAdminWorkTests
         var edit = WebUtility.HtmlDecode(await c.GetStringAsync($"/servicecatalog/edit/{MemoryServices.Staff}"));
         Assert.Contains("data-ta-pricing", edit);
         Assert.Contains("Quy mô nhân sự", edit);                                                                 // the stored table goes to the editor
+        Assert.Contains("data-ta-svc-tasks", edit);                                                              // tab Danh sách công việc
 
         var bad = await c.PostAsync($"/servicecatalog/save/{MemoryServices.Staff}", Form(Token(edit), ("Input.CategoryId", MemoryServices.Hr.ToString()), ("Input.Name", "Dịch vụ nhân sự hàng tháng"),
             ("Input.PricingMode", "TIER"), ("Input.PricingJson", "{\"metrics\":[]}")));
@@ -439,6 +440,7 @@ public sealed class SafeAdminWorkTests
             ? new(Staff, Hr, "Dịch vụ nhân sự hàng tháng", null, "TIER", "Phí dịch vụ", "đồng/tháng", null, Pricing, "Tính lương", null, 10, true) : null);
         public Task<IReadOnlyList<S.Industry>> IndustriesAsync() => Task.FromResult<IReadOnlyList<S.Industry>>([TradeIndustry]);
         public Task<IReadOnlyList<S.ServiceMetricOption>> MetricsAsync() => Task.FromResult<IReadOnlyList<S.ServiceMetricOption>>([]);
+        public Task<IReadOnlyList<S.ServiceTaskItem>> ServiceTasksAsync(Guid serviceId) => Task.FromResult<IReadOnlyList<S.ServiceTaskItem>>([]);
         public Task<S.ServiceCatalogResult> SaveServiceAsync(Guid actor, Guid? id, S.ServiceInput input)
         {
             var (service, error) = S.ServicePricingPolicy.Check(id ?? Guid.NewGuid(), input, [Trade]);
@@ -449,6 +451,59 @@ public sealed class SafeAdminWorkTests
         public Task<S.ServiceCatalogResult> DeleteServiceAsync(Guid actor, Guid id) => Task.FromResult(new S.ServiceCatalogResult(S.ServiceCatalogOutcome.Saved));
         public Task<S.ServiceCatalogResult> SaveEntryAsync(Guid actor, S.CatalogKind kind, Guid? id, S.CatalogEntryInput input) => Task.FromResult(new S.ServiceCatalogResult(S.ServiceCatalogOutcome.Saved));
         public Task<S.ServiceCatalogResult> DeleteEntryAsync(Guid actor, S.CatalogKind kind, Guid id) => Task.FromResult(new S.ServiceCatalogResult(S.ServiceCatalogOutcome.Saved));
+    }
+
+    [Fact]
+    public async Task QuantitiesAreEnteredOnATaskAndKeptAsHistory()
+    {
+        var qty = new MemoryPeriods();
+        using var f = Factory("STAFF", new MemoryWork(), "TASKS.VIEW").WithWebHostBuilder(b => b.ConfigureTestServices(s =>
+        {
+            s.RemoveAll<S.IServicePeriodStore>(); s.AddSingleton<S.IServicePeriodStore>(qty);
+            s.RemoveAll<S.IServiceCatalogStore>(); s.AddSingleton<S.IServiceCatalogStore>(new MemoryServices());
+        }));
+        var c = Client(f);
+        var html = WebUtility.HtmlDecode(await c.GetStringAsync($"/work/details/{MemoryWork.T1}"));
+        Assert.Contains("data-ta-tabbtn=\"quantities\"", html);                                                 // a task with entries shows the tab
+        Assert.Contains("+12", html);
+        var token = Token(html);
+
+        Assert.Equal(HttpStatusCode.Redirect, (await c.PostAsync($"/work/quantityadd/{MemoryWork.T1}", Form(token, ("quantity", "1.200"), ("note", "kéo hóa đơn")))).StatusCode);
+        Assert.Equal(1200m, qty.Added.Single().Qty);
+        Assert.Equal(HttpStatusCode.Redirect, (await c.PostAsync($"/work/quantityadd/{MemoryWork.T1}", Form(token, ("quantity", "0")))).StatusCode);
+        Assert.Single(qty.Added);                                                                                // zero refused
+        Assert.Equal(HttpStatusCode.Redirect, (await c.PostAsync($"/work/quantityadd/{MemoryWork.T2}", Form(token, ("quantity", "5")))).StatusCode);
+        Assert.Single(qty.Added);                                                                                // T2 is done: no more entries
+        Assert.Equal(HttpStatusCode.NotFound, (await c.PostAsync($"/work/quantityadd/{MemoryWork.Hidden}", Form(token, ("quantity", "5")))).StatusCode);
+        Assert.Equal(HttpStatusCode.Redirect, (await c.PostAsync($"/work/quantitydelete/{MemoryWork.T1}", Form(token, ("entry", MemoryPeriods.Entry.ToString())))).StatusCode);
+        Assert.Equal(MemoryPeriods.Entry, qty.Deleted.Single());
+
+        var list = await c.GetAsync("/serviceperiods");
+        Assert.Equal(HttpStatusCode.OK, list.StatusCode);
+        Assert.Contains("Dịch vụ nhân sự hàng tháng", WebUtility.HtmlDecode(await list.Content.ReadAsStringAsync()));
+        var detail = WebUtility.HtmlDecode(await c.GetStringAsync($"/serviceperiods/details/{MemoryPeriods.Period}"));
+        Assert.Contains("Danh sách công việc (1)", detail);
+        Assert.Contains("SLCT", detail);
+        Assert.Equal(HttpStatusCode.Forbidden, (await c.GetAsync("/serviceperiods/create")).StatusCode);         // TASKS.VIEW only
+    }
+
+    private sealed class MemoryPeriods : S.IServicePeriodStore
+    {
+        public static readonly Guid Entry = Guid.Parse("e9000000-0000-0000-0000-000000000001"), Period = Guid.Parse("e8000000-0000-0000-0000-000000000001");
+        public List<(Guid Task, decimal Qty)> Added { get; } = [];
+        public List<Guid> Deleted { get; } = [];
+        private static S.ServicePeriodRow Row() => new(Period, Guid.NewGuid(), "Công ty An Phát", "KH001", Guid.NewGuid(), "Dịch vụ nhân sự hàng tháng",
+            new DateOnly(2026, 11, 1), new DateOnly(2026, 11, 1), new DateOnly(2026, 11, 25), E1, "Nguyễn Văn An", 1, 0, 1, DateTime.UtcNow);
+        public Task<IReadOnlyList<S.ServicePeriodRow>> ListAsync(Guid actor, S.ServicePeriodFilter filter) => Task.FromResult<IReadOnlyList<S.ServicePeriodRow>>([Row()]);
+        public Task<S.ServicePeriodDetail?> GetAsync(Guid actor, Guid id) => Task.FromResult<S.ServicePeriodDetail?>(id == Period
+            ? new(Row(), null, [new(MemoryWork.T1, "CV000001", "Kéo hóa đơn", "IN_PROGRESS", "An", null, 0, 0, 0, "hóa đơn", "SLCT", 12m, 10)], false) : null);
+        public Task<S.ServicePeriodResult> CreateAsync(Guid actor, S.ServicePeriodInput input) => Task.FromResult(new S.ServicePeriodResult(S.WorkOutcome.Forbidden));
+        public Task<S.ServicePeriodResult> AddTaskAsync(Guid actor, Guid periodId, Guid catalogId) => Task.FromResult(new S.ServicePeriodResult(S.WorkOutcome.Forbidden));
+        public Task<S.ServicePeriodResult> DeleteAsync(Guid actor, Guid id) => Task.FromResult(new S.ServicePeriodResult(S.WorkOutcome.Forbidden));
+        public Task<IReadOnlyList<S.WorkQuantityEntry>?> QuantitiesAsync(Guid taskId) => Task.FromResult<IReadOnlyList<S.WorkQuantityEntry>?>(
+            taskId == MemoryWork.T1 ? [new(Entry, new DateOnly(2026, 11, 6), 12m, null, DateTime.UtcNow, Actor, "An")] : []);
+        public Task<string?> AddQuantityAsync(Guid actor, Guid taskId, DateOnly date, decimal quantity, string? unit, string? note) { Added.Add((taskId, quantity)); return Task.FromResult<string?>(null); }
+        public Task<string?> DeleteQuantityAsync(Guid actor, Guid taskId, Guid entryId, bool canEditTask) { Deleted.Add(entryId); return Task.FromResult<string?>(null); }
     }
 
     [Fact]

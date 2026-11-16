@@ -208,6 +208,77 @@
     if (form && panel && panel.hidden) form.querySelector('[data-ta-tabbtn="' + panel.dataset.taTabpanel + '"]')?.click();
   }, true);
 
-  document.addEventListener('ta:load', init);
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
+  // ---- Danh sách công việc of the service: add from the work catalogue, order with ↑ ↓ or by dragging, remove. ----------
+  function renumber(box) {
+    const items = [...box.querySelectorAll('[data-ta-svc-task-list] > li')];
+    items.forEach((li, i) => {
+      li.querySelector('.ta-svc-task__no').textContent = String(i + 1);
+      li.querySelector('[data-ta-svc-task-move="-1"]').disabled = i === 0;
+      li.querySelector('[data-ta-svc-task-move="1"]').disabled = i === items.length - 1;
+    });
+    box.querySelector('[data-ta-svc-task-empty]').hidden = items.length > 0;
+    const count = box.closest('form')?.querySelector('[data-ta-svc-task-count]');
+    if (count) count.textContent = String(items.length);
+    const pick = box.querySelector('[data-ta-svc-task-pick]');
+    const used = new Set(items.map((li) => li.dataset.id));
+    [...pick.options].forEach((o) => { if (o.value) o.disabled = used.has(o.value); });
+  }
+
+  document.addEventListener('click', (e) => {
+    const t = e.target.closest && e.target.closest('button');
+    const box = t && t.closest('[data-ta-svc-tasks]');
+    if (!box) return;
+    const list = box.querySelector('[data-ta-svc-task-list]');
+    if (t.matches('[data-ta-svc-task-add]')) {
+      e.preventDefault();
+      const pick = box.querySelector('[data-ta-svc-task-pick]');
+      const o = pick.selectedOptions[0];
+      if (!o || !o.value || list.querySelector('li[data-id="' + o.value + '"]')) return;
+      const li = box.querySelector('[data-ta-svc-task-template]').content.firstElementChild.cloneNode(true);
+      li.dataset.id = o.value;
+      li.querySelector('[data-name]').textContent = o.dataset.name;
+      li.querySelector('[data-meta]').textContent = o.dataset.meta;
+      li.querySelector('input[type=hidden]').value = o.value;
+      list.appendChild(li);
+      pick.value = '';
+      pick.dispatchEvent(new Event('change', { bubbles: true }));
+    } else if (t.matches('[data-ta-svc-task-remove]')) {
+      e.preventDefault();
+      t.closest('li').remove();
+    } else if (t.matches('[data-ta-svc-task-move]')) {
+      e.preventDefault();
+      const li = t.closest('li');
+      if (t.dataset.taSvcTaskMove === '-1' && li.previousElementSibling) li.parentNode.insertBefore(li, li.previousElementSibling);
+      else if (t.dataset.taSvcTaskMove === '1' && li.nextElementSibling) li.parentNode.insertBefore(li.nextElementSibling, li);
+    } else return;
+    renumber(box);
+  });
+
+  let dragged = null;
+  document.addEventListener('dragstart', (e) => {
+    const li = e.target.closest && e.target.closest('[data-ta-svc-task-list] > li');
+    if (!li) return;
+    dragged = li;
+    li.classList.add('is-dragging');
+    e.dataTransfer.effectAllowed = 'move';
+    try { e.dataTransfer.setData('text/plain', li.dataset.id); } catch (err) { /* old browsers */ }
+  });
+  document.addEventListener('dragover', (e) => {
+    if (!dragged) return;
+    const over = e.target.closest && e.target.closest('[data-ta-svc-task-list] > li');
+    if (!over || over === dragged || over.parentNode !== dragged.parentNode) return;
+    e.preventDefault();
+    const box = over.getBoundingClientRect();
+    over.parentNode.insertBefore(dragged, e.clientY > box.top + box.height / 2 ? over.nextSibling : over);
+  });
+  document.addEventListener('dragend', () => {
+    if (!dragged) return;
+    dragged.classList.remove('is-dragging');
+    renumber(dragged.closest('[data-ta-svc-tasks]'));
+    dragged = null;
+  });
+
+  function initTasks() { document.querySelectorAll('[data-ta-svc-tasks]').forEach(renumber); }
+  document.addEventListener('ta:load', () => { init(); initTasks(); });
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => { init(); initTasks(); }); else { init(); initTasks(); }
 })();

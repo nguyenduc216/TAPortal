@@ -8,12 +8,13 @@ using TAPortal.Web.Services;
 namespace TAPortal.Web.Controllers;
 
 public sealed record ServiceCatalogVm(ServiceCatalog Catalog, string Tab, bool Unavailable);
-public sealed record ServiceEditVm(Guid? Id, ServiceInput Input, IReadOnlyList<ServiceCategory> Categories, IReadOnlyList<Industry> Industries, string? Error);
+public sealed record ServiceEditVm(Guid? Id, ServiceInput Input, IReadOnlyList<ServiceCategory> Categories, IReadOnlyList<Industry> Industries, string? Error,
+    IReadOnlyList<ServiceTaskItem>? Tasks = null, IReadOnlyList<WorkCatalogItem>? WorkCatalog = null);
 
 // Hợp đồng > Danh mục dịch vụ (operator 2026-11-16, migration 061): service groups, services with their scope of work,
 // fee rules and pricing tiers, and industries (set on customers). CONTRACTS.SERVICES.MANAGE only.
 [Authorize(Policy = AdminPermissions.Policy.ServiceCatalogManage)]
-public sealed class ServiceCatalogController(IServiceCatalogStore store, ILogger<ServiceCatalogController> logger) : Controller
+public sealed class ServiceCatalogController(IServiceCatalogStore store, IWorkCatalogStore workCatalog, ILogger<ServiceCatalogController> logger) : Controller
 {
     public const string ServicesTab = "services", CategoriesTab = "categories", IndustriesTab = "industries";
 
@@ -40,7 +41,7 @@ public sealed class ServiceCatalogController(IServiceCatalogStore store, ILogger
             return RedirectToAction(nameof(Index), new { tab = CategoriesTab });
         }
         var input = new ServiceInput { CategoryId = category ?? catalog.Categories[0].Id, FeeLabel = "Phí dịch vụ", FeeUnit = "đồng/tháng" };
-        return EditView(null, input, catalog, null);
+        return await EditView(null, input, catalog, null);
     }
 
     [HttpGet]
@@ -48,7 +49,9 @@ public sealed class ServiceCatalogController(IServiceCatalogStore store, ILogger
     {
         var service = await store.GetServiceAsync(id);
         if (service is null) return NotFound();
-        return EditView(id, ServiceInput.From(service), await store.ListAsync(), null);
+        var input = ServiceInput.From(service);
+        input.TaskIds = (await store.ServiceTasksAsync(id)).Select(t => t.CatalogId).ToList();
+        return await EditView(id, input, await store.ListAsync(), null);
     }
 
     [HttpPost]
@@ -64,7 +67,7 @@ public sealed class ServiceCatalogController(IServiceCatalogStore store, ILogger
         if (result.Outcome == ServiceCatalogOutcome.Invalid)
         {
             Response.StatusCode = StatusCodes.Status400BadRequest;
-            return EditView(id, input, await store.ListAsync(), result.Message);
+            return await EditView(id, input, await store.ListAsync(), result.Message);
         }
         TempData["Success"] = id is null ? $"Đã thêm dịch vụ \"{input.Name.Trim()}\"." : "Đã lưu dịch vụ.";
         return next == "list" ? RedirectToAction(nameof(Index)) : RedirectToAction(nameof(Edit), new { id = result.Id });
@@ -124,11 +127,18 @@ public sealed class ServiceCatalogController(IServiceCatalogStore store, ILogger
         catch (AuditUnavailableException) { return new(ServiceCatalogOutcome.Invalid, "Không ghi được nhật ký audit nên chưa lưu. Liên hệ quản trị hệ thống."); }
     }
 
-    private ViewResult EditView(Guid? id, ServiceInput input, ServiceCatalog catalog, string? error)
+    private async Task<ViewResult> EditView(Guid? id, ServiceInput input, ServiceCatalog catalog, string? error)
     {
         ViewData["Title"] = id is null ? "Thêm dịch vụ" : "Sửa dịch vụ";
         ViewData["ParentTitle"] = "Danh mục dịch vụ";
         ViewData["ParentController"] = "ServiceCatalog";
-        return View("Edit", new ServiceEditVm(id, input, catalog.Categories, catalog.Industries.Where(i => i.IsActive).ToList(), error));
+        IReadOnlyList<WorkCatalogItem> entries;
+        try { entries = await workCatalog.ListAsync(); }
+        catch (Exception ex) when (ex is SqlException or ArgumentException or InvalidOperationException) { logger.LogWarning(ex, "Work catalogue unavailable."); entries = []; }
+        // The list as posted (after an error) or as stored, shown with the catalogue's names.
+        var byId = entries.ToDictionary(e => e.Id);
+        var tasks = (input.TaskIds ?? []).Where(byId.ContainsKey).Distinct().Select(x => byId[x])
+            .Select(e => new ServiceTaskItem(e.Id, e.Name, e.Unit, e.MetricCode, e.ChecklistCount, e.IsActive)).ToList();
+        return View("Edit", new ServiceEditVm(id, input, catalog.Categories, catalog.Industries.Where(i => i.IsActive).ToList(), error, tasks, entries));
     }
 }

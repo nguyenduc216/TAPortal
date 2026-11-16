@@ -1,0 +1,82 @@
+@model ServicePeriodListVm
+@using TAPortal.Web.Controllers
+@{
+    ViewData["Subtitle"] = "Dịch vụ làm cho từng khách hàng theo tháng: tiến độ, người phụ trách, bắt đầu và hạn. Mở một dòng để xem các công việc của dịch vụ trong tháng.";
+    ViewData["PageIcon"] = "list-tree";
+    var f = Model.Filter;
+    var today = Model.Today;
+    // Two months ahead, this month and twelve back.
+    var months = Enumerable.Range(0, 15).Select(i => new DateOnly(today.Year, today.Month, 1).AddMonths(2 - i)).ToList();
+    string Badge(string state) => state switch
+    {
+        ServicePeriodPolicy.Done => "bg-green-lt",
+        ServicePeriodPolicy.Overdue => "bg-red-lt",
+        ServicePeriodPolicy.InProgress => "bg-blue-lt",
+        _ => "bg-secondary-lt"
+    };
+}
+@section PageActions {
+    <a class="btn" asp-controller="Work" asp-action="Tasks">@UiIcon.Render("checks")<span>Tất cả công việc</span></a>
+    @if (Model.CanCreate) {<a class="btn btn-ta-gold" asp-action="Create" asp-route-month="@(f.Month?.ToString("yyyy-MM"))">@UiIcon.Render("plus")<span>Tạo dịch vụ theo tháng</span></a>}
+}
+@if (Model.Error is not null)
+{
+    <div class="ta-alert ta-alert--warning" role="alert">@UiIcon.Render("alert-triangle")<div class="ta-alert__body">@Model.Error</div></div>
+}
+<section class="card ta-table-card" aria-label="Danh sách dịch vụ">
+    <form method="get" class="ta-table-toolbar ta-sp-filter">
+        <div class="ta-search">@UiIcon.Render("search")<input class="form-control" type="search" name="q" value="@f.Q" placeholder="Tìm khách hàng, dịch vụ..." aria-label="Tìm khách hàng, dịch vụ" /></div>
+        <select class="form-select" name="month" aria-label="Tháng" onchange="this.form.requestSubmit()">
+            <option value="all" selected="@(Model.MonthText == "all")">Tất cả các tháng</option>
+            @foreach (var m in months) {<option value="@m.ToString("yyyy-MM")" selected="@(f.Month == m)">Tháng @ServicePeriodPolicy.MonthLabel(m)</option>}
+        </select>
+        <select class="form-select" name="customer" aria-label="Khách hàng" onchange="this.form.requestSubmit()">
+            <option value="">Tất cả khách hàng</option>
+            @foreach (var c in Model.Customers) {<option value="@c.Id" selected="@(f.CustomerId == c.Id)">@c.Name</option>}
+        </select>
+        <select class="form-select" name="service" aria-label="Dịch vụ" onchange="this.form.requestSubmit()">
+            <option value="">Tất cả dịch vụ</option>
+            @foreach (var s in Model.Services) {<option value="@s.Id" selected="@(f.ServiceId == s.Id)">@s.Name</option>}
+        </select>
+        <select class="form-select" name="state" aria-label="Tiến độ" onchange="this.form.requestSubmit()">
+            <option value="">Mọi tiến độ</option>
+            @foreach (var s in new[] { ServicePeriodPolicy.New, ServicePeriodPolicy.InProgress, ServicePeriodPolicy.Overdue, ServicePeriodPolicy.Done, ServicePeriodPolicy.Empty })
+            {<option value="@s" selected="@(f.State == s)">@ServicePeriodPolicy.StateLabel(s)</option>}
+        </select>
+        <button class="btn" type="submit">@UiIcon.Render("search")<span>Lọc</span></button>
+    </form>
+    @if (Model.Rows.Count == 0)
+    {
+        <div class="ta-empty"><span class="ta-empty__icon">@UiIcon.Render("list-tree")</span><p class="ta-empty__title">Chưa có dịch vụ nào@(f.Month is DateOnly mm ? " trong tháng " + ServicePeriodPolicy.MonthLabel(mm) : "")</p>
+            <p class="ta-empty__text">Tạo dịch vụ cho khách hàng theo tháng: hệ thống tạo sẵn các công việc theo danh sách công việc của dịch vụ.</p>
+            @if (Model.CanCreate) {<a class="btn btn-ta-gold mt-2" asp-action="Create" asp-route-month="@(f.Month?.ToString("yyyy-MM"))">@UiIcon.Render("plus")<span>Tạo dịch vụ theo tháng</span></a>}</div>
+    }
+    else
+    {
+        <div class="ta-table-wrap">
+            <table class="ta-table ta-table-stack">
+                <thead><tr><th scope="col">Khách hàng</th><th scope="col">Dịch vụ</th><th scope="col">Tháng</th><th scope="col">Bắt đầu</th><th scope="col">Hạn</th><th scope="col">Phụ trách</th><th scope="col">Tiến độ</th><th scope="col">Trạng thái</th><th scope="col" class="ta-col-actions">Thao tác</th></tr></thead>
+                <tbody>
+                @foreach (var r in Model.Rows)
+                {
+                    var state = r.State(today);
+                    <tr>
+                        <td data-label="Khách hàng"><span class="fw-semibold">@r.CustomerName</span>@if (r.CustomerCode is not null) {<small class="d-block text-secondary">@r.CustomerCode</small>}</td>
+                        <td data-label="Dịch vụ"><a class="fw-semibold" asp-action="Details" asp-route-id="@r.Id">@r.ServiceName</a></td>
+                        <td data-label="Tháng">@r.MonthLabel</td>
+                        <td data-label="Bắt đầu">@(r.StartDate?.ToString("dd/MM/yyyy") ?? "—")</td>
+                        <td data-label="Hạn">@(r.DueDate?.ToString("dd/MM/yyyy") ?? "—")</td>
+                        <td data-label="Phụ trách">@(r.OwnerName ?? "—")</td>
+                        <td data-label="Tiến độ">
+                            <div class="ta-sp-progress" title="@r.TaskDone / @r.TaskTotal công việc hoàn thành"><div class="progress progress-sm"><div class="progress-bar" style="width:@r.Percent%"></div></div><span class="small text-secondary">@r.TaskDone/@r.TaskTotal việc · @r.Percent%</span></div>
+                        </td>
+                        <td data-label="Trạng thái"><span class="badge @Badge(state)">@ServicePeriodPolicy.StateLabel(state)</span></td>
+                        <td class="ta-col-actions"><a class="btn btn-sm btn-soft-primary" asp-action="Details" asp-route-id="@r.Id">@UiIcon.Render("eye")<span>Mở</span></a></td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+        <div class="ta-table-footer small text-secondary">@Model.Rows.Count dịch vụ</div>
+    }
+</section>

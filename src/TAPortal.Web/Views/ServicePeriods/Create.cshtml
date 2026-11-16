@@ -1,0 +1,83 @@
+@model ServicePeriodCreateVm
+@using TAPortal.Web.Controllers
+@{
+    ViewData["Subtitle"] = "Chọn khách hàng, dịch vụ và tháng: hệ thống tạo sẵn các công việc theo danh sách công việc của dịch vụ (kèm checklist mẫu, đơn vị và mã hạn mức).";
+    ViewData["PageIcon"] = "plus";
+    var i = Model.Input;
+}
+@if (Model.Error is not null)
+{
+    <div class="ta-alert ta-alert--danger" role="alert">@UiIcon.Render("alert-circle")<div class="ta-alert__body">@Model.Error</div></div>
+}
+<form method="post" asp-action="Create" class="card">
+    <div class="card-body">
+        <div class="ta-form-grid">
+            <div class="ta-span-2">
+                <label class="form-label" for="spCustomer">Khách hàng <span class="text-danger">*</span></label>
+                <select class="form-select" id="spCustomer" name="Input.CustomerId" required>
+                    <option value="">— Chọn khách hàng —</option>
+                    @foreach (var c in Model.Customers) {<option value="@c.Id" selected="@(c.Id == i.CustomerId)">@c.Name (@c.Code)</option>}
+                </select>
+            </div>
+            <div class="ta-span-2">
+                <label class="form-label" for="spService">Dịch vụ <span class="text-danger">*</span></label>
+                <select class="form-select" id="spService" name="Input.ServiceId" required>
+                    <option value="">— Chọn dịch vụ —</option>
+                    @foreach (var g in Model.Categories)
+                    {
+                        var list = Model.Services.Where(s => s.CategoryId == g.Id).ToList();
+                        if (list.Count == 0) { continue; }
+                        <optgroup label="@g.Name">
+                            @foreach (var s in list)
+                            {
+                                var n = Model.TaskCounts.TryGetValue(s.Id, out var c) ? c : 0;
+                                <option value="@s.Id" selected="@(s.Id == i.ServiceId)">@s.Name — @(n == 0 ? "chưa có công việc" : n + " công việc")</option>
+                            }
+                        </optgroup>
+                    }
+                </select>
+                <div class="form-hint">Danh sách công việc của dịch vụ sửa ở Hợp đồng › Danh mục dịch vụ › tab Danh sách công việc.</div>
+            </div>
+            <div>
+                <label class="form-label" for="spMonth">Tháng thực hiện <span class="text-danger">*</span></label>
+                <div class="ta-input-icon">@UiIcon.Render("calendar")<input class="form-control" id="spMonth" name="Input.Month" type="month" value="@i.Month" required /></div>
+            </div>
+            <div>
+                <label class="form-label" for="spOwner">Người phụ trách <span class="text-danger">*</span></label>
+                @if (Model.CanAssign)
+                {
+                    <select class="form-select" id="spOwner" name="Input.OwnerEmployeeId" required>
+                        @foreach (var e in Model.Employees) {<option value="@e.Id" selected="@(e.Id == i.OwnerEmployeeId)">@e.Name (@e.Code)</option>}
+                    </select>
+                    <div class="form-hint">Các công việc tạo ra giao cho người này; đổi người cho từng việc sau nếu cần.</div>
+                }
+                else
+                {
+                    <div class="ta-input-icon">@UiIcon.Render("user")<input class="form-control" value="@(Model.Employees.FirstOrDefault(e => e.Id == Model.Self)?.Name ?? "Bạn")" readonly disabled /></div>
+                    <input type="hidden" name="Input.OwnerEmployeeId" value="@Model.Self" />
+                    <div class="form-hint">Bạn chỉ tạo được dịch vụ do chính mình phụ trách.</div>
+                }
+            </div>
+            <div class="ta-form-grid ta-form-grid--pair ta-span-2">
+                <div>
+                    <label class="form-label" for="spStart">Ngày bắt đầu</label>
+                    <div class="ta-input-icon">@UiIcon.Render("calendar")<input class="form-control" id="spStart" name="Input.StartDate" type="date" value="@i.StartDate?.ToString("yyyy-MM-dd")" /></div>
+                    <div class="form-hint">Để trống: ngày 1 của tháng.</div>
+                </div>
+                <div>
+                    <label class="form-label" for="spDue">Hạn hoàn thành</label>
+                    <div class="ta-input-icon">@UiIcon.Render("calendar")<input class="form-control" id="spDue" name="Input.DueDate" type="date" value="@i.DueDate?.ToString("yyyy-MM-dd")" /></div>
+                </div>
+            </div>
+            <div class="ta-span-2">
+                <label class="form-label" for="spNote">Ghi chú</label>
+                <div class="ta-input-icon ta-input-icon--top">@UiIcon.Render("file-text")<textarea class="form-control" id="spNote" name="Input.Note" rows="2" maxlength="@ServicePeriodPolicy.NoteMax" data-ta-voice>@i.Note</textarea></div>
+                <div class="form-hint">Hợp đồng của dịch vụ sẽ gắn ở bước làm lại phần hợp đồng.</div>
+            </div>
+        </div>
+    </div>
+    <div class="card-footer ta-form-actions">
+        <a class="btn" asp-action="Index">@UiIcon.Render("x")<span>Hủy</span></a>
+        <button class="btn btn-primary" type="submit" data-ta-loading data-ta-loading-text="Đang tạo...">@UiIcon.Render("device-floppy")<span>Tạo dịch vụ</span></button>
+    </div>
+</form>

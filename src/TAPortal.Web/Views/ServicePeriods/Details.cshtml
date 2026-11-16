@@ -1,0 +1,96 @@
+@model ServicePeriodDetailVm
+@using TAPortal.Web.Controllers
+@{
+    var d = Model.Detail;
+    var p = d.Period;
+    var state = p.State(Model.Today);
+    ViewData["Title"] = $"{p.ServiceName} — {p.MonthLabel}";
+    ViewData["Heading"] = $"{p.ServiceName} — {p.MonthLabel}";
+    ViewData["Subtitle"] = $"{p.CustomerName}{(p.CustomerCode is null ? "" : " (" + p.CustomerCode + ")")} · phụ trách {p.OwnerName ?? "—"}";
+    ViewData["PageIcon"] = "list-tree";
+    ViewData["ParentTitle"] = "Danh sách dịch vụ";
+    ViewData["ParentController"] = "ServicePeriods";
+    var inService = d.Tasks.Select(t => t.Title).ToHashSet(StringComparer.OrdinalIgnoreCase);
+}
+@section PageActions {
+    @if (d.CanManage && p.TaskDone == 0)
+    {
+        <form method="post" asp-action="Delete" asp-route-id="@p.Id" onsubmit="return confirm('Xóa dịch vụ của tháng này cùng các công việc chưa làm của nó?');"><button class="btn" type="submit">@UiIcon.Render("trash")<span>Xóa</span></button></form>
+    }
+}
+<div class="ta-ws-grid ta-sp-detail">
+    <section class="card" aria-label="Thông tin dịch vụ">
+        <div class="card-body">
+            <dl class="ta-dl">
+                <dt>Khách hàng</dt><dd><a asp-controller="Customers" asp-action="Details" asp-route-id="@p.CustomerId">@p.CustomerName</a></dd>
+                <dt>Dịch vụ</dt><dd>@p.ServiceName</dd>
+                <dt>Tháng</dt><dd>@p.MonthLabel</dd>
+                <dt>Bắt đầu</dt><dd>@(p.StartDate?.ToString("dd/MM/yyyy") ?? "—")</dd>
+                <dt>Hạn hoàn thành</dt><dd>@(p.DueDate?.ToString("dd/MM/yyyy") ?? "—")</dd>
+                <dt>Phụ trách</dt><dd>@(p.OwnerName ?? "—")</dd>
+                <dt>Tiến độ</dt><dd><span class="badge @(state == ServicePeriodPolicy.Done ? "bg-green-lt" : state == ServicePeriodPolicy.Overdue ? "bg-red-lt" : "bg-blue-lt")">@ServicePeriodPolicy.StateLabel(state)</span> @p.TaskDone/@p.TaskTotal việc · @p.Percent%</dd>
+                <dt>Hợp đồng</dt><dd class="text-secondary">Chưa gắn (sẽ có ở bước làm lại hợp đồng)</dd>
+                @if (d.Note is not null) {<dt>Ghi chú</dt><dd>@d.Note</dd>}
+            </dl>
+        </div>
+    </section>
+    <section class="card" aria-label="Số lượng theo mã hạn mức">
+        <div class="card-body">
+            <h2 class="ta-section-title mb-2">@UiIcon.Render("hash")<span>Số lượng trong tháng</span></h2>
+            @if (d.ByMetric.Count == 0)
+            {
+                <p class="text-secondary mb-0">Chưa có công việc nào gắn mã hạn mức chi phí.</p>
+            }
+            else
+            {
+                <ul class="ta-sp-metrics">
+                    @foreach (var m in d.ByMetric) {<li><span class="ta-code">@m.Code</span><strong>@ServicePeriodPolicy.Number(m.Total)</strong><span class="text-secondary">@m.Unit</span></li>}
+                </ul>
+                <p class="form-hint mb-0">Tổng số lượng các công việc theo từng mã hạn mức; dùng để tính phí dịch vụ của tháng theo bảng hạn mức.</p>
+            }
+        </div>
+    </section>
+</div>
+
+<section class="card ta-table-card mt-3" aria-label="Công việc của dịch vụ">
+    <div class="ta-table-toolbar"><h2 class="ta-section-title mb-0">@UiIcon.Render("checks")<span>Danh sách công việc (@d.Tasks.Count)</span></h2></div>
+    @if (d.Tasks.Count == 0)
+    {
+        <p class="text-secondary px-4 pb-3 mb-0">Chưa có công việc nào. Thêm công việc bên dưới, hoặc thêm danh sách công việc cho dịch vụ ở Danh mục dịch vụ.</p>
+    }
+    else
+    {
+        <div class="ta-table-wrap">
+            <table class="ta-table ta-table-stack">
+                <thead><tr><th scope="col">#</th><th scope="col">Công việc</th><th scope="col">Phụ trách</th><th scope="col">Hạn</th><th scope="col">Checklist</th><th scope="col" class="text-end">Số lượng</th><th scope="col">Trạng thái</th></tr></thead>
+                <tbody>
+                @{ var n = 0; }
+                @foreach (var t in d.Tasks)
+                {
+                    n++;
+                    var overdue = WorkTaskPolicy.IsOverdue(t.Status, t.DueDate, Model.Today);
+                    <tr class="@(t.Status == WorkTaskPolicy.Cancelled ? "text-secondary" : null)">
+                        <td data-label="#">@n</td>
+                        <td data-label="Công việc"><a class="fw-semibold" asp-controller="Work" asp-action="Details" asp-route-id="@t.Id">@t.Title</a><small class="d-block text-secondary">@t.TaskNo</small></td>
+                        <td data-label="Phụ trách">@(t.OwnerName ?? "—")</td>
+                        <td data-label="Hạn" class="@(overdue ? "text-danger" : null)">@(t.DueDate?.ToString("dd/MM/yyyy") ?? "—")</td>
+                        <td data-label="Checklist">@(t.ChecklistTotal == 0 ? "—" : $"{t.ChecklistDone}/{t.ChecklistTotal}")</td>
+                        <td data-label="Số lượng" class="text-end">@if (t.Unit is null && t.MetricCode is null && t.Quantity == 0) {<span class="text-secondary">—</span>} else {<a asp-controller="Work" asp-action="Details" asp-route-id="@t.Id" asp-fragment="quantities" title="Nhập / xem lịch sử số lượng"><strong>@ServicePeriodPolicy.Number(t.Quantity)</strong> @t.Unit</a>@if (t.MetricCode is not null) {<small class="d-block"><span class="ta-code">@t.MetricCode</span></small>}}</td>
+                        <td data-label="Trạng thái"><span class="badge @(t.Status == WorkTaskPolicy.Done ? "bg-green-lt" : overdue ? "bg-red-lt" : t.Status == WorkTaskPolicy.InProgress ? "bg-blue-lt" : "bg-secondary-lt")">@WorkTaskPolicy.StatusLabel(t.Status)</span></td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    }
+    @if (d.CanManage && Model.Catalog.Count > 0)
+    {
+        <form method="post" asp-action="AddTask" asp-route-id="@p.Id" class="ta-sp-add">
+            <select class="form-select" name="catalogId" required aria-label="Đầu việc cần thêm">
+                <option value="">— Thêm công việc từ Danh mục công việc —</option>
+                @foreach (var e in Model.Catalog.Where(e => e.IsActive && !inService.Contains(e.Name))) {<option value="@e.Id">@e.Name@(e.Unit is null ? "" : " (" + e.Unit + ")")</option>}
+            </select>
+            <button class="btn" type="submit">@UiIcon.Render("plus")<span>Thêm công việc</span></button>
+        </form>
+    }
+</section>
