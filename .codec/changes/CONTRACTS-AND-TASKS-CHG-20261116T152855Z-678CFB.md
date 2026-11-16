@@ -50,3 +50,6 @@ Operator 2026-11-16 (start of the contract / customer / task rework after the ne
 ## Deploy
 - portal: commit 11c0eb3, artifact f3eb630517b9d4f54c91d35140749e2b395d6bf59fafb767ee9448bf0c9dac62, package 64BAF6DBC5CDF5BAADDE53D00B6D786FD8947EB380F969E51792F095EA6EB48A, DEPLOYED 2026-11-16T15:35:02Z, health 200. Smoke: /ServiceCatalog (3 tabs, empty catalogue), industries tab add row, customer edit shows Ngành nghề; nothing saved.
 - Note: portal had been overwritten at 21:28 by the WEBSITE-TA deploy (d998c53); redeployed from b02bcd4 (main with both) at 22:11 before this change.
+
+## One-off data (not committed)
+- 062-quote-catalog-data (verify 111, rollback 112): operator "Nhập giúp tôi" - catalogue filled from the T.A quote (5 groups, 3 industries, 11 services: tax accounting 9 tiers x 3 industries, monthly HR 5 tiers, HR setup package 10.000.000 đồng/gói, internal accounting 5 tiers, 7 quoted-separately items). First dry-run failed (PRINT with subqueries, rolled back, nothing left); fixed; DRYRUN PASS/NOT_APPLIED, gates PASS (800), REAL RUN VERIFY_STATUS=PASS => EXECUTED 2026-11-16T15:45:16Z. Files removed from the working tree; numbers 062/111/112 stay reserved.
