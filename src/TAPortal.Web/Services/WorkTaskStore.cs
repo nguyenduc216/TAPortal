@@ -149,6 +149,8 @@ public interface IWorkTaskStore
     Task<WorkResult> AddChecklistAsync(Guid actor, Guid id, string title);
     Task<WorkResult> SetChecklistAsync(Guid actor, Guid id, Guid itemId, bool done);
     Task<WorkResult> RemoveChecklistAsync(Guid actor, Guid id, Guid itemId);
+    // Checklist order (operator 2026-11-16, drag and drop): @items are the task's items in the new order.
+    Task<WorkResult> OrderChecklistAsync(Guid actor, Guid id, IReadOnlyList<Guid> items);
     Task<WorkResult> CommentAsync(Guid actor, Guid id, string body);
     Task<IReadOnlyList<WorkTemplateRow>> TemplatesAsync();
     Task<WorkTemplateRow?> TemplateAsync(Guid id);
@@ -309,6 +311,7 @@ UPDATE dbo.WorkTaskChecklistItems SET IsDone=@done,DoneAt=CASE WHEN @done=1 THEN
 WHERE Id=@item AND TaskId=@id AND IsDeleted=0 AND IsDone<>@done;
 """;
     public const string RemoveChecklist = "UPDATE dbo.WorkTaskChecklistItems SET IsDeleted=1,DeletedAt=SYSUTCDATETIME(),DeletedBy=@by WHERE Id=@item AND TaskId=@id AND IsDeleted=0;";
+    public const string OrderChecklist = "UPDATE dbo.WorkTaskChecklistItems SET SortOrder=@n WHERE Id=@item AND TaskId=@id AND IsDeleted=0 AND SortOrder<>@n;";
     public const string Counts = "SELECT COUNT(1),SUM(CASE WHEN IsDone=1 THEN 1 ELSE 0 END) FROM dbo.WorkTaskChecklistItems WHERE TaskId=@id AND IsDeleted=0;";
 
     // "Truy cập hộ" (042): @imp names the person who really acted under the account @by.
@@ -632,6 +635,20 @@ public sealed class SqlWorkTaskStore(IConfiguration configuration, ILogger<SqlWo
         await Exec(cn, tx, WorkTaskSql.RemoveChecklist, ("@id", id), ("@item", itemId), ("@by", actor));
         await Log(cn, tx, id, "CHECKLIST", "Xóa: " + itemTitle, null, null, actor);
         await AfterChecklist(cn, tx, t, id, actor);
+        return new(WorkOutcome.Saved, id);
+    });
+
+    public async Task<WorkResult> OrderChecklistAsync(Guid actor, Guid id, IReadOnlyList<Guid> items) => await InTransaction(async (cn, tx) =>
+    {
+        if (items.Count == 0 || items.Count > WorkTaskPolicy.ChecklistItemsMax || items.Distinct().Count() != items.Count)
+            return new(WorkOutcome.Invalid, id, "Thứ tự checklist không hợp lệ, vui lòng tải lại trang.");
+        var (a, t) = await Load(cn, tx, actor, id);
+        if (t is null || !t.CanSee(a)) return new(WorkOutcome.NotFound);
+        var changed = 0;
+        for (var n = 0; n < items.Count; n++)
+            changed += await Exec(cn, tx, WorkTaskSql.OrderChecklist, ("@id", id), ("@item", items[n]), ("@n", n + 1));
+        if (changed == 0) return new(WorkOutcome.NoChange, id);
+        await Log(cn, tx, id, "CHECKLIST", "Đổi thứ tự checklist", null, null, actor);
         return new(WorkOutcome.Saved, id);
     });
 

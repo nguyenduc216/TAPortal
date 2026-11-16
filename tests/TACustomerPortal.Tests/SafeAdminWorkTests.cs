@@ -328,6 +328,22 @@ public sealed class SafeAdminWorkTests
     private static HttpClient Client(WebApplicationFactory<admin::Program> f) => f.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false, BaseAddress = new Uri("https://localhost") });
 
     [Fact]
+    public async Task ChecklistItemsOfATaskAreReorderedByDragging()
+    {
+        var store = new MemoryWork();
+        using var f = Factory("STAFF", store, "TASKS.VIEW");
+        var c = Client(f);
+        var html = await c.GetStringAsync($"/work/details/{MemoryWork.T1}");
+        Assert.Contains("data-ta-step-handle", html);
+        Assert.Contains($"data-ta-order=\"checkOrder{MemoryWork.T1:N}\"", html);
+        Assert.Contains($"data-ta-item=\"{MemoryWork.I1}\"", html);
+        Assert.Contains("data-ta-step-handle", await c.GetStringAsync("/work"));                             // task cards too
+        var r = await c.PostAsync($"/work/checklistorder/{MemoryWork.T1}", Form(Token(html), ("items", MemoryWork.I2.ToString()), ("items", MemoryWork.I1.ToString())));
+        Assert.Equal(HttpStatusCode.Redirect, r.StatusCode);
+        Assert.Equal([MemoryWork.I2, MemoryWork.I1], store.LastOrder);
+    }
+
+    [Fact]
     public async Task TheCataloguePageListsEntriesAsTextAndEditsThemInATabbedPopup()
     {
         var entry = new S.WorkCatalogItem(Guid.Parse("c1000000-0000-0000-0000-000000000001"), "Kéo hóa đơn", "Hóa đơn đầu vào", 10, true, 2, "Tải XML",
@@ -450,6 +466,8 @@ public sealed class SafeAdminWorkTests
             return new(S.WorkOutcome.Saved, id);
         }));
         public Task<S.WorkResult> RemoveChecklistAsync(Guid actor, Guid id, Guid itemId) => Task.FromResult(Act(id, t => Items.Remove(itemId) ? new(S.WorkOutcome.Saved, id) : new(S.WorkOutcome.NotFound)));
+        public List<Guid> LastOrder { get; } = [];
+        public Task<S.WorkResult> OrderChecklistAsync(Guid actor, Guid id, IReadOnlyList<Guid> items) => Task.FromResult(Act(id, t => { LastOrder.Clear(); LastOrder.AddRange(items); return new(S.WorkOutcome.Saved, id); }));
         public Task<S.WorkResult> CommentAsync(Guid actor, Guid id, string body) => Task.FromResult(Act(id, t => { comments.Add((id, body)); return new(S.WorkOutcome.Saved, id); }));
         public Task<IReadOnlyList<S.WorkTemplateRow>> TemplatesAsync() => Task.FromResult<IReadOnlyList<S.WorkTemplateRow>>([]);
         public Task<S.WorkTemplateRow?> TemplateAsync(Guid id) => Task.FromResult<S.WorkTemplateRow?>(null);

@@ -126,6 +126,10 @@
 .ta-step__handle:hover, .ta-step__handle:focus-visible { background: var(--ta-surface-2, #eef3fa); color: var(--ta-text); }
 .ta-step.is-dragging { border-color: var(--ta-primary, #1565c0); box-shadow: 0 8px 24px rgba(15, 23, 42, .16); position: relative; z-index: 1; }
 .ta-step.is-dragging .ta-step__handle { cursor: grabbing; }
+.ta-checklist__handle { flex: 0 0 auto; width: 20px; height: 26px; margin-right: -4px; }
+.ta-checklist__handle .ta-icon { width: 16px; height: 16px; }
+.ta-checklist > li.is-dragging { position: relative; z-index: 1; border-radius: 8px; background: var(--ta-surface, #fff); box-shadow: 0 8px 24px rgba(15, 23, 42, .16); }
+.ta-checklist.is-saving { opacity: .7; }
 .ta-step__no::before { content: counter(ta-step) "."; display: block; padding-top: 6px; font-weight: 600; color: var(--ta-text-2); text-align: right; }
 .ta-step__body { display: grid; gap: 4px; }
 .ta-step__used { display: flex; flex-wrap: wrap; gap: 6px; padding-top: var(--ta-sp-2); border-top: 1px dashed var(--ta-border); }

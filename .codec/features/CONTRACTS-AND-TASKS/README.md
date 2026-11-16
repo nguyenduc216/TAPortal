@@ -24,3 +24,4 @@
 | `CONTRACTS-AND-TASKS-CHG-20261116T060542Z-E543D2` | 2026-11-16 | Danh mục công việc: ô tìm có danh sách gợi ý tên đầu việc | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |
 | `CONTRACTS-AND-TASKS-CHG-20261116T062438Z-9435EF` | 2026-11-16 | Danh mục công việc: nút Hủy hiện khi đang sửa dòng/checklist mẫu | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |
 | `CONTRACTS-AND-TASKS-CHG-20261116T071620Z-30C6CF` | 2026-11-16 | Danh mục công việc: lưới dạng chữ, sửa nhanh trên lưới, popup 2 tab, kéo thả checklist | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |
+| `CONTRACTS-AND-TASKS-CHG-20261116T081529Z-265C15` | 2026-11-16 | Công việc: kéo thả đổi thứ tự checklist trong từng công việc | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |

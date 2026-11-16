@@ -65,10 +65,17 @@
         <div class="card-header"><h2 class="card-title" id="checkTitle">@UiIcon.Render("checks")Checklist (@t.ChecklistDone/@t.ChecklistTotal)</h2></div>
         <div class="card-body">
             @if (d.Checklist.Count == 0) {<p class="text-secondary">Chưa có mục nào. Checklist không bắt buộc; nếu có thì phải tích hết, và khi chuyển sang “Hoàn thành” cần nhập ghi chú kết quả.</p>}
-            <ul class="ta-checklist">
+            @{ var canOrder = !closed && d.Checklist.Count > 1; var orderForm = "checkOrder" + t.Id.ToString("N"); }
+            @if (canOrder)
+            {
+                @* Drag and drop (operator 2026-11-16): the new order is posted in the background, the page stays as it is. *@
+                <form id="@orderForm" method="post" asp-action="ChecklistOrder" asp-route-id="@t.Id" hidden><input type="hidden" name="returnUrl" value="@returnUrl" /></form>
+            }
+            <ul class="ta-checklist" data-ta-order="@(canOrder ? orderForm : null)">
                 @foreach (var i in d.Checklist)
                 {
-                    <li class="@(i.IsDone ? "is-done" : null)">
+                    <li class="@(i.IsDone ? "is-done" : null)" data-ta-step data-ta-item="@i.Id">
+                        @if (canOrder) {<button class="ta-step__handle ta-checklist__handle" type="button" data-ta-step-handle aria-label="Đổi vị trí mục (kéo, hoặc ↑ / ↓): @i.Title" title="Kéo để đổi vị trí">@UiIcon.Render("grip-vertical")</button>}
                         <form method="post" asp-action="ChecklistSet" asp-route-id="@t.Id">
                             <input type="hidden" name="item" value="@i.Id" /><input type="hidden" name="done" value="@(i.IsDone ? "false" : "true")" /><input type="hidden" name="returnUrl" value="@returnUrl" />
                             <button type="submit" class="ta-check" role="checkbox" aria-checked="@(i.IsDone ? "true" : "false")" aria-label="@(i.IsDone ? "Bỏ hoàn thành" : "Đánh dấu hoàn thành"): @i.Title" disabled="@closed">@if (i.IsDone) {@UiIcon.Render("check")}</button>

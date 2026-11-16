@@ -50,10 +50,16 @@
     </form>
 
     <section class="ta-task__checklist" aria-label="Checklist">
-        <ul class="ta-checklist">
+        @{ var canOrder = !closed && c.Checklist.Count > 1; var orderForm = "checkOrder" + t.Id.ToString("N"); }
+        @if (canOrder)
+        {
+            <form id="@orderForm" method="post" asp-action="ChecklistOrder" asp-route-id="@t.Id" hidden><input type="hidden" name="returnUrl" value="@Model.ReturnUrl" /></form>
+        }
+        <ul class="ta-checklist" data-ta-order="@(canOrder ? orderForm : null)">
             @foreach (var i in c.Checklist)
             {
-                <li class="@(i.IsDone ? "is-done" : null)">
+                <li class="@(i.IsDone ? "is-done" : null)" data-ta-step data-ta-item="@i.Id">
+                    @if (canOrder) {<button class="ta-step__handle ta-checklist__handle" type="button" data-ta-step-handle aria-label="Đổi vị trí mục (kéo, hoặc ↑ / ↓): @i.Title" title="Kéo để đổi vị trí">@UiIcon.Render("grip-vertical")</button>}
                     <form method="post" asp-action="ChecklistSet" asp-route-id="@t.Id" data-ta-card-form>
                         <input type="hidden" name="item" value="@i.Id" />
                         <input type="hidden" name="done" value="@(i.IsDone ? "false" : "true")" />

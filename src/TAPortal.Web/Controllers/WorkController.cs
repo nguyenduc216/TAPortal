@@ -170,6 +170,11 @@ public sealed class WorkController(IWorkTaskStore work, ILogger<WorkController> 
     [HttpPost]
     [ValidateAntiForgeryToken]
     [Authorize(Policy = AdminPermissions.Policy.TasksView)]
+    public Task<IActionResult> ChecklistOrder(Guid id, Guid[] items, string? returnUrl) => Quick(id, returnUrl, actor => work.OrderChecklistAsync(actor, id, items ?? []));
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [Authorize(Policy = AdminPermissions.Policy.TasksView)]
     public Task<IActionResult> Comment(Guid id, string body, string? returnUrl) => Quick(id, returnUrl, actor => work.CommentAsync(actor, id, body ?? ""));
 
     private async Task<IActionResult> Quick(Guid id, string? returnUrl, Func<Guid, Task<WorkResult>> act)

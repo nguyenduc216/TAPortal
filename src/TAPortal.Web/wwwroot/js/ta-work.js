@@ -192,6 +192,27 @@
     document.addEventListener('ta:before-swap', () => document.querySelectorAll('[data-ta-catalog-dialog][open]').forEach((d) => d.close?.()));
 
     // Checklist order: drag an item by its handle (mouse or touch), or focus the handle and press ↑ / ↓.
+    // A task's checklist (ul[data-ta-order] = its order form) is saved in the background; the catalogue popup on Lưu.
+    const orderTimers = new WeakMap();
+    const saveOrder = (list, delay) => {
+        const form = list.dataset.taOrder ? document.getElementById(list.dataset.taOrder) : null;
+        if (!form || !window.fetch) return;
+        clearTimeout(orderTimers.get(list));
+        orderTimers.set(list, setTimeout(async () => {
+            const body = new FormData(form);
+            list.querySelectorAll('[data-ta-item]').forEach((li) => body.append('items', li.dataset.taItem));
+            list.classList.add('is-saving');
+            try {
+                const response = await fetch(form.action, { method: 'POST', body, credentials: 'same-origin' });
+                if (!response.ok) throw new Error(String(response.status));
+            } catch {
+                window.alert('Không lưu được thứ tự checklist, trang sẽ tải lại.');
+                window.location.reload();
+            } finally {
+                list.classList.remove('is-saving');
+            }
+        }, delay));
+    };
     let dragging = null;
     document.addEventListener('pointerdown', (event) => {
         const handle = event.target?.closest?.('[data-ta-step-handle]');
@@ -217,7 +238,7 @@
         const { li, list, moved } = dragging;
         dragging = null;
         li.classList.remove('is-dragging');
-        if (moved) { renumberSteps(list); catalogDirty(list.closest('[data-ta-catalog-dialog]'), true); }
+        if (moved) { renumberSteps(list); catalogDirty(list.closest('[data-ta-catalog-dialog]'), true); saveOrder(list, 0); }
     };
     document.addEventListener('pointerup', dragEnd);
     document.addEventListener('pointercancel', dragEnd);
@@ -232,6 +253,7 @@
         else return;
         renumberSteps(list);
         catalogDirty(list.closest('[data-ta-catalog-dialog]'), true);
+        saveOrder(list, 700);
         handle.focus();
     });
 
