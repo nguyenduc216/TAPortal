@@ -54,7 +54,6 @@
                     <tr class="ta-catalog-check" id="@(formId)Check" hidden>
                         <td colspan="7">
                             <p class="form-label mb-1">Checklist mẫu của “@x.Name” <span class="text-secondary small">· tạo việc với tên này sẽ tự có các mục này; phần diễn giải hiện kèm mục ở từng công việc</span></p>
-                            <input form="@formId" type="hidden" name="Input.Items" value="" />
                             <ol class="ta-steps" data-ta-steps>
                                 @{ var n = 0; }
                                 @foreach (var s in x.Steps)
