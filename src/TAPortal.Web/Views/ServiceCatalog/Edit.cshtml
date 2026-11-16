@@ -5,6 +5,8 @@
     ViewData["Subtitle"] = "Thông tin dịch vụ, cách tính phí theo hạn mức, phạm vi công việc và nguyên tắc tính phí.";
     ViewData["PageIcon"] = "package";
     var i = Model.Input;
+    // Operator 2026-11-17: show which service is being edited in the page heading.
+    if (Model.Id is not null && !string.IsNullOrWhiteSpace(i.Name)) ViewData["Heading"] = "Sửa dịch vụ: " + i.Name.Trim();
     var mode = ServicePricingPolicy.Modes.Contains(i.PricingMode) ? i.PricingMode : ServicePricingPolicy.Tier;
     var industries = JsonSerializer.Serialize(Model.Industries.Select(x => new { id = x.Id.ToString(), name = x.Name }));
     var pricing = string.IsNullOrWhiteSpace(i.PricingJson) ? "" : i.PricingJson;
