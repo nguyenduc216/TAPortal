@@ -47,4 +47,3 @@ Operator 2026-11-16: "Thêm phần cài đặt app để tạo icon của T.A po
 
 ## Migration execution
 - 059-web-push.sql: PRECHECK NOT_APPLIED; DRYRUN PASS/NOT_APPLIED (trancount 0); gates PASS (791 Safe tests); REAL RUN VERIFY_STATUS=PASS => EXECUTED 2026-11-16T12:47:28Z
-
