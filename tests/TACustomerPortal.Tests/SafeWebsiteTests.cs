@@ -433,6 +433,23 @@ public sealed class SafeWebsiteTests
         Assert.All(store.Posts.Values, p => Assert.Equal(S.PostLibrary.Author, p.Input.AuthorName));
         await client.PostAsync("/WebsitePosts/ImportLibrary", Form(token));
         Assert.Equal(S.PostLibrary.All.Count, store.Posts.Count);
+        Assert.Contains("Thêm và đăng luôn " + S.PostLibrary.All.Count, WebUtility.HtmlDecode(await client.GetStringAsync("/WebsitePosts/Library")));
+
+        // "Thêm và đăng luôn": existing library drafts are published in place, nothing is duplicated.
+        Assert.Equal(HttpStatusCode.Redirect, (await client.PostAsync("/WebsitePosts/ImportLibrary", Form(token, ("publish", "true")))).StatusCode);
+        Assert.Equal(S.PostLibrary.All.Count, store.Posts.Count);
+        Assert.All(store.Posts.Values, p => Assert.True(p.Input.Publish));
+        Assert.DoesNotContain("Thêm và đăng luôn", WebUtility.HtmlDecode(await client.GetStringAsync("/WebsitePosts/Library")));
+
+        var fresh = new MemoryAdminStore();
+        await using (var f2 = AdminFactory(fresh, "WEBSITE.VIEW", "WEBSITE.POSTS.EDIT"))
+        {
+            var c2 = AdminClient(f2);
+            var t2 = Token(await c2.GetStringAsync("/WebsitePosts/Library"));
+            await c2.PostAsync("/WebsitePosts/ImportLibrary", Form(t2, ("publish", "true")));
+            Assert.Equal(S.PostLibrary.All.Count, fresh.Posts.Count);
+            Assert.All(fresh.Posts.Values, p => Assert.True(p.Input.Publish));
+        }
 
         await using var viewer = AdminFactory(new MemoryAdminStore(), "WEBSITE.VIEW");
         Assert.NotEqual(HttpStatusCode.OK, (await AdminClient(viewer).GetAsync("/WebsitePosts/Library")).StatusCode);

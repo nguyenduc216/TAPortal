@@ -365,8 +365,10 @@ public sealed class WebsitePostsController(IWebsiteAdminStore store, IConfigurat
     {
         try
         {
-            var existing = (await store.PostsAsync(null, null, null)).ToDictionary(p => p.Slug, p => p.Id, StringComparer.Ordinal);
-            return View(new WebsitePostLibraryVm(PostLibrary.All, existing, null));
+            var posts = await store.PostsAsync(null, null, null);
+            var existing = posts.ToDictionary(p => p.Slug, p => p.Id, StringComparer.Ordinal);
+            var drafts = posts.Where(p => p.Status == 0).Select(p => p.Slug).ToHashSet(StringComparer.Ordinal);
+            return View(new WebsitePostLibraryVm(PostLibrary.All, existing, null, drafts));
         }
         catch (SqlException ex) { logger.LogError(ex, "WEBSITE_ADMIN_UNAVAILABLE"); return View(new WebsitePostLibraryVm(PostLibrary.All, new Dictionary<string, Guid>(), WebsiteController.StoreUnavailable)); }
     }
@@ -374,15 +376,34 @@ public sealed class WebsitePostsController(IWebsiteAdminStore store, IConfigurat
     [HttpPost]
     [ValidateAntiForgeryToken]
     [Authorize(Policy = AdminPermissions.Policy.WebsitePostsEdit)]
-    public async Task<IActionResult> ImportLibrary(string[]? slugs)
+    public async Task<IActionResult> ImportLibrary(string[]? slugs, bool publish = false)
     {
         if (UsersController.ActorId(User) is not Guid actor) return Forbid();
         var ip = HttpContext.Connection.RemoteIpAddress?.ToString();
         var wanted = slugs is { Length: > 0 } ? new HashSet<string>(slugs, StringComparer.Ordinal) : null;
-        var existing = (await store.PostsAsync(null, null, null)).Select(p => p.Slug).ToHashSet(StringComparer.Ordinal);
+        var current = await store.PostsAsync(null, null, null);
+        var existing = current.Select(p => p.Slug).ToHashSet(StringComparer.Ordinal);
         var picks = PostLibrary.All.Where(p => (wanted is null || wanted.Contains(p.Slug)) && !existing.Contains(p.Slug)).ToList();
         var categories = (await store.CategoriesAsync()).ToDictionary(c => c.Slug, c => c.Id, StringComparer.Ordinal);
-        int added = 0, failed = 0;
+        int added = 0, published = 0, failed = 0;
+        if (publish)
+        {
+            // Library articles already added as drafts are published as they are now (staff edits kept).
+            var librarySlugs = PostLibrary.All.Where(p => wanted is null || wanted.Contains(p.Slug)).Select(p => p.Slug).ToHashSet(StringComparer.Ordinal);
+            foreach (var draft in current.Where(p => p.Status == 0 && librarySlugs.Contains(p.Slug)))
+            {
+                if (await store.PostAsync(draft.Id) is not { } post) { failed++; continue; }
+                var edit = new WebsitePostInput
+                {
+                    Title = post.Title, Slug = post.Slug, Summary = post.Summary, BodyHtml = post.BodyHtml, CoverMediaId = post.CoverMediaId, CategoryId = post.CategoryId,
+                    AuthorName = post.AuthorName, Tags = post.Tags, Publish = true, IsFeatured = post.IsFeatured, SeoTitle = post.SeoTitle,
+                    SeoDescription = post.SeoDescription, Stamp = Convert.ToBase64String(post.Stamp)
+                };
+                if (edit.Normalize().Count > 0) { failed++; continue; }
+                var saved = await store.SavePostAsync(actor, ip, post.Id, edit, clock.GetUtcNow().UtcDateTime);
+                if (saved.Outcome == WebsiteOutcome.Saved) published++; else failed++;
+            }
+        }
         foreach (var post in picks)
         {
             if (!categories.TryGetValue(post.Category, out var categoryId))
@@ -394,15 +415,16 @@ public sealed class WebsitePostsController(IWebsiteAdminStore store, IConfigurat
             var input = new WebsitePostInput
             {
                 Title = post.Title, Slug = post.Slug, Summary = post.Summary, BodyHtml = post.BodyHtml, Tags = post.Tags, AuthorName = PostLibrary.Author,
-                SeoTitle = post.SeoTitle, SeoDescription = post.SeoDescription, CategoryId = categoryId == Guid.Empty ? null : categoryId, Publish = false
+                SeoTitle = post.SeoTitle, SeoDescription = post.SeoDescription, CategoryId = categoryId == Guid.Empty ? null : categoryId, Publish = publish
             };
             if (input.Normalize().Count > 0) { failed++; continue; }
             var result = await store.SavePostAsync(actor, ip, null, input, clock.GetUtcNow().UtcDateTime);
             if (result.Outcome == WebsiteOutcome.Saved) added++; else failed++;
         }
-        if (added > 0) TempData["Success"] = $"Đã thêm {added} bài dưới dạng bản nháp. Đọc lại từng bài rồi bấm Xuất bản.";
-        if (failed > 0) TempData["Error"] = $"{failed} bài chưa thêm được, thử lại sau.";
-        if (added == 0 && failed == 0) TempData["Success"] = "Các bài soạn sẵn đã có trong danh sách bài viết.";
+        if (publish && added + published > 0) TempData["Success"] = $"Đã đăng {added + published} bài lên website.";
+        else if (added > 0) TempData["Success"] = $"Đã thêm {added} bài dưới dạng bản nháp. Đọc lại từng bài rồi bấm Xuất bản.";
+        if (failed > 0) TempData["Error"] = $"{failed} bài chưa xử lý được, thử lại sau.";
+        if (added == 0 && published == 0 && failed == 0) TempData["Success"] = publish ? "Các bài soạn sẵn đều đã được đăng." : "Các bài soạn sẵn đã có trong danh sách bài viết.";
         return RedirectToAction(nameof(Library));
     }
 
