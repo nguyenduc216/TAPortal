@@ -120,6 +120,8 @@ public sealed class SafeWebPushTests
         var login = await c.GetStringAsync("/account/login");
         Assert.Contains("rel=\"manifest\" href=\"/manifest.webmanifest\"", login);
         Assert.Contains("ta-app.js", login);
+        Assert.Contains("data-ta-app-install", login);                                                          // "Cài ứng dụng" under the sign-in form
+        Assert.Contains("data-ta-app-ios", login);
         Assert.NotEqual(HttpStatusCode.OK, (await c.GetAsync("/push/key")).StatusCode);                          // the rest needs a sign-in
     }
 

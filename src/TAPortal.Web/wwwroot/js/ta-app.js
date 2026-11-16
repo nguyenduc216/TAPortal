@@ -116,11 +116,12 @@
     const installed = standalone();
     document.querySelectorAll('[data-ta-app-install]').forEach(b => show(b, !!installPrompt && !installed));
     document.querySelectorAll('[data-ta-app]').forEach(root => {
+      if (root.hasAttribute('data-ta-app-hide-installed')) { root.hidden = installed; if (installed) return; }
       const status = root.querySelector('[data-ta-app-status]');
       if (status) status.textContent = installed ? 'Bạn đang dùng T.A Portal dạng ứng dụng trên thiết bị này.'
         : installPrompt ? 'Có thể cài T.A Portal lên thiết bị này.'
         : isIos ? 'Trên iPhone/iPad: cài bằng Safari theo hướng dẫn bên dưới.'
-        : 'Nếu không thấy nút cài, mở menu của trình duyệt và chọn "Cài đặt ứng dụng" hoặc "Thêm vào màn hình chính".';
+        : 'Cài theo hướng dẫn bên dưới.';
       show(root.querySelector('[data-ta-app-ios]'), isIos && !installed);
       show(root.querySelector('[data-ta-app-manual]'), !isIos && !installed && !installPrompt);
     });

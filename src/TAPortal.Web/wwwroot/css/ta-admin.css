@@ -369,3 +369,21 @@
 .ta-app-devices{list-style:none;margin:0;padding:0;display:grid;gap:.375rem}
 .ta-app-devices li{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap}
 @media (max-width:575.98px){.ta-app-install span{display:none}.ta-app-install{padding-inline:.5rem}}
+/* Trang đăng nhập: khối cài ứng dụng dưới form. */
+.ta-auth-form:has(.ta-login-app){flex-direction:column;gap:1.5rem}
+.ta-login-app{width:min(440px,100%);padding:1rem;border:1px solid var(--ta-border,#e2e8f0);border-radius:12px;background:var(--ta-surface-2,#f8fafc)}
+.ta-login-app[hidden]{display:none}
+.ta-login-app__head{display:flex;align-items:center;gap:.75rem}
+.ta-login-app__icon{flex:none;border-radius:10px;box-shadow:0 1px 3px rgba(15,23,42,.12)}
+.ta-login-app__text{display:flex;flex-direction:column;gap:.125rem;min-width:0;font-size:.875rem;color:var(--ta-text-muted,#475569)}
+.ta-login-app__text strong{color:var(--ta-text,#0f172a);font-size:.9375rem}
+.ta-login-app__btn{flex:none;display:inline-flex;align-items:center;gap:.35rem}
+.ta-login-app__btn[hidden]{display:none}
+.ta-login-app .ta-app-steps{font-size:.875rem}
+/* Trang đăng nhập trên điện thoại / máy tính bảng: logo T.A phía trên form (khối thương hiệu bên trái bị ẩn ở cỡ này). */
+.ta-auth-mobile-brand{display:none}
+@media (max-width:991.98px){
+  .ta-auth-form{flex-direction:column;justify-content:flex-start;gap:1.5rem;padding-top:2rem}
+  .ta-auth-mobile-brand{display:flex;justify-content:center;width:min(440px,100%)}
+  .ta-auth-mobile-brand__logo{display:block;width:min(260px,70%);height:auto;object-fit:contain}
+}
