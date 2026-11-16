@@ -36,6 +36,44 @@ public static class PostLibrary
 
     public static LibraryPost? Find(string? slug) => All.FirstOrDefault(p => p.Slug == slug);
 
+    /// <summary>The cover photo shipped for the article (JPEG 960x540), or null.</summary>
+    public static byte[]? Cover(int order)
+    {
+        using var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream($"TAPortal.postcover.{order:00}.jpg");
+        if (stream is null) return null;
+        using var ms = new MemoryStream();
+        stream.CopyTo(ms);
+        return ms.ToArray();
+    }
+
+    /// <summary>
+    /// Publication times spread over the last <paramref name="days"/> days (Vietnam time): working days, office hours, in the
+    /// past, and never before the day after the original article for a cited summary. Deterministic for the same input.
+    /// </summary>
+    public static IReadOnlyDictionary<string, DateTime> Schedule(IReadOnlyList<LibraryPost> posts, DateTime nowVn, int days = 45, int seed = 20261117)
+    {
+        var random = new Random(seed);
+        var end = nowVn.AddHours(-2);
+        var start = nowVn.Date.AddDays(-days);
+        var workdays = Enumerable.Range(0, days + 1).Select(i => start.AddDays(i))
+            .Where(d => d.DayOfWeek is not (DayOfWeek.Saturday or DayOfWeek.Sunday)).ToList();
+        DateTime At(DateTime day) => day.AddMinutes(7 * 60 + 45 + random.Next(0, 9 * 60 + 30));   // 07:45 – 17:15
+        var slots = posts.Select(_ => At(workdays[random.Next(workdays.Count)])).Where(t => t <= end).ToList();
+        while (slots.Count < posts.Count) slots.Add(At(workdays[random.Next(workdays.Count / 2)]));
+        var result = new Dictionary<string, DateTime>(StringComparer.Ordinal);
+        // Cited summaries with the latest original first, so they get the late slots they need.
+        foreach (var post in posts.OrderByDescending(p => p.Origin?.PublishedOn ?? DateTime.MinValue).ThenBy(p => p.Order))
+        {
+            var earliest = post.Origin?.PublishedOn?.Date.AddDays(1) ?? DateTime.MinValue;
+            var fitting = slots.Where(s => s >= earliest).ToList();
+            DateTime slot;
+            if (fitting.Count > 0) { slot = fitting[random.Next(fitting.Count)]; slots.Remove(slot); }
+            else { slot = earliest.AddHours(9).AddMinutes(random.Next(0, 240)); if (slot > end) slot = end; slots.RemoveAt(0); }
+            result[post.Slug] = slot;
+        }
+        return result;
+    }
+
     /// <summary>"Tên nguồn – https://…" → (label, url); url is null unless it is an http(s) link.</summary>
     public static (string Label, string? Url) SplitSource(string source)
     {

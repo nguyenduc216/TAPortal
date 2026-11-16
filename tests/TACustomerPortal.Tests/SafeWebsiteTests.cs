@@ -495,6 +495,68 @@ public sealed class SafeWebsiteTests
         Assert.NotEqual(HttpStatusCode.OK, (await AdminClient(viewer).GetAsync("/WebsitePosts/LibraryPreview?slug=" + first.Slug)).StatusCode);
     }
 
+    [Fact]
+    public void PostLibraryShipsACoverPerArticleAndSpreadsPublicationTimes()
+    {
+        Assert.All(S.PostLibrary.All, p =>
+        {
+            var cover = S.PostLibrary.Cover(p.Order);
+            Assert.NotNull(cover);
+            Assert.Equal(new byte[] { 0xFF, 0xD8, 0xFF }, cover![..3]);   // JPEG
+            Assert.InRange(cover.Length, 10_000, 400_000);
+        });
+        var now = new DateTime(2026, 11, 17, 10, 0, 0);
+        var schedule = S.PostLibrary.Schedule(S.PostLibrary.All, now);
+        Assert.Equal(S.PostLibrary.All.Count, schedule.Count);
+        Assert.Equal(schedule, S.PostLibrary.Schedule(S.PostLibrary.All, now));          // same input, same times
+        Assert.True(schedule.Values.Distinct().Count() == schedule.Count);
+        Assert.True(schedule.Values.Select(d => d.Date).Distinct().Count() >= 15);        // spread, not all on one day
+        foreach (var p in S.PostLibrary.All)
+        {
+            var at = schedule[p.Slug];
+            Assert.True(at <= now.AddHours(-2) && at >= now.Date.AddDays(-45), $"{p.Slug} {at}");
+            Assert.True(at.DayOfWeek is not (DayOfWeek.Saturday or DayOfWeek.Sunday), $"{p.Slug} {at}");
+            Assert.InRange(at.TimeOfDay, new TimeSpan(7, 45, 0), new TimeSpan(17, 15, 0));
+            if (p.Origin?.PublishedOn is DateTime original) Assert.True(at.Date > original.Date, $"{p.Slug}: {at} before original {original}");
+        }
+    }
+
+    [Fact]
+    public async Task ApplyLibraryExtrasAddsCoversAndSpreadsDates()
+    {
+        var store = new MemoryAdminStore();
+        await using var f = AdminFactory(store, "WEBSITE.VIEW", "WEBSITE.POSTS.EDIT");
+        var client = AdminClient(f);
+        var token = Token(await client.GetStringAsync("/WebsitePosts/Library"));
+        await client.PostAsync("/WebsitePosts/ImportLibrary", Form(token, ("publish", "true")));
+        Assert.Equal(S.PostLibrary.All.Count, store.Media.Count);                         // new posts get their cover on import
+        Assert.All(store.Posts.Values, p => Assert.NotNull(p.Input.CoverMediaId));
+        Assert.Contains("Gắn ảnh bìa và rải ngày đăng", WebUtility.HtmlDecode(await client.GetStringAsync("/WebsitePosts/Library")));
+        Assert.Equal(HttpStatusCode.Redirect, (await client.PostAsync("/WebsitePosts/ApplyLibraryExtras", Form(token))).StatusCode);
+        Assert.All(store.Posts.Values, p => Assert.True(p.Input.Publish));
+        var dates = store.Posts.Values.Select(p => p.Input.PublishedAtLocal).ToList();
+        Assert.All(dates, d => Assert.NotNull(d));
+        Assert.True(dates.Select(d => d!.Value.Date).Distinct().Count() >= 15);
+
+        await using var viewer = AdminFactory(new MemoryAdminStore(), "WEBSITE.VIEW");
+        var viewerClient = AdminClient(viewer);
+        Assert.NotEqual(HttpStatusCode.Redirect, (await viewerClient.PostAsync("/WebsitePosts/ApplyLibraryExtras", Form(token))).StatusCode);
+    }
+
+    [Fact]
+    public async Task NewsPageHeroShowsItsIllustration()
+    {
+        await using var f = SiteFactory(new MemoryReader());
+        var client = f.CreateClient();
+        var html = await client.GetStringAsync("/tin-tuc");
+        Assert.Contains("class=\"dv-hero-art\"", html);
+        Assert.Contains("/site-assets/news-hero.jpg", html);
+        var image = await client.GetAsync("/site-assets/news-hero.jpg");
+        Assert.Equal(HttpStatusCode.OK, image.StatusCode);
+        Assert.Equal("image/jpeg", image.Content.Headers.ContentType?.MediaType);
+        Assert.DoesNotContain("dv-hero-art", await client.GetStringAsync("/lien-he"));      // other page heroes stay text-only
+    }
+
     // ---- Soạn bài bằng AI ----------------------------------------------------------------------------------------
     private const string AiArticleJson = """
 {"title":"Hạn nộp tờ khai thuế quý 4/2026","slug":"han-nop-to-khai-quy-4-2026","summary":"Tóm tắt hạn nộp.","category":"thue","tags":"thuế, hạn nộp",

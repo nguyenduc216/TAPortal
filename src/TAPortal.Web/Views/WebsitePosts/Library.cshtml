@@ -19,6 +19,7 @@
             <span class="d-flex flex-wrap gap-2">
                 @if (Model.Missing > 0) {<button class="btn" type="submit">@UiIcon.Render("plus")<span>Thêm @Model.Missing bài chưa có (bản nháp)</span></button>}
                 @if (Model.Unpublished > 0) {<button class="btn btn-ta-gold" type="submit" name="publish" value="true" onclick="return confirm('Đăng @Model.Unpublished bài soạn sẵn lên website ngay?')">@UiIcon.Render("external-link")<span>Thêm và đăng luôn @Model.Unpublished bài</span></button>}
+                @if (Model.Missing < Model.Posts.Count) {<button class="btn" type="submit" formaction="@Url.Action("ApplyLibraryExtras")" onclick="return confirm('Gắn ảnh bìa cho bài chưa có ảnh và rải lại ngày đăng của các bài soạn sẵn đã đăng trong 45 ngày gần đây?')">@UiIcon.Render("calendar")<span>Gắn ảnh bìa và rải ngày đăng</span></button>}
             </span>
         </div>
         <div class="ta-table-wrap">

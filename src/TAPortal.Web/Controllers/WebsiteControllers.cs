@@ -464,6 +464,7 @@ public sealed class WebsitePostsController(IWebsiteAdminStore store, IConfigurat
             };
             input.SetSource(post.Origin);
             if (input.Normalize().Count > 0) { failed++; continue; }
+            input.CoverMediaId = await UploadCoverAsync(actor, ip, post);
             var result = await store.SavePostAsync(actor, ip, null, input, clock.GetUtcNow().UtcDateTime);
             if (result.Outcome == WebsiteOutcome.Saved) added++; else failed++;
         }
@@ -472,6 +473,53 @@ public sealed class WebsitePostsController(IWebsiteAdminStore store, IConfigurat
         if (failed > 0) TempData["Error"] = $"{failed} bài chưa xử lý được, thử lại sau.";
         if (added == 0 && published == 0 && failed == 0) TempData["Success"] = publish ? "Các bài soạn sẵn đều đã được đăng." : "Các bài soạn sẵn đã có trong danh sách bài viết.";
         return RedirectToAction(nameof(Library));
+    }
+
+    // "Gắn ảnh bìa và rải ngày đăng": library articles already on the site get their shipped cover photo (only when they have
+    // none) and, for published ones, a publication time spread over the last 45 days (working days, office hours; a cited
+    // summary never before its original). Saved through SavePostAsync (audited); staff edits to the articles are kept.
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [Authorize(Policy = AdminPermissions.Policy.WebsitePostsEdit)]
+    public async Task<IActionResult> ApplyLibraryExtras()
+    {
+        if (UsersController.ActorId(User) is not Guid actor) return Forbid();
+        var ip = HttpContext.Connection.RemoteIpAddress?.ToString();
+        var bySlug = PostLibrary.All.ToDictionary(p => p.Slug, StringComparer.Ordinal);
+        var onSite = (await store.PostsAsync(null, null, null)).Where(p => bySlug.ContainsKey(p.Slug)).ToList();
+        var nowUtc = clock.GetUtcNow().UtcDateTime;
+        var schedule = PostLibrary.Schedule(onSite.Where(p => p.Status == 1).Select(p => bySlug[p.Slug]).ToList(), WebsiteUi.Local(nowUtc));
+        int covers = 0, dated = 0, failed = 0;
+        foreach (var item in onSite)
+        {
+            if (await store.PostAsync(item.Id) is not { } post) { failed++; continue; }
+            var input = new WebsitePostInput
+            {
+                Title = post.Title, Slug = post.Slug, Summary = post.Summary, BodyHtml = post.BodyHtml, CoverMediaId = post.CoverMediaId, CategoryId = post.CategoryId,
+                AuthorName = post.AuthorName, Tags = post.Tags, Publish = post.Status == 1, IsFeatured = post.IsFeatured, SeoTitle = post.SeoTitle,
+                SeoDescription = post.SeoDescription, Stamp = Convert.ToBase64String(post.Stamp),
+                PublishedAtLocal = post.PublishedAt is DateTime p ? WebsiteUi.Local(p) : null
+            };
+            input.SetSource(post.Source);
+            var changed = false;
+            if (input.CoverMediaId is null && await UploadCoverAsync(actor, ip, bySlug[post.Slug]) is Guid cover) { input.CoverMediaId = cover; covers++; changed = true; }
+            if (input.Publish && schedule.TryGetValue(post.Slug, out var at) && input.PublishedAtLocal != at) { input.PublishedAtLocal = at; dated++; changed = true; }
+            if (!changed) continue;
+            if (input.Normalize().Count > 0) { failed++; continue; }
+            var saved = await store.SavePostAsync(actor, ip, post.Id, input, nowUtc);
+            if (saved.Outcome != WebsiteOutcome.Saved) failed++;
+        }
+        TempData["Success"] = $"Đã gắn ảnh bìa cho {covers} bài và rải ngày đăng cho {dated} bài.";
+        if (failed > 0) TempData["Error"] = $"{failed} bài chưa cập nhật được, thử lại sau.";
+        return RedirectToAction(nameof(Library));
+    }
+
+    // Uploads the cover photo shipped with a library article to the media library; null when there is none or it fails.
+    private async Task<Guid?> UploadCoverAsync(Guid actor, string? ip, LibraryPost post)
+    {
+        if (PostLibrary.Cover(post.Order) is not { } bytes) return null;
+        var result = await store.UploadMediaAsync(actor, ip, $"bai-{post.Order:00}-{post.Slug}.jpg", "image/jpeg", bytes, 960, 540, post.Title.Length > 250 ? post.Title[..250] : post.Title);
+        return result is { Outcome: WebsiteOutcome.Saved, Id: Guid id } ? id : null;
     }
 
     private async Task<IReadOnlyList<TAWebsite.Core.Data.PostCategory>> SafeCategories()

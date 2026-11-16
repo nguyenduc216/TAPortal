@@ -98,9 +98,10 @@ public static class SectionTypes
             FieldDef.Text("note", "Ghi chú dưới trích dẫn"),
             FieldDef.Text("newsTitle", "Tiêu đề phần tin tức")
         ]),
-        new("page-hero", "Banner đầu trang con", "Đường dẫn, tiêu đề và đoạn giới thiệu của trang.",
+        new("page-hero", "Banner đầu trang con", "Đường dẫn, tiêu đề, đoạn giới thiệu và ảnh minh họa bên phải (không bắt buộc).",
         [
-            ..Heading
+            ..Heading,
+            FieldDef.Image("image", "Ảnh minh họa bên phải", "Để trống: banner chỉ có chữ."), FieldDef.Text("imageAlt", "Mô tả ảnh (cho người khiếm thị, SEO)")
         ]),
         new("contact-channels", "Kênh liên hệ", "Các ô liên hệ lấy từ Cài đặt chung (hotline, email, Zalo, văn phòng).",
         [

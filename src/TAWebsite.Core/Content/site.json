@@ -537,7 +537,9 @@
           "content": {
             "eyebrow": "CẨM NANG DOANH NGHIỆP",
             "title": "Tin tức & kiến thức kế toán – thuế",
-            "intro": "Hướng dẫn thủ tục, lịch nghĩa vụ và kinh nghiệm thực tế được T.A biên soạn cho chủ doanh nghiệp và hộ kinh doanh."
+            "intro": "Hướng dẫn thủ tục, lịch nghĩa vụ và kinh nghiệm thực tế được T.A biên soạn cho chủ doanh nghiệp và hộ kinh doanh.",
+            "image": "asset:news-hero.jpg",
+            "imageAlt": "Chuyên viên tư vấn kế toán – thuế trao đổi cùng khách hàng"
           }
         },
         {
