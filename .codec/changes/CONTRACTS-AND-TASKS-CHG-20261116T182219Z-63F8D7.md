@@ -45,3 +45,8 @@ Operator 2026-11-16: a service gets a task list (work catalogue entries, ordered
 
 ## Migration execution
 - 065-service-periods.sql: PRECHECK NOT_APPLIED; DRYRUN PASS/NOT_APPLIED (trancount 0); gates PASS (806); REAL RUN VERIFY_STATUS=PASS => EXECUTED 2026-11-16T18:25:16Z
+
+## Deploy
+- Found before deploy: List/Detail SQL joined "OwnerEmployeeId" and "WHERE" without a space (raw string drops its last line break); fixed in ce5be60; every read query of the change compiled read-only on TAPortalSys (Invoke-TAReadQuery).
+- portal: commit ce5be60, artifact 7e3741dbc7f1f4f15547fc72b10d23eb03f66d4fe7d723b8be030472f55bfe22, package E165CE7D99E6BD1B0028DC159F3649FD47B9C9B6A863F688FDFFE3E615F07C44, DEPLOYED 2026-11-16T18:34:40Z, health 200.
+- Smoke (prod, nothing saved): Danh sách dịch vụ (empty T11/2026), Create form (services listed with task counts), service edit tab Danh sách công việc (add 3, reorder, count; not saved). Creating a service month and entering quantities NOT_VERIFIED on prod (would create real data).
