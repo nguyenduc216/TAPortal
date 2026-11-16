@@ -426,7 +426,8 @@
 .ta-pricing__title{font-size:1rem;font-weight:650;margin:1.25rem 0 .25rem}
 .ta-pricing__title:first-child{margin-top:0}
 .ta-pricing__metrics{display:grid;gap:.5rem;margin:.5rem 0}
-.ta-pricing__metric{display:grid;grid-template-columns:28px minmax(0,2fr) minmax(0,1fr) 36px;gap:.5rem;align-items:center}
+.ta-pricing__metric{display:grid;grid-template-columns:28px 96px minmax(0,2fr) minmax(0,1fr) 36px;gap:.5rem;align-items:center}
+.ta-pricing__code{text-transform:uppercase;font-family:var(--tblr-font-monospace,monospace)}
 .ta-pricing__metric-no{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;background:var(--ta-surface-2,#f1f5f9);font-size:.8125rem;font-weight:600}
 .ta-pricing__table{min-width:640px}
 .ta-pricing__table th{white-space:normal;vertical-align:bottom}
@@ -436,7 +437,7 @@
 .ta-pricing__label{min-width:160px}
 .ta-pricing__num{min-width:84px;text-align:right}
 .ta-pricing__fee{min-width:110px}
-@media (max-width:767.98px){.ta-svc-modes{grid-template-columns:1fr}.ta-pricing__metric{grid-template-columns:24px minmax(0,1fr) 36px}.ta-pricing__unit{grid-column:2}}
+@media (max-width:767.98px){.ta-svc-modes{grid-template-columns:1fr}.ta-pricing__metric{grid-template-columns:24px 80px minmax(0,1fr) 36px}.ta-pricing__unit{grid-column:3}}
 .ta-pricing__actions{white-space:nowrap;width:1%}
 /* Danh mục dịch vụ: khoảng cách giữa các nhóm; cột thẳng hàng giữa các nhóm (operator 2026-11-16). */
 .ta-svc-group + .ta-svc-group{margin-top:var(--ta-sp-5,1.25rem)}

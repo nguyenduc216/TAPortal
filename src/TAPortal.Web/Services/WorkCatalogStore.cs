@@ -8,7 +8,10 @@ using TAPortal.Web.Security;
 
 namespace TAPortal.Web.Services;
 
-public sealed record WorkCatalogItem(Guid Id, string Name, string? Description, int SortOrder, bool IsActive, int TaskCount, string? ChecklistText = null, string? ChecklistJson = null)
+// Unit / MetricCode (operator 2026-11-16, migration 063): the unit of the quantity entered for this work (hóa đơn, lần...) and
+// the code of the fee measure of the service tier tables it counts towards (ServiceMetric.Code, e.g. SLCT).
+public sealed record WorkCatalogItem(Guid Id, string Name, string? Description, int SortOrder, bool IsActive, int TaskCount, string? ChecklistText = null, string? ChecklistJson = null,
+    string? Unit = null, string? MetricCode = null)
 {
     public IReadOnlyList<WorkChecklistStep> Steps => WorkCatalogPolicy.Steps(ChecklistJson, ChecklistText);
     public int ChecklistCount => Steps.Count;
@@ -61,6 +64,8 @@ public sealed class WorkCatalogInput
     public bool IsActive { get; set; } = true;
     public string? ChecklistText { get; set; }   // checklist mẫu: one item per line (operator 2026-11-16) — the add form
     public List<WorkCatalogStepInput>? Items { get; set; }   // checklist mẫu item by item with explanations — the entry editor
+    public string? Unit { get; set; }         // đơn vị tính (migration 063)
+    public string? MetricCode { get; set; }   // mã hạn mức chi phí (migration 063)
 }
 
 public enum WorkCatalogOutcome { Saved, Invalid, Duplicate, NotFound, Forbidden, NoChange }
@@ -71,7 +76,13 @@ public sealed record WorkCatalogResult(WorkCatalogOutcome Outcome, string? Messa
 // carries the same name; details go to the description. While the list has no active entry, names stay free (start-up).
 public static class WorkCatalogPolicy
 {
-    public const int NameMax = 200, DescriptionMax = 500, ChecklistTextMax = 4000, GuideMax = 4000;
+    public const int NameMax = 200, DescriptionMax = 500, ChecklistTextMax = 4000, GuideMax = 4000, UnitMax = 50;
+
+    public static string? Unit(string? unit)
+    {
+        var u = (unit ?? "").Trim();
+        return u.Length == 0 ? null : u.Length > UnitMax ? u[..UnitMax] : u;
+    }
 
     private static readonly JsonSerializerOptions Json = new() { Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
     private sealed record StepJson(string? title, string? guide);
@@ -171,7 +182,7 @@ ELSE SELECT TOP 0 CAST(NULL AS nvarchar(200)),CAST(NULL AS nvarchar(500)),CAST(N
 
     public const string List = """
 SELECT c.Id,c.Name,c.Description,c.SortOrder,c.IsActive,
- (SELECT COUNT(1) FROM dbo.WorkTasks t WHERE t.IsDeleted=0 AND (t.Title=c.Name OR LEFT(t.Title,LEN(c.Name)+3)=c.Name+N' — ')),c.ChecklistText,c.ChecklistJson
+ (SELECT COUNT(1) FROM dbo.WorkTasks t WHERE t.IsDeleted=0 AND (t.Title=c.Name OR LEFT(t.Title,LEN(c.Name)+3)=c.Name+N' — ')),c.ChecklistText,c.ChecklistJson,c.Unit,c.MetricCode
 FROM dbo.WorkTaskCatalog c WHERE c.IsDeleted=0 ORDER BY c.IsActive DESC,c.SortOrder,c.Name;
 SELECT c.Id,i.Title,COUNT(DISTINCT t.Id)
 FROM dbo.WorkTaskCatalog c
@@ -182,9 +193,9 @@ GROUP BY c.Id,i.Title ORDER BY c.Id,COUNT(DISTINCT t.Id) DESC,i.Title;
 """;
 
     public const string Taken = "SELECT COUNT(1) FROM dbo.WorkTaskCatalog WITH (UPDLOCK, HOLDLOCK) WHERE IsDeleted=0 AND Name=@name AND (@id IS NULL OR Id<>@id);";
-    public const string Insert = "INSERT dbo.WorkTaskCatalog(Id,Name,Description,SortOrder,IsActive,ChecklistText,ChecklistJson,CreatedBy) VALUES(@id,@name,@desc,@sort,@active,@check,@json,@by);";
+    public const string Insert = "INSERT dbo.WorkTaskCatalog(Id,Name,Description,SortOrder,IsActive,ChecklistText,ChecklistJson,Unit,MetricCode,CreatedBy) VALUES(@id,@name,@desc,@sort,@active,@check,@json,@unit,@metric,@by);";
     public const string OldName = "SELECT Name FROM dbo.WorkTaskCatalog WITH (UPDLOCK) WHERE Id=@id AND IsDeleted=0;";
-    public const string Update = "UPDATE dbo.WorkTaskCatalog SET Name=@name,Description=@desc,SortOrder=@sort,IsActive=@active,ChecklistText=@check,ChecklistJson=@json,UpdatedAt=SYSUTCDATETIME(),UpdatedBy=@by WHERE Id=@id AND IsDeleted=0;";
+    public const string Update = "UPDATE dbo.WorkTaskCatalog SET Name=@name,Description=@desc,SortOrder=@sort,IsActive=@active,ChecklistText=@check,ChecklistJson=@json,Unit=@unit,MetricCode=@metric,UpdatedAt=SYSUTCDATETIME(),UpdatedBy=@by WHERE Id=@id AND IsDeleted=0;";
     public const string ChecklistOf = "SELECT Id,ChecklistText,ChecklistJson FROM dbo.WorkTaskCatalog WITH (UPDLOCK) WHERE IsDeleted=0 AND Name=@name;";
     public const string Guides = "SELECT Name,ChecklistText,ChecklistJson FROM dbo.WorkTaskCatalog WHERE IsDeleted=0 AND ChecklistJson IS NOT NULL;";
     public const string SetChecklist = "UPDATE dbo.WorkTaskCatalog SET ChecklistText=@check,ChecklistJson=@json,UpdatedAt=SYSUTCDATETIME(),UpdatedBy=@by WHERE Id=@id AND IsDeleted=0;";
@@ -267,7 +278,8 @@ public sealed class SqlWorkCatalogStore(IConfiguration configuration, AdminAudit
         await using var cmd = new SqlCommand(WorkCatalogSql.List, cn);
         await using var r = await cmd.ExecuteReaderAsync();
         var list = new List<WorkCatalogItem>();
-        while (await r.ReadAsync()) list.Add(new(r.GetGuid(0), r.GetString(1), r.IsDBNull(2) ? null : r.GetString(2), r.GetInt32(3), r.GetBoolean(4), r.GetInt32(5), r.IsDBNull(6) ? null : r.GetString(6), r.IsDBNull(7) ? null : r.GetString(7)));
+        while (await r.ReadAsync()) list.Add(new(r.GetGuid(0), r.GetString(1), r.IsDBNull(2) ? null : r.GetString(2), r.GetInt32(3), r.GetBoolean(4), r.GetInt32(5), r.IsDBNull(6) ? null : r.GetString(6), r.IsDBNull(7) ? null : r.GetString(7),
+            r.IsDBNull(8) ? null : r.GetString(8), r.IsDBNull(9) ? null : r.GetString(9)));
         var used = new Dictionary<Guid, List<WorkCatalogUsedItem>>();
         if (await r.NextResultAsync())
             while (await r.ReadAsync())
@@ -288,6 +300,8 @@ public sealed class SqlWorkCatalogStore(IConfiguration configuration, AdminAudit
             : WorkCatalogPolicy.Steps(null, WorkCatalogPolicy.NormalizeChecklist(input.ChecklistText));
         var check = WorkCatalogPolicy.ToText(steps);
         var json = WorkCatalogPolicy.ToJson(steps);
+        var unit = WorkCatalogPolicy.Unit(input.Unit);
+        var metric = ServicePricingPolicy.CleanCode(input.MetricCode);
         await using var cn = Connection();
         await cn.OpenAsync();
         await using var tx = (SqlTransaction)await cn.BeginTransactionAsync(IsolationLevel.Serializable);
@@ -299,21 +313,21 @@ public sealed class SqlWorkCatalogStore(IConfiguration configuration, AdminAudit
         {
             old = await Scalar(cn, tx, WorkCatalogSql.OldName, ("@id", existing)) as string;
             if (old is null) return new(WorkCatalogOutcome.NotFound);
-            await Exec(cn, tx, WorkCatalogSql.Update, ("@id", existing), ("@name", name), ("@desc", (object?)desc ?? DBNull.Value), ("@sort", input.SortOrder), ("@active", input.IsActive), ("@check", (object?)check ?? DBNull.Value), ("@json", (object?)json ?? DBNull.Value), ("@by", actor));
+            await Exec(cn, tx, WorkCatalogSql.Update, ("@id", existing), ("@name", name), ("@desc", (object?)desc ?? DBNull.Value), ("@sort", input.SortOrder), ("@active", input.IsActive), ("@check", (object?)check ?? DBNull.Value), ("@json", (object?)json ?? DBNull.Value), ("@unit", (object?)unit ?? DBNull.Value), ("@metric", (object?)metric ?? DBNull.Value), ("@by", actor));
             if (!string.Equals(old, name, StringComparison.Ordinal))
                 await Exec(cn, tx, WorkCatalogSql.Rename, ("@name", name), ("@old", old), ("@by", actor));
         }
         else
         {
             id = Guid.NewGuid();
-            await Exec(cn, tx, WorkCatalogSql.Insert, ("@id", id.Value), ("@name", name), ("@desc", (object?)desc ?? DBNull.Value), ("@sort", input.SortOrder), ("@active", input.IsActive), ("@check", (object?)check ?? DBNull.Value), ("@json", (object?)json ?? DBNull.Value), ("@by", actor));
+            await Exec(cn, tx, WorkCatalogSql.Insert, ("@id", id.Value), ("@name", name), ("@desc", (object?)desc ?? DBNull.Value), ("@sort", input.SortOrder), ("@active", input.IsActive), ("@check", (object?)check ?? DBNull.Value), ("@json", (object?)json ?? DBNull.Value), ("@unit", (object?)unit ?? DBNull.Value), ("@metric", (object?)metric ?? DBNull.Value), ("@by", actor));
         }
         // The template reaches the tasks of this name still being worked on (new or in progress); finished ones stay as they are.
         var added = 0;
         foreach (var step in steps)
             added += Convert.ToInt32(await Scalar(cn, tx, WorkCatalogSql.ApplyToTasks, ("@name", name), ("@title", step.Title), ("@by", actor), ("@max", WorkTaskPolicy.ChecklistItemsMax)));
         await AuditSql.WriteOrThrowAsync(cn, tx, audit.RequireDurableAudit, actor, old is null ? "WORK_CATALOG_CREATED" : "WORK_CATALOG_UPDATED", "dbo.WorkTaskCatalog", id.Value.ToString(),
-            old is null ? "{}" : AuditSql.Json(("name", old)), AuditSql.Json(("name", name), ("active", input.IsActive), ("sortOrder", input.SortOrder), ("checklistItems", steps.Count), ("addedToTasks", added)), null);
+            old is null ? "{}" : AuditSql.Json(("name", old)), AuditSql.Json(("name", name), ("active", input.IsActive), ("sortOrder", input.SortOrder), ("checklistItems", steps.Count), ("addedToTasks", added), ("unit", unit), ("metricCode", metric)), null);
         await tx.CommitAsync();
         cache.Remove(GuideCacheKey);
         return new(WorkCatalogOutcome.Saved, added == 0 ? null : $"Đã thêm {added} mục checklist vào các công việc “{name}” đang làm.");
