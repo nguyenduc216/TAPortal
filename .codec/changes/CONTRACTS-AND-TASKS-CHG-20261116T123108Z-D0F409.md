@@ -47,3 +47,8 @@ Operator 2026-11-16: "Thêm phần cài đặt app để tạo icon của T.A po
 
 ## Migration execution
 - 059-web-push.sql: PRECHECK NOT_APPLIED; DRYRUN PASS/NOT_APPLIED (trancount 0); gates PASS (791 Safe tests); REAL RUN VERIFY_STATUS=PASS => EXECUTED 2026-11-16T12:47:28Z
+
+## Deploy
+- portal (TAPortal.Web): commit 89ef74e, artifact 138ae7af98fe2bdb9494f89f778c8b959d5ab75a17a445dd74a8cc59ffcab598, package FF1734A849CD06AD2A74826528D227EA4334CA666CB00E43D3DD1E93268C2D3E, DEPLOYED 2026-11-16T12:54:59Z, health 200.
+- Smoke (prod, browser pane): /manifest.webmanifest OK (3 icons), /sw.js registered with scope /, /push/key 200 (VAPID pair created), Hồ sơ cá nhân shows "Ứng dụng T.A Portal" and "Thông báo đẩy". Real notification on a phone NOT_VERIFIED (the pane blocks notifications; operator to test on Chrome Android / iPhone).
+- invoice (TACustomerPortal.Web): commit 89ef74e (UiIcon.cs shared change), DEPLOYED 2026-11-16.
