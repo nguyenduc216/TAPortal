@@ -122,7 +122,7 @@
         if (!main) return;
         main.classList.toggle('is-dirty', dirty);
         check?.classList.toggle('is-dirty', dirty);
-        main.querySelector('[data-ta-entry-cancel]').hidden = !dirty;
+        main.querySelector('[data-ta-entry-cancel]').hidden = !dirty && !(check && !check.hidden);
         const save = main.querySelector('[data-ta-entry-save]');
         save.classList.toggle('btn-primary', dirty);
         save.classList.toggle('btn-soft-primary', !dirty);
@@ -140,8 +140,9 @@
     document.addEventListener('click', (event) => {
         const target = event.target instanceof Element ? event.target : null;
         if (target?.closest('[data-ta-step-add], [data-ta-step-remove], [data-ta-step-suggest]')) {
+            // Read the entry now: the suggestion chip is removed from the page by its own handler.
             const id = entryIdOf(target);
-            if (id) queueMicrotask(() => setDirty(id, true));
+            if (id) setTimeout(() => setDirty(id, true));
         }
         const cancel = target?.closest('[data-ta-entry-cancel]');
         if (!cancel) return;
@@ -153,7 +154,8 @@
         setDirty(id, false);
         if (check) check.hidden = true;
         main?.querySelector('[data-ta-catalog-toggle]')?.setAttribute('aria-expanded', 'false');
-    });
+        if (main) main.querySelector('[data-ta-entry-cancel]').hidden = true;
+    }, true);
     window.addEventListener('beforeunload', (event) => {
         if (document.querySelector('tr.is-dirty[data-ta-entry]')) { event.preventDefault(); event.returnValue = ''; }
     });
@@ -169,6 +171,8 @@
         const row = document.getElementById(toggle.dataset.taCatalogToggle + 'Check');
         row.hidden = !row.hidden;
         toggle.setAttribute('aria-expanded', row.hidden ? 'false' : 'true');
+        const main = toggle.closest('[data-ta-entry]');
+        if (main && !main.classList.contains('is-dirty')) main.querySelector('[data-ta-entry-cancel]').hidden = row.hidden;
         if (!row.hidden) {
             const list = row.querySelector('[data-ta-steps]');
             if (list && list.children.length === 0 && !row.querySelector('[data-ta-step-suggest]')) row.querySelector('[data-ta-step-add]').click();

@@ -126,5 +126,6 @@ public sealed class SafeWorkCatalogTests
         Assert.Contains("data-ta-combo data-ta-combo-free", view);
         Assert.Contains("aria-controls=\"catalogSearchList\"", view);
         Assert.Contains("[data-ta-combo]:not([data-ta-combo-free])", js);   // a search box never blocks a submit
+        Assert.Contains("main.querySelector('[data-ta-entry-cancel]').hidden = !dirty && !(check && !check.hidden);", js);   // Hủy shows while a row is being edited
     }
 }
