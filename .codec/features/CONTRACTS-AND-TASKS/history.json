@@ -88,5 +88,15 @@
     "migration_status": "NOT_EXECUTED",
     "publish_status": "NOT_PUBLISHED",
     "merge_status": "PENDING_APPROVAL"
+  },
+  {
+    "change_id": "CONTRACTS-AND-TASKS-CHG-20261116T060542Z-E543D2",
+    "created_at": "2026-11-16T06:05:42.092635+00:00",
+    "title": "Danh mục công việc: ô tìm có danh sách gợi ý tên đầu việc",
+    "status": "PLANNED",
+    "commit_sha": null,
+    "migration_status": "NOT_EXECUTED",
+    "publish_status": "NOT_PUBLISHED",
+    "merge_status": "PENDING_APPROVAL"
   }
 ]

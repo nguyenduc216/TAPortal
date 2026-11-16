@@ -116,4 +116,15 @@ public sealed class SafeWorkCatalogTests
         Assert.True(File.Exists(Path.Combine(root, "database", "scripts", "101-verify-work-catalog-checklist-guides.sql")));
         Assert.True(File.Exists(Path.Combine(root, "database", "scripts", "102-rollback-work-catalog-checklist-guides.sql")));
     }
+
+    [Fact]
+    public void TheCatalogueSearchSuggestsEntryNamesWithoutRefusingFreeText()
+    {
+        var root = AppContext.BaseDirectory[..AppContext.BaseDirectory.IndexOf($"{Path.DirectorySeparatorChar}tests{Path.DirectorySeparatorChar}", StringComparison.Ordinal)];
+        var view = File.ReadAllText(Path.Combine(root, "src", "TAPortal.Web", "Views", "WorkCatalog", "Index.cshtml"));
+        var js = File.ReadAllText(Path.Combine(root, "src", "TAPortal.Web", "wwwroot", "js", "ta-work.js"));
+        Assert.Contains("data-ta-combo data-ta-combo-free", view);
+        Assert.Contains("aria-controls=\"catalogSearchList\"", view);
+        Assert.Contains("[data-ta-combo]:not([data-ta-combo-free])", js);   // a search box never blocks a submit
+    }
 }

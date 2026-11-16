@@ -440,6 +440,8 @@
         const input = comboInput(combo);
         input.value = option.dataset.value;
         input.setCustomValidity('');
+        // A search box (data-ta-combo-free) re-runs its own filter with the picked name; free text stays allowed.
+        if (combo.hasAttribute('data-ta-combo-free')) input.dispatchEvent(new Event('input', { bubbles: true }));
         comboShow(combo, false);
         input.dispatchEvent(new Event('change', { bubbles: true }));
         // Checklist mẫu (operator 2026-11-16): fill the form's checklist with the entry's template, unless the user
@@ -473,17 +475,20 @@
 
     document.addEventListener('input', (event) => {
         const combo = comboOf(event.target);
-        if (combo && event.target.matches('[data-ta-combo-input]')) { event.target.setCustomValidity(''); comboFilter(combo); }
+        if (!combo || !event.target.matches('[data-ta-combo-input]')) return;
+        event.target.setCustomValidity('');
+        if (combo.hasAttribute('data-ta-combo-free') && event.target.value.trim() === '') comboShow(combo, false);
+        else comboFilter(combo);
     });
     document.addEventListener('focusin', (event) => {
         const combo = comboOf(event.target);
-        if (combo && event.target.matches('[data-ta-combo-input]')) comboFilter(combo);
+        if (combo && event.target.matches('[data-ta-combo-input]') && !(combo.hasAttribute('data-ta-combo-free') && event.target.value.trim() === '')) comboFilter(combo);
     });
     document.addEventListener('focusout', (event) => {
         const combo = comboOf(event.target);
         if (!combo || combo.contains(event.relatedTarget)) return;
         comboShow(combo, false);
-        if (comboInput(combo).value.trim() !== '') comboValid(combo);
+        if (!combo.hasAttribute('data-ta-combo-free') && comboInput(combo).value.trim() !== '') comboValid(combo);
     });
     // pointerdown, not click: the option is picked before the input loses focus and the list closes.
     document.addEventListener('pointerdown', (event) => {
@@ -506,7 +511,7 @@
     document.addEventListener('submit', (event) => {
         const form = event.target;
         if (!(form instanceof HTMLFormElement)) return;
-        for (const combo of form.querySelectorAll('[data-ta-combo]')) {
+        for (const combo of form.querySelectorAll('[data-ta-combo]:not([data-ta-combo-free])')) {
             if (!comboValid(combo)) { event.preventDefault(); event.stopImmediatePropagation(); comboInput(combo).reportValidity(); comboInput(combo).focus(); return; }
         }
     }, true);

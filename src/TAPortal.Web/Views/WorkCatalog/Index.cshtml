@@ -24,7 +24,17 @@
 </section>
 <section class="card ta-table-card" aria-label="Danh sách đầu việc">
     <div class="ta-table-toolbar">
-        <div class="ta-search">@UiIcon.Render("search")<input class="form-control" type="search" aria-label="Tìm đầu việc" placeholder="Tìm đầu việc..." oninput="taFilterRows(this.value,'catalogTable')" /></div>
+        @* Typing filters the table and lists the matching entry names (accents optional); picking one narrows the table to it. *@
+        <div class="ta-search ta-combo" data-ta-combo data-ta-combo-free>@UiIcon.Render("search")<input class="form-control" type="search" aria-label="Tìm đầu việc" placeholder="Tìm đầu việc..." autocomplete="off"
+            role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="catalogSearchList" oninput="taFilterRows(this.value,'catalogTable')" data-ta-combo-input />
+            <ul class="ta-combo__list" id="catalogSearchList" role="listbox" hidden>
+                @foreach (var x in Model)
+                {
+                    <li class="ta-combo__option" role="option" aria-selected="false" data-value="@x.Name"><span class="ta-combo__name">@x.Name</span>@if (!x.IsActive) {<small class="ta-combo__desc">Đã ẩn</small>}</li>
+                }
+                <li class="ta-combo__empty" data-ta-combo-empty hidden>Không có đầu việc phù hợp.</li>
+            </ul>
+        </div>
         <span class="small text-secondary ms-auto">@active đang dùng · @(Model.Count - active) đã ẩn</span>
     </div>
     @if (Model.Count == 0)

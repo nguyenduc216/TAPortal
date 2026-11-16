@@ -281,6 +281,8 @@ tr.is-dirty > td { background: var(--ta-warning-bg, #fff8e6); }
 
 /* ---- Danh mục công việc: task name picker (combobox) and the catalogue page ---- */
 .ta-combo { position: relative; }
+/* A search box with suggestions: the list may hang below a short (filtered) table. */
+.ta-table-card:has(.ta-table-toolbar .ta-combo) { overflow: visible; }
 .ta-combo__list { position: absolute; z-index: 1050; left: 0; right: 0; top: calc(100% + 4px); max-height: 280px; overflow-y: auto; margin: 0; padding: 4px; list-style: none;
     background: var(--tblr-bg-surface, #fff); border: 1px solid var(--tblr-border-color, #dce1e7); border-radius: 8px; box-shadow: 0 8px 24px rgba(8, 39, 70, .14); }
 .ta-combo__list + .form-hint { margin-top: 4px; }

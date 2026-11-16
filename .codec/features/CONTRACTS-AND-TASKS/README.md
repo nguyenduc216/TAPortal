@@ -21,3 +21,4 @@
 | `CONTRACTS-AND-TASKS-CHG-20261113T114748Z-364101` | 2026-11-13 | Customer staff assignment (manager/executors) and task filter popup | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |
 | `CONTRACTS-AND-TASKS-CHG-20261114T021052Z-F6F9C9` | 2026-11-14 | Danh muc cong viec: chon ten viec tu danh muc, goi y khi go, khong nhap tu do | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |
 | `CONTRACTS-AND-TASKS-CHG-20261116T014956Z-621486` | 2026-11-16 | Hoàn thành: checklist không bắt buộc, bắt buộc ghi chú kết quả | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |
+| `CONTRACTS-AND-TASKS-CHG-20261116T060542Z-E543D2` | 2026-11-16 | Danh mục công việc: ô tìm có danh sách gợi ý tên đầu việc | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |
