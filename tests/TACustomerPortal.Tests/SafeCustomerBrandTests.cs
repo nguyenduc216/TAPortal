@@ -39,5 +39,8 @@ public sealed class SafeCustomerBrandTests
         Assert.Contains("<a class=\"cp-maker\" href=\"https://tuvangiaiphapta.vn\" target=\"_blank\" rel=\"noopener\" data-ta-hard>Sản phẩm của Tư vấn giải pháp T.A</a>", layout);
         Assert.Contains("<span class=\"cp-brand__text\">Hóa đơn tự động<small>", layout);
         Assert.Contains("· Hóa đơn tự động</title>", layout);
+        // Operator 2026-11-17: also at the very bottom of the public payment page.
+        Assert.Contains("<a class=\"cp-maker\" href=\"https://tuvangiaiphapta.vn\" target=\"_blank\" rel=\"noopener\" data-ta-hard>Sản phẩm của Tư vấn giải pháp T.A</a>",
+            File.ReadAllText(Path.Combine(Web(), "Views", "Pay", "Index.cshtml")));
     }
 }
