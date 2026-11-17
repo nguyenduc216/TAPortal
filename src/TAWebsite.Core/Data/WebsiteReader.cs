@@ -95,7 +95,7 @@ p.PublishedAt, p.UpdatedAt, p.SeoTitle, p.SeoDescription, p.ViewCount, p.SourceK
 WHERE p.Slug=@slug AND p.Status=1 AND p.IsDeleted=0 AND p.PublishedAt<=SYSUTCDATETIME();
 """;
 
-    public const string Media = "SELECT Id, ContentType, Data, Sha256 FROM dbo.WebsiteMedia WHERE Id=@id AND IsDeleted=0;";
+    public const string Media = "SELECT Id, ContentType, Data, Sha256, FileName, ExternalUrl FROM dbo.WebsiteMedia WHERE Id=@id AND IsDeleted=0;";
 
     public const string CountView = "UPDATE dbo.WebsitePosts SET ViewCount=ViewCount+1 WHERE Id=@id AND Status=1 AND IsDeleted=0;";
 
@@ -230,18 +230,23 @@ public sealed class SqlWebsiteReader(IConfiguration configuration, IMemoryCache 
         return (prev.FirstOrDefault(), next.FirstOrDefault());
     }
 
-    public Task<MediaFile?> MediaAsync(Guid id) => Cached($"media:{id:N}", async () =>
+    // Images and PDFs stay in memory for 10 minutes; videos (up to 25 MB) are read from SQL on each request instead.
+    public async Task<MediaFile?> MediaAsync(Guid id)
     {
+        var key = "website:media:" + id.ToString("N");
+        if (cache.TryGetValue(key, out MediaFile? hit)) return hit;
         MediaFile? file = null;
         await Safe("WEBSITE_MEDIA_READ", async cn =>
         {
             await using var cmd = new SqlCommand(WebsiteSql.Media, cn);
             cmd.Parameters.AddWithValue("@id", id);
             await using var r = await cmd.ExecuteReaderAsync();
-            if (await r.ReadAsync()) file = new(r.GetGuid(0), r.GetString(1), (byte[])r.GetValue(2), r.GetString(3));
+            if (await r.ReadAsync())
+                file = new(r.GetGuid(0), r.GetString(1), (byte[])r.GetValue(2), r.GetString(3), r.GetString(4), r.IsDBNull(5) ? null : r.GetString(5));
         });
+        if (file is null || file.Data.Length <= MediaKinds.CacheLimit) cache.Set(key, file, TimeSpan.FromMinutes(10));
         return file;
-    }, TimeSpan.FromMinutes(10));
+    }
 
     public Task CountViewAsync(Guid postId) => Safe("WEBSITE_VIEW_COUNT", async cn =>
     {

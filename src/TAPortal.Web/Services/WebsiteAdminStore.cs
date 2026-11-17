@@ -16,7 +16,12 @@ public sealed record WebsiteResult(WebsiteOutcome Outcome, Guid? Id = null);
 
 public sealed record WebsitePageEditor(RenderedPage Page, PageRow? Row, IReadOnlyDictionary<string, SectionRow> Rows);
 
-public sealed record WebsiteMediaItem(Guid Id, string FileName, string ContentType, int ByteSize, int? Width, int? Height, string? AltText, DateTime CreatedAt);
+public sealed record WebsiteMediaItem(Guid Id, string FileName, string ContentType, int ByteSize, int? Width, int? Height, string? AltText, DateTime CreatedAt,
+    string? ExternalUrl = null)
+{
+    public TAWebsite.Core.MediaKind Kind => TAWebsite.Core.MediaKinds.KindOf(ContentType);
+    public string? YouTubeId => ContentType == TAWebsite.Core.MediaKinds.YouTube ? TAWebsite.Core.MediaKinds.YouTubeId(ExternalUrl) : null;
+}
 
 public sealed record WebsitePostListItem(Guid Id, string Slug, string Title, string? CategoryName, byte Status, DateTime? PublishedAt, bool IsFeatured,
     int ViewCount, DateTime UpdatedAt, Guid? CoverMediaId);
@@ -118,9 +123,12 @@ public interface IWebsiteAdminStore
     Task<SiteSettings> SettingsAsync();
     Task<WebsiteResult> SaveSettingsAsync(Guid actor, string? ip, IReadOnlyDictionary<string, string?> values);
 
-    Task<IReadOnlyList<WebsiteMediaItem>> MediaAsync(string? search, int take);
+    /// <summary>Library items, newest first; <paramref name="kind"/> null = every kind.</summary>
+    Task<IReadOnlyList<WebsiteMediaItem>> MediaAsync(string? search, int take, TAWebsite.Core.MediaKind? kind = null);
     Task<MediaFile?> MediaFileAsync(Guid id);
     Task<WebsiteResult> UploadMediaAsync(Guid actor, string? ip, string fileName, string contentType, byte[] data, int? width, int? height, string? alt);
+    /// <summary>A YouTube video (no bytes): <paramref name="url"/> is the canonical watch link.</summary>
+    Task<WebsiteResult> AddMediaLinkAsync(Guid actor, string? ip, string title, string url, string? alt);
     Task<WebsiteResult> UpdateMediaAltAsync(Guid actor, string? ip, Guid id, string? alt);
     Task<WebsiteResult> DeleteMediaAsync(Guid actor, string? ip, Guid id);
 
@@ -189,13 +197,16 @@ ELSE
 """;
 
     public const string MediaList = """
-SELECT TOP (@take) Id, FileName, ContentType, ByteSize, Width, Height, AltText, CreatedAt FROM dbo.WebsiteMedia
-WHERE IsDeleted=0 AND (@q IS NULL OR FileName LIKE @q OR AltText LIKE @q) ORDER BY CreatedAt DESC;
+SELECT TOP (@take) Id, FileName, ContentType, ByteSize, Width, Height, AltText, CreatedAt, ExternalUrl FROM dbo.WebsiteMedia
+WHERE IsDeleted=0 AND (@q IS NULL OR FileName LIKE @q OR AltText LIKE @q)
+  AND (@kind IS NULL OR (@kind='image' AND ContentType LIKE 'image/%') OR (@kind='video' AND ContentType LIKE 'video/%')
+       OR (@kind='file' AND ContentType='application/pdf'))
+ORDER BY CreatedAt DESC;
 """;
 
     public const string MediaInsert = """
-INSERT dbo.WebsiteMedia(Id, FileName, ContentType, ByteSize, Width, Height, AltText, Data, Sha256, CreatedBy)
-VALUES(@id, @name, @type, @size, @width, @height, @alt, @data, @sha, @by);
+INSERT dbo.WebsiteMedia(Id, FileName, ContentType, ByteSize, Width, Height, AltText, Data, Sha256, CreatedBy, ExternalUrl)
+VALUES(@id, @name, @type, @size, @width, @height, @alt, @data, @sha, @by, @url);
 """;
 
     public const string MediaBySha = "SELECT TOP 1 Id FROM dbo.WebsiteMedia WHERE Sha256=@sha AND IsDeleted=0;";
@@ -255,7 +266,7 @@ SELECT SUM(CASE WHEN Status=0 THEN 1 ELSE 0 END), SUM(CASE WHEN CreatedAt>=@toda
 
 public sealed class SqlWebsiteAdminStore(IConfiguration configuration, AdminAuditOptions audit) : IWebsiteAdminStore
 {
-    public const int MaxImageBytes = 5 * 1024 * 1024;
+    public const int MaxImageBytes = TAWebsite.Core.MediaKinds.MaxImageBytes;
 
     private SqlConnection Connection() => new(configuration["Database:ConnectionString"]);
 
@@ -384,7 +395,7 @@ public sealed class SqlWebsiteAdminStore(IConfiguration configuration, AdminAudi
         });
 
     // ---- media --------------------------------------------------------------------------------------------------
-    public async Task<IReadOnlyList<WebsiteMediaItem>> MediaAsync(string? search, int take)
+    public async Task<IReadOnlyList<WebsiteMediaItem>> MediaAsync(string? search, int take, TAWebsite.Core.MediaKind? kind = null)
     {
         var list = new List<WebsiteMediaItem>();
         await using var cn = Connection();
@@ -392,10 +403,14 @@ public sealed class SqlWebsiteAdminStore(IConfiguration configuration, AdminAudi
         await using var cmd = new SqlCommand(WebsiteAdminSql.MediaList, cn);
         cmd.Parameters.AddWithValue("@take", Math.Clamp(take, 1, 500));
         cmd.Parameters.AddWithValue("@q", Like(search));
+        cmd.Parameters.Add("@kind", SqlDbType.VarChar, 5).Value = kind switch
+        {
+            TAWebsite.Core.MediaKind.Image => "image", TAWebsite.Core.MediaKind.Video => "video", TAWebsite.Core.MediaKind.File => "file", _ => DBNull.Value
+        };
         await using var r = await cmd.ExecuteReaderAsync();
         while (await r.ReadAsync())
             list.Add(new(r.GetGuid(0), r.GetString(1), r.GetString(2), r.GetInt32(3), r.IsDBNull(4) ? null : r.GetInt32(4),
-                r.IsDBNull(5) ? null : r.GetInt32(5), Str(r, 6), r.GetDateTime(7)));
+                r.IsDBNull(5) ? null : r.GetInt32(5), Str(r, 6), r.GetDateTime(7), Str(r, 8)));
         return list;
     }
 
@@ -406,7 +421,9 @@ public sealed class SqlWebsiteAdminStore(IConfiguration configuration, AdminAudi
         await using var cmd = new SqlCommand(WebsiteSql.Media, cn);
         cmd.Parameters.AddWithValue("@id", id);
         await using var r = await cmd.ExecuteReaderAsync();
-        return await r.ReadAsync() ? new MediaFile(r.GetGuid(0), r.GetString(1), (byte[])r.GetValue(2), r.GetString(3)) : null;
+        return await r.ReadAsync()
+            ? new MediaFile(r.GetGuid(0), r.GetString(1), (byte[])r.GetValue(2), r.GetString(3), r.GetString(4), r.IsDBNull(5) ? null : r.GetString(5))
+            : null;
     }
 
     public Task<WebsiteResult> UploadMediaAsync(Guid actor, string? ip, string fileName, string contentType, byte[] data, int? width, int? height, string? alt) =>
@@ -418,9 +435,23 @@ public sealed class SqlWebsiteAdminStore(IConfiguration configuration, AdminAudi
             var id = Guid.NewGuid();
             await Exec(cn, tx, WebsiteAdminSql.MediaInsert, ("@id", id), ("@name", Truncate(fileName, 260)!), ("@type", contentType), ("@size", data.Length),
                 ("@width", (object?)width ?? DBNull.Value), ("@height", (object?)height ?? DBNull.Value), ("@alt", Db(Truncate(alt, 300))),
-                ("@data", data), ("@sha", sha), ("@by", actor));
+                ("@data", data), ("@sha", sha), ("@by", actor), ("@url", DBNull.Value));
             await Audit(cn, tx, actor, ip, "WEBSITE_MEDIA_UPLOAD", "WebsiteMedia", id.ToString(), "",
                 AuditSql.Json(("file", fileName), ("type", contentType), ("bytes", data.Length)));
+            return new(WebsiteOutcome.Saved, id);
+        });
+
+    public Task<WebsiteResult> AddMediaLinkAsync(Guid actor, string? ip, string title, string url, string? alt) =>
+        Write(actor, AdminPermissions.WebsiteMediaEdit, async (cn, tx) =>
+        {
+            var sha = Convert.ToHexString(SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(url))).ToLowerInvariant();
+            // The same YouTube video added twice is stored once.
+            if (await Scalar(cn, tx, WebsiteAdminSql.MediaBySha, ("@sha", sha)) is Guid existing) return new(WebsiteOutcome.Saved, existing);
+            var id = Guid.NewGuid();
+            await Exec(cn, tx, WebsiteAdminSql.MediaInsert, ("@id", id), ("@name", Truncate(title, 260)!), ("@type", TAWebsite.Core.MediaKinds.YouTube),
+                ("@size", 0), ("@width", DBNull.Value), ("@height", DBNull.Value), ("@alt", Db(Truncate(alt, 300))),
+                ("@data", Array.Empty<byte>()), ("@sha", sha), ("@by", actor), ("@url", url));
+            await Audit(cn, tx, actor, ip, "WEBSITE_MEDIA_LINK", "WebsiteMedia", id.ToString(), "", AuditSql.Json(("title", title), ("url", url)));
             return new(WebsiteOutcome.Saved, id);
         });
 

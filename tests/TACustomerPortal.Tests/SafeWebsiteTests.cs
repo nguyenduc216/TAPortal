@@ -369,6 +369,66 @@ public sealed class SafeWebsiteTests
     }
 
     [Fact]
+    public async Task MediaLibraryKeepsImagesVideosAndPdfApart()
+    {
+        var store = new MemoryAdminStore();
+        await using var f = AdminFactory(store, "WEBSITE.VIEW", "WEBSITE.MEDIA.EDIT");
+        var client = AdminClient(f);
+        var token = Token(await client.GetStringAsync("/WebsiteMedia?kind=file"));
+        var pdf = "%PDF-1.7 %test"u8.ToArray();
+        var mp4 = new byte[] { 0, 0, 0, 24, (byte)'f', (byte)'t', (byte)'y', (byte)'p', (byte)'i', (byte)'s', (byte)'o', (byte)'m', 0, 0, 2, 0 };
+        HttpRequestMessage Up(string kind, string name, byte[] data)
+        {
+            var content = Upload(token, name, data);
+            content.Add(new StringContent(kind), "kind");
+            return new HttpRequestMessage(HttpMethod.Post, "/WebsiteMedia/Upload") { Content = content, Headers = { Accept = { new("application/json") } } };
+        }
+        var okPdf = await client.SendAsync(Up("file", "mau-to-khai.pdf", pdf));
+        Assert.Equal(HttpStatusCode.OK, okPdf.StatusCode);
+        Assert.Contains("\"publicUrl\":\"/media/", await okPdf.Content.ReadAsStringAsync());
+        Assert.Equal(HttpStatusCode.OK, (await client.SendAsync(Up("video", "gioi-thieu.mp4", mp4))).StatusCode);
+        // Wrong kind for the tab, and a renamed file, are refused.
+        Assert.Equal(HttpStatusCode.BadRequest, (await client.SendAsync(Up("file", "anh.pdf", Png))).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await client.SendAsync(Up("video", "x.mp4", pdf))).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await client.SendAsync(Up("image", "x.png", pdf))).StatusCode);
+        var link = await client.PostAsync("/WebsiteMedia/AddVideoLink", Form(token, ("url", "https://youtu.be/dQw4w9WgXcQ?t=5"), ("title", "Giới thiệu T.A")));
+        Assert.Equal(HttpStatusCode.Redirect, link.StatusCode);
+        Assert.Equal("https://www.youtube.com/watch?v=dQw4w9WgXcQ", store.Media.Single(m => m.ContentType == TAWebsite.Core.MediaKinds.YouTube).ExternalUrl);
+        await client.PostAsync("/WebsiteMedia/AddVideoLink", Form(token, ("url", "https://evil.example/watch?v=dQw4w9WgXcQ")));
+        Assert.Equal(3, store.Media.Count);
+        Assert.Equal(["application/pdf", "video/mp4", "video/youtube"], store.Media.Select(m => m.ContentType).Order().ToArray());
+        // The image picker never offers a video or a PDF; the video picker gets both videos.
+        Assert.Equal("[]", await client.GetStringAsync("/WebsiteMedia/Picker"));
+        var videos = await client.GetStringAsync("/WebsiteMedia/Picker?kind=video");
+        Assert.Contains("https://www.youtube.com/watch?v=dQw4w9WgXcQ", videos);
+        Assert.Contains("i.ytimg.com/vi/dQw4w9WgXcQ", videos);
+        Assert.Contains("Giới thiệu T.A", System.Net.WebUtility.HtmlDecode(await client.GetStringAsync("/WebsiteMedia?kind=video")));
+    }
+
+    [Fact]
+    public void ArticleVideosBecomePlayersOnlyForYouTubeAndOwnMedia()
+    {
+        Assert.Equal("dQw4w9WgXcQ", TAWebsite.Core.MediaKinds.YouTubeId("https://www.youtube.com/watch?v=dQw4w9WgXcQ&list=x"));
+        Assert.Equal("dQw4w9WgXcQ", TAWebsite.Core.MediaKinds.YouTubeId("https://www.youtube.com/shorts/dQw4w9WgXcQ"));
+        Assert.Null(TAWebsite.Core.MediaKinds.YouTubeId("https://youtube.com.evil.example/watch?v=dQw4w9WgXcQ"));
+        Assert.Null(TAWebsite.Core.MediaKinds.YouTubeId("javascript:alert(1)//youtu.be/dQw4w9WgXcQ"));
+        var id = Guid.NewGuid().ToString("N");
+        var html = PostHtml.WithMedia(PostHtml.Sanitize(
+            "<figure class=\"ar-video\"><a href=\"https://youtu.be/dQw4w9WgXcQ\">▶ Video</a><figcaption>Giới thiệu</figcaption></figure>"
+            + $"<figure class=\"ar-video\"><p><a href=\"/media/{id}\">▶ Video</a></p></figure>"
+            + "<figure class=\"ar-video\"><a href=\"https://evil.example/x.mp4\">x</a></figure>"
+            + $"<p><a class=\"ar-file\" href=\"/media/{id}\" target=\"_blank\">Tải về</a></p><iframe src=\"https://evil.example\"></iframe>"));
+        Assert.Contains("<iframe src=\"https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ\" title=\"Giới thiệu\"", html);
+        Assert.Contains($"<video src=\"/media/{id}\" controls=\"\"", html);
+        Assert.Single(System.Text.RegularExpressions.Regex.Matches(html, "<iframe"));
+        Assert.Contains("href=\"https://evil.example/x.mp4\"", html);
+        Assert.Contains("class=\"ar-file\"", html);
+        Assert.DoesNotContain("evil.example\"></iframe>", html);
+        Assert.Equal(TAWebsite.Core.MediaKinds.Pdf, TAWebsite.Core.MediaKinds.Sniff("%PDF-1.4"u8));
+        Assert.Null(TAWebsite.Core.MediaKinds.Sniff("<svg>"u8));
+    }
+
+    [Fact]
     public async Task PostEditorSavesSanitizedArticles()
     {
         var store = new MemoryAdminStore();
@@ -1033,12 +1093,19 @@ public sealed class SafeWebsiteTests
         public Task<S.WebsiteResult> SavePageSeoAsync(Guid actor, string? ip, string pageKey, string? title, string? description, bool published) => Task.FromResult(Ok());
         public Task<SiteSettings> SettingsAsync() => Task.FromResult(SiteSettings.Defaults);
         public Task<S.WebsiteResult> SaveSettingsAsync(Guid actor, string? ip, IReadOnlyDictionary<string, string?> values) => Task.FromResult(Ok());
-        public Task<IReadOnlyList<S.WebsiteMediaItem>> MediaAsync(string? search, int take) => Task.FromResult<IReadOnlyList<S.WebsiteMediaItem>>(Media);
+        public Task<IReadOnlyList<S.WebsiteMediaItem>> MediaAsync(string? search, int take, TAWebsite.Core.MediaKind? kind = null) =>
+            Task.FromResult<IReadOnlyList<S.WebsiteMediaItem>>(Media.Where(m => kind is null || m.Kind == kind).ToList());
         public Task<MediaFile?> MediaFileAsync(Guid id) => Task.FromResult<MediaFile?>(null);
         public Task<S.WebsiteResult> UploadMediaAsync(Guid actor, string? ip, string fileName, string contentType, byte[] data, int? width, int? height, string? alt)
         {
             var id = Guid.NewGuid();
             Media.Add(new(id, fileName, contentType, data.Length, width, height, alt, DateTime.UtcNow));
+            return Task.FromResult(Ok(id));
+        }
+        public Task<S.WebsiteResult> AddMediaLinkAsync(Guid actor, string? ip, string title, string url, string? alt)
+        {
+            var id = Guid.NewGuid();
+            Media.Add(new(id, title, TAWebsite.Core.MediaKinds.YouTube, 0, null, null, alt, DateTime.UtcNow, url));
             return Task.FromResult(Ok(id));
         }
         public Task<S.WebsiteResult> UpdateMediaAltAsync(Guid actor, string? ip, Guid id, string? alt) => Task.FromResult(Ok(id));

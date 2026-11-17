@@ -5,7 +5,7 @@
 @{
     Layout = null;
     var publicUrl = WebsiteUi.PublicUrl(Configuration);
-    var (body, toc) = PostHtml.WithToc(PostHtml.Sanitize(Model.BodyHtml).Replace("src=\"/media/", "src=\"" + WebsiteUi.MediaBase + "/"));
+    var (body, toc) = PostHtml.WithToc(PostHtml.WithMedia(PostHtml.Sanitize(Model.BodyHtml)).Replace("src=\"/media/", "src=\"" + WebsiteUi.MediaBase + "/"));
     var vi = System.Globalization.CultureInfo.GetCultureInfo("vi-VN");
     var library = ViewData["LibraryPost"] as LibraryPost; // "Bài soạn sẵn" preview: not saved yet, sources shown for the reviewer
 }

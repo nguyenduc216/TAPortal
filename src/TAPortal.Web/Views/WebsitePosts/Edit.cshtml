@@ -45,7 +45,7 @@
                         <button type="button" data-cmd="callout" title="Khối lưu ý">⚠ Lưu ý</button>
                         <span></span>
                         <button type="button" data-cmd="link" title="Chèn liên kết">🔗 Liên kết</button>
-                        <button type="button" data-cmd="image" title="Chèn ảnh từ thư viện">🖼 Ảnh</button>
+                        <button type="button" data-cmd="image" title="Chèn ảnh từ thư viện">🖼 Ảnh</button><button type="button" data-cmd="video" title="Chèn video (YouTube hoặc MP4) từ Media">▶ Video</button><button type="button" data-cmd="file" title="Chèn link tải tệp PDF từ Media">📄 PDF</button>
                         <button type="button" data-cmd="table" title="Chèn bảng 3 cột">▦ Bảng</button>
                         <button type="button" data-cmd="removeFormat" title="Xóa định dạng">⌫</button>
                         <button type="button" data-cmd="html" title="Sửa mã HTML" class="ms-auto">&lt;/&gt; HTML</button>
@@ -54,7 +54,7 @@
                     <textarea asp-for="Input.BodyHtml" class="ta-web-rte__html form-control" rows="18" hidden data-ta-rte-html></textarea>
                 </div>
                 <span asp-validation-for="Input.BodyHtml" class="invalid-feedback d-block"></span>
-                <small class="form-hint">Dùng H2 cho các mục chính: website tự tạo mục lục. Ảnh chèn từ Thư viện ảnh. Mã HTML được lọc an toàn khi lưu.</small>
+                <small class="form-hint">Dùng H2 cho các mục chính: website tự tạo mục lục. Ảnh, video và tệp PDF chèn từ Media. Mã HTML được lọc an toàn khi lưu.</small>
             </div>
         </div>
         <aside class="ta-web-post-side">

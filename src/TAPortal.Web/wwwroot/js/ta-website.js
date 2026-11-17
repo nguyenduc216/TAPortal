@@ -80,19 +80,25 @@
         if (box) box.closest('.ta-web-section')?.classList.toggle('is-hidden', !box.checked);
     });
 
-    // ---- Image picker -------------------------------------------------------------------------------------------------
+    // ---- Media picker (images, videos, PDF files) ------------------------------------------------------------------------
+    const KINDS = {
+        image: { title: 'Chọn ảnh', search: 'Tìm ảnh...', upload: 'Tải ảnh mới', accept: 'image/png,image/jpeg,image/webp,image/gif', max: 5, empty: 'Thư viện chưa có ảnh. Bấm "Tải ảnh mới".' },
+        video: { title: 'Chọn video', search: 'Tìm video...', upload: 'Tải video MP4', accept: 'video/mp4', max: 25, empty: 'Chưa có video. Tải MP4 lên hoặc thêm link YouTube ở trang Media.' },
+        file: { title: 'Chọn tệp PDF', search: 'Tìm tệp...', upload: 'Tải PDF mới', accept: 'application/pdf', max: 10, empty: 'Chưa có tệp PDF. Bấm "Tải PDF mới".' }
+    };
     let dialog = null;
     let onPick = null;
+    let kind = 'image';
 
     const ensureDialog = () => {
         if (dialog && document.body.contains(dialog)) return dialog;
         dialog = document.createElement('dialog');
         dialog.className = 'ta-web-picker';
         dialog.innerHTML = `
-            <form method="dialog" class="ta-web-picker__head"><b>Chọn ảnh</b><button class="btn btn-sm" value="close" aria-label="Đóng">✕</button></form>
+            <div class="ta-web-picker__head"><b data-picker-title>Chọn ảnh</b><button class="btn btn-sm" type="button" data-picker-close aria-label="Đóng">✕</button></div>
             <div class="ta-web-picker__tools">
-                <input class="form-control" type="search" placeholder="Tìm ảnh..." data-picker-search />
-                <label class="btn btn-ta-gold mb-0">Tải ảnh mới<input type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden data-picker-upload /></label>
+                <input class="form-control" type="search" data-picker-search />
+                <label class="btn btn-ta-gold mb-0"><span data-picker-upload-label>Tải ảnh mới</span><input type="file" hidden data-picker-upload /></label>
             </div>
             <p class="ta-web-picker__msg" data-picker-msg></p>
             <div class="ta-web-picker__grid" data-picker-grid></div>`;
@@ -106,21 +112,25 @@
             const file = e.target.files[0];
             if (!file) return;
             const msg = dialog.querySelector('[data-picker-msg]');
-            if (file.size > 5 * 1024 * 1024) { msg.textContent = 'Ảnh tối đa 5 MB. Hãy nén ảnh rồi tải lại.'; return; }
-            msg.textContent = 'Đang tải ảnh lên...';
+            const k = KINDS[kind];
+            if (file.size > k.max * 1024 * 1024) { msg.textContent = `Tệp tối đa ${k.max} MB.`; e.target.value = ''; return; }
+            msg.textContent = 'Đang tải lên...';
             const body = new FormData();
             body.append('file', file);
+            body.append('kind', kind);
             body.append('__RequestVerificationToken', token());
             try {
                 const response = await fetch('/WebsiteMedia/Upload', { method: 'POST', body, credentials: 'same-origin', headers: { Accept: 'application/json' } });
                 const data = await response.json().catch(() => ({}));
-                if (!response.ok) { msg.textContent = data.error || 'Không tải được ảnh (thiếu quyền hoặc lỗi máy chủ).'; return; }
+                if (!response.ok) { msg.textContent = data.error || 'Không tải lên được (thiếu quyền hoặc lỗi máy chủ).'; return; }
                 msg.textContent = '';
                 choose(data);
             } catch { msg.textContent = 'Không kết nối được máy chủ.'; }
             e.target.value = '';
         });
+        // A plain button, not <form method="dialog">: the Portal shell intercepts every form submit and would navigate.
         dialog.addEventListener('click', (e) => {
+            if (e.target.closest('[data-picker-close]')) { dialog.close(); return; }
             const tile = e.target.closest('[data-picker-item]');
             if (tile) choose(JSON.parse(tile.dataset.pickerItem));
         });
@@ -138,34 +148,51 @@
         grid.innerHTML = '';
         msg.textContent = 'Đang tải...';
         try {
-            const response = await fetch('/WebsiteMedia/Picker?q=' + encodeURIComponent(q || ''), { credentials: 'same-origin', headers: { Accept: 'application/json' } });
-            if (!response.ok) { msg.textContent = 'Không đọc được thư viện ảnh.'; return; }
+            const response = await fetch('/WebsiteMedia/Picker?kind=' + kind + '&q=' + encodeURIComponent(q || ''), { credentials: 'same-origin', headers: { Accept: 'application/json' } });
+            if (!response.ok) { msg.textContent = 'Không đọc được thư viện Media.'; return; }
             const items = await response.json();
-            msg.textContent = items.length ? '' : 'Thư viện chưa có ảnh. Bấm "Tải ảnh mới".';
+            msg.textContent = items.length ? '' : KINDS[kind].empty;
             for (const item of items) {
                 const tile = document.createElement('button');
                 tile.type = 'button';
                 tile.className = 'ta-web-picker__item';
                 tile.dataset.pickerItem = JSON.stringify(item);
-                const img = document.createElement('img');
-                img.src = item.url;
-                img.alt = item.alt || '';
-                img.loading = 'lazy';
+                if (item.thumb) {
+                    const img = document.createElement('img');
+                    img.src = item.thumb;
+                    img.alt = item.alt || '';
+                    img.loading = 'lazy';
+                    tile.append(img);
+                } else {
+                    const badge = document.createElement('span');
+                    badge.className = 'ta-web-picker__badge';
+                    badge.textContent = item.kind === 'file' ? 'PDF' : 'MP4';
+                    tile.append(badge);
+                }
                 const name = document.createElement('span');
                 name.textContent = item.name;
-                tile.append(img, name);
+                tile.append(name);
                 grid.appendChild(tile);
             }
         } catch { msg.textContent = 'Không kết nối được máy chủ.'; }
     };
 
-    const openPicker = (callback) => {
+    const openPicker = (callback, pickKind = 'image') => {
         ensureDialog();
+        kind = KINDS[pickKind] ? pickKind : 'image';
+        const k = KINDS[kind];
         onPick = callback;
-        dialog.querySelector('[data-picker-search]').value = '';
+        dialog.querySelector('[data-picker-title]').textContent = k.title;
+        dialog.querySelector('[data-picker-upload-label]').textContent = k.upload;
+        dialog.querySelector('[data-picker-upload]').accept = k.accept;
+        const search = dialog.querySelector('[data-picker-search]');
+        search.value = '';
+        search.placeholder = k.search;
         dialog.showModal();
         load('');
     };
+
+    const esc = (text) => String(text || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
     document.addEventListener('click', (event) => {
         const pick = event.target.closest('[data-ta-image-pick]');
@@ -241,6 +268,19 @@
                 const alt = (item.alt || '').replace(/"/g, '&quot;');
                 document.execCommand('insertHTML', false, `<figure><img src="${MEDIA_ADMIN}${item.id}" alt="${alt}"><figcaption>${alt}</figcaption></figure><p></p>`);
             });
+        } else if (cmd === 'video' || cmd === 'file') {
+            const selection = window.getSelection();
+            const range = selection.rangeCount ? selection.getRangeAt(0).cloneRange() : null;
+            openPicker((item) => {
+                area.focus();
+                if (range) { selection.removeAllRanges(); selection.addRange(range); }
+                const label = esc(item.alt || item.name);
+                if (cmd === 'video') {
+                    document.execCommand('insertHTML', false, `<figure class="ar-video"><a href="${esc(item.publicUrl)}">▶ Video: ${label}</a><figcaption>${label}</figcaption></figure><p></p>`);
+                } else {
+                    document.execCommand('insertHTML', false, `<p><a class="ar-file" href="${esc(item.publicUrl)}" target="_blank">Tải về: ${label}${item.size ? ' (' + esc(item.size) + ')' : ''}</a></p><p></p>`);
+                }
+            }, cmd);
         } else if (cmd === 'callout') {
             document.execCommand('insertHTML', false, '<div class="ar-callout"><p><b>Lưu ý:</b> nội dung cần chú ý...</p></div><p></p>');
         } else if (cmd === 'table') {

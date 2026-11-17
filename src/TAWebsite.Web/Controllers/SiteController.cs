@@ -64,7 +64,7 @@ public sealed partial class SiteController(IWebsiteReader reader, ILogger<SiteCo
         var post = await reader.PostAsync(slug);
         if (post is null) return NotFound();
         var news = await reader.PageAsync("news");
-        var (body, toc) = PostHtml.WithToc(PostHtml.Sanitize(post.BodyHtml));
+        var (body, toc) = PostHtml.WithToc(PostHtml.WithMedia(PostHtml.Sanitize(post.BodyHtml)));
         var settings = await reader.SettingsAsync();
         var global = await reader.PageAsync(SiteMap.GlobalPage);
         var title = (string.IsNullOrWhiteSpace(post.SeoTitle) ? post.Title : post.SeoTitle) + " | " + settings["seo.siteName"];
@@ -94,11 +94,21 @@ public sealed partial class SiteController(IWebsiteReader reader, ILogger<SiteCo
         if (!Guid.TryParse(id, out var guid)) return NotFound();
         var file = await reader.MediaAsync(guid);
         if (file is null) return NotFound();
+        // A YouTube entry has no bytes: the link goes to the video on YouTube.
+        if (file.IsLink) return TAWebsite.Core.MediaKinds.YouTubeId(file.ExternalUrl) is string yt ? Redirect(TAWebsite.Core.MediaKinds.YouTubeWatchUrl(yt)) : NotFound();
         var etag = new EntityTagHeaderValue("\"" + file.Sha256[..32] + "\"");
         if (Request.Headers.IfNoneMatch.ToString().Contains(etag.Tag.ToString(), StringComparison.Ordinal)) return StatusCode(304);
         Response.Headers.CacheControl = "public, max-age=604800, immutable"; // a media id always holds the same bytes
         Response.Headers.ETag = etag.ToString();
-        return File(file.Data, file.ContentType);
+        Response.Headers.XContentTypeOptions = "nosniff";
+        if (file.ContentType == TAWebsite.Core.MediaKinds.Pdf)
+        {
+            // Opens in the browser's PDF viewer; "Save" keeps the original file name.
+            var name = string.IsNullOrWhiteSpace(file.FileName) ? "tai-lieu.pdf" : file.FileName;
+            Response.Headers.ContentDisposition = new ContentDispositionHeaderValue("inline") { FileNameStar = name }.ToString();
+        }
+        // Range requests let the video player seek without downloading the whole file.
+        return File(file.Data, file.ContentType, enableRangeProcessing: file.ContentType == TAWebsite.Core.MediaKinds.Mp4);
     }
 
     [HttpGet("/robots.txt")]

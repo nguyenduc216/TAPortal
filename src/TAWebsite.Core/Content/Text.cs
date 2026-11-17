@@ -48,7 +48,7 @@ public static class PostHtml
         foreach (var scheme in new[] { "http", "https", "mailto", "tel" }) s.AllowedSchemes.Add(scheme);
         s.AllowedCssProperties.Clear();
         s.AllowedClasses.Clear();
-        foreach (var c in new[] { "ar-callout", "info", "warn", "ok", "lead" }) s.AllowedClasses.Add(c);
+        foreach (var c in new[] { "ar-callout", "info", "warn", "ok", "lead", "ar-video", "ar-file" }) s.AllowedClasses.Add(c);
         s.AllowDataAttributes = false;
         s.PostProcessNode += (_, e) =>
         {
@@ -114,6 +114,55 @@ public static class PostHtml
     // About 200 words a minute; at least 1.
     public static int ReadMinutes(string? html) =>
         Math.Max(1, (int)Math.Round(PlainText(html, int.MaxValue).Split(' ', StringSplitOptions.RemoveEmptyEntries).Length / 200.0));
+
+    private static readonly System.Text.RegularExpressions.Regex MediaPath = new(@"^/media/[0-9a-f]{32}$", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+    /// <summary>
+    /// Videos inserted from the media library (<c>&lt;figure class="ar-video"&gt;&lt;a href="…"&gt;</c>, already sanitized) become a
+    /// player: a YouTube link → privacy-enhanced YouTube embed, a /media/{id} link → HTML5 video. Only those two exact URL
+    /// shapes are turned into an iframe/video, so a stored article can never embed another site.
+    /// </summary>
+    public static string WithMedia(string html)
+    {
+        if (string.IsNullOrEmpty(html) || !html.Contains("ar-video", StringComparison.Ordinal)) return html;
+        var doc = new AngleSharp.Html.Parser.HtmlParser().ParseDocument("<body>" + html + "</body>");
+        foreach (var figure in doc.Body!.QuerySelectorAll("figure.ar-video").ToList())
+        {
+            var link = figure.QuerySelector("a[href]");
+            var href = link?.GetAttribute("href")?.Trim() ?? "";
+            var caption = PlainText(figure.QuerySelector("figcaption")?.InnerHtml ?? "", 200);
+            AngleSharp.Dom.IElement? player = null;
+            if (TAWebsite.Core.MediaKinds.YouTubeId(href) is string yt)
+            {
+                var frame = doc.CreateElement("div");
+                frame.ClassName = "ar-video-frame";
+                var iframe = doc.CreateElement("iframe");
+                iframe.SetAttribute("src", TAWebsite.Core.MediaKinds.YouTubeEmbedUrl(yt));
+                iframe.SetAttribute("title", caption.Length > 0 ? caption : "Video");
+                iframe.SetAttribute("loading", "lazy");
+                iframe.SetAttribute("allow", "accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture");
+                iframe.SetAttribute("referrerpolicy", "strict-origin-when-cross-origin");
+                iframe.SetAttribute("allowfullscreen", "");
+                frame.AppendChild(iframe);
+                player = frame;
+            }
+            else if (MediaPath.IsMatch(href))
+            {
+                var video = doc.CreateElement("video");
+                video.SetAttribute("src", href.ToLowerInvariant());
+                video.SetAttribute("controls", "");
+                video.SetAttribute("preload", "metadata");
+                video.SetAttribute("playsinline", "");
+                player = video;
+            }
+            if (player is null || link is null) continue;
+            // The link may sit inside a paragraph the editor created; replace the outermost wrapper inside the figure.
+            AngleSharp.Dom.IElement target = link;
+            while (target.ParentElement is { } parent && parent != figure && parent.ChildElementCount == 1) target = parent;
+            target.Replace(player);
+        }
+        return doc.Body.InnerHtml;
+    }
 
     // h2 headings of the body for the table of contents; gives each an id when it has none.
     public static (string Html, IReadOnlyList<(string Id, string Title)> Toc) WithToc(string html)

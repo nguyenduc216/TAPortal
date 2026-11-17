@@ -123,3 +123,15 @@ a.ta-dash-leads__stat:hover { background: var(--ta-surface-2, #f7fafc); text-dec
     .ta-dash-leads__stat:nth-child(3) { border-left: 0; }
     .ta-dash-leads__stat:nth-child(n+3) { border-top: 1px solid var(--ta-border, #e6edf3); }
 }
+
+/* Media (images, videos, PDF): tabs, non-image tiles, picker badge. */
+.ta-web-media-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+.ta-web-media-tabs a { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 30px; border: 1px solid var(--ta-border, #dbe7f0); background: #fff; color: inherit; font-weight: 600; text-decoration: none; }
+.ta-web-media-tabs a[aria-current="page"] { background: var(--ta-navy, #052b50); border-color: var(--ta-navy, #052b50); color: #fff; }
+.ta-web-media__tile { display: flex; align-items: center; justify-content: center; height: 140px; border-radius: 0; background: linear-gradient(135deg, #0b3a66, #052b50); color: #fff; font: 800 22px/1 system-ui, sans-serif; letter-spacing: .06em; text-decoration: none; position: relative; overflow: hidden; }
+.ta-web-media__tile--pdf { background: linear-gradient(135deg, #e74c3c, #a93226); }
+.ta-web-media__tile img { width: 100%; height: 100%; object-fit: cover; }
+.ta-web-media__tile video { width: 100%; height: 100%; object-fit: cover; background: #000; }
+.ta-web-media__play { position: absolute; inset: auto auto 8px 8px; background: #000a; color: #fff; font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 20px; letter-spacing: 0; }
+.ta-web-media__copy { font-size: 12px; }
+.ta-web-picker__badge { display: flex; align-items: center; justify-content: center; height: 100px; border-radius: 6px; background: linear-gradient(135deg, #0b3a66, #052b50); color: #fff; font-weight: 800; letter-spacing: .06em; }

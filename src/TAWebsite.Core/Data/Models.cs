@@ -74,7 +74,11 @@ public sealed record PostPage(IReadOnlyList<PostCard> Items, int Total, int Page
     public int Pages => Math.Max(1, (Total + PageSize - 1) / PageSize);
 }
 
-public sealed record MediaFile(Guid Id, string ContentType, byte[] Data, string Sha256);
+public sealed record MediaFile(Guid Id, string ContentType, byte[] Data, string Sha256, string FileName = "", string? ExternalUrl = null)
+{
+    /// <summary>A YouTube video: no bytes are stored, the site redirects / embeds <see cref="ExternalUrl"/>.</summary>
+    public bool IsLink => ContentType == MediaKinds.YouTube;
+}
 
 public sealed class LeadInput
 {

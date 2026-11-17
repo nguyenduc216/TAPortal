@@ -149,38 +149,99 @@ public sealed class WebsiteController(IWebsiteAdminStore store, IConfiguration c
     }
 }
 
-// Admin → Website TA → Thư viện ảnh. Images live in dbo.WebsiteMedia; the public site serves them at /media/{id}.
+// Admin → Website TA → Media: images, videos (MP4 upload or YouTube link) and PDF files. Everything lives in
+// dbo.WebsiteMedia; the public site serves it at /media/{id} (a YouTube entry redirects to the video).
 [Authorize(Policy = AdminPermissions.Policy.WebsiteView)]
 public sealed class WebsiteMediaController(IWebsiteAdminStore store, ILogger<WebsiteMediaController> logger) : Controller
 {
-    private const long UploadLimit = SqlWebsiteAdminStore.MaxImageBytes + 1024 * 1024;
+    private const long UploadLimit = TAWebsite.Core.MediaKinds.MaxVideoBytes + 1024 * 1024;
 
-    public async Task<IActionResult> Index(string? q)
+    public static TAWebsite.Core.MediaKind ParseKind(string? kind) => kind switch
     {
-        try { return View(new WebsiteMediaVm(await store.MediaAsync(q, 300), q, null)); }
-        catch (SqlException ex) { logger.LogError(ex, "WEBSITE_ADMIN_UNAVAILABLE"); return View(new WebsiteMediaVm([], q, WebsiteController.StoreUnavailable)); }
+        "video" => TAWebsite.Core.MediaKind.Video,
+        "file" => TAWebsite.Core.MediaKind.File,
+        _ => TAWebsite.Core.MediaKind.Image
+    };
+
+    public static string KindKey(TAWebsite.Core.MediaKind kind) => kind switch
+    {
+        TAWebsite.Core.MediaKind.Video => "video",
+        TAWebsite.Core.MediaKind.File => "file",
+        _ => "image"
+    };
+
+    public async Task<IActionResult> Index(string? q, string? kind)
+    {
+        var k = ParseKind(kind);
+        try { return View(new WebsiteMediaVm(await store.MediaAsync(q, 300, k), q, null, k)); }
+        catch (SqlException ex) { logger.LogError(ex, "WEBSITE_ADMIN_UNAVAILABLE"); return View(new WebsiteMediaVm([], q, WebsiteController.StoreUnavailable, k)); }
     }
 
-    // Image bytes for previews inside the Admin portal (thumbnails, picker, editor).
+    // Bytes for previews inside the Admin portal (thumbnails, picker, editor, video player, PDF viewer).
     [ResponseCache(Duration = 600, Location = ResponseCacheLocation.Client)]
     public async Task<IActionResult> File(string id)
     {
         if (!Guid.TryParse(id, out var guid)) return NotFound();
         var file = await store.MediaFileAsync(guid);
         if (file is null) return NotFound();
+        if (file.IsLink) return TAWebsite.Core.MediaKinds.YouTubeId(file.ExternalUrl) is string yt ? Redirect(TAWebsite.Core.MediaKinds.YouTubeWatchUrl(yt)) : NotFound();
         Response.Headers.XContentTypeOptions = "nosniff";
-        return File(file.Data, file.ContentType);
+        if (file.ContentType == TAWebsite.Core.MediaKinds.Pdf)
+            Response.Headers.ContentDisposition = new Microsoft.Net.Http.Headers.ContentDispositionHeaderValue("inline") { FileNameStar = file.FileName }.ToString();
+        return File(file.Data, file.ContentType, enableRangeProcessing: file.ContentType == TAWebsite.Core.MediaKinds.Mp4);
     }
 
-    // JSON list for the image picker of the section and article editors.
-    public async Task<IActionResult> Picker(string? q)
+    /// <summary>Picker / upload JSON: <c>url</c> previews in the Admin, <c>publicUrl</c> is what an article links to.</summary>
+    public static object PickerItem(Guid id, string name, string contentType, string? alt, int? width, int? height, int bytes, string? externalUrl)
+    {
+        var kind = TAWebsite.Core.MediaKinds.KindOf(contentType);
+        var yt = contentType == TAWebsite.Core.MediaKinds.YouTube ? TAWebsite.Core.MediaKinds.YouTubeId(externalUrl) : null;
+        var adminUrl = WebsiteUi.ImageUrl(id);
+        return new
+        {
+            id = id.ToString("N"),
+            value = ImageRef.MediaPrefix + id.ToString("N"),
+            url = adminUrl,
+            kind = KindKey(kind),
+            publicUrl = yt is not null ? TAWebsite.Core.MediaKinds.YouTubeWatchUrl(yt) : "/media/" + id.ToString("N"),
+            thumb = kind == TAWebsite.Core.MediaKind.Image ? adminUrl : yt is not null ? TAWebsite.Core.MediaKinds.YouTubeThumbUrl(yt) : null,
+            size = bytes > 0 ? WebsiteUi.Size(bytes) : null,
+            name,
+            alt,
+            w = width,
+            h = height
+        };
+    }
+
+    // JSON list for the pickers of the section and article editors (images by default).
+    public async Task<IActionResult> Picker(string? q, string? kind)
     {
         try
         {
-            var items = await store.MediaAsync(q, 120);
-            return Json(items.Select(m => new { id = m.Id.ToString("N"), value = ImageRef.MediaPrefix + m.Id.ToString("N"), url = WebsiteUi.ImageUrl(m.Id), name = m.FileName, alt = m.AltText, w = m.Width, h = m.Height }));
+            var items = await store.MediaAsync(q, 120, ParseKind(kind));
+            return Json(items.Select(m => PickerItem(m.Id, m.FileName, m.ContentType, m.AltText, m.Width, m.Height, m.ByteSize, m.ExternalUrl)));
         }
         catch (SqlException ex) { logger.LogError(ex, "WEBSITE_ADMIN_UNAVAILABLE"); return StatusCode(503); }
+    }
+
+    /// <summary>Recognises an uploaded file by its bytes: image, PDF or MP4, with the size limit of its kind.</summary>
+    public static (string? ContentType, int? Width, int? Height, string? Error) Inspect(byte[] data, TAWebsite.Core.MediaKind expected)
+    {
+        string? type = null;
+        int? w = null, h = null;
+        if (ImageProbe.Inspect(data) is { } img) { type = img.ContentType; w = img.Width; h = img.Height; }
+        else type = TAWebsite.Core.MediaKinds.Sniff(data);
+        var kindName = expected switch { TAWebsite.Core.MediaKind.Video => "video MP4", TAWebsite.Core.MediaKind.File => "tệp PDF", _ => "ảnh PNG, JPEG, WEBP hoặc GIF" };
+        if (type is null || TAWebsite.Core.MediaKinds.KindOf(type) != expected || type == TAWebsite.Core.MediaKinds.YouTube)
+            return (null, null, null, $"Chỉ nhận {kindName}.");
+        if (data.Length > TAWebsite.Core.MediaKinds.MaxBytes(type))
+            return (null, null, null, expected switch
+            {
+                TAWebsite.Core.MediaKind.Video => "Video MP4 tối đa 25 MB. Video dài hơn hãy đưa lên YouTube rồi dán link.",
+                TAWebsite.Core.MediaKind.File => "Tệp PDF tối đa 10 MB.",
+                _ => "Ảnh tối đa 5 MB. Hãy nén ảnh (vd. squoosh.app) rồi tải lại."
+            });
+        return (type, w, h, null);
     }
 
     [HttpPost]
@@ -188,62 +249,82 @@ public sealed class WebsiteMediaController(IWebsiteAdminStore store, ILogger<Web
     [Authorize(Policy = AdminPermissions.Policy.WebsiteMediaEdit)]
     [RequestSizeLimit(UploadLimit)]
     [RequestFormLimits(MultipartBodyLengthLimit = UploadLimit)]
-    public async Task<IActionResult> Upload(IFormFile? file, string? alt)
+    public async Task<IActionResult> Upload(IFormFile? file, string? alt, string? kind)
     {
+        var k = ParseKind(kind);
         var wantsJson = Request.Headers.Accept.ToString().Contains("application/json", StringComparison.OrdinalIgnoreCase);
         if (UsersController.ActorId(User) is not Guid actor) return Forbid();
         string? error = null;
         byte[] data = [];
-        (string ContentType, int? Width, int? Height)? probe = null;
-        if (file is null || file.Length == 0) error = "Chọn một file ảnh.";
-        else if (file.Length > SqlWebsiteAdminStore.MaxImageBytes) error = "Ảnh tối đa 5 MB. Hãy nén ảnh (vd. squoosh.app) rồi tải lại.";
+        (string? ContentType, int? Width, int? Height, string? Error) probe = default;
+        if (file is null || file.Length == 0) error = k switch { TAWebsite.Core.MediaKind.Video => "Chọn một video MP4.", TAWebsite.Core.MediaKind.File => "Chọn một tệp PDF.", _ => "Chọn một file ảnh." };
+        else if (file.Length > UploadLimit) error = "Tệp quá lớn.";
         else
         {
             await using var ms = new MemoryStream();
             await file.CopyToAsync(ms);
             data = ms.ToArray();
-            probe = ImageProbe.Inspect(data);
-            if (probe is null) error = "Chỉ nhận ảnh PNG, JPEG, WEBP hoặc GIF.";
+            probe = Inspect(data, k);
+            error = probe.Error;
         }
         if (error is not null)
         {
             if (wantsJson) return BadRequest(new { error });
             TempData["Error"] = error;
-            return RedirectToAction(nameof(Index));
+            return RedirectToAction(nameof(Index), new { kind = KindKey(k) });
         }
         var name = Path.GetFileName(file!.FileName);
-        var result = await store.UploadMediaAsync(actor, HttpContext.Connection.RemoteIpAddress?.ToString(), name, probe!.Value.ContentType, data, probe.Value.Width, probe.Value.Height,
-            string.IsNullOrWhiteSpace(alt) ? Path.GetFileNameWithoutExtension(name).Replace('-', ' ').Replace('_', ' ') : alt);
+        var label = string.IsNullOrWhiteSpace(alt) ? Path.GetFileNameWithoutExtension(name).Replace('-', ' ').Replace('_', ' ') : alt;
+        var result = await store.UploadMediaAsync(actor, HttpContext.Connection.RemoteIpAddress?.ToString(), name, probe.ContentType!, data, probe.Width, probe.Height, label);
         if (wantsJson)
             return result.Outcome == WebsiteOutcome.Saved && result.Id is Guid id
-                ? Json(new { id = id.ToString("N"), value = ImageRef.MediaPrefix + id.ToString("N"), url = WebsiteUi.ImageUrl(id), name })
+                ? Json(PickerItem(id, name, probe.ContentType!, label, probe.Width, probe.Height, data.Length, null))
                 : BadRequest(new { error = WebsiteUi.Message(result.Outcome) });
-        if (result.Outcome == WebsiteOutcome.Saved) TempData["Success"] = "Đã tải ảnh lên thư viện.";
+        if (result.Outcome == WebsiteOutcome.Saved) TempData["Success"] = k switch { TAWebsite.Core.MediaKind.Video => "Đã tải video lên.", TAWebsite.Core.MediaKind.File => "Đã tải tệp PDF lên.", _ => "Đã tải ảnh lên thư viện." };
         else TempData["Error"] = WebsiteUi.Message(result.Outcome);
-        return RedirectToAction(nameof(Index));
+        return RedirectToAction(nameof(Index), new { kind = KindKey(k) });
+    }
+
+    // A YouTube video: only the link is stored; the article embeds it with youtube-nocookie.com.
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [Authorize(Policy = AdminPermissions.Policy.WebsiteMediaEdit)]
+    public async Task<IActionResult> AddVideoLink(string? url, string? title)
+    {
+        if (UsersController.ActorId(User) is not Guid actor) return Forbid();
+        if (TAWebsite.Core.MediaKinds.YouTubeId(url) is not string yt)
+        {
+            TempData["Error"] = "Link YouTube không hợp lệ. Dán link dạng https://www.youtube.com/watch?v=... hoặc https://youtu.be/...";
+            return RedirectToAction(nameof(Index), new { kind = "video" });
+        }
+        var name = string.IsNullOrWhiteSpace(title) ? "YouTube " + yt : title.Trim();
+        var result = await store.AddMediaLinkAsync(actor, HttpContext.Connection.RemoteIpAddress?.ToString(), name, TAWebsite.Core.MediaKinds.YouTubeWatchUrl(yt), name);
+        if (result.Outcome == WebsiteOutcome.Saved) TempData["Success"] = "Đã thêm video YouTube.";
+        else TempData["Error"] = WebsiteUi.Message(result.Outcome);
+        return RedirectToAction(nameof(Index), new { kind = "video" });
     }
 
     [HttpPost]
     [ValidateAntiForgeryToken]
     [Authorize(Policy = AdminPermissions.Policy.WebsiteMediaEdit)]
-    public async Task<IActionResult> Alt(Guid id, string? alt, string? q)
+    public async Task<IActionResult> Alt(Guid id, string? alt, string? q, string? kind)
     {
         if (UsersController.ActorId(User) is not Guid actor) return Forbid();
         var result = await store.UpdateMediaAltAsync(actor, HttpContext.Connection.RemoteIpAddress?.ToString(), id, alt);
-        if (result.Outcome == WebsiteOutcome.Saved) TempData["Success"] = "Đã lưu mô tả ảnh."; else TempData["Error"] = WebsiteUi.Message(result.Outcome);
-        return RedirectToAction(nameof(Index), new { q });
+        if (result.Outcome == WebsiteOutcome.Saved) TempData["Success"] = "Đã lưu mô tả."; else TempData["Error"] = WebsiteUi.Message(result.Outcome);
+        return RedirectToAction(nameof(Index), new { q, kind = KindKey(ParseKind(kind)) });
     }
 
     [HttpPost]
     [ValidateAntiForgeryToken]
     [Authorize(Policy = AdminPermissions.Policy.WebsiteMediaEdit)]
-    public async Task<IActionResult> Delete(Guid id, string? q)
+    public async Task<IActionResult> Delete(Guid id, string? q, string? kind)
     {
         if (UsersController.ActorId(User) is not Guid actor) return Forbid();
         var result = await store.DeleteMediaAsync(actor, HttpContext.Connection.RemoteIpAddress?.ToString(), id);
-        if (result.Outcome == WebsiteOutcome.Saved) TempData["Success"] = "Đã xóa ảnh. Nơi nào đang dùng ảnh này sẽ không hiện ảnh nữa.";
+        if (result.Outcome == WebsiteOutcome.Saved) TempData["Success"] = "Đã xóa. Nơi nào đang dùng mục này sẽ không hiện nữa.";
         else TempData["Error"] = WebsiteUi.Message(result.Outcome);
-        return RedirectToAction(nameof(Index), new { q });
+        return RedirectToAction(nameof(Index), new { q, kind = KindKey(ParseKind(kind)) });
     }
 }
 
@@ -525,7 +606,7 @@ public sealed class WebsitePostsController(IWebsiteAdminStore store, IConfigurat
         if (UsersController.ActorId(User) is not Guid actor) return Forbid();
         var ip = HttpContext.Connection.RemoteIpAddress?.ToString();
         var bySlug = PostLibrary.All.ToDictionary(p => p.Slug, StringComparer.Ordinal);
-        var mediaNames = (await store.MediaAsync("bai-", 500)).ToDictionary(m => m.Id, m => m.FileName);
+        var mediaNames = (await store.MediaAsync("bai-", 500, TAWebsite.Core.MediaKind.Image)).ToDictionary(m => m.Id, m => m.FileName);
         var onSite = (await store.PostsAsync(null, null, null)).Where(p => bySlug.ContainsKey(p.Slug)).ToList();
         var nowUtc = clock.GetUtcNow().UtcDateTime;
         int replaced = 0, failed = 0;
