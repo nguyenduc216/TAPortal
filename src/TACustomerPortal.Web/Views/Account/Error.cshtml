@@ -7,4 +7,7 @@
         @if (ViewData["Reference"] is string reference) {<p class="cp-hint" style="margin-top:-8px">Mã sự cố: <span class="cp-code" data-ta-reference>@reference</span></p>}
         <a class="cp-btn cp-btn--primary" href="~/">@UiIcon.Render("arrow-left")<span>Về trang chính</span></a>
     </section>
+    @* Public page (no sign-in): the maker line under the card, as on the sign-in pages (operator 2026-11-17). Signed-in
+       customers see it at the bottom of the sidebar. *@
+    @if (User.Identity?.IsAuthenticated != true) {<partial name="_AuthMaker" />}
 </div>

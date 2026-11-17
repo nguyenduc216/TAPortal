@@ -6,4 +6,7 @@
         <p>Vui lòng liên hệ bộ phận hỗ trợ Hóa đơn tự động để kiểm tra quyền doanh nghiệp của bạn.</p>
         <a class="cp-btn cp-btn--primary" asp-controller="Account" asp-action="Login">@UiIcon.Render("login-2")<span>Đăng nhập</span></a>
     </section>
+    @* Public page (no sign-in): the maker line under the card, as on the sign-in pages (operator 2026-11-17). Signed-in
+       customers see it at the bottom of the sidebar. *@
+    @if (User.Identity?.IsAuthenticated != true) {<partial name="_AuthMaker" />}
 </div>

@@ -818,3 +818,9 @@ textarea.cp-input { height: auto; min-height: 72px; padding-top: 8px; padding-bo
     .cp-grid:has(> .cp-stat) > *, .cp-grid:has(> .cp-service) > * { flex: 0 0 min(78%, 280px); }
     .cp-grid:has(> .cp-stat) > .cp-stat { padding: 12px 14px; }
 }
+/* Payment page (operator 2026-11-17): the maker line under the card, like the sign-in pages. */
+.cp-pay__maker { margin: 20px 0 8px; text-align: center; }
+.cp-pay__maker .cp-maker { display: inline; margin: 0; padding: 0; color: var(--cp-ink-3); font-size: 12px; opacity: 1; }
+.cp-pay__maker .cp-maker:hover { color: var(--cp-blue-600); }
+/* Public state pages (Không có quyền truy cập, Lỗi hệ thống) without sign-in: card and maker line stacked (operator 2026-11-17). */
+.cp-center:has(> .cp-auth__maker) { align-content: center; gap: 0; }
