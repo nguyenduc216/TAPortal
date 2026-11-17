@@ -37,7 +37,7 @@
                             <div class="nw-side-cards">
                                 @foreach (var p in featured.Skip(1))
                                 {
-                                    <a class="nw-card" href="@SiteHtml.PostUrl(p)"><div class="thumb"><img alt="" loading="lazy" src="@SiteContext.Img(p.CoverMediaId)" /></div><div class="body"><span class="nw-tag soft">@(p.CategoryName?.ToUpperInvariant() ?? "TIN TỨC")</span><h3>@p.Title</h3><div class="nw-meta"><span>@SiteHtml.Date(p.PublishedAt)</span><span>@p.ReadMinutes phút đọc</span></div></div></a>
+                                    <a class="nw-card" href="@SiteHtml.PostUrl(p)"><div class="thumb"><img alt="" loading="lazy" src="@SiteContext.Img(p.CoverMediaId)" /></div><div class="body"><span class="nw-tag soft" data-cm="@p.CategorySlug">@(p.CategoryName?.ToUpperInvariant() ?? "TIN TỨC")</span><h3>@p.Title</h3><div class="nw-meta"><span>@SiteHtml.Date(p.PublishedAt)</span><span>@p.ReadMinutes phút đọc</span></div></div></a>
                                 }
                             </div>
                         }
@@ -49,7 +49,7 @@
                     <div class="nw-grid">
                         @foreach (var p in grid)
                         {
-                            <a class="nw-card" href="@SiteHtml.PostUrl(p)"><div class="thumb"><img alt="" loading="lazy" src="@SiteContext.Img(p.CoverMediaId)" /></div><div class="body"><span class="nw-tag soft">@(p.CategoryName?.ToUpperInvariant() ?? "TIN TỨC")</span><h3>@p.Title</h3>@if (p.Summary is not null) {<p>@p.Summary</p>}<div class="nw-meta"><span>@SiteHtml.Date(p.PublishedAt)</span><span>@p.ReadMinutes phút đọc</span></div></div></a>
+                            <a class="nw-card" href="@SiteHtml.PostUrl(p)"><div class="thumb"><img alt="" loading="lazy" src="@SiteContext.Img(p.CoverMediaId)" /></div><div class="body"><span class="nw-tag soft" data-cm="@p.CategorySlug">@(p.CategoryName?.ToUpperInvariant() ?? "TIN TỨC")</span><h3>@p.Title</h3>@if (p.Summary is not null) {<p>@p.Summary</p>}<div class="nw-meta"><span>@SiteHtml.Date(p.PublishedAt)</span><span>@p.ReadMinutes phút đọc</span></div></div></a>
                         }
                     </div>
                 }

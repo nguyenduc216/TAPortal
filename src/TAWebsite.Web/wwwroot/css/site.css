@@ -4,6 +4,28 @@
 .nw-filters a{font:700 13px 'Be Vietnam Pro',sans-serif;border:1.5px solid var(--line);background:#fff;color:var(--navy);padding:8px 16px;border-radius:30px;transition:all .2s}
 .nw-filters a:hover{border-color:#a9cde3}
 .nw-filters a[aria-current=true]{background:var(--navy);border-color:var(--navy);color:#fff}
+/* Phones: one swipeable row of categories instead of several wrapped lines. */
+@media (max-width:760px){
+  .nw-filters{flex-wrap:nowrap;overflow-x:auto;scroll-snap-type:x proximity;scrollbar-width:none;-webkit-overflow-scrolling:touch;padding:2px 32px 4px 0;margin-bottom:20px;-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 36px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 36px),transparent)}
+  .nw-filters::-webkit-scrollbar{display:none}
+  .nw-filters a{flex:0 0 auto;white-space:nowrap;scroll-snap-align:start}
+}
+/* Mobile menu "Ghé văn phòng" panel: text in proportion to the panel. */
+.header-inner nav .nav-visit-go{font-size:14px;padding:12px 10px;line-height:1.35}
+.header-inner nav .nav-visit-alt{font-size:12.5px}
+.nav-visit-addr{font-size:13px}
+.nav-visit-eyebrow{font-size:10.5px}
+/* "T.A" in the logo colours (navy T, gold dot, green A) on a white chip so it reads on the dark footer. */
+.ta-mark{display:inline-flex;align-items:baseline;background:#fff;border-radius:8px;padding:0 .3em;margin-left:.15em;line-height:1.25;font-weight:900;letter-spacing:0;white-space:nowrap}
+.ta-mark b{font-weight:900}
+.ta-mark-t{color:#052b50}.ta-mark-d{color:#d19f02}.ta-mark-a{color:#044906}
+/* Category tag: own width (not stretched by the card's flex column) and one colour per category. */
+.nw-card .body .nw-tag{align-self:flex-start}
+.nw-tag[data-cm=ke-toan-doanh-nghiep]{background:#e3edfb;color:#1d4f91}
+.nw-tag[data-cm=thue]{background:#fdeadd;color:#a4461a}
+.nw-tag[data-cm=hoa-don-dien-tu]{background:#efe6fb;color:#6236a8}
+.nw-tag[data-cm=ho-kinh-doanh]{background:#e2f3ea;color:#17704a}
+.nw-tag[data-cm=doanh-nghiep-moi]{background:#fff3c4;color:#7a5a00}
 .v9-bottom-showcase.is-single .v9-showcase-grid{grid-template-columns:minmax(0,760px);justify-content:center}
 .v9-quote-author{display:block}
 .ct-hp{position:absolute;left:-10000px;width:1px;height:1px;overflow:hidden}

@@ -58,7 +58,7 @@
 @RenderBody()
 
 <footer class="v9-footer" id="contact"><div class="wrap v9-footer-grid">
-    <div class="v9-footer-brand"><h2>@f["brand"]</h2><p>@f["tagline"]</p><p>@f["slogan"]</p></div>
+    <div class="v9-footer-brand"><h2>@f["brand"] <span class="ta-mark" aria-label="T.A"><b class="ta-mark-t">T</b><b class="ta-mark-d">.</b><b class="ta-mark-a">A</b></span></h2><p>@f["tagline"]</p><p>@f["slogan"]</p></div>
     <div><h3>@f["col1Title"]</h3>@foreach (var l in f.List("col1")) {<a href="@SiteContext.Link(l["url"])">› @l["label"]</a>}</div>
     <div><h3>@f["col2Title"]</h3>@foreach (var l in f.List("col2")) {<a href="@SiteContext.Link(l["url"])">› @l["label"]</a>}</div>
     <div><h3>LIÊN HỆ</h3>

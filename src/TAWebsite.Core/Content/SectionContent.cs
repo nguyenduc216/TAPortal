@@ -61,7 +61,7 @@ public static class ImageRef
 
     // mediaBase: "/media" on the public site, "/WebsiteMedia/File" in the Admin portal.
     public static string Url(string? value, string mediaBase) =>
-        MediaId(value) is Guid id ? $"{mediaBase}/{id:N}" : AssetName(value) is string name ? $"{SiteAssets.PathPrefix}/{name}" : "";
+        MediaId(value) is Guid id ? $"{mediaBase}/{id:N}" : AssetName(value) is string name ? SiteAssets.Url(name) : "";
 
     public static bool IsValid(string? value) => string.IsNullOrEmpty(value) || MediaId(value) is not null || AssetName(value) is not null;
 }

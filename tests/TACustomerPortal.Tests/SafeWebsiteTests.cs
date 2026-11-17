@@ -132,7 +132,7 @@ public sealed class SafeWebsiteTests
             var html = string.Join("", page.Sections.Select(s => s.Defaults["html"]!.GetValue<string>()));
             Assert.DoesNotContain(".html\"", html); // every mockup link points to a site route
             Assert.DoesNotContain("src=\"assets/", html);
-            Assert.All(Regex.Matches(html, "src=\"/site-assets/([^\"]+)\"").Select(m => m.Groups[1].Value), a => Assert.True(SiteAssets.Exists(a), a));
+            Assert.All(Regex.Matches(html, "src=\"/site-assets/([^\"?]+)").Select(m => m.Groups[1].Value), a => Assert.True(SiteAssets.Exists(a), a));
         }
         Assert.Contains("/css/gioi-thieu.css", SiteMap.Get("about").Styles);
         Assert.Equal("dv-main", SiteMap.Get("services").MainClass);

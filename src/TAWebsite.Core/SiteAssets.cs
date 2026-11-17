@@ -17,6 +17,13 @@ public static class SiteAssets
 
     public static bool Exists(string name) => Files.ContainsKey(name);
 
+    // Short content hash per file, appended as ?v= so browsers drop their cached copy when a new build changes the image.
+    private static readonly Dictionary<string, string> Versions = Files.ToDictionary(f => f.Key,
+        f => Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(f.Value))[..10].ToLowerInvariant(), StringComparer.Ordinal);
+
+    /// <summary>Public URL of an embedded asset, versioned by its content: /site-assets/news-hero.jpg?v=1a2b3c4d5e.</summary>
+    public static string Url(string name) => Versions.TryGetValue(name, out var v) ? $"{PathPrefix}/{name}?v={v}" : $"{PathPrefix}/{name}";
+
     public static string ContentType(string name) => Path.GetExtension(name).ToLowerInvariant() switch
     {
         ".webp" => "image/webp",

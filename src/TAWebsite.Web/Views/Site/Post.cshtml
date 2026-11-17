@@ -11,7 +11,7 @@
 <article>
     <header class="ar-head"><div class="wrap"><div class="ar-head-inner">
         <nav aria-label="Breadcrumb" class="dv-crumb"><a href="/">Trang chủ</a><span aria-hidden="true">›</span><a href="/tin-tuc">Tin tức</a>@if (p.CategoryName is not null) {<span aria-hidden="true">›</span><a href="/tin-tuc?cm=@p.CategorySlug">@p.CategoryName</a>}</nav>
-        @if (p.CategoryName is not null) {<span class="nw-tag">@p.CategoryName.ToUpperInvariant()</span>}
+        @if (p.CategoryName is not null) {<span class="nw-tag" data-cm="@p.CategorySlug">@p.CategoryName.ToUpperInvariant()</span>}
         <h1>@p.Title</h1>
         @if (p.Summary is not null) {<p class="ar-lead">@p.Summary</p>}
         @if (src is not null) {<p class="ar-origin">@(republished ? "Đăng lại từ" : "Tổng hợp từ") <b>@src.Name</b>@if (src.SafeUrl is not null) {<text> · </text><a href="@src.SafeUrl" target="_blank" rel="noopener nofollow">Xem bài gốc ↗</a>}</p>}
@@ -58,7 +58,7 @@
         <div class="nw-grid">
             @foreach (var r in Model.Related)
             {
-                <a class="nw-card" href="@SiteHtml.PostUrl(r)"><div class="thumb"><img alt="" loading="lazy" src="@SiteContext.Img(r.CoverMediaId)" /></div><div class="body"><span class="nw-tag soft">@(r.CategoryName?.ToUpperInvariant() ?? "TIN TỨC")</span><h3>@r.Title</h3><div class="nw-meta"><span>@SiteHtml.Date(r.PublishedAt)</span><span>@r.ReadMinutes phút đọc</span></div></div></a>
+                <a class="nw-card" href="@SiteHtml.PostUrl(r)"><div class="thumb"><img alt="" loading="lazy" src="@SiteContext.Img(r.CoverMediaId)" /></div><div class="body"><span class="nw-tag soft" data-cm="@r.CategorySlug">@(r.CategoryName?.ToUpperInvariant() ?? "TIN TỨC")</span><h3>@r.Title</h3><div class="nw-meta"><span>@SiteHtml.Date(r.PublishedAt)</span><span>@r.ReadMinutes phút đọc</span></div></div></a>
             }
         </div>
     </div></section>
