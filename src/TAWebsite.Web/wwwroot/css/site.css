@@ -15,6 +15,12 @@
 .header-inner nav .nav-visit-alt{font-size:12.5px}
 .nav-visit-addr{font-size:13px}
 .nav-visit-eyebrow{font-size:10.5px}
+/* Logo colours blended outward from the centre: gold dot, green A, navy T. */
+:root{--ta-logo-mix:radial-gradient(ellipse farthest-side at 50% 50%,#f0c33a 0%,#d19f02 22%,#2f7d1f 52%,#044906 70%,#052b50 100%)}
+.v9-footer{border-top-color:transparent;background:var(--ta-logo-mix) top/100% 6px no-repeat border-box,linear-gradient(110deg,#0b558a,#052b50 82%) border-box}
+/* Mobile menu: gold toggle while the menu is open, 2px logo-colour line under the drop-down panel. */
+.menu-toggle[aria-expanded=true]{color:#d19f02}
+.header-inner nav.open{border-bottom:2px solid transparent;background:linear-gradient(#fff,#fff) padding-box,var(--ta-logo-mix) border-box}
 /* "T.A" in the logo colours (navy T, gold dot, green A) on a white chip so it reads on the dark footer. */
 .ta-mark{display:inline-flex;align-items:baseline;background:#fff;border-radius:8px;padding:0 .3em;margin-left:.15em;line-height:1.25;font-weight:900;letter-spacing:0;white-space:nowrap}
 .ta-mark b{font-weight:900}
