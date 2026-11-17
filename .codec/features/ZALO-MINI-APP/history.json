@@ -40,11 +40,11 @@
     "change_id": "ZALO-MINI-APP-CHG-20261117T142043Z-C7BB65",
     "created_at": "2026-11-17T14:20:43.534254+00:00",
     "title": "Mẫu tin OTP Zalo OA: mã mẫu OTP cấu hình trong Admin, gửi thử, bật kênh không cần mẫu thanh toán",
-    "status": "IMPLEMENTED",
-    "commit_sha": null,
+    "status": "DEPLOYED",
+    "commit_sha": "2dad1a7",
     "migration_status": "NOT_APPLICABLE",
-    "publish_status": "NOT_PUBLISHED",
-    "merge_status": "PENDING_APPROVAL",
+    "publish_status": "DEPLOYED 4289fad portal/invoice/webhooks 2026-11-17T15:20Z",
+    "merge_status": "MERGED (main fast-forward 2dad1a7)",
     "summary": "OTP template id set in Admin on the SYSTEM Zalo OA channel (fallback ZaloMiniApp:OtpTemplateId), Admin OTP test, channel can be on without the payment template; Safe 820/820."
   }
 ]
