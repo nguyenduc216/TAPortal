@@ -40,3 +40,4 @@
 
 ## Follow-up (operator 2026-11-17)
 - 'Every page people can open from a link': the maker line on all pages reachable without sign-in. Already on Login, Register, RegisterDone, ForgotPassword, ResetPassword, Terms and Pay; added to AccessDenied and Error for visitors not signed in (signed-in customers have it in the sidebar). AGENTS.md and SafeCustomerBrandTests updated.
+- invoice: commit ec49dbc, artifact a6a2441ee934801eae433e78a5eafe5857c5f2e490776fc61a081ea17e6b923c, DEPLOYED 2026-11-17T03:06:02Z; maker line checked on public pages with curl.
