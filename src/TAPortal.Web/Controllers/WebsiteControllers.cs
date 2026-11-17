@@ -514,11 +514,49 @@ public sealed class WebsitePostsController(IWebsiteAdminStore store, IConfigurat
         return RedirectToAction(nameof(Library));
     }
 
+    // "Đổi sang ảnh bìa mới": library articles whose cover is still a previously shipped library cover (uploaded under an
+    // older file name such as bai-07-slug.jpg) get the current one. Covers staff picked themselves are left alone; the
+    // publication dates are not touched. Saved through SavePostAsync (audited).
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [Authorize(Policy = AdminPermissions.Policy.WebsitePostsEdit)]
+    public async Task<IActionResult> ReplaceLibraryCovers()
+    {
+        if (UsersController.ActorId(User) is not Guid actor) return Forbid();
+        var ip = HttpContext.Connection.RemoteIpAddress?.ToString();
+        var bySlug = PostLibrary.All.ToDictionary(p => p.Slug, StringComparer.Ordinal);
+        var mediaNames = (await store.MediaAsync("bai-", 500)).ToDictionary(m => m.Id, m => m.FileName);
+        var onSite = (await store.PostsAsync(null, null, null)).Where(p => bySlug.ContainsKey(p.Slug)).ToList();
+        var nowUtc = clock.GetUtcNow().UtcDateTime;
+        int replaced = 0, failed = 0;
+        foreach (var item in onSite)
+        {
+            var lib = bySlug[item.Slug];
+            if (item.CoverMediaId is not Guid current || !mediaNames.TryGetValue(current, out var name) || !PostLibrary.IsOldCoverName(lib, name)) continue;
+            if (await store.PostAsync(item.Id) is not { } post) { failed++; continue; }
+            if (await UploadCoverAsync(actor, ip, lib) is not Guid cover) { failed++; continue; }
+            var input = new WebsitePostInput
+            {
+                Title = post.Title, Slug = post.Slug, Summary = post.Summary, BodyHtml = post.BodyHtml, CoverMediaId = cover, CategoryId = post.CategoryId,
+                AuthorName = post.AuthorName, Tags = post.Tags, Publish = post.Status == 1, IsFeatured = post.IsFeatured, SeoTitle = post.SeoTitle,
+                SeoDescription = post.SeoDescription, Stamp = Convert.ToBase64String(post.Stamp),
+                PublishedAtLocal = post.PublishedAt is DateTime p ? WebsiteUi.Local(p) : null
+            };
+            input.SetSource(post.Source);
+            if (input.Normalize().Count > 0) { failed++; continue; }
+            var saved = await store.SavePostAsync(actor, ip, post.Id, input, nowUtc);
+            if (saved.Outcome == WebsiteOutcome.Saved) replaced++; else failed++;
+        }
+        TempData["Success"] = replaced > 0 ? $"Đã đổi ảnh bìa mới cho {replaced} bài." : "Không có bài nào còn dùng ảnh bìa cũ.";
+        if (failed > 0) TempData["Error"] = $"{failed} bài chưa đổi được ảnh, thử lại sau.";
+        return RedirectToAction(nameof(Library));
+    }
+
     // Uploads the cover photo shipped with a library article to the media library; null when there is none or it fails.
     private async Task<Guid?> UploadCoverAsync(Guid actor, string? ip, LibraryPost post)
     {
         if (PostLibrary.Cover(post.Order) is not { } bytes) return null;
-        var result = await store.UploadMediaAsync(actor, ip, $"bai-{post.Order:00}-{post.Slug}.jpg", "image/jpeg", bytes, 960, 540, post.Title.Length > 250 ? post.Title[..250] : post.Title);
+        var result = await store.UploadMediaAsync(actor, ip, PostLibrary.CoverFileName(post), "image/jpeg", bytes, 960, 540, post.Title.Length > 250 ? post.Title[..250] : post.Title);
         return result is { Outcome: WebsiteOutcome.Saved, Id: Guid id } ? id : null;
     }
 

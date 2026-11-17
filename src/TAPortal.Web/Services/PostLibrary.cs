@@ -46,6 +46,22 @@ public static class PostLibrary
         return ms.ToArray();
     }
 
+    /// <summary>Version of the shipped cover set; bump it whenever the photos in Content/post-library/covers are replaced.</summary>
+    public const int CoverVersion = 2;
+
+    /// <summary>Media-library file name of the shipped cover, e.g. bai-07-slug-v2.jpg (version 1 had no suffix).</summary>
+    public static string CoverFileName(LibraryPost post) => $"bai-{post.Order:00}-{post.Slug}-v{CoverVersion}.jpg";
+
+    /// <summary>True when the file name is a cover shipped for this article in an earlier version of the cover set.</summary>
+    public static bool IsOldCoverName(LibraryPost post, string fileName)
+    {
+        var stem = $"bai-{post.Order:00}-{post.Slug}";
+        if (string.Equals(fileName, stem + ".jpg", StringComparison.OrdinalIgnoreCase)) return true;
+        for (var v = 2; v < CoverVersion; v++)
+            if (string.Equals(fileName, $"{stem}-v{v}.jpg", StringComparison.OrdinalIgnoreCase)) return true;
+        return false;
+    }
+
     /// <summary>
     /// Publication times spread over the last <paramref name="days"/> days (Vietnam time): working days, office hours, in the
     /// past, and never before the day after the original article for a cited summary. Deterministic for the same input.
