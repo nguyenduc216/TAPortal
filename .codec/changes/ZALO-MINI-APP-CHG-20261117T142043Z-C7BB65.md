@@ -4,7 +4,7 @@
 - Change ID: `ZALO-MINI-APP-CHG-20261117T142043Z-C7BB65`
 - Created UTC: 2026-11-17T14:20:43.534254+00:00
 - Tiêu đề: Mẫu tin OTP Zalo OA: mã mẫu OTP cấu hình trong Admin, gửi thử, bật kênh không cần mẫu thanh toán
-- Trạng thái: IMPLEMENTED
+- Trạng thái: DEPLOYED
 
 ## Yêu cầu và phạm vi
 
@@ -72,11 +72,16 @@ Ngoài phạm vi: quên mật khẩu bằng OTP, OTP khi đăng ký, đăng nh�
 - Chưa xem trực tiếp trang Admin trên trình duyệt (NOT_RUN), vì trang cần SQL. Việc hiển thị các trường dựa trên `Fields(channel, scope)` và đã được test.
 
 ## Publish
-- Project: TAPortal.Web, TACustomerPortal.Web, TAPortal.Webhooks (thay đổi nằm trong TAPortal.Integrations).
-- Destination (chỉ từ config): `src\publish\deployed-<PROJECT_NAME>` qua `Deploy-TARemote.ps1`.
-- Trạng thái: NOT_PUBLISHED. Chỉ deploy khi operator đồng ý.
-- Artifact SHA256: chưa có.
-- Smoke test: chưa chạy.
+- Deploy 2026-11-17 15:20 UTC qua `Deploy-TARemote.ps1 -Target portal,invoice,webhooks -MigrationsApplied`. Source commit `4289fad` (chứa `2dad1a7`).
+- Audit thấy migration 056–065 trong khoảng commit kể từ lần deploy trước của invoice và webhooks. Các migration này thuộc tính năng khác.
+- Pre-check (`Invoke-TAMigrations.ps1 -DryRunOnly`) báo cả 9 là ALREADY_APPLIED. Không chạy migration nào.
+- Kết quả từng target (manifest lưu trong `.codec/reports/<CHANGE_ID>-<PROJECT>.sha256`):
+
+| Target | Project | Artifact SHA256 | Package SHA256 | Kết quả |
+|---|---|---|---|---|
+| portal | TAPortal.Web | 682fa34b951fa128a5620e3a216396f0d30b68f784071613df0931e1d5d3accd | 2E89D2A9E0BA353121624375C3DDCA84D6A8B28843D424332CE0344FDC3EF806 | DEPLOYED, health 200 |
+| invoice | TACustomerPortal.Web | 2231278a1163ee32303afab385299050b1440ea409d7ef42dbd02009ec8b9ef1 | D3DC947AFCAD859D3DE7142469C5F7F8BA219BA4707A317E8EEAB97934BD4E7A | DEPLOYED, health 200 |
+| webhooks | TAPortal.Webhooks | e2fc99323220e485fe530ede246c3444b1198b1db62b39ea095ef37ecfe14088 | F35D166B388C2C4279C3C0363E92BAFC0A5CDBF3B2FC38C7124CF9F366297470 | DEPLOYED, health 200 |
 
 ## Git
 - Branch: `feature/zalo-mini-app` (đã merge origin/main 38b33c9 trước khi sửa).
