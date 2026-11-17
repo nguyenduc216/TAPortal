@@ -541,6 +541,40 @@ public sealed class SafeWebsiteTests
         await using var viewer = AdminFactory(new MemoryAdminStore(), "WEBSITE.VIEW");
         var viewerClient = AdminClient(viewer);
         Assert.NotEqual(HttpStatusCode.Redirect, (await viewerClient.PostAsync("/WebsitePosts/ApplyLibraryExtras", Form(token))).StatusCode);
+        Assert.NotEqual(HttpStatusCode.Redirect, (await viewerClient.PostAsync("/WebsitePosts/ReplaceLibraryCovers", Form(token))).StatusCode);
+    }
+
+    [Fact]
+    public async Task ReplaceLibraryCoversSwapsOnlyOldShippedCovers()
+    {
+        var store = new MemoryAdminStore();
+        await using var f = AdminFactory(store, "WEBSITE.VIEW", "WEBSITE.POSTS.EDIT");
+        var client = AdminClient(f);
+        var token = Token(await client.GetStringAsync("/WebsitePosts/Library"));
+        await client.PostAsync("/WebsitePosts/ImportLibrary", Form(token, ("publish", "true")));
+        Assert.All(store.Media, m => Assert.EndsWith($"-v{S.PostLibrary.CoverVersion}.jpg", m.FileName));
+        // Pretend the covers came from the first cover set, and one article got a cover picked by staff.
+        for (var i = 0; i < store.Media.Count; i++) store.Media[i] = store.Media[i] with { FileName = store.Media[i].FileName.Replace($"-v{S.PostLibrary.CoverVersion}", "") };
+        var custom = Guid.NewGuid();
+        store.Media.Add(new(custom, "anh-rieng.jpg", "image/jpeg", 10, 960, 540, null, DateTime.UtcNow));
+        var keep = store.Posts.Values.First();
+        keep.Input.CoverMediaId = custom;
+        var before = store.Posts.Values.ToDictionary(p => p.Input.Slug!, p => (p.Input.CoverMediaId, p.Input.PublishedAtLocal));
+
+        Assert.Contains("Đổi sang ảnh bìa mới", WebUtility.HtmlDecode(await client.GetStringAsync("/WebsitePosts/Library")));
+        Assert.Equal(HttpStatusCode.Redirect, (await client.PostAsync("/WebsitePosts/ReplaceLibraryCovers", Form(token))).StatusCode);
+        var names = store.Media.ToDictionary(m => m.Id, m => m.FileName);
+        foreach (var p in store.Posts.Values)
+        {
+            Assert.Equal(before[p.Input.Slug!].PublishedAtLocal, p.Input.PublishedAtLocal);
+            if (ReferenceEquals(p.Input, keep.Input)) { Assert.Equal(custom, p.Input.CoverMediaId); continue; }
+            Assert.NotEqual(before[p.Input.Slug!].CoverMediaId, p.Input.CoverMediaId);
+            Assert.EndsWith($"-v{S.PostLibrary.CoverVersion}.jpg", names[p.Input.CoverMediaId!.Value]);
+        }
+        var lib = S.PostLibrary.All[0];
+        Assert.True(S.PostLibrary.IsOldCoverName(lib, $"bai-{lib.Order:00}-{lib.Slug}.jpg"));
+        Assert.False(S.PostLibrary.IsOldCoverName(lib, S.PostLibrary.CoverFileName(lib)));
+        Assert.False(S.PostLibrary.IsOldCoverName(lib, "anh-rieng.jpg"));
     }
 
     [Fact]
@@ -1014,9 +1048,9 @@ public sealed class SafeWebsiteTests
         public Task<S.WebsiteResult> DeleteCategoryAsync(Guid actor, string? ip, Guid id) => Task.FromResult(Ok());
         public Task<IReadOnlyList<S.WebsitePostListItem>> PostsAsync(string? status, Guid? category, string? search) =>
             Task.FromResult<IReadOnlyList<S.WebsitePostListItem>>(Posts.Select(p => new S.WebsitePostListItem(p.Key, p.Value.Input.Slug!, p.Value.Input.Title!, null,
-                (byte)(p.Value.Input.Publish ? 1 : 0), null, false, 0, DateTime.UtcNow, null)).ToList());
+                (byte)(p.Value.Input.Publish ? 1 : 0), null, false, 0, DateTime.UtcNow, p.Value.Input.CoverMediaId)).ToList());
         public Task<S.WebsitePostEdit?> PostAsync(Guid id) => Task.FromResult(Posts.TryGetValue(id, out var p)
-            ? new S.WebsitePostEdit(id, p.Input.Slug!, p.Input.Title!, p.Input.Summary, p.Input.BodyHtml, null, null, null, null, (byte)(p.Input.Publish ? 1 : 0), null, false,
+            ? new S.WebsitePostEdit(id, p.Input.Slug!, p.Input.Title!, p.Input.Summary, p.Input.BodyHtml, p.Input.CoverMediaId, null, null, null, (byte)(p.Input.Publish ? 1 : 0), null, false,
                 null, null, 0, DateTime.UtcNow, DateTime.UtcNow, p.Stamp,
                 PostSource.From(p.Input.SourceKind, p.Input.SourceName, p.Input.SourceUrl, p.Input.SourceAuthor, p.Input.SourcePublishedOn)) : null);
         public Task<S.WebsiteResult> SavePostAsync(Guid actor, string? ip, Guid? id, S.WebsitePostInput input, DateTime nowUtc)
