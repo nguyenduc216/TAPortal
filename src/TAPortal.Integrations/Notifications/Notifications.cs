@@ -92,6 +92,25 @@ public static class NotificationCatalog
 
     public const string TemplateHelp = "JSON tham số mẫu ZNS → giá trị. Dùng được: {order_no} {amount} {paid} {total} {status} {company} {buyer} {time}.";
 
+    public const string OtpTemplateHelp = "Mẫu \"Template xác thực\" đã được Zalo duyệt, tham số OTP tên otp. Dùng gửi mã xác minh số điện thoại của tài khoản TA Portal và Hóa đơn tự động.";
+
+    /// <summary>
+    /// The form fields of a channel. T.A's SYSTEM Zalo OA also sends the account OTP (operator 2026-11-17), so there the
+    /// payment template is optional and the OTP template id is one more field.
+    /// </summary>
+    public static IReadOnlyList<ChannelField> Fields(string channel, string? scope) => channel == NotificationChannelKind.ZaloOa && scope == NotificationScope.System
+        ?
+        [
+            new("appId", "App ID", false, true, null, "hash"),
+            new("appSecret", "Secret key của ứng dụng", true, true, null, "lock"),
+            new("refreshToken", "Refresh token OA", true, true, null, "lock", "Hệ thống tự làm mới access token bằng refresh token."),
+            new("accessToken", "Access token OA (không bắt buộc)", true, false, null, "lock"),
+            new("otpTemplateId", "Mã mẫu ZNS OTP", false, false, null, "file-text", OtpTemplateHelp),
+            new("templateId", "Mã mẫu ZNS báo thanh toán", false, false, null, "file-text", "Để trống nếu chưa gửi tin báo thanh toán qua Zalo."),
+            new("templateData", "Tham số mẫu báo thanh toán (JSON)", false, false, "{\"order_code\":\"{order_no}\",\"amount\":\"{amount}\"}", "list-tree", TemplateHelp),
+        ]
+        : Fields(channel);
+
     public static IReadOnlyList<ChannelField> Fields(string channel) => channel switch
     {
         NotificationChannelKind.Smtp =>
@@ -125,22 +144,31 @@ public static class NotificationCatalog
     };
 
     /// <summary>Field checks; <paramref name="secrets"/> are the secrets after the form was merged into the saved ones.</summary>
-    public static List<string> Validate(string channel, IReadOnlyDictionary<string, string> settings, IReadOnlyDictionary<string, string> secrets, bool enabled)
+    public static List<string> Validate(string channel, IReadOnlyDictionary<string, string> settings, IReadOnlyDictionary<string, string> secrets, bool enabled, string? scope = null)
     {
         var errors = new List<string>();
         string? V(string key) => settings.TryGetValue(key, out var v) && !string.IsNullOrWhiteSpace(v) ? v.Trim() : secrets.TryGetValue(key, out var s) && !string.IsNullOrWhiteSpace(s) ? s : null;
         if (enabled)
-            foreach (var f in Fields(channel).Where(f => f.Required && V(f.Key) is null)) errors.Add($"Vui lòng nhập {f.Label.ToLowerInvariant()}.");
+            foreach (var f in Fields(channel, scope).Where(f => f.Required && V(f.Key) is null)) errors.Add($"Vui lòng nhập {f.Label.ToLowerInvariant()}.");
+        if (channel == NotificationChannelKind.ZaloOa && scope == NotificationScope.System)
+        {
+            if (enabled && V("otpTemplateId") is null && V("templateId") is null) errors.Add("Vui lòng nhập mã mẫu ZNS OTP hoặc mã mẫu báo thanh toán.");
+            if ((V("templateId") is null) != (V("templateData") is null)) errors.Add("Mẫu báo thanh toán cần cả mã mẫu và tham số mẫu (JSON).");
+        }
+        if (V("otpTemplateId") is string otpTpl && !TemplateId(otpTpl)) errors.Add("Mã mẫu ZNS OTP chỉ gồm chữ và số.");
         if (V("port") is string port && (!int.TryParse(port, out var p) || p is not (25 or 587 or 2525))) errors.Add("Cổng SMTP chỉ nhận 587, 25 hoặc 2525 (STARTTLS).");
         if (V("host") is string host && !Regex.IsMatch(host, @"^(?=.{1,253}$)([a-zA-Z0-9-]{1,63}\.)+[a-zA-Z]{2,63}$")) errors.Add("Máy chủ SMTP phải là tên miền (ví dụ smtp.gmail.com).");
         if (V("fromAddress") is string from && !Mail(from)) errors.Add("Email gửi đi không hợp lệ.");
         if (V("botToken") is string token && !TelegramToken(token)) errors.Add("Bot token Telegram không đúng định dạng.");
         if (V("chatId") is string chat && !TelegramChat(chat)) errors.Add("Chat ID Telegram không đúng định dạng (ví dụ -1001234567890 hoặc @tennhom).");
         if (V("appId") is string app && !Regex.IsMatch(app, "^[0-9]{5,30}$")) errors.Add("App ID Zalo chỉ gồm chữ số.");
-        if (V("templateId") is string tpl && !Regex.IsMatch(tpl, "^[0-9]{1,20}$")) errors.Add("Mã mẫu ZNS chỉ gồm chữ số.");
+        if (V("templateId") is string tpl && !TemplateId(tpl)) errors.Add("Mã mẫu ZNS chỉ gồm chữ và số.");
         if (V("templateData") is string data && TemplateData(data) is null) errors.Add("Tham số mẫu ZNS phải là JSON dạng {\"tên_tham_số\":\"giá trị\"}.");
         return errors;
     }
+
+    /// <summary>A ZNS template id: Zalo gives numbers (e.g. 31239) and, in its documentation, hex strings.</summary>
+    public static bool TemplateId(string? value) => value is not null && Regex.IsMatch(value, "^[0-9A-Za-z]{1,40}$");
 
     public static bool Mail(string? value) => value is { Length: <= 256 } && Regex.IsMatch(value, @"^[^@\s<>""]+@[^@\s<>""]+\.[^@\s<>""]{2,}$");
     public static bool TelegramToken(string? value) => value is not null && Regex.IsMatch(value, "^[0-9]{5,15}:[A-Za-z0-9_-]{30,60}$");

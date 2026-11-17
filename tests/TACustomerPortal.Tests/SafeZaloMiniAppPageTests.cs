@@ -37,6 +37,8 @@ public sealed class SafeZaloMiniAppPageTests
         s.AddSingleton<IMiniAppStore>(store);
         s.RemoveAll<IZnsSender>();
         s.AddSingleton<IZnsSender>(sender);
+        s.RemoveAll<IOtpTemplateSource>();   // the Admin value lives in SQL; these tests use the configured one only
+        s.AddSingleton<IOtpTemplateSource>(sp => new ConfiguredOtpTemplate(sp.GetRequiredService<IOptions<ZaloMiniAppOptions>>()));
         s.RemoveAll<IZaloGraph>();
         s.AddSingleton<IZaloGraph>(new SafeZaloMiniAppTests.Graph());
     }

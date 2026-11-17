@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Options;
 using TAPortal.Integrations.Notifications;
+using TAPortal.Integrations.ZaloMiniApp;
 
 namespace TAPortal.Web.Controllers;
 
@@ -28,7 +30,7 @@ public sealed class NotificationSettingsController(NotificationSettings settings
         if (UsersController.ActorId(User) is not Guid actor) return Forbid();
         var s = Scope(scope);
         if (!NotificationCatalog.Allowed(s, channel)) return BadRequest();
-        var form = NotificationCatalog.Fields(channel).ToDictionary(f => f.Key, f => (string?)Request.Form["f_" + f.Key].ToString());
+        var form = NotificationCatalog.Fields(channel, s).ToDictionary(f => f.Key, f => (string?)Request.Form["f_" + f.Key].ToString());
         var errors = await settings.SaveAsync(s, null, channel, enabled, events ?? [], form, clear ?? [], actor, HttpContext.RequestAborted);
         var tab = TabOf(s, channel);
         if (errors.Count > 0) { Response.StatusCode = StatusCodes.Status400BadRequest; return View(nameof(Index), await Model(tab, errors, s + ":" + channel)); }
@@ -37,12 +39,17 @@ public sealed class NotificationSettingsController(NotificationSettings settings
     }
 
     [HttpPost, ValidateAntiForgeryToken]
-    public async Task<IActionResult> Test(string channel, string? scope, string? recipient)
+    public async Task<IActionResult> Test(string channel, string? scope, string? recipient, string? kind,
+        [FromServices] IOtpTemplateSource otpTemplate, [FromServices] IOptions<ZaloMiniAppOptions> zalo)
     {
         var s = Scope(scope);
         if (!NotificationCatalog.Allowed(s, channel)) return BadRequest();
-        var result = await settings.TestAsync(s, null, channel, recipient, HttpContext.RequestAborted);
-        TempData[result.StartsWith("Gửi thử thành công", StringComparison.Ordinal) ? "Success" : "Error"] = result;
+        // Operator 2026-11-17: "Gửi thử OTP" sends the account OTP template (the one the phone verification uses) with a random code.
+        var otp = kind == "otp" && s == NotificationScope.System && channel == NotificationChannelKind.ZaloOa;
+        var result = otp
+            ? await settings.TestOtpAsync(recipient, await otpTemplate.TemplateIdAsync(HttpContext.RequestAborted), zalo.Value.OtpTemplateParam, HttpContext.RequestAborted)
+            : await settings.TestAsync(s, null, channel, recipient, HttpContext.RequestAborted);
+        TempData[result.StartsWith("Gửi thử thành công", StringComparison.Ordinal) || result.StartsWith("Gửi thử OTP thành công", StringComparison.Ordinal) ? "Success" : "Error"] = result;
         return RedirectToAction(nameof(Index), new { tab = TabOf(s, channel) });
     }
 

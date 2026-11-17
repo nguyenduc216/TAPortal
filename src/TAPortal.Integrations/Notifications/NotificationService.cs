@@ -30,7 +30,7 @@ public sealed class NotificationSettings(INotificationStore store, ISecretProtec
             var c = saved.FirstOrDefault(s => s.Channel == channel);
             var secretKeys = c is null ? new HashSet<string>()
                 : protector.Unprotect((await store.SecretAsync(scope, customerId, channel, ct))?.Secret).Where(p => !string.IsNullOrEmpty(p.Value)).Select(p => p.Key).ToHashSet();
-            views.Add(new(channel, NotificationCatalog.Label(channel), NotificationCatalog.Audience(scope, channel), NotificationCatalog.Fields(channel), c?.IsEnabled ?? false,
+            views.Add(new(channel, NotificationCatalog.Label(channel), NotificationCatalog.Audience(scope, channel), NotificationCatalog.Fields(channel, scope), c?.IsEnabled ?? false,
                 c?.Events ?? new HashSet<string>(NotificationEvent.All.Select(e => e.Code)), c?.Settings ?? new Dictionary<string, string>(), secretKeys, c?.LastTestAtUtc, c?.LastTestResult));
         }
         return views;
@@ -45,7 +45,7 @@ public sealed class NotificationSettings(INotificationStore store, ISecretProtec
     {
         Owner(scope, customerId);
         if (!NotificationCatalog.Allowed(scope, channel)) return ["Kênh không được hỗ trợ."];
-        var fields = NotificationCatalog.Fields(channel);
+        var fields = NotificationCatalog.Fields(channel, scope);
         var settings = new Dictionary<string, string>();
         var secrets = protector.Unprotect((await store.SecretAsync(scope, customerId, channel, ct))?.Secret);
         foreach (var key in clearSecrets) secrets.Remove(key);
@@ -56,7 +56,7 @@ public sealed class NotificationSettings(INotificationStore store, ISecretProtec
             if (f.Secret) { if (!string.IsNullOrEmpty(value)) secrets[f.Key] = value; }
             else if (!string.IsNullOrEmpty(value)) settings[f.Key] = value;
         }
-        var errors = NotificationCatalog.Validate(channel, settings, secrets, enabled);
+        var errors = NotificationCatalog.Validate(channel, settings, secrets, enabled, scope);
         if (channel == NotificationChannelKind.Smtp && scope == NotificationScope.Customer && settings.TryGetValue("host", out var host) && errors.Count == 0
             && !await PublicHost(host, ct))
             errors.Add("Máy chủ SMTP phải là địa chỉ công khai trên Internet.");
@@ -73,15 +73,8 @@ public sealed class NotificationSettings(INotificationStore store, ISecretProtec
         Owner(scope, customerId);
         var c = (await store.ChannelsAsync(scope, customerId, ct)).FirstOrDefault(x => x.Channel == channel);
         if (c is null) return "Chưa lưu cấu hình kênh này.";
-        var key = $"{scope}:{customerId}";
+        if (!TryTest(scope, customerId)) return "Bạn đã gửi thử quá nhiều lần, vui lòng thử lại sau một phút.";
         var now = clock.GetUtcNow().UtcDateTime;
-        var queue = Tests.GetOrAdd(key, _ => new Queue<DateTime>());
-        lock (queue)
-        {
-            while (queue.Count > 0 && queue.Peek() < now.AddMinutes(-1)) queue.Dequeue();
-            if (queue.Count >= TestsPerMinute) return "Bạn đã gửi thử quá nhiều lần, vui lòng thử lại sau một phút.";
-            queue.Enqueue(now);
-        }
         var to = channel == NotificationChannelKind.TelegramGroup ? c.Settings.GetValueOrDefault("chatId") : recipient?.Trim();
         if (string.IsNullOrEmpty(to)) return channel == NotificationChannelKind.Smtp ? "Vui lòng nhập email nhận thử." : channel == NotificationChannelKind.ZaloOa ? "Vui lòng nhập số điện thoại nhận thử." : "Vui lòng nhập chat ID nhận thử.";
         var sample = new NotifiableTransaction(0, Tingee.PaymentTxStatus.Matched, null, null, 10_000, "DH000000-0000", "0000000000", now, customerId, "Doanh nghiệp mẫu",
@@ -122,6 +115,40 @@ public sealed class NotificationSettings(INotificationStore store, ISecretProtec
         var message = new OutboxMessage($"otp:{Guid.NewGuid():N}", NotificationScope.System, null, NotificationChannelKind.ZaloOa, phone, null, "", data, null);
         var (result, _) = await Dispatch.SendAsync(store, protector, transport, c with { Settings = settings }, message, ct);
         return result.Ok ? null : result.Error ?? "Gửi tin Zalo thất bại.";
+    }
+
+    /// <summary>The OTP template set on T.A's SYSTEM Zalo OA channel in Admin (operator 2026-11-17); null when the channel is off or has none.</summary>
+    public async Task<string?> SystemOtpTemplateIdAsync(CancellationToken ct = default) =>
+        (await store.ChannelsAsync(NotificationScope.System, null, ct)).FirstOrDefault(x => x.Channel == NotificationChannelKind.ZaloOa && x.IsEnabled) is { } c
+        && c.Settings.TryGetValue("otpTemplateId", out var id) && !string.IsNullOrWhiteSpace(id) ? id.Trim() : null;
+
+    /// <summary>
+    /// Admin "Gửi thử OTP": one OTP message with a random code through the SYSTEM Zalo OA channel and the given template,
+    /// under the same per-minute limit as the other tests; the result is recorded on the channel.
+    /// </summary>
+    public async Task<string> TestOtpAsync(string? recipient, string? templateId, string parameter, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(templateId)) return "Chưa có mã mẫu ZNS OTP.";
+        if (NotificationCatalog.ZaloPhone(recipient) is not string phone) return "Vui lòng nhập số điện thoại di động nhận thử (ví dụ 0912345678).";
+        if (!TryTest(NotificationScope.System, null)) return "Bạn đã gửi thử quá nhiều lần, vui lòng thử lại sau một phút.";
+        var code = System.Security.Cryptography.RandomNumberGenerator.GetInt32(0, 1_000_000).ToString("D6");
+        var error = await SendSystemZnsAsync(phone, templateId.Trim(), new Dictionary<string, string> { [parameter] = code }, ct);
+        var text = error is null ? $"Gửi thử OTP thành công tới {recipient!.Trim()} (mã {code})." : $"Gửi thử OTP thất bại: {error}";
+        await store.RecordTestAsync(NotificationScope.System, null, NotificationChannelKind.ZaloOa, text, ct);
+        return text;
+    }
+
+    private bool TryTest(string scope, Guid? customerId)
+    {
+        var now = clock.GetUtcNow().UtcDateTime;
+        var queue = Tests.GetOrAdd($"{scope}:{customerId}", _ => new Queue<DateTime>());
+        lock (queue)
+        {
+            while (queue.Count > 0 && queue.Peek() < now.AddMinutes(-1)) queue.Dequeue();
+            if (queue.Count >= TestsPerMinute) return false;
+            queue.Enqueue(now);
+            return true;
+        }
     }
 
     public Task<NotificationRecipients> RecipientsAsync(Guid customerId, CancellationToken ct = default) => store.RecipientsAsync(customerId, ct);
