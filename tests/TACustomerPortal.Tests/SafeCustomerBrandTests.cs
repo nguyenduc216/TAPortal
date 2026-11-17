@@ -42,5 +42,8 @@ public sealed class SafeCustomerBrandTests
         // Operator 2026-11-17: also at the very bottom of the public payment page.
         Assert.Contains("<a class=\"cp-maker\" href=\"https://tuvangiaiphapta.vn\" target=\"_blank\" rel=\"noopener\" data-ta-hard>Sản phẩm của Tư vấn giải pháp T.A</a>",
             File.ReadAllText(Path.Combine(Web(), "Views", "Pay", "Index.cshtml")));
+        // Every page reachable without signing in carries it (the sign-in pages, terms, access denied, error).
+        foreach (var page in new[] { "Login", "Register", "RegisterDone", "ForgotPassword", "ResetPassword", "Terms", "AccessDenied", "Error" })
+            Assert.Contains("<partial name=\"_AuthMaker\" />", File.ReadAllText(Path.Combine(Web(), "Views", "Account", page + ".cshtml")));
     }
 }
