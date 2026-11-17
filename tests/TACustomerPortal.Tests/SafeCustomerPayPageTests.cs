@@ -60,7 +60,9 @@ public sealed class SafeCustomerPayPageTests
         Assert.Contains("M5 6l7 -3l7 3", page[bridgeAt..page.IndexOf("cp-pay__party--seller", StringComparison.Ordinal)]);   // building-bank icon
         var i = store.Orders.FindIndex(x => x.Order.Id == order.Id);
         store.Orders[i] = (A, store.Orders[i].Order with { Status = OrderStatus.Paid, PaidAmount = 150_000 });
-        Assert.Contains("class=\"cp-pay__bridge is-paid\"", await c.GetStringAsync(link));   // paid: a green check instead of the bank
+        var paid = System.Net.WebUtility.HtmlDecode(await c.GetStringAsync(link));
+        Assert.Contains("class=\"cp-pay__bridge is-paid\"", paid);            // paid: a green check instead of the bank
+        Assert.Contains("Đơn hàng đã được thanh toán đủ.<br />Cảm ơn quý khách!", paid);   // operator 2026-11-17: two lines on a phone
         store.Orders[i] = (A, store.Orders[i].Order with { Status = OrderStatus.Awaiting, PaidAmount = 0 });
         Assert.Contains(link[17..] + "/logo/buyer?v=", page);                 // buyer logo uploaded, seller shows initials
         Assert.DoesNotContain("/logo/seller", page);
@@ -69,6 +71,8 @@ public sealed class SafeCustomerPayPageTests
         Assert.Contains("<dd>Công ty TNHH Sen Việt</dd>", page);
         Assert.Contains("<svg", page);
         Assert.Contains("150.000 ₫", page);
+        // Operator 2026-11-17: the name on its own line, then "qty unit × unit price" and the amount (nowrap, for billions).
+        Assert.Contains("<span class=\"cp-pay__line-name\">Set tiệc</span><span class=\"cp-pay__line-row\"><small class=\"cp-muted\">1 suất × 150.000 ₫</small><strong>150.000 ₫</strong>", System.Net.WebUtility.HtmlDecode(page));
         Assert.Contains("DH2611060001", page);                               // transfer content
         // Link previews: T.A image and "Thanh toán <title>".
         Assert.Contains("<meta property=\"og:image\" content=\"https://localhost/images/og-share.png\"", page);

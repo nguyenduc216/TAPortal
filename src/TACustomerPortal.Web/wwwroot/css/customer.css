@@ -590,7 +590,7 @@ textarea.cp-input { height: auto; min-height: 72px; padding-top: 8px; padding-bo
 .cp-pay__done { display: grid; justify-items: center; gap: 6px; padding: 18px; color: var(--cp-ink-3); }
 .cp-pay__done .ta-icon { width: 44px; height: 44px; }
 .cp-pay__done.is-paid { color: var(--cp-green-700); }
-.cp-pay__done p { margin: 0; font-size: 14px; }
+.cp-pay__done p { margin: 0; font-size: 14px; text-align: center; line-height: 1.5; }
 .cp-pay__facts { display: grid; gap: 0; margin: 0; border: 1px solid var(--cp-line); border-radius: var(--cp-radius); overflow: hidden; }
 .cp-pay__facts > div { display: flex; justify-content: space-between; gap: 12px; padding: 9px 14px; font-size: 13px; }
 .cp-pay__facts > div + div { border-top: 1px solid var(--cp-line); }
@@ -598,8 +598,13 @@ textarea.cp-input { height: auto; min-height: 72px; padding-top: 8px; padding-bo
 .cp-pay__facts dd { margin: 0; text-align: right; font-weight: 600; overflow-wrap: anywhere; }
 .cp-pay__invoice .cp-pay__facts { background: var(--cp-surface); }
 .cp-pay__lines summary { display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px; font-weight: 600; color: var(--cp-ink-2); }
-.cp-pay__lines ul { margin: 10px 0 0; padding: 0; list-style: none; display: grid; gap: 6px; }
-.cp-pay__lines li { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; }
+.cp-pay__lines ul { margin: 10px 0 0; padding: 0; list-style: none; display: grid; }
+.cp-pay__lines li { display: grid; gap: 2px; padding: 8px 0; font-size: 13px; border-top: 1px solid var(--cp-line); }
+.cp-pay__lines li:first-child { border-top: 0; padding-top: 0; }
+.cp-pay__line-name { overflow-wrap: anywhere; }
+.cp-pay__line-row { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.cp-pay__line-row small { min-width: 0; }
+.cp-pay__line-row strong { flex: none; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .cp-pay__foot { display: flex; align-items: center; justify-content: center; gap: 6px; color: var(--cp-ink-3); font-size: 12px; text-align: center; }
 .cp-pay__foot .ta-icon { flex: none; color: var(--cp-green-700); }
 /* "Chuyển khoản": opens the payer's banking app with the QR's transfer filled in. */
