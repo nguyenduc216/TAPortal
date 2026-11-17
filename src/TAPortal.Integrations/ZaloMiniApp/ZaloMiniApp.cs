@@ -22,7 +22,7 @@ public sealed class ZaloMiniAppOptions
     public string? AppId { get; set; }
     /// <summary>Mini App secret key: decodes the phone-number token at graph.zalo.me. Configuration only, never logged.</summary>
     public string? SecretKey { get; set; }
-    /// <summary>ZNS template of the OTP, sent through T.A's SYSTEM Zalo OA channel.</summary>
+    /// <summary>ZNS template of the OTP, sent through T.A's SYSTEM Zalo OA channel. Fallback only: Admin's "Mã mẫu ZNS OTP" on that channel wins (operator 2026-11-17).</summary>
     public string? OtpTemplateId { get; set; }
     /// <summary>Name of the OTP parameter in that template.</summary>
     public string OtpTemplateParam { get; set; } = "otp";

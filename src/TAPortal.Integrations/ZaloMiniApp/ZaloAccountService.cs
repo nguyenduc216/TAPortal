@@ -16,7 +16,7 @@ public sealed record MiniAppQr(bool Ok, string? Error, string? Link = null, Date
 /// Account side of the Mini App, the same on TA Portal and Hoa don tu dong (operator 2026-11-13): change one's own phone,
 /// verify it by ZNS OTP, open the one-time QR, unlink Zalo. Every call acts on the signed-in user only.
 /// </summary>
-public sealed class ZaloAccountService(IMiniAppStore store, PhoneVerification otp, IOptions<ZaloMiniAppOptions> options, TimeProvider clock)
+public sealed class ZaloAccountService(IMiniAppStore store, PhoneVerification otp, IOtpTemplateSource template, IOptions<ZaloMiniAppOptions> options, TimeProvider clock)
 {
     public static readonly TimeSpan QrLifetime = TimeSpan.FromMinutes(5);
     public const string VerifyPhoneFirst = "Tài khoản chưa có số điện thoại đã xác minh. Vui lòng xác minh số điện thoại bằng mã OTP Zalo trước.";
@@ -25,7 +25,7 @@ public sealed class ZaloAccountService(IMiniAppStore store, PhoneVerification ot
     {
         if (await store.AccountAsync(userId, ct) is not { } account) return null;
         var verified = account.NormalizedPhone is string p && await store.VerifiedPhoneAsync(userId, ct) == p;
-        return new(account.Phone, account.NormalizedPhone is not null, verified, !string.IsNullOrWhiteSpace(options.Value.OtpTemplateId),
+        return new(account.Phone, account.NormalizedPhone is not null, verified, await template.TemplateIdAsync(ct) is not null,
             options.Value.SignInConfigured, await store.ActiveLinkCountAsync(userId, ct), options.Value.RequirePhoneVerification);
     }
 
@@ -67,8 +67,8 @@ public sealed class ZaloAccountService(IMiniAppStore store, PhoneVerification ot
 
 /// <summary>
 /// Operator decision 2026-11-13: accounts must verify their phone at the next web sign-in. Only when
-/// ZaloMiniApp:RequirePhoneVerification is on and the OTP template is configured (so nobody is locked out before ZNS
-/// works): a signed-in user without a verified phone sees only the page that verifies it.
+/// ZaloMiniApp:RequirePhoneVerification is on and the OTP template is configured (Admin or server configuration, so nobody
+/// is locked out before ZNS works): a signed-in user without a verified phone sees only the page that verifies it.
 /// </summary>
 public static class PhoneVerificationGate
 {
@@ -81,12 +81,13 @@ public static class PhoneVerificationGate
     public static IApplicationBuilder UsePhoneVerificationGate(this IApplicationBuilder app, string verifyPath, params string[] allowed) => app.Use(async (context, next) =>
     {
         var options = context.RequestServices.GetRequiredService<IOptions<ZaloMiniAppOptions>>().Value;
-        if (options.RequirePhoneVerification && !string.IsNullOrWhiteSpace(options.OtpTemplateId)
+        if (options.RequirePhoneVerification
             && context.User.Identity?.IsAuthenticated == true
             && Guid.TryParse(context.User.FindFirstValue(ClaimTypes.NameIdentifier), out var userId)
             && !context.Request.Path.StartsWithSegments(verifyPath, StringComparison.OrdinalIgnoreCase)
             && !allowed.Any(p => context.Request.Path.StartsWithSegments(p, StringComparison.OrdinalIgnoreCase))
-            && !(Verified.TryGetValue(userId, out var until) && until > DateTime.UtcNow))
+            && !(Verified.TryGetValue(userId, out var until) && until > DateTime.UtcNow)
+            && await context.RequestServices.GetRequiredService<IOtpTemplateSource>().TemplateIdAsync(context.RequestAborted) is not null)
         {
             if (await context.RequestServices.GetRequiredService<PhoneVerification>().IsVerifiedAsync(userId, context.RequestAborted))
                 Verified[userId] = DateTime.UtcNow + Remember;

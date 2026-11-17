@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using TAPortal.Integrations.Notifications;
 
@@ -18,13 +19,46 @@ public sealed class SystemZnsSender(NotificationSettings settings) : IZnsSender
         settings.SendSystemZnsAsync(phone, templateId, data, ct);
 }
 
+/// <summary>
+/// The ZNS template of the OTP. Operator 2026-11-17: set in Admin on T.A's SYSTEM Zalo OA channel ("Mã mẫu ZNS OTP");
+/// ZaloMiniApp:OtpTemplateId in the server configuration stays as the fallback. Null when neither is set.
+/// </summary>
+public interface IOtpTemplateSource
+{
+    Task<string?> TemplateIdAsync(CancellationToken ct = default);
+}
+
+/// <summary>Only the server configuration (ZaloMiniApp:OtpTemplateId).</summary>
+public sealed class ConfiguredOtpTemplate(IOptions<ZaloMiniAppOptions> options) : IOtpTemplateSource
+{
+    public Task<string?> TemplateIdAsync(CancellationToken ct = default) =>
+        Task.FromResult(string.IsNullOrWhiteSpace(options.Value.OtpTemplateId) ? null : options.Value.OtpTemplateId.Trim());
+}
+
+/// <summary>Admin's value on the SYSTEM Zalo OA channel first, then the server configuration; a store failure falls back to the configuration.</summary>
+public sealed class SystemOtpTemplate(NotificationSettings settings, IOptions<ZaloMiniAppOptions> options, ILogger<SystemOtpTemplate> logger) : IOtpTemplateSource
+{
+    public async Task<string?> TemplateIdAsync(CancellationToken ct = default)
+    {
+        try
+        {
+            if (await settings.SystemOtpTemplateIdAsync(ct) is string id) return id;
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            logger.LogWarning(ex, "ZALO_OTP_TEMPLATE_UNAVAILABLE");
+        }
+        return await new ConfiguredOtpTemplate(options).TemplateIdAsync(ct);
+    }
+}
+
 public sealed record OtpRequest(bool Ok, string? Error, Guid? ChallengeId = null, string? MaskedPhone = null);
 
 /// <summary>
 /// Proves that the phone on an account belongs to its user: a 6-digit code sent by ZNS to the account's own phone
 /// (never a number typed in the request), valid 5 minutes, 5 tries; at most one code a minute and 5 an hour per account.
 /// </summary>
-public sealed class PhoneVerification(IMiniAppStore store, IZnsSender sender, IOptions<ZaloMiniAppOptions> options, TimeProvider clock)
+public sealed class PhoneVerification(IMiniAppStore store, IZnsSender sender, IOtpTemplateSource template, IOptions<ZaloMiniAppOptions> options, TimeProvider clock)
 {
     public static readonly TimeSpan Lifetime = TimeSpan.FromMinutes(5);
     public static readonly TimeSpan MinInterval = TimeSpan.FromSeconds(60);
@@ -39,7 +73,7 @@ public sealed class PhoneVerification(IMiniAppStore store, IZnsSender sender, IO
 
     public async Task<OtpRequest> RequestAsync(Guid userId, string? ip, CancellationToken ct = default)
     {
-        if (string.IsNullOrWhiteSpace(options.Value.OtpTemplateId)) return new(false, "Chưa cấu hình mẫu tin OTP Zalo, vui lòng liên hệ bộ phận hỗ trợ.");
+        if (await template.TemplateIdAsync(ct) is not string templateId) return new(false, "Chưa cấu hình mẫu tin OTP Zalo, vui lòng liên hệ bộ phận hỗ trợ.");
         if (await store.AccountAsync(userId, ct) is not { } account) return new(false, "Tài khoản không còn hoạt động.");
         if (account.NormalizedPhone is not string phone) return new(false, "Tài khoản chưa có số điện thoại di động hợp lệ (ví dụ 0912345678). Vui lòng cập nhật số điện thoại trước.");
         var (count, last) = await store.OtpStatsAsync(userId, Now.AddHours(-1), ct);
@@ -48,7 +82,7 @@ public sealed class PhoneVerification(IMiniAppStore store, IZnsSender sender, IO
         var id = Guid.NewGuid();
         var code = MiniAppSecrets.NewOtp();
         await store.CreateOtpAsync(id, userId, phone, Purpose, MiniAppSecrets.OtpHash(id, code), Now + Lifetime, ip, ct);
-        var error = await sender.SendAsync(phone, options.Value.OtpTemplateId!, new Dictionary<string, string> { [options.Value.OtpTemplateParam] = code }, ct);
+        var error = await sender.SendAsync(phone, templateId, new Dictionary<string, string> { [options.Value.OtpTemplateParam] = code }, ct);
         return error is null ? new(true, null, id, MiniAppPhone.Masked(phone)) : new(false, "Không gửi được mã qua Zalo: " + error);
     }
 
@@ -82,6 +116,7 @@ public static class ZaloMiniAppServiceCollectionExtensions
         services.AddHttpClient<IZaloGraph, ZaloGraphClient>(c => c.Timeout = TimeSpan.FromSeconds(10)).RemoveAllLoggers();   // headers carry tokens and the secret key
         services.TryAddScoped<IMiniAppStore, SqlMiniAppStore>();
         services.TryAddScoped<IZnsSender, SystemZnsSender>();
+        services.TryAddScoped<IOtpTemplateSource, SystemOtpTemplate>();
         services.TryAddScoped<PhoneVerification>();
         services.TryAddScoped<ZaloAccountService>();
         return services;

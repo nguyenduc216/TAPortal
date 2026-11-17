@@ -134,8 +134,8 @@ public sealed class SafeZaloMiniAppTests
             Store.Now = () => Clock.GetUtcNow().UtcDateTime;
             var options = Options.Create(new ZaloMiniAppOptions { AppId = configured ? "1234567890" : null, SecretKey = configured ? "secret" : null, OtpTemplateId = "445566" });
             Auth = new(Store, new Graph(), Passwords, new EphemeralDataProtectionProvider(), options, Clock);
-            Otp = new(Store, Sender, options, Clock);
-            Account = new(Store, Otp, options, Clock);
+            Otp = new(Store, Sender, new ConfiguredOtpTemplate(options), options, Clock);
+            Account = new(Store, Otp, new ConfiguredOtpTemplate(options), options, Clock);
             Store.Accounts[Ann] = new(Ann, "ann", "Chị An", "0912 345 678", "hash:Pass@123", false);
             Store.Accounts[Bob] = new(Bob, "bob", "Anh Bình", "+84 987 654 321", "hash:Pass@456", false);
         }

@@ -83,6 +83,10 @@
                     <div class="ta-input-icon">@UiIcon.Render("hash")<input class="form-control form-control-sm" name="recipient" maxlength="50" aria-label="Chat ID nhận thử" placeholder="Chat ID nhận thử" /></div>
                 }
                 <button class="btn btn-sm" type="submit">@UiIcon.Render("send")<span>Gửi thử</span></button>
+                @if (c.Channel == NotificationChannelKind.ZaloOa && sc.Scope == NotificationScope.System)
+                {
+                    <button class="btn btn-sm" type="submit" name="kind" value="otp" data-ns-test-otp>@UiIcon.Render("key")<span>Gửi thử OTP</span></button>
+                }
                 @if (c.LastTestResult is string t) {<span class="text-secondary small">@Local(c.LastTestAtUtc): @t</span>}
             </form>
         </section>
