@@ -43,3 +43,4 @@
 - invoice: commit ec49dbc, artifact a6a2441ee934801eae433e78a5eafe5857c5f2e490776fc61a081ea17e6b923c, DEPLOYED 2026-11-17T03:06:02Z; maker line checked on public pages with curl.
 
 - 2026-11-17 (operator): payment page on a phone: goods lines show the name on its own line, then "qty unit × unit price" ("(chưa thuế)" when taxed) and the amount, which never wraps (billions); the paid message is two lines ("Đơn hàng đã được thanh toán đủ." / "Cảm ơn quý khách!"). No total row (the order total is already shown). Tests: SafeCustomerPayPageTests.
+- invoice: commit 9a42d97, artifact de26a482034f277223665033bb9f59a808ecdb9c111fa8273bf21ea519954fb4, DEPLOYED 2026-11-17T08:22:49Z, health 200.
