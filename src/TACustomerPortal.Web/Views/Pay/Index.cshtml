@@ -14,7 +14,7 @@
     var shareText = "Thanh toán " + Model.Title;
     var message = Model.Status switch
     {
-        OrderStatus.Paid => "Đơn hàng đã được thanh toán đủ. Cảm ơn quý khách!",
+        OrderStatus.Paid => "Đơn hàng đã được thanh toán đủ.",
         OrderStatus.Cancelled or OrderStatus.CancelledPaid => "Đơn hàng đã hủy. Vui lòng liên hệ người bán nếu cần hỗ trợ.",
         OrderStatus.Expired or OrderStatus.ExpiredPaid => "Mã QR đã hết hạn. Vui lòng liên hệ người bán để nhận mã mới.",
         _ => "Đơn hàng chưa có mã QR thanh toán. Vui lòng liên hệ người bán."
@@ -84,7 +84,8 @@
                 <ul>
                     @foreach (var l in o.Lines)
                     {
-                        <li><span>@l.ItemName <small class="cp-muted">× @l.Quantity.ToString("0.###")@(l.UnitName is null ? "" : " " + l.UnitName)</small></span><strong>@PaymentText.Money(l.Total)</strong></li>
+                        @* Name on its own line; below it "qty unit × unit price" (may wrap) and the amount, which never wraps (even billions). *@
+                        <li><span class="cp-pay__line-name">@l.ItemName</span><span class="cp-pay__line-row"><small class="cp-muted">@l.Quantity.ToString("0.###")@(l.UnitName is null ? "" : " " + l.UnitName) × @PaymentText.Money(l.UnitPrice)@(l.TaxAmount != 0 ? " (chưa thuế)" : "")</small><strong>@PaymentText.Money(l.Total)</strong></span></li>
                     }
                 </ul>
             </details>
@@ -176,7 +177,7 @@
             }
             else
             {
-                <div class="cp-pay__done @(Model.Status == OrderStatus.Paid ? "is-paid" : "")">@UiIcon.Render(Model.Status == OrderStatus.Paid ? "circle-check" : "qrcode")<p>@message</p></div>
+                <div class="cp-pay__done @(Model.Status == OrderStatus.Paid ? "is-paid" : "")">@UiIcon.Render(Model.Status == OrderStatus.Paid ? "circle-check" : "qrcode")<p>@message@if (Model.Status == OrderStatus.Paid) {<br /><text>Cảm ơn quý khách!</text>}</p></div>
                 <div class="cp-pay__amount"><small>Tổng tiền đơn hàng</small><strong>@PaymentText.Money(o.Amount)</strong></div>
             }
         </section>
