@@ -16,7 +16,7 @@ public sealed class TransactionsController(ICurrentCustomerContext customer, IPa
     public async Task<IActionResult> Index(string? status = "STAFF", string? q = null, DateOnly? from = null, DateOnly? to = null)
     {
         if (await Current() is not { } m) return SelectCustomer();
-        status ??= "";
+        status = string.IsNullOrEmpty(status) ? "STAFF" : status;
         var (fromUtc, toUtc) = PaymentTxText.Days(from, to);
         var filter = new PaymentTxFilter(m.CustomerId, status, fromUtc, toUtc, q);
         var ct = HttpContext.RequestAborted;

@@ -10,7 +10,7 @@
     var period = Model.From is null && Model.To is null ? "toàn bộ thời gian" : Model.From == Model.To ? $"ngày {Model.From:dd/MM/yyyy}" : $"{Model.From?.ToString("dd/MM/yyyy") ?? "…"} – {Model.To?.ToString("dd/MM/yyyy") ?? "nay"}";
     var cards = new (string Code, string Label, string Icon, string Tone, int Count, decimal Amount)[]
     {
-        ("", "Tiền vào", "cash", "cp-blob--green", s.Credit, s.CreditAmount),
+        (PaymentTxText.All, "Tiền vào", "cash", "cp-blob--green", s.Credit, s.CreditAmount),
         (PaymentTxStatus.Unmatched, "Chưa xử lý", "alert-triangle", "cp-blob--red", s.Unmatched, s.UnmatchedAmount),
         (PaymentTxStatus.Review, "Cần xem lại", "refresh", "cp-blob--gold", s.Review, s.ReviewAmount),
         (PaymentTxStatus.Matched, "Đã khớp đơn", "circle-check", "cp-blob--green", s.Matched, s.MatchedAmount),
@@ -37,7 +37,7 @@
         <button class="cp-btn cp-btn--ghost" type="submit">@UiIcon.Render("search")<span>Lọc</span></button>
     </form>
     <div class="cp-toolbar cp-tx-sync" data-cp-tx-sync>
-        <p class="cp-muted">Tổng tiền vào/ra: <b>@period</b>. <a class="cp-link" asp-action="Index" asp-route-status="" asp-route-from="@today" asp-route-to="@today">Xem hôm nay</a></p>
+        <p class="cp-muted">Tổng tiền vào/ra: <b>@period</b>. <a class="cp-link" asp-action="Index" asp-route-status="@PaymentTxText.All" asp-route-from="@today" asp-route-to="@today">Xem hôm nay</a></p>
         @if (Model.CanManage)
         {
             <form method="post" asp-action="Sync" class="cp-inline-form">

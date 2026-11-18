@@ -364,6 +364,7 @@ public sealed class SafeCustomerWorkspaceTests
         {
             AdminTransactions.Items.Add(SafeCustomerPaymentsTests.MemoryTransactionStore.Tx(9301, A, TAPortal.Integrations.Tingee.PaymentTxStatus.Unmatched, "CK A 9301"));
             AdminTransactions.Items.Add(SafeCustomerPaymentsTests.MemoryTransactionStore.Tx(9302, null, TAPortal.Integrations.Tingee.PaymentTxStatus.Unmatched, "CK none 9302"));
+            AdminTransactions.Items.Add(SafeCustomerPaymentsTests.MemoryTransactionStore.Tx(9303, A, TAPortal.Integrations.Tingee.PaymentTxStatus.Matched, "CK matched 9303"));
         }
         var c = Client(f);
         var page = WebUtility.HtmlDecode(await c.GetStringAsync("/paymentreconciliation"));
@@ -371,6 +372,17 @@ public sealed class SafeCustomerWorkspaceTests
         Assert.Contains("CK none 9302", page);
         Assert.Contains("name=\"orderCustomerId\"", page);   // an unattributed transaction asks for the customer
         Assert.Contains("data-pr-cards", page);
+        // Operator 2026-11-18: opens on "Tất cả" (a matched transaction is listed), its card highlighted; "Tất cả" chosen in the
+        // filter stays "Tất cả" (an empty value used to fall back to "Cần xử lý").
+        Assert.Contains("CK matched 9303", page);
+        Assert.Contains("<option value=\"ALL\" selected=\"selected\">Tất cả</option>", page);
+        Assert.Contains("ta-stat-card is-active", page);
+        Assert.Contains("CK matched 9303", WebUtility.HtmlDecode(await c.GetStringAsync("/paymentreconciliation?status=ALL")));
+        Assert.Contains("CK matched 9303", WebUtility.HtmlDecode(await c.GetStringAsync("/paymentreconciliation?status=")));
+        var staff = WebUtility.HtmlDecode(await c.GetStringAsync("/paymentreconciliation?status=STAFF"));
+        Assert.DoesNotContain("CK matched 9303", staff);
+        Assert.Contains("data-pr-shown", staff);
+        Assert.Contains(">Xem tất cả</a>", staff);
     }
 
     [Fact]

@@ -73,3 +73,4 @@ Database sẵn sàng cho phần thanh toán (verify PASS). Tiếp theo: operator
 | `TINGEE-INTEGRATION-CHG-20261112T153512Z-791FCD` | 2026-11-12 | Sync also reads root-account payments; one sync run at a time | 357f115 | NOT_APPLICABLE | DEPLOYED | MERGED |
 | `TINGEE-INTEGRATION-CHG-20261112T161108Z-A11DB4` | 2026-11-12 | History page size 50 (partner refuses 200 with 1108) | c9801ac | NOT_APPLICABLE | DEPLOYED | MERGED |
 | `TINGEE-INTEGRATION-CHG-20261115T011455Z-BC9386` | 2026-11-15 | Cai dat thong bao: tab Hoa don tu dong va Portal, kenh email rieng cho Portal | 10c9c00 | EXECUTED | DEPLOYED | MERGED |
+| `TINGEE-INTEGRATION-CHG-20261118T091627Z-2B4048` | 2026-11-18 | Reconciliation opens on Tất cả; Tất cả filter kept; selected card highlighted; shown/total line | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |
