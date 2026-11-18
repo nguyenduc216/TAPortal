@@ -61,3 +61,7 @@
 .ar-body a.ar-file{display:inline-flex;align-items:center;gap:10px;padding:10px 16px;border:1.5px solid #f0d77d;border-radius:12px;background:var(--gold-soft,#fff8db);color:var(--navy);font-weight:700;text-decoration:none;line-height:1.35}
 .ar-body a.ar-file::before{content:"PDF";flex:0 0 auto;font:800 10px/1 'Be Vietnam Pro',sans-serif;letter-spacing:.06em;color:#fff;background:#c0392b;border-radius:6px;padding:6px 6px}
 .ar-body a.ar-file:hover{border-color:var(--gold);background:#fff3c4}
+
+/* Testimonial slider: the quote slides sideways; the card clips it. */
+.v9-quote-card{overflow:hidden}
+.v9-quote-body{flex:1;min-width:0;will-change:transform,opacity}
