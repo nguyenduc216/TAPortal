@@ -472,5 +472,15 @@
     "migration_status": "EXECUTED",
     "publish_status": "DEPLOYED",
     "merge_status": "MERGED"
+  },
+  {
+    "change_id": "TINGEE-INTEGRATION-CHG-20261118T091627Z-2B4048",
+    "created_at": "2026-11-18T09:16:27.995203+00:00",
+    "title": "Reconciliation opens on Tất cả; Tất cả filter kept; selected card highlighted; shown/total line",
+    "status": "PLANNED",
+    "commit_sha": null,
+    "migration_status": "NOT_EXECUTED",
+    "publish_status": "NOT_PUBLISHED",
+    "merge_status": "PENDING_APPROVAL"
   }
 ]

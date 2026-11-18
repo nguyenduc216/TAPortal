@@ -894,7 +894,7 @@ public sealed class SafeCustomerPaymentsTests
 
         private IEnumerable<PaymentTransaction> Scoped(Guid? scope) { lock (Items) return Items.Where(t => scope is null || t.CustomerId == scope).ToList(); }
         public Task<IReadOnlyList<PaymentTransaction>> SearchAsync(PaymentTxFilter f, CancellationToken ct = default) =>
-            Task.FromResult<IReadOnlyList<PaymentTransaction>>(Scoped(f.CustomerId).Where(t => string.IsNullOrEmpty(f.Status) || t.Status == f.Status || (f.Status == "STAFF" && PaymentTxStatus.NeedsStaff(t.Status))).ToList());
+            Task.FromResult<IReadOnlyList<PaymentTransaction>>(Scoped(f.CustomerId).Where(t => string.IsNullOrEmpty(f.Status) || f.Status == PaymentTxText.All || t.Status == f.Status || (f.Status == "STAFF" && PaymentTxStatus.NeedsStaff(t.Status))).ToList());
         public Task<PaymentTxSummary> SummaryAsync(PaymentTxFilter f, CancellationToken ct = default)
         {
             var mine = Scoped(f.CustomerId).ToList();

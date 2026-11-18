@@ -15,9 +15,9 @@ public sealed record PaymentReconciliationVm(Guid? CustomerId, bool Unattributed
 public sealed class PaymentReconciliationController(IPaymentTransactionStore transactions, ILogger<PaymentReconciliationController> logger) : Controller
 {
     [HttpGet]
-    public async Task<IActionResult> Index(Guid? customerId, bool unattributed = false, string? status = "STAFF", string? q = null, DateOnly? from = null, DateOnly? to = null)
+    public async Task<IActionResult> Index(Guid? customerId, bool unattributed = false, string? status = PaymentTxText.All, string? q = null, DateOnly? from = null, DateOnly? to = null)
     {
-        status ??= "";
+        status = string.IsNullOrEmpty(status) ? PaymentTxText.All : status;   // operator 2026-11-18: opens on "Tất cả"
         ViewData["Title"] = "Đối soát giao dịch";
         var (fromUtc, toUtc) = PaymentTxText.Days(from, to);
         var filter = new PaymentTxFilter(customerId, status, fromUtc, toUtc, q, unattributed);

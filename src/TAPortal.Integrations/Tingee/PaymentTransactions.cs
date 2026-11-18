@@ -99,7 +99,7 @@ LEFT JOIN dbo.CustomerOrders o ON o.Id=t.OrderId AND o.CustomerId=t.CustomerId
         if (f.UnattributedOnly) where.Add("t.CustomerId IS NULL");
         if (f.FromUtc is DateTime from) { where.Add("t.ReceivedAt>=@from"); args.Add(("@from", from)); }
         if (f.ToUtc is DateTime to) { where.Add("t.ReceivedAt<@to"); args.Add(("@to", to)); }
-        if (withStatus && !string.IsNullOrEmpty(f.Status))
+        if (withStatus && !string.IsNullOrEmpty(f.Status) && f.Status != PaymentTxText.All)
         {
             if (f.Status == "STAFF") where.Add("t.Status IN ('UNMATCHED','REVIEW')");
             else { where.Add("t.Status=@status"); args.Add(("@status", f.Status)); }
@@ -277,11 +277,15 @@ public static class PaymentTxText
         _ => flag
     };
 
-    /// <summary>Filters of the reconciliation pages: "STAFF" = UNMATCHED + REVIEW (the default), "" = every transaction.</summary>
+    /// <summary>"Tất cả": an explicit code, because an empty status in the query string binds as missing and fell back to "STAFF"
+    /// (operator 2026-11-18: choosing "Tất cả" came back as "Cần xử lý").</summary>
+    public const string All = "ALL";
+
+    /// <summary>Filters of the reconciliation pages: "STAFF" = UNMATCHED + REVIEW (the default), "ALL" = every transaction.</summary>
     public static readonly IReadOnlyList<(string Code, string Label)> Filters =
     [
         ("STAFF", "Cần xử lý"), (PaymentTxStatus.Unmatched, "Chưa xử lý"), (PaymentTxStatus.Review, "Cần xem lại"), (PaymentTxStatus.Matched, "Đã khớp đơn"),
-        (PaymentTxStatus.Resolved, "Đã xử lý"), (PaymentTxStatus.Ignored, "Tiền ra"), ("", "Tất cả"),
+        (PaymentTxStatus.Resolved, "Đã xử lý"), (PaymentTxStatus.Ignored, "Tiền ra"), (All, "Tất cả"),
     ];
 
     /// <summary>A Vietnam calendar day range (inclusive dates) as UTC bounds.</summary>
