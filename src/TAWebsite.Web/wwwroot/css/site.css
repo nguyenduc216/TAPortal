@@ -65,3 +65,13 @@
 /* Testimonial slider: the quote slides sideways; the card clips it. */
 .v9-quote-card{overflow:hidden}
 .v9-quote-body{flex:1;min-width:0;will-change:transform,opacity}
+
+/* Featured services and workflow: line icons, navy with a gold accent. */
+.mini-symbol{display:grid;place-items:center;width:36px;height:36px;min-width:36px;border-radius:10px;background:linear-gradient(135deg,#eef7fe,#d9edfb);color:#0b416b;font-size:0;transition:background .2s,color .2s}
+.mini-symbol svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.mini-symbol svg .ac{stroke:var(--gold)}
+.featured-links a:hover .mini-symbol{background:var(--navy);color:#fff}
+.step-icon{background:radial-gradient(circle at 50% 35%,#fff 0,#f1f8fe 70%);box-shadow:inset 0 0 0 6px #fff,inset 0 0 0 7px #e3f1fb;transition:transform .25s,box-shadow .25s}
+.step-icon svg{width:44%;height:44%;stroke:var(--navy);stroke-width:1.5}
+.step-icon svg .ac{stroke:var(--gold);stroke-width:1.8}
+.workflow article:hover .step-icon{transform:translateY(-4px);box-shadow:inset 0 0 0 6px #fff,inset 0 0 0 7px #cfe6f7,0 10px 22px #052b5014}

@@ -1,13 +1,35 @@
 @model SectionVm
 @{
     var c = Model.C;
-    string[] symbols = ["▤", "▧", "▥", "▦", "◈", "▣", "▨", "▩"];
+    // Line icons (24-unit grid, stroke only); the "ac" paths take the logo gold.
+    static string Svg(string d) => $"""<svg aria-hidden="true" viewBox="0 0 24 24">{d}</svg>""";
+    (string Key, string Icon)[] serviceIcons =
+    [
+        ("trọn gói", Svg("""<rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path class="ac" d="m9 14 2 2 4-4"/>""")),
+        ("thuế", Svg("""<path d="M5 3h14v18l-3-2-2 2-2-2-2 2-2-2-3 2Z"/><path class="ac" d="m9 15 6-6M9.5 9.5h.01M14.5 14.5h.01"/>""")),
+        ("báo cáo", Svg("""<path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M8 17v-4M13 17V9"/><path class="ac" d="M18 17V5"/>""")),
+        ("thành lập", Svg("""<path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path class="ac" d="M10 6h4M10 10h4M10 14h4M10 18h4"/>""")),
+        ("tư vấn", Svg("""<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2Z"/><path class="ac" d="m7 12 3-3 2 2 4-4"/>""")),
+        ("hộ kinh doanh", Svg("""<path d="M3 9 5 3h14l2 6"/><path d="M3 9a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 6 0M5 12v9h14v-9"/><path class="ac" d="M10 21v-5h4v5"/>""")),
+        ("phần mềm", Svg("""<rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/><path class="ac" d="m7 12 3-3 2 2 4-4"/>""")),
+        ("", Svg("""<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><path class="ac" d="M8 13h8M8 17h5"/>"""))
+    ];
+    string ServiceIcon(string label)
+    {
+        var l = label.ToLowerInvariant();
+        foreach (var (key, icon) in serviceIcons) if (key.Length > 0 && l.Contains(key)) return icon;
+        return serviceIcons[^1].Icon;
+    }
     string[] icons =
     [
-        """<svg aria-hidden="true" viewBox="0 0 64 64"><path d="M8 26 19 16l12 8 12-8 13 10-12 17-12-7-12 7Z"></path><path d="m19 30 13 12 13-12M26 35l-7 7m19-7 7 7"></path></svg>""",
-        """<svg aria-hidden="true" viewBox="0 0 64 64"><path d="M17 7h22l10 10v38H17zM39 7v12h10M24 28h18M24 36h11M24 44h10"></path><circle cx="45" cy="44" r="10"></circle><path d="M41 44h8m-4-4v8"></path></svg>""",
-        """<svg aria-hidden="true" viewBox="0 0 64 64"><rect height="32" rx="2" width="38" x="13" y="11"></rect><path d="M8 51h48l-5-8H13zM26 22h12m-12 7h12"></path></svg>""",
-        """<svg aria-hidden="true" viewBox="0 0 64 64"><path d="M32 7 51 15v15c0 13-9 22-19 27C22 52 13 43 13 30V15Z"></path><path d="m23 31 7 7 13-15"></path></svg>"""
+        // Receive the request: headset
+        Svg("""<path d="M3 14h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7a9 9 0 0 1 18 0v7a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3"/><path class="ac" d="M21 19a3 3 0 0 1-3 3h-4"/>"""),
+        // Sign the contract: document with a signature
+        Svg("""<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6M8 9h2M8 13h8"/><path class="ac" d="M8 18c1-1.5 2-1.5 2.5 0s1.5 1.5 2.5 0 1.5-1 3 0"/>"""),
+        // Do the work: calculator
+        Svg("""<rect x="4" y="2" width="16" height="20" rx="2"/><rect x="8" y="6" width="8" height="4" rx=".5"/><path class="ac" d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01M16 18h.01"/>"""),
+        // Hand over and support: badge with a check
+        Svg("""<path d="M3.85 8.62a4 4 0 0 1 4.78-4.77 4 4 0 0 1 6.74 0 4 4 0 0 1 4.78 4.78 4 4 0 0 1 0 6.74 4 4 0 0 1-4.77 4.78 4 4 0 0 1-6.75 0 4 4 0 0 1-4.78-4.77 4 4 0 0 1 0-6.76Z"/><path class="ac" d="m9 12 2 2 4-4"/>""")
     ];
     var steps = c.List("steps");
     var featured = c.List("featured");
@@ -15,7 +37,7 @@
 <section aria-label="Dịch vụ nổi bật và quy trình làm việc" class="classic-middle wrap">
     <aside class="featured-services"><h2>@c["featuredTitle"]</h2>
         <div class="featured-links">
-            @for (var i = 0; i < featured.Count; i++) {<a href="@SiteContext.Link(featured[i]["url"])"><span class="mini-symbol">@symbols[i % symbols.Length]</span><span>@featured[i]["label"]</span><span class="chev">›</span></a>}
+            @for (var i = 0; i < featured.Count; i++) {<a href="@SiteContext.Link(featured[i]["url"])"><span class="mini-symbol">@Html.Raw(ServiceIcon(featured[i]["label"]))</span><span>@featured[i]["label"]</span><span class="chev">›</span></a>}
         </div>
         @if (c.Has("allLabel")) {<a class="all-services" href="@SiteContext.Link(c["allUrl"])">@c["allLabel"] <span aria-hidden="true">→</span></a>}
     </aside>
