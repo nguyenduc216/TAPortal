@@ -9,7 +9,7 @@
     {
         <section aria-labelledby="v9-testimonial-heading" class="v9-testimonials" data-quotes="@System.Text.Json.JsonSerializer.Serialize(quotes.Select(q => new { text = q["text"], author = q["author"] }))">
             <div class="v9-heading"><h2 id="v9-testimonial-heading">@c["title"]</h2></div>
-            <div aria-live="polite" class="v9-quote-card"><span aria-hidden="true" class="v9-quote-mark">“</span><div>
+            <div aria-live="polite" class="v9-quote-card"><span aria-hidden="true" class="v9-quote-mark">“</span><div class="v9-quote-body">
                 <p class="v9-quote-text">@quotes[0]["text"]</p>
                 <div class="v9-stars" aria-label="5 sao">★★★★★</div>
                 @if (quotes[0].Has("author")) {<small class="v9-quote-author">— @quotes[0]["author"]</small>} else {<small class="v9-quote-author@(c["note"].StartsWith("T.A bổ sung") ? " ta-todo" : "")">@c["note"]</small>}

@@ -61,6 +61,9 @@
     const quotes = JSON.parse(box.dataset.quotes || '[]');
     const note = $('.v9-quote-author', box)?.textContent || '';
     let i = 0;
+    const body = $('.v9-quote-body', box);
+    const still = window.matchMedia('(prefers-reduced-motion: reduce)');
+    let busy = false;
     const show = () => {
       $('.v9-quote-text', box).textContent = quotes[i].text;
       const author = $('.v9-quote-author', box);
@@ -68,8 +71,46 @@
       author.classList.toggle('ta-todo', !quotes[i].author && note.startsWith('T.A bổ sung'));
       $$('.v9-dots span', box).forEach((d, k) => d.classList.toggle('active', k === i));
     };
-    $('.v9-slide-prev', box)?.addEventListener('click', () => { i = (i + quotes.length - 1) % quotes.length; show(); });
-    $('.v9-slide-next', box)?.addEventListener('click', () => { i = (i + 1) % quotes.length; show(); });
+    // Slide the quote out and the next one in from the side it comes from (dir 1 = next, -1 = previous).
+    // Timers, not animation promises, drive the steps, and the incoming animation has no fill: whatever happens to
+    // the animations (paused tab, throttled frames), the quote always ends at rest and fully visible.
+    const go = (dir) => {
+      if (busy || quotes.length < 2) return;
+      i = (i + dir + quotes.length) % quotes.length;
+      if (still.matches || !body || !body.animate) { show(); return; }
+      busy = true;
+      const out = body.animate([{ transform: 'translateX(0)', opacity: 1 }, { transform: `translateX(${-dir * 48}px)`, opacity: 0 }],
+        { duration: 200, easing: 'ease-in', fill: 'forwards' });
+      window.setTimeout(() => {
+        show();
+        body.animate([{ transform: `translateX(${dir * 48}px)`, opacity: 0 }, { transform: 'translateX(0)', opacity: 1 }],
+          { duration: 320, easing: 'cubic-bezier(.2,.7,.2,1)' });
+        out.cancel();
+        window.setTimeout(() => { busy = false; }, 330);
+      }, 200);
+    };
+    // Auto-advance every 6 s; pauses while the pointer or keyboard focus is on the block or the tab is hidden.
+    let timer = 0, paused = false;
+    const restart = () => {
+      window.clearInterval(timer);
+      if (quotes.length > 1 && !still.matches) timer = window.setInterval(() => { if (!paused && !document.hidden) go(1); }, 6000);
+    };
+    $('.v9-slide-prev', box)?.addEventListener('click', () => { go(-1); restart(); });
+    $('.v9-slide-next', box)?.addEventListener('click', () => { go(1); restart(); });
+    box.addEventListener('mouseenter', () => { paused = true; });
+    box.addEventListener('mouseleave', () => { paused = false; });
+    box.addEventListener('focusin', () => { paused = true; });
+    box.addEventListener('focusout', () => { paused = false; });
+    // Swipe left/right on touch screens.
+    let x0 = null;
+    box.addEventListener('touchstart', (e) => { x0 = e.touches[0].clientX; }, { passive: true });
+    box.addEventListener('touchend', (e) => {
+      if (x0 === null) return;
+      const dx = e.changedTouches[0].clientX - x0;
+      x0 = null;
+      if (Math.abs(dx) > 40) { go(dx < 0 ? 1 : -1); restart(); }
+    });
+    restart();
   }
 
   /* ---------- Quote request form ---------- */
