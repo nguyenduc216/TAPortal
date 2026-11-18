@@ -68,7 +68,7 @@
       $('.v9-quote-text', box).textContent = quotes[i].text;
       const author = $('.v9-quote-author', box);
       author.textContent = quotes[i].author ? '— ' + quotes[i].author : note;
-      author.classList.toggle('ta-todo', !quotes[i].author && note.startsWith('T.A bổ sung'));
+      author.hidden = !author.textContent;
       $$('.v9-dots span', box).forEach((d, k) => d.classList.toggle('active', k === i));
     };
     // Slide the quote out and the next one in from the side it comes from (dir 1 = next, -1 = previous).
