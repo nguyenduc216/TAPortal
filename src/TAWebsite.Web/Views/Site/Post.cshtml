@@ -5,9 +5,11 @@
     var minutes = PostHtml.ReadMinutes(p.BodyHtml);
     var src = p.Source is { HasSource: true } s ? s : null;
     var republished = src?.Kind == PostSource.Republished;
+    var printUrl = $"{Context.Request.Scheme}://{Context.Request.Host}{Context.Request.Path}";
 }
 <div class="ar-progress" aria-hidden="true"></div>
 <main class="dv-main" id="top">
+<div class="ar-print-head" aria-hidden="true"><img alt="" src="/site-assets/ta-logo.png" /><div><b>TƯ VẤN GIẢI PHÁP T.A</b><span>@printUrl</span></div></div>
 <article>
     <header class="ar-head"><div class="wrap"><div class="ar-head-inner">
         <nav aria-label="Breadcrumb" class="dv-crumb"><a href="/">Trang chủ</a><span aria-hidden="true">›</span><a href="/tin-tuc">Tin tức</a>@if (p.CategoryName is not null) {<span aria-hidden="true">›</span><a href="/tin-tuc?cm=@p.CategorySlug">@p.CategoryName</a>}</nav>
