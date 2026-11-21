@@ -18,7 +18,7 @@
         @if (p.Summary is not null) {<p class="ar-lead">@p.Summary</p>}
         @if (src is not null) {<p class="ar-origin">@(republished ? "Đăng lại từ" : "Tổng hợp từ") <b>@src.Name</b>@if (src.SafeUrl is not null) {<text> · </text><a href="@src.SafeUrl" target="_blank" rel="noopener nofollow">Xem bài gốc ↗</a>}</p>}
         <div class="ar-byline"><img alt="" src="/site-assets/ta-logo.png" /><span>@(src is null ? "Biên soạn" : republished ? "Đăng lại" : "Tổng hợp"): <b>@(p.AuthorName ?? "Ban chuyên môn T.A")</b></span><span>Đăng: @SiteHtml.Date(p.PublishedAt)</span><span>@minutes phút đọc</span></div>
-        <div class="ar-sharebar" aria-label="Chia sẻ bài viết"><span>Chia sẻ:</span><button class="ar-sb-native" data-share type="button" hidden>⤴ Gửi</button><button data-copy-link type="button">🔗 Sao chép link</button><a href="https://www.facebook.com/sharer/sharer.php?u=@Uri.EscapeDataString(printUrl)" target="_blank" rel="noopener">Facebook</a></div>
+        <div class="ar-sharebar"><button data-copy-link type="button">🔗 Sao chép link</button></div>
     </div></div></header>
     <div class="wrap">
         @if (p.CoverMediaId is not null) {<figure class="ar-cover"><img alt="@(p.CoverAlt ?? p.Title)" src="@SiteContext.Img(p.CoverMediaId)" /></figure>}

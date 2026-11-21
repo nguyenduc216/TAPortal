@@ -221,17 +221,12 @@
       catch { e.target.textContent = 'Không sao chép được'; }
     });
     $('#ar-print')?.addEventListener('click', () => print());
-    // Share bar under the title: copy the link, or open the phone's share sheet (Zalo, Messenger…) where supported.
+    // Copy-link button under the title.
     $$('[data-copy-link]').forEach(b => b.addEventListener('click', async () => {
       const label = b.textContent;
       try { await navigator.clipboard.writeText(location.href.split('#')[0]); b.textContent = '✓ Đã sao chép'; }
       catch { window.prompt('Sao chép đường link bài viết:', location.href.split('#')[0]); }
       setTimeout(() => { b.textContent = label; }, 2000);
     }));
-    $$('[data-share]').forEach(b => {
-      if (!navigator.share) return;
-      b.hidden = false;
-      b.addEventListener('click', () => navigator.share({ title: document.title, url: location.href.split('#')[0] }).catch(() => {}));
-    });
   }
 })();
