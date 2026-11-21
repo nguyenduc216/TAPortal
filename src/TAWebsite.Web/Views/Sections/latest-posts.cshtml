@@ -2,8 +2,8 @@
 @{
     var c = Model.C;
     var posts = Model.Posts;
-    var featured = posts.Take(4).ToList();
-    var feed = posts.Skip(4).Take(6).ToList();
+    var featured = posts.Take(5).ToList(); // first one is the lead story (full width, large title)
+    var feed = posts.Skip(5).Take(5).ToList();
 }
 @* Hidden until at least one article is published in TA Portal → Website TA → Bài viết. *@
 @if (posts.Count > 0)
