@@ -11,7 +11,7 @@
     <PackageReference Include="Microsoft.Data.SqlClient" Version="7.0.2" />
     <!-- Pins the transitive dependency of Microsoft.Data.SqlClient above 8.0.1 (GHSA-846f-f764-76mx, High). -->
     <PackageReference Include="System.Security.Cryptography.Pkcs" Version="8.0.2" />
-    <PackageReference Include="HtmlSanitizer" Version="9.0.892" />
+    <PackageReference Include="HtmlSanitizer" Version="9.0.967" />
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
   <ItemGroup>
