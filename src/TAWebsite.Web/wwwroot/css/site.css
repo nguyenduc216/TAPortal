@@ -114,3 +114,9 @@
 .ar-sharebar button,.ar-sharebar a{font:700 12px 'Be Vietnam Pro',sans-serif;border:1px solid var(--line);background:#fff;color:var(--navy);border-radius:20px;padding:6px 12px;cursor:pointer;line-height:1.4;text-decoration:none}
 .ar-sharebar button:hover,.ar-sharebar a:hover{border-color:var(--gold);color:var(--navy)}
 @media print{.ar-sharebar{display:none!important}}
+
+/* Knowledge header: same navy heading + muted intro as the other section heads (no green box). */
+.knowledge-title-row h2{display:block;background:none;color:var(--navy);padding:0;margin:0;font-size:clamp(27px,2.15vw,40px);letter-spacing:-.045em}
+.knowledge-title-row p{font-size:13px;color:var(--muted);margin:12px 0 0;max-width:620px}
+.knowledge-more{display:inline-flex;align-items:center;gap:6px;color:var(--green);white-space:nowrap}
+.knowledge-more:hover{color:var(--navy)}

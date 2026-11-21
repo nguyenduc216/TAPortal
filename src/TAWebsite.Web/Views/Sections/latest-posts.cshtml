@@ -9,7 +9,7 @@
 @if (posts.Count > 0)
 {
 <section class="section knowledge" id="knowledge"><div class="wrap knowledge-v10">
-    <div class="knowledge-title-row"><div>@if (c.Has("eyebrow")) {<span class="eyebrow">@c["eyebrow"]</span>}<h2>@c["title"]</h2>@if (c.Has("intro")) {<p>@c["intro"]</p>}</div>
+    <div class="knowledge-title-row"><div><h2>@(c.Has("eyebrow") ? c["eyebrow"] : c["title"])</h2>@if (c.Has("intro")) {<p>@c["intro"]</p>}</div>
         <a class="knowledge-more" href="/tin-tuc">@(c.Has("linkLabel") ? c["linkLabel"] : "Xem thêm") <span aria-hidden="true">→</span></a></div>
     <div class="knowledge-editorial">
         <div class="knowledge-feature-grid">
