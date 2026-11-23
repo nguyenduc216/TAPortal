@@ -6,7 +6,7 @@ using static TACustomerPortal.Tests.SafeCustomerPaymentsTests;
 
 namespace TACustomerPortal.Tests;
 
-// Automatic MISA e-invoice for paid QR orders (operator request 2026-11-06). No SQL and no network: an in-memory invoice
+// Automatic e-invoice (MISA meInvoice, Viettel SInvoice since 2026-11-23) for paid QR orders (operator request 2026-11-06). No SQL and no network: an in-memory invoice
 // store over the in-memory orders and a recording fake of the e-invoice API.
 public sealed class SafeCustomerEInvoiceTests
 {
@@ -150,7 +150,7 @@ public sealed class SafeCustomerEInvoiceTests
         Assert.Equal(OrderInvoiceStatus.Draft, outcome.Status);
         var o = store.Order(order);
         Assert.Equal(OrderInvoiceStatus.Draft, o.InvoiceStatus);
-        Assert.Equal(OrderInvoiceRules.DraftNote, o.InvoiceError);
+        Assert.Equal(OrderInvoiceRules.DraftNote(CustomerInvoiceProviders.Misa), o.InvoiceError);
         var draft = Assert.Single(api.Drafts);
         Assert.Equal((o.InvoiceCode, api.Issued[0].InvoiceCode), (draft.InvoiceCode, draft.InvoiceCode));
         Assert.Empty(api.Emails);                           // a draft is not sent to the buyer
@@ -203,7 +203,7 @@ public sealed class SafeCustomerEInvoiceTests
         Assert.Empty(api.Issued);
         Assert.Single(api.Drafts);
         var o = store.Order(order);
-        Assert.Equal((OrderInvoiceStatus.Draft, OrderInvoiceRules.ManualDraftNote), (o.InvoiceStatus, o.InvoiceError));
+        Assert.Equal((OrderInvoiceStatus.Draft, OrderInvoiceRules.ManualDraftNote(CustomerInvoiceProviders.Misa)), (o.InvoiceStatus, o.InvoiceError));
         Assert.Equal(o.InvoiceCode, api.Drafts[0].InvoiceCode);
         Assert.Empty(api.Emails);
         Assert.Equal(0, await invoicer.RunOnceAsync());
@@ -224,8 +224,8 @@ public sealed class SafeCustomerEInvoiceTests
         var c = Client(f);
         var page = WebUtility.HtmlDecode(await c.GetStringAsync("/einvoice"));
         Assert.Contains("Ký số tự động cần chữ ký số HSM của MISA", page);
-        Assert.Contains("Đã mua HSM — ký số và phát hành tự động", page);
-        Assert.Contains("Chưa mua HSM — xuất hóa đơn nháp, duyệt thủ công", page);
+        Assert.Contains("Đã có chữ ký số từ xa — ký số và phát hành tự động", page);
+        Assert.Contains("Chưa có chữ ký số từ xa — xuất hóa đơn nháp, duyệt thủ công", page);
         Assert.Contains("Không xuất hóa đơn tự động", page);
         Assert.Contains("value=\"NONE\" checked", page);
 
@@ -290,7 +290,8 @@ public sealed class SafeCustomerEInvoiceTests
         payments.Merchants[A] = 9001;
         var c = Client(f);
         var page = WebUtility.HtmlDecode(await c.GetStringAsync("/einvoice"));
-        Assert.Contains("Kết nối MISA meInvoice", page);
+        Assert.Contains("Kết nối phần mềm hóa đơn", page);
+        Assert.Contains("MISA meInvoice", page);
         Assert.Contains("value=\"0101234567\"", page);   // the company's tax code is offered
 
         var token = await Token(c, "/einvoice");
@@ -382,7 +383,7 @@ public sealed class SafeCustomerEInvoiceTests
         var order = PaidOrder() with { AutoIssueInvoice = false };
         payments.Orders.Add((A, order));
         var c = Client(f);
-        Assert.Contains("Kết nối MISA meInvoice", WebUtility.HtmlDecode(await c.GetStringAsync($"/orders/details/{order.Id}")));
+        Assert.Contains("Kết nối phần mềm hóa đơn", WebUtility.HtmlDecode(await c.GetStringAsync($"/orders/details/{order.Id}")));
 
         invoices.Settings[A] = Ready(A);
         var page = WebUtility.HtmlDecode(await c.GetStringAsync($"/orders/details/{order.Id}"));
@@ -396,6 +397,147 @@ public sealed class SafeCustomerEInvoiceTests
         var pdf = await c.GetAsync($"/orders/invoicepdf/{order.Id}");
         Assert.Equal("application/pdf", pdf.Content.Headers.ContentType?.MediaType);
         Assert.Equal(invoices.Order(order.Id).InvoiceCode, api.Downloads.Single());
+    }
+
+    // ---- Viettel SInvoice (operator 2026-11-23) ---------------------------------------------------------
+    [Fact]
+    public async Task TheCompanyCanConnectViettelSInvoiceAndSwitchingProviderStartsOver()
+    {
+        var invoices = new MemoryInvoiceStore();
+        var api = new FakeInvoiceApi();
+        using var f = Factory("OWNER", out var payments, out _, invoiceStore: invoices, invoiceApi: api);
+        payments.Merchants[A] = 9001;
+        invoices.Settings[A] = Ready(A);   // MISA, account 77, template C26TAA, automatic
+        var c = Client(f);
+        var token = await Token(c, "/einvoice");
+        var r = await Post(c, "/einvoice/connect", token, new()
+        {
+            ["Account.Provider"] = TingeeInvoiceProviders.SInvoice, ["Account.TaxCode"] = "0109999999", ["Account.Username"] = "api-user", ["Account.Password"] = "Secret#123"
+        });
+        Assert.Equal(HttpStatusCode.Redirect, r.StatusCode);
+        var saved = Assert.Single(api.Saved);
+        Assert.Equal((TingeeInvoiceProviders.SInvoice, (long?)null), (saved.Provider, saved.Id));   // a new account at the partner
+        Assert.Equal([77L], api.Deleted);                                                             // the MISA one is removed
+        var s = invoices.Settings[A];
+        Assert.Equal((TingeeInvoiceProviders.SInvoice, 78L, null, null, false), (s.Provider, s.ProviderAccountId!.Value, s.InvoicePattern, s.InvoiceSeries, s.AutoIssueEnabled));
+
+        var page = WebUtility.HtmlDecode(await c.GetStringAsync("/einvoice"));
+        Assert.Contains("data-cp-einvoice-provider>Viettel SInvoice", page);
+        Assert.Contains("Ký số tự động cần chữ ký số từ xa của Viettel-CA", page);
+        Assert.Contains("Lấy mẫu hóa đơn từ Viettel", page);
+        Assert.Contains("data-cp-no-email", page);
+        Assert.DoesNotContain("Gửi hóa đơn qua email cho người mua", page);
+        Assert.DoesNotContain("Tingee", page, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task OnlyOfferedProvidersCanBeConnected()
+    {
+        var invoices = new MemoryInvoiceStore();
+        var api = new FakeInvoiceApi();
+        using var f = Factory("OWNER", out var payments, out _, invoiceStore: invoices, invoiceApi: api);
+        payments.Merchants[A] = 9001;
+        var c = Client(f);
+        var r = await Post(c, "/einvoice/connect", await Token(c, "/einvoice"), new()
+        {
+            ["Account.Provider"] = TingeeInvoiceProviders.Bkav, ["Account.TaxCode"] = "0101234567", ["Account.Username"] = "x", ["Account.Password"] = "y"
+        });
+        Assert.Equal(HttpStatusCode.BadRequest, r.StatusCode);
+        Assert.Empty(api.Saved);
+        Assert.False(invoices.Settings.ContainsKey(A));
+        Assert.Equal([TingeeInvoiceProviders.Misa, TingeeInvoiceProviders.SInvoice], CustomerInvoiceProviders.All.Select(p => p.Code));
+    }
+
+    [Fact]
+    public async Task ViettelInvoicesAreIssuedWithoutTheEmailItCannotSend()
+    {
+        var (store, api, invoicer, customer, order) = Setup(buyerEmail: "ketoan@namphat.vn");
+        store.Settings[customer] = store.Settings[customer] with { Provider = TingeeInvoiceProviders.SInvoice };
+        Assert.Equal(1, await invoicer.RunOnceAsync());
+        Assert.Equal(OrderInvoiceStatus.Issued, store.Order(order).InvoiceStatus);
+        Assert.Empty(api.Emails);
+        Assert.Null(store.Order(order).InvoiceEmailedAt);
+    }
+
+    [Fact]
+    public async Task ViettelRefusalsNameViettelNotMisa()
+    {
+        var (store, api, invoicer, customer, order) = Setup();
+        store.Settings[customer] = store.Settings[customer] with { Provider = TingeeInvoiceProviders.SInvoice };
+        api.IssueErrors.Enqueue(new TingeeApiException("2037", "invalid login"));
+        await invoicer.IssueAsync(customer, order, manual: false);
+        Assert.Contains("sai thông tin đăng nhập Viettel", store.Order(order).InvoiceError);
+        Assert.DoesNotContain("MISA", store.Order(order).InvoiceError);
+    }
+
+    // ---- readiness for fully automatic invoices (operator 2026-11-23) -----------------------------------
+    [Fact]
+    public void TheSeriesYearFollowsThongTu78()
+    {
+        Assert.Equal(2026, InvoiceReadiness.Year("C26TAA"));
+        Assert.Equal(2026, InvoiceReadiness.Year("1C26TTA"));
+        Assert.Equal(2025, InvoiceReadiness.Year("k25tyy"));
+        Assert.Null(InvoiceReadiness.Year("AA/26E"));
+        Assert.Null(InvoiceReadiness.Year(null));
+    }
+
+    [Fact]
+    public void TheChecklistShowsWhatStandsBetweenTheCompanyAndAutomaticSignedInvoices()
+    {
+        var customer = Guid.NewGuid();
+        var nov = new DateOnly(2026, 11, 23);
+        string State(IReadOnlyList<InvoiceReadinessItem> items, string key) => items.Single(i => i.Key == key).State;
+
+        var empty = InvoiceReadiness.Check(CustomerInvoiceSettings.Empty(customer), nov, InvoiceSigningHealth.None);
+        Assert.Equal((InvoiceReadinessItem.Todo, InvoiceReadinessItem.Todo, InvoiceReadinessItem.Todo), (State(empty, "account"), State(empty, "template"), State(empty, "signing")));
+        Assert.DoesNotContain(empty, i => i.Key == "series-year");
+
+        // Signed mode, issued without a failure since: fully automatic.
+        var signed = Ready(customer) with { IssueMode = InvoiceIssueModes.Signed };
+        var ok = InvoiceReadiness.Check(signed, nov, new(nov.ToDateTime(TimeOnly.MinValue), null));
+        Assert.True(InvoiceReadiness.FullyAutomatic(ok));
+
+        // Not yet tried: works, but unproven.
+        Assert.Equal(InvoiceReadinessItem.Warn, State(InvoiceReadiness.Check(signed, nov, InvoiceSigningHealth.None), "signing"));
+        // The last attempt could not be signed (draft created instead): the company must fix its signature.
+        var failed = InvoiceReadiness.Check(signed, nov, new(new DateTime(2026, 11, 1), new DateTime(2026, 11, 20)));
+        Assert.Equal(InvoiceReadinessItem.Todo, State(failed, "signing"));
+        Assert.Contains("Viettel-CA", InvoiceReadiness.Check(signed with { Provider = TingeeInvoiceProviders.SInvoice }, nov, new(null, new DateTime(2026, 11, 20)))
+            .Single(i => i.Key == "signing").Detail);
+        // Drafts: works, not fully automatic.
+        Assert.Equal(InvoiceReadinessItem.Warn, State(InvoiceReadiness.Check(signed with { IssueMode = InvoiceIssueModes.Draft }, nov, InvoiceSigningHealth.None), "signing"));
+
+        // Ký hiệu năm: C26 is fine in 2026, a reminder in December, wrong from 2027.
+        Assert.Equal(InvoiceReadinessItem.Ok, State(ok, "series-year"));
+        Assert.Equal(InvoiceReadinessItem.Warn, State(InvoiceReadiness.Check(signed, new DateOnly(2026, 12, 2), InvoiceSigningHealth.None), "series-year"));
+        var stale = InvoiceReadiness.Check(signed, new DateOnly(2027, 1, 2), InvoiceSigningHealth.None);
+        Assert.Equal(InvoiceReadinessItem.Todo, State(stale, "series-year"));
+        Assert.Contains("năm 2027", stale.Single(i => i.Key == "series-year").Detail);
+    }
+
+    [Fact]
+    public async Task ASigningFailureShowsOnTheChecklist()
+    {
+        var invoices = new MemoryInvoiceStore();
+        var api = new FakeInvoiceApi();
+        using var f = Factory("OWNER", out var payments, out _, invoiceStore: invoices, invoiceApi: api);
+        invoices.Payments = payments;
+        payments.Merchants[A] = 9001;
+        invoices.Settings[A] = Ready(A) with { IssueMode = InvoiceIssueModes.Signed };
+        var order = PaidOrder() with { AutoIssueInvoice = false };
+        payments.Orders.Add((A, order));
+        var c = Client(f);
+        var page = WebUtility.HtmlDecode(await c.GetStringAsync("/einvoice"));
+        Assert.Contains("Sẵn sàng xuất tự động", page);
+        Assert.Contains("data-cp-check=\"signing\" data-cp-state=\"warn\"", page);
+        Assert.Contains("Các bước để xuất hóa đơn tự động", page);
+
+        api.IssueErrors.Enqueue(new TingeeApiException("400", "CallSignServiceFail"));
+        await Post(c, $"/orders/issueinvoice/{order.Id}", await Token(c, $"/orders/details/{order.Id}"), []);
+        Assert.Equal(OrderInvoiceStatus.Draft, invoices.Order(order.Id).InvoiceStatus);
+        page = WebUtility.HtmlDecode(await c.GetStringAsync("/einvoice"));
+        Assert.Contains("data-cp-check=\"signing\" data-cp-state=\"todo\"", page);
+        Assert.Contains("Lần xuất gần nhất chưa ký số được", page);
     }
 
     // ---- helpers ---------------------------------------------------------------------------------------
@@ -501,6 +643,14 @@ public sealed class SafeCustomerEInvoiceTests
             Update(orderId, o => o with { InvoiceEmailedAt = DateTime.UtcNow });
             return Task.CompletedTask;
         }
+        public Task<InvoiceSigningHealth> SigningHealthAsync(Guid customerId, CancellationToken ct = default)
+        {
+            var orders = Payments.Orders.Where(x => x.Customer == customerId).Select(x => x.Order).ToList();
+            var issued = orders.Where(o => o.InvoiceStatus == OrderInvoiceStatus.Issued).Max(o => o.InvoiceIssuedAt);
+            var failed = orders.Any(o => o.InvoiceStatus == OrderInvoiceStatus.Draft && o.InvoiceError?.StartsWith(OrderInvoiceRules.SigningFailedPrefix, StringComparison.Ordinal) == true)
+                ? DateTime.UtcNow : (DateTime?)null;
+            return Task.FromResult(new InvoiceSigningHealth(issued, failed));
+        }
     }
 
     public sealed class FakeInvoiceApi : ITingeeInvoiceApi
@@ -511,13 +661,14 @@ public sealed class SafeCustomerEInvoiceTests
         public List<TingeeInvoiceRequest> Drafts { get; } = [];
         public List<string> Emails { get; } = [];
         public List<string> Downloads { get; } = [];
+        public List<long> Deleted { get; } = [];
         public Queue<Exception> IssueErrors { get; } = new();
         public Queue<Exception> DraftErrors { get; } = new();
 
         public Task<IReadOnlyList<TingeeInvoiceProvider>> GetProvidersAsync(CancellationToken ct = default) => Task.FromResult<IReadOnlyList<TingeeInvoiceProvider>>([]);
         public Task<TingeePage<TingeeInvoiceAccount>> GetAccountsAsync(long merchantId, CancellationToken ct = default) => Task.FromResult(new TingeePage<TingeeInvoiceAccount>());
         public Task<long> SaveAccountAsync(TingeeInvoiceAccountRequest request, CancellationToken ct = default) { Saved.Add(request); return Task.FromResult(78L); }
-        public Task DeleteAccountAsync(long merchantId, long accountId, CancellationToken ct = default) => Task.CompletedTask;
+        public Task DeleteAccountAsync(long merchantId, long accountId, CancellationToken ct = default) { Deleted.Add(accountId); return Task.CompletedTask; }
         public Task<IReadOnlyList<TingeeInvoiceTemplate>> GetTemplatesAsync(long merchantId, long? accountId, int? invoiceNoToCheck = null, CancellationToken ct = default) =>
             Task.FromResult<IReadOnlyList<TingeeInvoiceTemplate>>([new() { InvoicePattern = "1", InvoiceSeries = "C26TAB" }]);
         public Task<TingeeInvoicePdf> CreateDraftAsync(TingeeInvoiceRequest request, CancellationToken ct = default)

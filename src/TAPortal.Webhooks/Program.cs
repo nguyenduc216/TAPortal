@@ -14,7 +14,7 @@ if (!string.IsNullOrWhiteSpace(builder.Configuration["Database:ConnectionString"
     builder.Services.AddSingleton<ITingeePaymentLedger, SqlTingeePaymentLedger>();
     builder.Services.AddScoped<TingeePaymentProcessor>();
     builder.Services.AddHostedService<TingeePaymentWorker>();
-    // Paid QR orders get their MISA e-invoice here when the company turned automatic invoices on (OrderInvoicer).
+    // Paid QR orders get their e-invoice (MISA meInvoice or Viettel SInvoice) here when the company turned automatic invoices on (OrderInvoicer).
     builder.Services.AddScoped<IOrderInvoiceStore, SqlOrderInvoiceStore>();
     builder.Services.AddScoped<OrderInvoicer>();
     builder.Services.AddHostedService<OrderInvoiceWorker>();

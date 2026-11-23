@@ -43,7 +43,7 @@
                 <div class="cp-progress" style="margin-top:14px" role="progressbar" aria-valuenow="@percent" aria-valuemin="0" aria-valuemax="100" aria-label="Tỷ lệ đã thanh toán"><span style="width:@(percent)%"></span></div>
                 @if (o.LastError is string err) {<div class="cp-error" style="margin-top:10px">@err</div>}
                 @if (o.InvoiceError is string invoiceError) {<div class="@(issued || draft ? "cp-muted" : "cp-error")" style="margin-top:10px" data-cp-invoice-error>Hóa đơn: @PartnerText.Scrub(invoiceError)</div>}
-                @if (o.Status == OrderStatus.Paid && !Model.InvoiceReady && !issued) {<div class="cp-muted" style="margin-top:10px">Chưa cài đặt hóa đơn điện tử. <a class="cp-link" asp-controller="EInvoice" asp-action="Index">Kết nối MISA meInvoice</a></div>}
+                @if (o.Status == OrderStatus.Paid && !Model.InvoiceReady && !issued) {<div class="cp-muted" style="margin-top:10px">Chưa cài đặt hóa đơn điện tử. <a class="cp-link" asp-controller="EInvoice" asp-action="Index">Kết nối phần mềm hóa đơn</a></div>}
                 @if (Model.Status is OrderStatus.ExpiredPaid or OrderStatus.CancelledPaid || o.Overpaid > 0 || o.PartnerDiffers)
                 {
                     <div class="cp-error" style="margin-top:10px">@(Model.Status == OrderStatus.ExpiredPaid ? "Có tiền chuyển vào sau khi mã QR hết hạn." : Model.Status == OrderStatus.CancelledPaid ? "Có tiền chuyển vào đơn đã hủy." : o.Overpaid > 0 ? "Khách đã chuyển dư so với số tiền đơn." : "Số đã thu trên hệ thống khác số dịch vụ thanh toán báo về.")

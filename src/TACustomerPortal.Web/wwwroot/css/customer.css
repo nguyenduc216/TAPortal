@@ -469,7 +469,23 @@ textarea.cp-input { height: auto; min-height: 72px; padding-top: 8px; padding-bo
 [data-cp-when][hidden] { display: none !important; }
 .cp-label.is-required::after { content: " *"; color: #B42318; }
 
-/* Hóa đơn điện tử: the MISA login form folds away once connected. */
+/* Hóa đơn điện tử: readiness checklist (ok / warn / todo) and the folding "Các bước" guide. */
+.cp-readiness { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.cp-readiness__item { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border: 1px solid var(--cp-line); border-radius: var(--cp-radius-sm); }
+.cp-readiness__item > svg { width: 18px; height: 18px; flex: none; margin-top: 1px; }
+.cp-readiness__item div { display: grid; gap: 2px; min-width: 0; }
+.cp-readiness__item span { color: var(--cp-ink-3); font-size: 12.5px; }
+.cp-readiness__item.is-ok > svg { color: var(--cp-green-700); }
+.cp-readiness__item.is-warn { background: var(--cp-gold-100); border-color: transparent; }
+.cp-readiness__item.is-warn > svg { color: var(--cp-gold-text); }
+.cp-readiness__item.is-todo { background: var(--cp-red-50); border-color: transparent; }
+.cp-readiness__item.is-todo > svg { color: var(--cp-red); }
+.cp-einvoice-guide > summary { cursor: pointer; list-style: none; transition: background .15s; }
+.cp-einvoice-guide > summary::-webkit-details-marker { display: none; }
+.cp-einvoice-guide > summary:hover { background: var(--cp-hover-bg); }
+.cp-steps-list { margin: 0; padding-left: 20px; display: grid; gap: 8px; font-size: 13px; }
+
+/* Hóa đơn điện tử: the provider login form folds away once connected. */
 .cp-einvoice-connect > summary { display: flex; align-items: center; gap: 8px; padding: 12px 18px; border-top: 1px solid var(--cp-line); cursor: pointer; color: var(--cp-blue-600); font-weight: 600; list-style: none; transition: background .15s; }
 .cp-einvoice-connect > summary::-webkit-details-marker { display: none; }
 .cp-einvoice-connect > summary:hover { background: var(--cp-hover-bg); }

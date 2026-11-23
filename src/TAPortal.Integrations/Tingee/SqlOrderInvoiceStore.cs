@@ -154,6 +154,18 @@ WHERE Id=@id AND CustomerId=@c AND InvoiceStatus='PENDING'
     public Task MarkEmailedAsync(Guid customerId, Guid orderId, CancellationToken ct = default) =>
         Execute(ct, "UPDATE dbo.CustomerOrders SET InvoiceEmailedAt=SYSUTCDATETIME() WHERE Id=@id AND CustomerId=@c", ("@id", orderId), ("@c", customerId));
 
+    public async Task<InvoiceSigningHealth> SigningHealthAsync(Guid customerId, CancellationToken ct = default)
+    {
+        await using var cn = await Open(ct);
+        await using var cmd = Command(cn, null, """
+SELECT MAX(CASE WHEN InvoiceStatus='ISSUED' THEN InvoiceIssuedAt END),
+ MAX(CASE WHEN InvoiceStatus='DRAFT' AND InvoiceError LIKE @failed THEN UpdatedAt END)
+FROM dbo.CustomerOrders WHERE CustomerId=@c AND InvoiceStatus IN ('ISSUED','DRAFT')
+""", ("@c", customerId), ("@failed", OrderInvoiceRules.SigningFailedPrefix + "%"));
+        await using var r = await cmd.ExecuteReaderAsync(ct);
+        return await r.ReadAsync(ct) ? new(D(r, 0), D(r, 1)) : InvoiceSigningHealth.None;
+    }
+
     private async Task Execute(CancellationToken ct, string sql, params (string Name, object? Value)[] args)
     {
         await using var cn = await Open(ct);

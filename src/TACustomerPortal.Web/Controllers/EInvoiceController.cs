@@ -6,9 +6,10 @@ using TAPortal.Integrations.Tingee;
 
 namespace TACustomerPortal.Web.Controllers;
 
-// Hóa đơn điện tử (operator request 2026-11-06, MISA meInvoice only): the company connects its own MISA account, picks the
-// template (mẫu số + ký hiệu) and turns on automatic invoices for paid QR orders. Calls go through T.A's e-invoice partner
-// with the company's merchant; the MISA password is passed on once and never stored. Same flow as the Admin "Hóa đơn Sandbox".
+// Hóa đơn điện tử (operator request 2026-11-06 MISA meInvoice, 2026-11-23 Viettel SInvoice): the company connects its own
+// provider account, picks the template (mẫu số + ký hiệu) and turns on automatic invoices for paid QR orders. Calls go through
+// T.A's e-invoice partner with the company's merchant; the provider password is passed on once and never stored. Same flow as
+// the Admin "Hóa đơn Sandbox". The page also shows what still stands between the company and fully automatic signed invoices.
 public sealed class EInvoiceController(ICurrentCustomerContext customer, IPaymentStore payments, IOrderInvoiceStore store, ITingeeInvoiceApi invoices,
     TimeProvider clock, ILogger<EInvoiceController> logger) : CustomerAreaController(customer)
 {
@@ -26,19 +27,24 @@ public sealed class EInvoiceController(ICurrentCustomerContext customer, IPaymen
         var settings = await store.SettingsAsync(m.CustomerId);
         input.TaxCode = input.TaxCode?.Trim();
         input.Username = input.Username?.Trim();
-        var keep = new EInvoiceAccountInput { TaxCode = input.TaxCode, Username = input.Username };
+        input.Provider = string.IsNullOrWhiteSpace(input.Provider) ? settings.Provider : input.Provider.Trim();
+        if (!CustomerInvoiceProviders.IsSupported(input.Provider)) ModelState.AddModelError("Account.Provider", "Chọn phần mềm hóa đơn điện tử.");
+        var provider = CustomerInvoiceProviders.Get(input.Provider);
+        var keep = new EInvoiceAccountInput { Provider = provider.Code, TaxCode = input.TaxCode, Username = input.Username };
         if (await payments.MerchantIdAsync(m.CustomerId) is not long merchantId)
             return await Page(m, settings, account: keep, connect: true, error: "Doanh nghiệp chưa được kích hoạt dịch vụ thanh toán.");
         if (!invoices.IsConfigured) return await Page(m, settings, account: keep, connect: true, error: "Dịch vụ hóa đơn chưa sẵn sàng. Vui lòng liên hệ bộ phận hỗ trợ Hóa đơn tự động.");
         if (!ModelState.IsValid) return await Page(m, settings, account: keep, connect: true, status: StatusCodes.Status400BadRequest);
+        // Another provider is another account at the partner: create it, then remove the old one.
+        var sameProvider = settings.Provider == provider.Code;
         long accountId;
         try
         {
             accountId = await invoices.SaveAccountAsync(new TingeeInvoiceAccountRequest
             {
-                Id = settings.ProviderAccountId,
+                Id = sameProvider ? settings.ProviderAccountId : null,
                 MerchantId = merchantId,
-                Provider = TingeeInvoiceProviders.Misa,
+                Provider = provider.Code,
                 TaxCode = input.TaxCode!,
                 Username = input.Username!,
                 Password = input.Password!,
@@ -48,19 +54,27 @@ public sealed class EInvoiceController(ICurrentCustomerContext customer, IPaymen
         catch (Exception ex) when (ex is TingeeApiException or HttpRequestException or TaskCanceledException or TingeeNotConfiguredException)
         {
             logger.LogWarning(ex, "EINVOICE_CONNECT_FAILED customer={Customer}", m.CustomerId);
-            return await Page(m, settings, account: keep, connect: true, error: "Kết nối MISA meInvoice không thành công. " + OrderInvoicer.Reason(ex));
+            return await Page(m, settings, account: keep, connect: true, error: $"Kết nối {provider.Name} không thành công. " + OrderInvoicer.Reason(ex, provider));
         }
-        // Another tax code is another seller: its templates are different.
-        var sameSeller = string.Equals(settings.ProviderTaxCode, input.TaxCode, StringComparison.Ordinal);
+        if (!sameProvider && settings.ProviderAccountId is long oldAccount && oldAccount != accountId)
+        {
+            try { await invoices.DeleteAccountAsync(merchantId, oldAccount); }
+            catch (Exception ex) when (ex is TingeeApiException or HttpRequestException or TaskCanceledException or TingeeNotConfiguredException)
+            {
+                logger.LogWarning(ex, "EINVOICE_OLD_ACCOUNT_NOT_REMOVED customer={Customer} account={Account}", m.CustomerId, oldAccount);
+            }
+        }
+        // Another provider or tax code is another seller: its templates are different.
+        var sameSeller = sameProvider && string.Equals(settings.ProviderTaxCode, input.TaxCode, StringComparison.Ordinal);
         await store.SaveSettingsAsync(settings with
         {
-            Provider = TingeeInvoiceProviders.Misa, ProviderAccountId = accountId, ProviderTaxCode = input.TaxCode, ProviderUsername = input.Username,
+            Provider = provider.Code, ProviderAccountId = accountId, ProviderTaxCode = input.TaxCode, ProviderUsername = input.Username,
             ConnectedAt = clock.GetUtcNow().UtcDateTime,
             InvoicePattern = sameSeller ? settings.InvoicePattern : null, InvoiceSeries = sameSeller ? settings.InvoiceSeries : null,
             AutoIssueEnabled = sameSeller && settings.AutoIssueEnabled
         }, Actor);
-        logger.LogInformation("EINVOICE_CONNECTED customer={Customer} account={Account} update={Update}", m.CustomerId, accountId, settings.ProviderAccountId is not null);
-        Flash(sameSeller && settings.HasTemplate ? "Đã kết nối tài khoản MISA meInvoice." : "Đã kết nối tài khoản MISA meInvoice. Bước tiếp theo: chọn mẫu hóa đơn.");
+        logger.LogInformation("EINVOICE_CONNECTED customer={Customer} provider={Provider} account={Account} update={Update}", m.CustomerId, provider.Code, accountId, settings.ProviderAccountId is not null);
+        Flash(sameSeller && settings.HasTemplate ? $"Đã kết nối tài khoản {provider.Name}." : $"Đã kết nối tài khoản {provider.Name}. Bước tiếp theo: chọn mẫu hóa đơn.");
         return RedirectToAction(nameof(Index));
     }
 
@@ -77,17 +91,17 @@ public sealed class EInvoiceController(ICurrentCustomerContext customer, IPaymen
             catch (Exception ex) when (ex is TingeeApiException or HttpRequestException or TaskCanceledException or TingeeNotConfiguredException)
             {
                 logger.LogWarning(ex, "EINVOICE_DISCONNECT_FAILED customer={Customer}", m.CustomerId);
-                Flash("Chưa gỡ được kết nối MISA meInvoice. " + OrderInvoicer.Reason(ex), error: true);
+                Flash($"Chưa gỡ được kết nối {settings.Info.Name}. " + OrderInvoicer.Reason(ex, settings.Info), error: true);
                 return RedirectToAction(nameof(Index));
             }
         }
         await store.SaveSettingsAsync(settings with { ProviderAccountId = null, InvoicePattern = null, InvoiceSeries = null, AutoIssueEnabled = false, ConnectedAt = null }, Actor);
         logger.LogInformation("EINVOICE_DISCONNECTED customer={Customer}", m.CustomerId);
-        Flash("Đã gỡ kết nối MISA meInvoice và tắt xuất hóa đơn tự động.");
+        Flash($"Đã gỡ kết nối {settings.Info.Name} và tắt xuất hóa đơn tự động.");
         return RedirectToAction(nameof(Index));
     }
 
-    /// <summary>Templates registered on the company's MISA account; picking one fills mẫu số and ký hiệu.</summary>
+    /// <summary>Templates registered on the company's provider account; picking one fills mẫu số and ký hiệu.</summary>
     [HttpPost]
     public async Task<IActionResult> Templates()
     {
@@ -95,17 +109,17 @@ public sealed class EInvoiceController(ICurrentCustomerContext customer, IPaymen
         if (!CanManage(m)) return Forbid();
         var settings = await store.SettingsAsync(m.CustomerId);
         if (!settings.IsConnected || await payments.MerchantIdAsync(m.CustomerId) is not long merchantId)
-            return await Page(m, settings, error: "Kết nối tài khoản MISA meInvoice trước.");
+            return await Page(m, settings, error: $"Kết nối tài khoản {settings.Info.Name} trước.");
         try
         {
             var templates = await invoices.GetTemplatesAsync(merchantId, settings.ProviderAccountId);
-            if (templates.Count == 0) return await Page(m, settings, error: "Tài khoản MISA chưa có mẫu hóa đơn nào đang sử dụng. Nhập mẫu số và ký hiệu theo MISA.");
+            if (templates.Count == 0) return await Page(m, settings, error: $"Tài khoản {settings.Info.Short} chưa có mẫu hóa đơn nào đang sử dụng. Nhập mẫu số và ký hiệu theo {settings.Info.Name}.");
             return await Page(m, settings, templates: templates);
         }
         catch (Exception ex) when (ex is TingeeApiException or HttpRequestException or TaskCanceledException or TingeeNotConfiguredException)
         {
             logger.LogWarning(ex, "EINVOICE_TEMPLATES_FAILED customer={Customer}", m.CustomerId);
-            return await Page(m, settings, error: "Chưa lấy được mẫu hóa đơn. " + OrderInvoicer.Reason(ex));
+            return await Page(m, settings, error: "Chưa lấy được mẫu hóa đơn. " + OrderInvoicer.Reason(ex, settings.Info));
         }
     }
 
@@ -129,7 +143,7 @@ public sealed class EInvoiceController(ICurrentCustomerContext customer, IPaymen
         input.IssueMode ??= input.AutoIssueEnabled ? InvoiceIssueModes.Signed : InvoiceIssueModes.None;
         if (!InvoiceIssueModes.IsValid(input.IssueMode)) ModelState.AddModelError(string.Empty, "Chọn cách xuất hóa đơn tự động.");
         input.AutoIssueEnabled = input.IssueMode is InvoiceIssueModes.Signed or InvoiceIssueModes.Draft;
-        if (input.AutoIssueEnabled && !settings.IsConnected) ModelState.AddModelError(string.Empty, "Kết nối tài khoản MISA meInvoice trước khi bật xuất hóa đơn tự động.");
+        if (input.AutoIssueEnabled && !settings.IsConnected) ModelState.AddModelError(string.Empty, $"Kết nối tài khoản {settings.Info.Name} trước khi bật xuất hóa đơn tự động.");
         if (input.AutoIssueEnabled && input.Pattern is null) ModelState.AddModelError(string.Empty, "Chọn mẫu hóa đơn trước khi bật xuất hóa đơn tự động.");
         if (!ModelState.IsValid) return await Page(m, settings, template: input, status: StatusCodes.Status400BadRequest);
         var now = clock.GetUtcNow().UtcDateTime;
@@ -139,7 +153,7 @@ public sealed class EInvoiceController(ICurrentCustomerContext customer, IPaymen
             // Orders paid before automatic invoices were turned on are never invoiced automatically (issue them from the order).
             AutoIssueFrom = input.AutoIssueEnabled ? (settings.AutoIssueEnabled ? settings.AutoIssueFrom ?? now : now) : null,
             IssueMode = input.IssueMode,
-            // Choosing "đã mua HSM" is the company's confirmation that it bought MISA's HSM signature: kept with who and when.
+            // Choosing "đã có chữ ký số từ xa" is the company's confirmation that it bought the provider's remote (HSM) signature: kept with who and when.
             HsmConfirmedAt = input.IssueMode == InvoiceIssueModes.Signed ? settings.HsmConfirmedAt ?? now : settings.HsmConfirmedAt,
             HsmConfirmedBy = input.IssueMode == InvoiceIssueModes.Signed ? settings.HsmConfirmedBy ?? Actor : settings.HsmConfirmedBy
         }, Actor);
@@ -147,8 +161,8 @@ public sealed class EInvoiceController(ICurrentCustomerContext customer, IPaymen
             input.IssueMode == InvoiceIssueModes.Signed && settings.HsmConfirmedAt is null);
         Flash(input.IssueMode switch
         {
-            InvoiceIssueModes.Signed => "Đã lưu. Đơn hàng có \"tự động xuất hóa đơn\" được xuất và ký số bằng HSM ngay khi thanh toán đủ.",
-            InvoiceIssueModes.Draft => "Đã lưu. Đơn hàng có \"tự động xuất hóa đơn\" được tạo hóa đơn nháp trên MISA khi thanh toán đủ, chờ duyệt và ký số thủ công.",
+            InvoiceIssueModes.Signed => "Đã lưu. Đơn hàng có \"tự động xuất hóa đơn\" được xuất và ký số từ xa ngay khi thanh toán đủ.",
+            InvoiceIssueModes.Draft => $"Đã lưu. Đơn hàng có \"tự động xuất hóa đơn\" được tạo hóa đơn nháp trên {settings.Info.Short} khi thanh toán đủ, chờ duyệt và ký số thủ công.",
             _ => "Đã lưu cài đặt hóa đơn điện tử. Không xuất hóa đơn tự động."
         });
         return RedirectToAction(nameof(Index));
@@ -163,7 +177,7 @@ public sealed class EInvoiceController(ICurrentCustomerContext customer, IPaymen
         var settings = await store.SettingsAsync(m.CustomerId);
         if (!settings.IsReady || await payments.MerchantIdAsync(m.CustomerId) is not long merchantId)
         {
-            Flash("Kết nối MISA meInvoice và lưu mẫu hóa đơn trước khi xem thử.", error: true);
+            Flash($"Kết nối {settings.Info.Name} và lưu mẫu hóa đơn trước khi xem thử.", error: true);
             return RedirectToAction(nameof(Index));
         }
         var now = clock.GetUtcNow();
@@ -179,7 +193,7 @@ public sealed class EInvoiceController(ICurrentCustomerContext customer, IPaymen
         catch (Exception ex) when (ex is TingeeApiException or HttpRequestException or TaskCanceledException or TingeeNotConfiguredException)
         {
             logger.LogWarning(ex, "EINVOICE_PREVIEW_FAILED customer={Customer}", m.CustomerId);
-            Flash("Chưa tạo được hóa đơn nháp. " + OrderInvoicer.Reason(ex), error: true);
+            Flash("Chưa tạo được hóa đơn nháp. " + OrderInvoicer.Reason(ex, settings.Info), error: true);
         }
         return RedirectToAction(nameof(Index));
     }
@@ -190,9 +204,11 @@ public sealed class EInvoiceController(ICurrentCustomerContext customer, IPaymen
         if (error is not null) ModelState.AddModelError(string.Empty, PartnerText.Scrub(error));
         if (status is int code) Response.StatusCode = code;
         else if (error is not null) Response.StatusCode = StatusCodes.Status400BadRequest;
-        account ??= new EInvoiceAccountInput { TaxCode = settings.ProviderTaxCode ?? m.TaxCode, Username = settings.ProviderUsername };
+        account ??= new EInvoiceAccountInput { Provider = settings.Provider, TaxCode = settings.ProviderTaxCode ?? m.TaxCode, Username = settings.ProviderUsername };
         template ??= new EInvoiceTemplateInput { Pattern = settings.InvoicePattern, Series = settings.InvoiceSeries, AutoIssueEnabled = settings.AutoIssueEnabled, SendEmail = settings.SendEmail, IssueMode = settings.Mode };
         var linked = await payments.MerchantIdAsync(m.CustomerId) is not null;
-        return View("Index", new EInvoiceVm(m, CanManage(m), linked, invoices.IsConfigured, settings, account, template, templates, connect || !settings.IsConnected));
+        var today = DateOnly.FromDateTime(clock.GetUtcNow().ToOffset(TingeeSignature.VietnamOffset).DateTime);
+        var readiness = InvoiceReadiness.Check(settings, today, settings.IsConnected ? await store.SigningHealthAsync(m.CustomerId) : InvoiceSigningHealth.None);
+        return View("Index", new EInvoiceVm(m, CanManage(m), linked, invoices.IsConfigured, settings, account, template, templates, connect || !settings.IsConnected, readiness));
     }
 }
