@@ -31,7 +31,7 @@ Operator (2026-11-23), sau trao đổi về xuất hóa đơn qua MISA / VNPT / 
 - Script: `database/migrations/067-einvoice-viettel-provider.sql` (sau 066)
 - Verify: `database/scripts/121-verify-einvoice-viettel-provider.sql`; Rollback: `database/scripts/122-rollback-einvoice-viettel-provider.sql`
 - Lệnh: `Invoke-TAMigrations.ps1 -Plan "067:121:122"`
-- Execution: NOT_EXECUTED (cập nhật sau khi chạy)
+- Execution: **EXECUTED** 2026-11-23T10:46:11Z qua `Invoke-TAMigrations.ps1 -Plan "067:121:122"`: pre-check NOT_APPLIED → dry-run (migration PASS, rollback NOT_APPLIED, @@TRANCOUNT=0) → pre-check lại NOT_APPLIED → backup đầy đủ gần nhất 7990 phút nên tạo bản mới `TAPortalSys-predeploy-20261123T104309Z.bak` (RESTORE VERIFYONLY OK) → gates 829/829 → chạy thật VERIFY_STATUS=PASS. Log: `.codec/reports/TINGEE-INTEGRATION-CHG-20261123T090237Z-0F6D3B-migrations-20261123T104309Z.log`. Dry-run trước (`-DryRunOnly`, log `...-migrations-20261123T104257Z.log`) xác nhận 066 ALREADY_APPLIED.
 
 ## Test và kết quả
 - `dotnet restore TAPortal.sln`; `dotnet build TAPortal.sln -c Release --no-restore`: 0 lỗi.
