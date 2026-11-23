@@ -4,7 +4,7 @@
 - Change ID: `TINGEE-INTEGRATION-CHG-20261123T090237Z-0F6D3B`
 - Created UTC: 2026-11-23T09:02:37.063636+00:00
 - Tiêu đề: E-invoice: Viettel SInvoice beside MISA, readiness check for automatic signed invoices (migration 067)
-- Trạng thái: IMPLEMENTED
+- Trạng thái: PARTIALLY_DEPLOYED (portal, invoice DEPLOYED; webhooks ROLLED_BACK vì lỗi đăng nhập SQL của server)
 
 ## Yêu cầu và phạm vi
 Operator (2026-11-23), sau trao đổi về xuất hóa đơn qua MISA / VNPT / Viettel cho khách hàng của T.A (T.A là nền tảng, mỗi doanh nghiệp khách xuất hóa đơn đứng tên mình): "ok thêm vào hệ thống nào". Hai việc đã đề xuất:
@@ -40,12 +40,16 @@ Operator (2026-11-23), sau trao đổi về xuất hóa đơn qua MISA / VNPT / 
 
 ## Publish
 - Project: TAPortal.Web, TACustomerPortal.Web, TAPortal.Webhooks (Integrations thay đổi)
-- Trạng thái: NOT_PUBLISHED (cập nhật sau khi deploy)
+- Deploy 2026-11-23 (`Deploy-TARemote.ps1 -Target portal,invoice,webhooks -MigrationsApplied`), source commit 57bdaea (code d779fd0), audit PASS (829/829):
+  - portal (TAPortal.Web): DEPLOYED 10:52:17Z, artifact b044d799c9932f289018448f2ba8062acfd300cd5816ab2a7d5a7fb160c29f56, package 7912C7F7B2C3DDAA53CA5E22AB3A878EFA46944BFF04E8BC664B07C19E7276E7
+  - invoice (TACustomerPortal.Web): DEPLOYED 10:52:23Z, artifact 3584590fd9bd24e987dc635201e94132deea7d8f49ce2d4c2c86a8380734350c, package 15165C9FCE26BF8DFB7EFC555F889B8E4034EAF5DB8C5B32321E72C792EDB7A9
+  - webhooks (TAPortal.Webhooks): ROLLED_BACK 10:54:35Z (health /health 503 trước và sau rollback), artifact 2b7d8c762851f99e5bcc0f67713dc9522fa861d61c109eb523ba828755c3c59e. Log server `C:\TADeploy\logspply-webhooks-*`.
+  - Nguyên nhân (Event Log Application, không phải do thay đổi này): SQL login `TA_User` của các ứng dụng hết hạn mật khẩu ("Login failed for user 'TA_User'. Reason: The password of the account has expired."), thấy từ 17:45 giờ VN; mọi worker của portal và webhooks cùng lỗi. PENDING_OPERATOR: đổi/gia hạn mật khẩu login (thay đổi bảo mật, agent không tự làm), sau đó deploy lại webhooks.
 
 ## Git
 - Branch: feature/einvoice-multi-provider (từ origin/main 70d8b7d)
 - Commit SHA: (source commit, ghi ở report)
-- Merge: PENDING
+- Merge: xem report / hand-off
 
 ## Rủi ro, quyết định và việc còn lại
 - Chưa kiểm chứng với tài khoản Viettel SInvoice thật: phát hiện "không ký được" (`IsSigningFailure`, chuỗi "SignService") được xác nhận cho MISA; với Viettel, lỗi ký có thể về FAILED kèm lý do thay vì tạo nháp. Kiểm tra bằng Admin "Hóa đơn Sandbox" với tài khoản SInvoice thật rồi bổ sung mã lỗi nếu cần.
