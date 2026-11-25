@@ -3,7 +3,7 @@
 @{
     ViewData["Title"] = "Hóa đơn điện tử";
     ViewData["Eyebrow"] = "Thanh toán";
-    ViewData["Subtitle"] = "Kết nối MISA meInvoice hoặc Viettel SInvoice để xuất hóa đơn điện tử ngay khi đơn hàng QR được thanh toán đủ.";
+    ViewData["Subtitle"] = "Kết nối MISA meInvoice, Viettel SInvoice hoặc SoftDreams EasyInvoice để xuất hóa đơn điện tử ngay khi đơn hàng QR được thanh toán đủ.";
     var s = Model.Settings;
     var t = Model.Template;
     var p = Model.Provider;
@@ -25,6 +25,7 @@ else if (!Model.ServiceReady) { <aside class="cp-note" style="margin-bottom:14px
                         <div><dt>@UiIcon.Render("file-invoice")Phần mềm</dt><dd data-cp-einvoice-provider>@p.Name</dd></div>
                         <div><dt>@UiIcon.Render("receipt-tax")Mã số thuế</dt><dd><span class="cp-code">@s.ProviderTaxCode</span></dd></div>
                         <div><dt>@UiIcon.Render("user")Tên đăng nhập</dt><dd>@s.ProviderUsername</dd></div>
+                        @if (!p.ViaPartner) {<div><dt>@UiIcon.Render("server")Hệ thống</dt><dd data-cp-einvoice-env>@(Model.Account.Demo ? "Môi trường thử (demo)" : "Chính thức")</dd></div>}
                         <div><dt>@UiIcon.Render("clock")Kết nối lúc</dt><dd>@PaymentText.VietnamTime(s.ConnectedAt)</dd></div>
                     </dl>
                 </div>
@@ -51,7 +52,9 @@ else if (!Model.ServiceReady) { <aside class="cp-note" style="margin-bottom:14px
                     <div class="cp-field"><label asp-for="Account.Username" class="cp-label is-required">Tên đăng nhập phần mềm hóa đơn</label><div class="cp-input-wrap">@UiIcon.Render("user")<input asp-for="Account.Username" class="cp-input" maxlength="150" autocomplete="off" required disabled="@(!canEdit)" /></div><span asp-validation-for="Account.Username" class="cp-error"></span>
                         <div class="cp-hint">Viettel SInvoice: dùng tài khoản được cấp quyền gọi API (thường khác tài khoản đăng nhập web), xin Viettel mở nếu chưa có.</div></div>
                     <div class="cp-field"><label asp-for="Account.Password" class="cp-label is-required">Mật khẩu</label><div class="cp-input-wrap">@UiIcon.Render("lock")<input asp-for="Account.Password" type="password" class="cp-input" maxlength="200" autocomplete="new-password" required disabled="@(!canEdit)" value="" /></div><span asp-validation-for="Account.Password" class="cp-error"></span>
-                        <div class="cp-hint">Mật khẩu chỉ dùng để xác thực với phần mềm hóa đơn lúc kết nối; Hóa đơn tự động không lưu mật khẩu.</div></div>
+                        <div class="cp-hint">MISA, Viettel: mật khẩu chỉ dùng để xác thực lúc kết nối, Hóa đơn tự động không lưu mật khẩu. SoftDreams EasyInvoice cần mật khẩu cho mỗi lần xuất hóa đơn: mật khẩu được mã hóa trước khi lưu và không hiển thị lại.</div></div>
+                    <label class="cp-check" data-cp-einvoice-demo><input type="checkbox" name="Account.Demo" value="true" checked="@Model.Account.Demo" disabled="@(!canEdit)" /><span><strong>Dùng môi trường thử (demo) của SoftDreams</strong><span class="cp-muted" style="display:block">Chỉ áp dụng cho SoftDreams EasyInvoice, khi SoftDreams cấp tài khoản demo để kiểm tra. Hóa đơn trên môi trường thử không có giá trị.</span></span></label>
+                    <input type="hidden" name="Account.Demo" value="false" />
                 </div>
                 @if (canEdit) {<div class="cp-card__foot"><button class="cp-btn cp-btn--primary" type="submit" style="margin-left:auto">@UiIcon.Render("lock-open")<span>@(s.IsConnected ? "Kết nối lại" : "Kết nối phần mềm hóa đơn")</span></button></div>}
             </form>
@@ -78,6 +81,7 @@ else if (!Model.ServiceReady) { <aside class="cp-note" style="margin-bottom:14px
                 <div class="cp-form-grid">
                     <div class="cp-field"><label asp-for="Template.Pattern" class="cp-label">Mẫu số</label><div class="cp-input-wrap">@UiIcon.Render("hash")<input asp-for="Template.Pattern" class="cp-input" maxlength="50" placeholder="Bấm Lấy mẫu hóa đơn" disabled="@(!canEdit || !s.IsConnected)" /></div><span asp-validation-for="Template.Pattern" class="cp-error"></span>
                         @if (p == CustomerInvoiceProviders.Misa) {<div class="cp-hint">MISA dùng mã mẫu riêng (chuỗi dài), không phải số "1": bấm "Lấy mẫu hóa đơn từ MISA", chọn mẫu rồi lưu.</div>}
+                        else if (!p.HasTemplates) {<div class="cp-hint" data-cp-template-manual>Nhập mẫu số và ký hiệu đã đăng ký trên @p.Short, VD mẫu số 1 và ký hiệu C26TAA (ghép lại là 1C26TAA).</div>}
                         else {<div class="cp-hint">Bấm "Lấy mẫu hóa đơn từ @p.Short" để chọn đúng mẫu số đã đăng ký.</div>}</div>
                     <div class="cp-field"><label asp-for="Template.Series" class="cp-label">Ký hiệu</label><div class="cp-input-wrap">@UiIcon.Render("hash")<input asp-for="Template.Series" class="cp-input" maxlength="20" placeholder="VD: C26TAA" disabled="@(!canEdit || !s.IsConnected)" /></div><span asp-validation-for="Template.Series" class="cp-error"></span></div>
                 </div>
@@ -109,8 +113,8 @@ else if (!Model.ServiceReady) { <aside class="cp-note" style="margin-bottom:14px
             @if (canEdit && s.IsConnected)
             {
                 <div class="cp-card__foot">
-                    <button class="cp-btn cp-btn--ghost" type="submit" formaction="@Url.Action("Templates")" formnovalidate>@UiIcon.Render("refresh")<span>Lấy mẫu hóa đơn từ @p.Short</span></button>
-                    @if (s.IsReady) {<button class="cp-btn cp-btn--ghost" type="submit" formaction="@Url.Action("Preview")" formtarget="_blank" formnovalidate>@UiIcon.Render("eye")<span>Xem thử hóa đơn nháp</span></button>}
+                    @if (p.HasTemplates) {<button class="cp-btn cp-btn--ghost" type="submit" formaction="@Url.Action("Templates")" formnovalidate>@UiIcon.Render("refresh")<span>Lấy mẫu hóa đơn từ @p.Short</span></button>}
+                    @if (s.IsReady && p.ViaPartner) {<button class="cp-btn cp-btn--ghost" type="submit" formaction="@Url.Action("Preview")" formtarget="_blank" formnovalidate>@UiIcon.Render("eye")<span>Xem thử hóa đơn nháp</span></button>}
                     <button class="cp-btn cp-btn--primary" type="submit" style="margin-left:auto">@UiIcon.Render("device-floppy")<span>Lưu cài đặt</span></button>
                 </div>
             }

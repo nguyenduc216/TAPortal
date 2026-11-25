@@ -492,5 +492,15 @@
     "migration_status": "EXECUTED",
     "publish_status": "DEPLOYED portal+invoice; webhooks ROLLED_BACK (SQL login TA_User password expired)",
     "merge_status": "MERGED"
+  },
+  {
+    "change_id": "TINGEE-INTEGRATION-CHG-20261125T234234Z-EAFC57",
+    "created_at": "2026-11-25T23:42:34.399507+00:00",
+    "title": "SoftDreams EasyInvoice provider, integrated directly (migration 068)",
+    "status": "PLANNED",
+    "commit_sha": null,
+    "migration_status": "NOT_EXECUTED",
+    "publish_status": "NOT_PUBLISHED",
+    "merge_status": "PENDING_APPROVAL"
   }
 ]

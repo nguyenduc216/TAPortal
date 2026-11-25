@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using TACustomerPortal.Web.Models;
 using TACustomerPortal.Web.Security;
 using TACustomerPortal.Web.Services;
+using TAPortal.Integrations.SoftDreams;
 using TAPortal.Integrations.Tingee;
 
 namespace TACustomerPortal.Web.Controllers;
@@ -10,8 +11,10 @@ namespace TACustomerPortal.Web.Controllers;
 // provider account, picks the template (mẫu số + ký hiệu) and turns on automatic invoices for paid QR orders. Calls go through
 // T.A's e-invoice partner with the company's merchant; the provider password is passed on once and never stored. Same flow as
 // the Admin "Hóa đơn Sandbox". The page also shows what still stands between the company and fully automatic signed invoices.
+// SoftDreams EasyInvoice (operator 2026-11-26) is called directly: the login is checked with one read-only call and the
+// password is kept encrypted (IInvoiceSecretProtector), because EasyInvoice needs it on every call.
 public sealed class EInvoiceController(ICurrentCustomerContext customer, IPaymentStore payments, IOrderInvoiceStore store, ITingeeInvoiceApi invoices,
-    TimeProvider clock, ILogger<EInvoiceController> logger) : CustomerAreaController(customer)
+    TimeProvider clock, ILogger<EInvoiceController> logger, IEasyInvoiceApi? easyInvoice = null, IInvoiceSecretProtector? secrets = null) : CustomerAreaController(customer)
 {
     public async Task<IActionResult> Index()
     {
@@ -34,7 +37,10 @@ public sealed class EInvoiceController(ICurrentCustomerContext customer, IPaymen
         if (await payments.MerchantIdAsync(m.CustomerId) is not long merchantId)
             return await Page(m, settings, account: keep, connect: true, error: "Doanh nghiệp chưa được kích hoạt dịch vụ thanh toán.");
         if (!invoices.IsConfigured) return await Page(m, settings, account: keep, connect: true, error: "Dịch vụ hóa đơn chưa sẵn sàng. Vui lòng liên hệ bộ phận hỗ trợ Hóa đơn tự động.");
+        if (!provider.ViaPartner && (input.Username?.Contains(':') == true || input.Password?.Contains(':') == true))
+            ModelState.AddModelError("Account.Password", $"Tên đăng nhập và mật khẩu {provider.Short} không được chứa dấu \":\" khi kết nối qua API. Đổi mật khẩu trên {provider.Short} rồi kết nối lại.");
         if (!ModelState.IsValid) return await Page(m, settings, account: keep, connect: true, status: StatusCodes.Status400BadRequest);
+        if (!provider.ViaPartner) return await ConnectDirect(m, settings, provider, merchantId, input, keep);
         // Another provider is another account at the partner: create it, then remove the old one.
         var sameProvider = settings.Provider == provider.Code;
         long accountId;
@@ -69,12 +75,50 @@ public sealed class EInvoiceController(ICurrentCustomerContext customer, IPaymen
         await store.SaveSettingsAsync(settings with
         {
             Provider = provider.Code, ProviderAccountId = accountId, ProviderTaxCode = input.TaxCode, ProviderUsername = input.Username,
-            ConnectedAt = clock.GetUtcNow().UtcDateTime,
+            ConnectedAt = clock.GetUtcNow().UtcDateTime, ProviderSecret = null,
             InvoicePattern = sameSeller ? settings.InvoicePattern : null, InvoiceSeries = sameSeller ? settings.InvoiceSeries : null,
             AutoIssueEnabled = sameSeller && settings.AutoIssueEnabled
         }, Actor);
         logger.LogInformation("EINVOICE_CONNECTED customer={Customer} provider={Provider} account={Account} update={Update}", m.CustomerId, provider.Code, accountId, settings.ProviderAccountId is not null);
         Flash(sameSeller && settings.HasTemplate ? $"Đã kết nối tài khoản {provider.Name}." : $"Đã kết nối tài khoản {provider.Name}. Bước tiếp theo: chọn mẫu hóa đơn.");
+        return RedirectToAction(nameof(Index));
+    }
+
+    /// <summary>
+    /// SoftDreams EasyInvoice: no account at the partner. The login is checked by looking up one unknown invoice key (read
+    /// only: nothing is created), then kept encrypted. A previous partner account (MISA, Viettel) is removed.
+    /// </summary>
+    private async Task<IActionResult> ConnectDirect(CustomerMembership m, CustomerInvoiceSettings settings, CustomerInvoiceProvider provider, long merchantId,
+        EInvoiceAccountInput input, EInvoiceAccountInput keep)
+    {
+        if (easyInvoice is null || secrets is null)
+            return await Page(m, settings, account: keep, connect: true, error: "Dịch vụ hóa đơn chưa sẵn sàng. Vui lòng liên hệ bộ phận hỗ trợ Hóa đơn tự động.");
+        var login = new EasyInvoiceCredentials(input.Username!, input.Password!, input.TaxCode!, input.Demo);
+        try { await easyInvoice.GetByIkeysAsync(login, ["KIEMTRA-" + Guid.NewGuid().ToString("N")[..12].ToUpperInvariant()]); }
+        catch (Exception ex) when (ex is EasyInvoiceApiException or HttpRequestException or TaskCanceledException)
+        {
+            logger.LogWarning(ex, "EINVOICE_CONNECT_FAILED customer={Customer} provider={Provider}", m.CustomerId, provider.Code);
+            return await Page(m, settings, account: keep, connect: true, error: $"Kết nối {provider.Name} không thành công. " + OrderInvoicer.Reason(ex, provider));
+        }
+        if (settings.Info.ViaPartner && settings.ProviderAccountId is long oldAccount)
+        {
+            try { await invoices.DeleteAccountAsync(merchantId, oldAccount); }
+            catch (Exception ex) when (ex is TingeeApiException or HttpRequestException or TaskCanceledException or TingeeNotConfiguredException)
+            {
+                logger.LogWarning(ex, "EINVOICE_OLD_ACCOUNT_NOT_REMOVED customer={Customer} account={Account}", m.CustomerId, oldAccount);
+            }
+        }
+        var sameSeller = settings.Provider == provider.Code && string.Equals(settings.ProviderTaxCode, input.TaxCode, StringComparison.Ordinal);
+        await store.SaveSettingsAsync(settings with
+        {
+            Provider = provider.Code, ProviderAccountId = null, ProviderTaxCode = input.TaxCode, ProviderUsername = input.Username,
+            ProviderSecret = secrets.Protect(new EasyInvoiceSecret(input.Password!, input.Demo)),
+            ConnectedAt = clock.GetUtcNow().UtcDateTime,
+            InvoicePattern = sameSeller ? settings.InvoicePattern : null, InvoiceSeries = sameSeller ? settings.InvoiceSeries : null,
+            AutoIssueEnabled = sameSeller && settings.AutoIssueEnabled
+        }, Actor);
+        logger.LogInformation("EINVOICE_CONNECTED customer={Customer} provider={Provider} demo={Demo}", m.CustomerId, provider.Code, input.Demo);
+        Flash(sameSeller && settings.HasTemplate ? $"Đã kết nối tài khoản {provider.Name}." : $"Đã kết nối tài khoản {provider.Name}. Bước tiếp theo: nhập mẫu số và ký hiệu hóa đơn.");
         return RedirectToAction(nameof(Index));
     }
 
@@ -84,7 +128,7 @@ public sealed class EInvoiceController(ICurrentCustomerContext customer, IPaymen
         if (await Current() is not { } m) return SelectCustomer();
         if (!CanManage(m)) return Forbid();
         var settings = await store.SettingsAsync(m.CustomerId);
-        if (settings.ProviderAccountId is long accountId && await payments.MerchantIdAsync(m.CustomerId) is long merchantId)
+        if (settings.Info.ViaPartner && settings.ProviderAccountId is long accountId && await payments.MerchantIdAsync(m.CustomerId) is long merchantId)
         {
             try { await invoices.DeleteAccountAsync(merchantId, accountId); }
             catch (TingeeApiException ex) when (ex.Code == "1057") { /* already gone at the partner */ }
@@ -95,7 +139,7 @@ public sealed class EInvoiceController(ICurrentCustomerContext customer, IPaymen
                 return RedirectToAction(nameof(Index));
             }
         }
-        await store.SaveSettingsAsync(settings with { ProviderAccountId = null, InvoicePattern = null, InvoiceSeries = null, AutoIssueEnabled = false, ConnectedAt = null }, Actor);
+        await store.SaveSettingsAsync(settings with { ProviderAccountId = null, ProviderSecret = null, InvoicePattern = null, InvoiceSeries = null, AutoIssueEnabled = false, ConnectedAt = null }, Actor);
         logger.LogInformation("EINVOICE_DISCONNECTED customer={Customer}", m.CustomerId);
         Flash($"Đã gỡ kết nối {settings.Info.Name} và tắt xuất hóa đơn tự động.");
         return RedirectToAction(nameof(Index));
@@ -108,6 +152,8 @@ public sealed class EInvoiceController(ICurrentCustomerContext customer, IPaymen
         if (await Current() is not { } m) return SelectCustomer();
         if (!CanManage(m)) return Forbid();
         var settings = await store.SettingsAsync(m.CustomerId);
+        if (!settings.Info.HasTemplates)
+            return await Page(m, settings, error: $"{settings.Info.Name} không cho lấy danh sách mẫu qua kết nối này: nhập mẫu số và ký hiệu đã đăng ký (VD mẫu số 1, ký hiệu C26TAA).");
         if (!settings.IsConnected || await payments.MerchantIdAsync(m.CustomerId) is not long merchantId)
             return await Page(m, settings, error: $"Kết nối tài khoản {settings.Info.Name} trước.");
         try
@@ -175,6 +221,11 @@ public sealed class EInvoiceController(ICurrentCustomerContext customer, IPaymen
         if (await Current() is not { } m) return SelectCustomer();
         if (!CanManage(m)) return Forbid();
         var settings = await store.SettingsAsync(m.CustomerId);
+        if (!settings.Info.ViaPartner)
+        {
+            Flash($"Xem thử hóa đơn nháp chưa có cho {settings.Info.Name}. Xuất thử một đơn hàng nhỏ để kiểm tra mẫu.", error: true);
+            return RedirectToAction(nameof(Index));
+        }
         if (!settings.IsReady || await payments.MerchantIdAsync(m.CustomerId) is not long merchantId)
         {
             Flash($"Kết nối {settings.Info.Name} và lưu mẫu hóa đơn trước khi xem thử.", error: true);
@@ -204,7 +255,8 @@ public sealed class EInvoiceController(ICurrentCustomerContext customer, IPaymen
         if (error is not null) ModelState.AddModelError(string.Empty, PartnerText.Scrub(error));
         if (status is int code) Response.StatusCode = code;
         else if (error is not null) Response.StatusCode = StatusCodes.Status400BadRequest;
-        account ??= new EInvoiceAccountInput { Provider = settings.Provider, TaxCode = settings.ProviderTaxCode ?? m.TaxCode, Username = settings.ProviderUsername };
+        account ??= new EInvoiceAccountInput { Provider = settings.Provider, TaxCode = settings.ProviderTaxCode ?? m.TaxCode, Username = settings.ProviderUsername,
+            Demo = !settings.Info.ViaPartner && secrets?.Unprotect(settings.ProviderSecret)?.Demo == true };
         template ??= new EInvoiceTemplateInput { Pattern = settings.InvoicePattern, Series = settings.InvoiceSeries, AutoIssueEnabled = settings.AutoIssueEnabled, SendEmail = settings.SendEmail, IssueMode = settings.Mode };
         var linked = await payments.MerchantIdAsync(m.CustomerId) is not null;
         var today = DateOnly.FromDateTime(clock.GetUtcNow().ToOffset(TingeeSignature.VietnamOffset).DateTime);

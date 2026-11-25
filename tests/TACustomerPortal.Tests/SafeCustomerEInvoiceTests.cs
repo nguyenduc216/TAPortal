@@ -445,7 +445,7 @@ public sealed class SafeCustomerEInvoiceTests
         Assert.Equal(HttpStatusCode.BadRequest, r.StatusCode);
         Assert.Empty(api.Saved);
         Assert.False(invoices.Settings.ContainsKey(A));
-        Assert.Equal([TingeeInvoiceProviders.Misa, TingeeInvoiceProviders.SInvoice], CustomerInvoiceProviders.All.Select(p => p.Code));
+        Assert.Equal([TingeeInvoiceProviders.Misa, TingeeInvoiceProviders.SInvoice, CustomerInvoiceProviders.SoftDreamsCode], CustomerInvoiceProviders.All.Select(p => p.Code));
     }
 
     [Fact]
@@ -611,7 +611,7 @@ public sealed class SafeCustomerEInvoiceTests
             var b = o.ContactId is Guid c ? Payments.Contacts.First(x => x.Contact.Id == c).Contact : null;
             return Task.FromResult<OrderInvoiceJob?>(new(customerId, orderId, o.OrderNo, o.Description, code, attempts[orderId],
                 Payments.Merchants.TryGetValue(customerId, out var m) ? m : null, b?.Type, b?.Name, b?.LegalName, b?.TaxCode, b?.Address, b?.Phone, b?.Email,
-                o.Lines.Select(l => new OrderInvoiceLine(l.LineNumber, l.ItemName, l.UnitName, l.Quantity, l.UnitPrice, l.TaxRateCode)).ToList(),
+                o.Lines.Select(l => new OrderInvoiceLine(l.LineNumber, l.ItemName, l.UnitName, l.Quantity, l.UnitPrice, l.TaxRateCode, l.AmountBeforeTax, l.TaxAmount)).ToList(),
                 o.InvoiceStatus == OrderInvoiceStatus.Draft));
         }
 

@@ -31,13 +31,13 @@ public sealed class SqlOrderInvoiceStore(IConfiguration configuration) : IOrderI
         await using var cn = await Open(ct);
         await using var cmd = Command(cn, null, """
 SELECT Provider,ProviderAccountId,ProviderTaxCode,ProviderUsername,InvoicePattern,InvoiceSeries,AutoIssueEnabled,SendEmail,AutoIssueFrom,ConnectedAt,
- IssueMode,HsmConfirmedAt,HsmConfirmedBy
+ IssueMode,HsmConfirmedAt,HsmConfirmedBy,ProviderSecret
 FROM dbo.CustomerInvoiceSettings WHERE CustomerId=@c
 """, ("@c", customerId));
         await using var r = await cmd.ExecuteReaderAsync(ct);
         return await r.ReadAsync(ct)
             ? new(customerId, r.GetString(0), r.IsDBNull(1) ? null : r.GetInt64(1), S(r, 2), S(r, 3), S(r, 4), S(r, 5), r.GetBoolean(6), r.GetBoolean(7), D(r, 8), D(r, 9),
-                S(r, 10), D(r, 11), r.IsDBNull(12) ? null : r.GetGuid(12))
+                S(r, 10), D(r, 11), r.IsDBNull(12) ? null : r.GetGuid(12), r.IsDBNull(13) ? null : (byte[])r[13])
             : CustomerInvoiceSettings.Empty(customerId);
     }
 
@@ -47,13 +47,15 @@ FROM dbo.CustomerInvoiceSettings WHERE CustomerId=@c
         await using var cmd = Command(cn, null, """
 UPDATE dbo.CustomerInvoiceSettings SET Provider=@p,ProviderAccountId=@acc,ProviderTaxCode=@tax,ProviderUsername=@user,InvoicePattern=@pattern,InvoiceSeries=@series,
  AutoIssueEnabled=@auto,SendEmail=@email,AutoIssueFrom=@from,ConnectedAt=@connected,IssueMode=@mode,HsmConfirmedAt=@hsmAt,HsmConfirmedBy=@hsmBy,
- UpdatedAt=SYSUTCDATETIME(),UpdatedBy=@actor WHERE CustomerId=@c;
+ ProviderSecret=@secret,UpdatedAt=SYSUTCDATETIME(),UpdatedBy=@actor WHERE CustomerId=@c;
 IF @@ROWCOUNT=0 INSERT dbo.CustomerInvoiceSettings(CustomerId,Provider,ProviderAccountId,ProviderTaxCode,ProviderUsername,InvoicePattern,InvoiceSeries,AutoIssueEnabled,SendEmail,AutoIssueFrom,ConnectedAt,
- IssueMode,HsmConfirmedAt,HsmConfirmedBy,UpdatedBy)
- VALUES(@c,@p,@acc,@tax,@user,@pattern,@series,@auto,@email,@from,@connected,@mode,@hsmAt,@hsmBy,@actor);
+ IssueMode,HsmConfirmedAt,HsmConfirmedBy,ProviderSecret,UpdatedBy)
+ VALUES(@c,@p,@acc,@tax,@user,@pattern,@series,@auto,@email,@from,@connected,@mode,@hsmAt,@hsmBy,@secret,@actor);
 """, ("@c", s.CustomerId), ("@p", s.Provider), ("@acc", s.ProviderAccountId), ("@tax", s.ProviderTaxCode), ("@user", s.ProviderUsername), ("@pattern", s.InvoicePattern),
             ("@series", s.InvoiceSeries), ("@auto", s.AutoIssueEnabled), ("@email", s.SendEmail), ("@from", s.AutoIssueFrom), ("@connected", s.ConnectedAt),
             ("@mode", s.IssueMode), ("@hsmAt", s.HsmConfirmedAt), ("@hsmBy", s.HsmConfirmedBy), ("@actor", actor));
+        // VARBINARY(MAX): AddWithValue would infer the size from the value; NULL needs the type stated.
+        cmd.Parameters.Add(new SqlParameter("@secret", System.Data.SqlDbType.VarBinary, -1) { Value = (object?)s.ProviderSecret ?? DBNull.Value });
         await cmd.ExecuteNonQueryAsync(ct);
     }
 
@@ -64,7 +66,7 @@ IF @@ROWCOUNT=0 INSERT dbo.CustomerInvoiceSettings(CustomerId,Provider,ProviderA
 SELECT TOP (@max) o.CustomerId,o.Id
 FROM dbo.CustomerOrders o JOIN dbo.CustomerInvoiceSettings s ON s.CustomerId=o.CustomerId
 WHERE o.Status='PAID' AND o.AutoIssueInvoice=1 AND o.InvoiceStatus IN ('NONE','PENDING')
-  AND s.AutoIssueEnabled=1 AND s.ProviderAccountId IS NOT NULL AND s.InvoicePattern IS NOT NULL AND s.InvoiceSeries IS NOT NULL
+  AND s.AutoIssueEnabled=1 AND (s.ProviderAccountId IS NOT NULL OR s.ProviderSecret IS NOT NULL) AND s.InvoicePattern IS NOT NULL AND s.InvoiceSeries IS NOT NULL
   AND s.AutoIssueFrom IS NOT NULL AND o.PaidAt>=s.AutoIssueFrom
   AND (o.InvoiceNextAttemptAt IS NULL OR o.InvoiceNextAttemptAt<=@now) AND (o.InvoiceLockedUntil IS NULL OR o.InvoiceLockedUntil<@now)
 ORDER BY o.PaidAt
@@ -122,9 +124,10 @@ WHERE o.Id=@id AND o.CustomerId=@c
                 S(r, 5), S(r, 6), S(r, 7), S(r, 8), S(r, 9), S(r, 10), S(r, 11), []);
         }
         var lines = new List<OrderInvoiceLine>();
-        await using (var linesCmd = Command(cn, tx, "SELECT LineNumber,ItemName,UnitName,Quantity,UnitPrice,TaxRateCode FROM dbo.CustomerOrderLines WHERE OrderId=@id ORDER BY LineNumber", ("@id", orderId)))
+        await using (var linesCmd = Command(cn, tx, "SELECT LineNumber,ItemName,UnitName,Quantity,UnitPrice,TaxRateCode,AmountBeforeTax,TaxAmount FROM dbo.CustomerOrderLines WHERE OrderId=@id ORDER BY LineNumber", ("@id", orderId)))
         await using (var r = await linesCmd.ExecuteReaderAsync(ct))
-            while (await r.ReadAsync(ct)) lines.Add(new(r.GetInt32(0), r.GetString(1), S(r, 2), r.GetDecimal(3), r.GetDecimal(4), r.GetString(5)));
+            while (await r.ReadAsync(ct)) lines.Add(new(r.GetInt32(0), r.GetString(1), S(r, 2), r.GetDecimal(3), r.GetDecimal(4), r.GetString(5),
+                r.IsDBNull(6) ? null : r.GetDecimal(6), r.IsDBNull(7) ? null : r.GetDecimal(7)));
         await tx.CommitAsync(ct);
         return job with { Lines = lines, FromDraft = fromDraft };
     }

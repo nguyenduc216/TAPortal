@@ -184,8 +184,9 @@ public sealed class OrdersController(ICurrentCustomerContext customer, IPaymentS
         if (await Current() is not { } m) return SelectCustomer();
         var order = await store.OrderAsync(m.CustomerId, id);
         if (order is null || order.InvoiceStatus is not (OrderInvoiceStatus.Issued or OrderInvoiceStatus.Draft) || order.InvoiceCode is not string code) return NotFound();
-        if (await store.MerchantIdAsync(m.CustomerId) is not long merchantId) return NotFound();
         var settings = await settingsStore.SettingsAsync(m.CustomerId);
+        if (!settings.Info.ViaPartner) return await DirectInvoicePdf(id, code, settings);
+        if (await store.MerchantIdAsync(m.CustomerId) is not long merchantId) return NotFound();
         try
         {
             var pdf = await invoices.DownloadAsync(merchantId, code, settings.ProviderAccountId, HttpContext.RequestAborted);
@@ -195,6 +196,25 @@ public sealed class OrdersController(ICurrentCustomerContext customer, IPaymentS
         catch (Exception ex) when (ex is FormatException or TingeeApiException or HttpRequestException or TaskCanceledException or TingeeNotConfiguredException)
         {
             Flash("Chưa tải được hóa đơn. " + (ex is FormatException ? "File PDF không đúng định dạng." : OrderInvoicer.Reason(ex)), error: true);
+            return RedirectToAction(nameof(Details), new { id });
+        }
+    }
+
+    /// <summary>SoftDreams EasyInvoice: the PDF straight from EasyInvoice with the company's stored login (operator 2026-11-26).</summary>
+    private async Task<IActionResult> DirectInvoicePdf(Guid id, string code, TAPortal.Integrations.Tingee.CustomerInvoiceSettings settings)
+    {
+        var easyInvoice = HttpContext.RequestServices.GetService<TAPortal.Integrations.SoftDreams.IEasyInvoiceApi>();
+        var login = OrderInvoicer.EasyInvoiceLogin(settings, HttpContext.RequestServices.GetService<TAPortal.Integrations.SoftDreams.IInvoiceSecretProtector>());
+        try
+        {
+            if (easyInvoice is null || login is null) throw new TAPortal.Integrations.SoftDreams.EasyInvoiceNotConnectedException();
+            var pdf = await easyInvoice.GetPdfAsync(login, TAPortal.Integrations.SoftDreams.EasyInvoiceXml.Pattern(settings), code, HttpContext.RequestAborted);
+            return File(pdf, "application/pdf");
+        }
+        catch (Exception ex) when (ex is TAPortal.Integrations.SoftDreams.EasyInvoiceApiException or TAPortal.Integrations.SoftDreams.EasyInvoiceNotConnectedException
+            or HttpRequestException or TaskCanceledException)
+        {
+            Flash("Chưa tải được hóa đơn. " + OrderInvoicer.Reason(ex, settings.Info), error: true);
             return RedirectToAction(nameof(Details), new { id });
         }
     }

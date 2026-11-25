@@ -4,7 +4,10 @@ using TAPortal.Integrations.Tingee;
 
 namespace TACustomerPortal.Web.Models;
 
-/// <summary>The company's login at its e-invoice provider. The password is sent to the e-invoice service once and never stored by T.A.</summary>
+/// <summary>
+/// The company's login at its e-invoice provider. MISA/Viettel: the password is sent to the e-invoice service once and never
+/// stored. SoftDreams EasyInvoice needs it on every call: kept encrypted (operator 2026-11-26).
+/// </summary>
 public sealed class EInvoiceAccountInput
 {
     /// <summary><see cref="CustomerInvoiceProviders"/> code; when not posted, the provider already saved.</summary>
@@ -21,6 +24,9 @@ public sealed class EInvoiceAccountInput
     [Required(ErrorMessage = "Nhập mật khẩu phần mềm hóa đơn.")]
     [StringLength(200, ErrorMessage = "Mật khẩu tối đa 200 ký tự.")]
     public string? Password { get; set; }
+
+    /// <summary>SoftDreams EasyInvoice only: connect to SoftDreams' demo system (testing) instead of production.</summary>
+    public bool Demo { get; set; }
 }
 
 public sealed class EInvoiceTemplateInput

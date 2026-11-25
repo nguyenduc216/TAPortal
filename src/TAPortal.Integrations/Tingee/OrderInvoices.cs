@@ -1,22 +1,28 @@
 using System.Globalization;
 using Microsoft.Extensions.Logging;
+using TAPortal.Integrations.SoftDreams;
 
 namespace TAPortal.Integrations.Tingee;
 
-// Automatic e-invoice for paid QR orders (operator request 2026-11-06, MISA meInvoice; Viettel SInvoice added 2026-11-23): a
+// Automatic e-invoice for paid QR orders (operator request 2026-11-06, MISA meInvoice; Viettel SInvoice added 2026-11-23;
+// SoftDreams EasyInvoice 2026-11-26, called directly with the company's login kept encrypted, see SoftDreams/EasyInvoice.cs): a
 // company connects its own provider account and picks a template on the Customer Portal; when an order with "tự động xuất hóa đơn" is fully paid, the webhook
 // site's worker issues the invoice through Tingee's e-invoice API. The invoice code is fixed per order, so a retry after a
 // lost answer can never issue a second invoice (Tingee answers 2034 "already issued").
 
-/// <summary>dbo.CustomerInvoiceSettings (migration 022). The provider password goes to the partner only and is never stored.</summary>
+/// <summary>
+/// dbo.CustomerInvoiceSettings (migration 022). For providers reached through the e-invoice partner (MISA, Viettel) the
+/// password goes to the partner only and is never stored. SoftDreams EasyInvoice has no partner in between and needs the
+/// login on every call: <paramref name="ProviderSecret"/> (migration 068) holds it encrypted (IInvoiceSecretProtector, operator 2026-11-26).
+/// </summary>
 public sealed record CustomerInvoiceSettings(
     Guid CustomerId, string Provider, long? ProviderAccountId, string? ProviderTaxCode, string? ProviderUsername, string? InvoicePattern, string? InvoiceSeries,
     bool AutoIssueEnabled, bool SendEmail, DateTime? AutoIssueFrom = null, DateTime? ConnectedAt = null,
-    string? IssueMode = null, DateTime? HsmConfirmedAt = null, Guid? HsmConfirmedBy = null)
+    string? IssueMode = null, DateTime? HsmConfirmedAt = null, Guid? HsmConfirmedBy = null, byte[]? ProviderSecret = null)
 {
     public static CustomerInvoiceSettings Empty(Guid customerId) => new(customerId, TingeeInvoiceProviders.Misa, null, null, null, null, null, false, true);
 
-    public bool IsConnected => ProviderAccountId is > 0;
+    public bool IsConnected => Info.ViaPartner ? ProviderAccountId is > 0 : ProviderSecret is { Length: > 0 } && !string.IsNullOrWhiteSpace(ProviderUsername);
     public bool HasTemplate => !string.IsNullOrWhiteSpace(InvoicePattern) && !string.IsNullOrWhiteSpace(InvoiceSeries);
     /// <summary>Connected with a template: invoices can be issued (by hand, or automatically when <see cref="AutoIssueEnabled"/>).</summary>
     public bool IsReady => IsConnected && HasTemplate;
@@ -29,18 +35,24 @@ public sealed record CustomerInvoiceSettings(
 /// <summary>An e-invoice provider a company can connect on the Customer Portal (dbo.CustomerInvoiceSettings.Provider, CK_CIS_Provider).</summary>
 /// <param name="Short">Short name in messages ("sai thông tin đăng nhập MISA").</param>
 /// <param name="Signer">The provider's remote-signing (HSM) product needed for automatic signed invoices.</param>
-/// <param name="SendsEmail">The provider emails the invoice to the buyer through the API (Tingee: only XCyber and MISA).</param>
-public sealed record CustomerInvoiceProvider(string Code, string Name, string Short, string Signer, bool SendsEmail);
+/// <param name="SendsEmail">The provider emails the invoice to the buyer through the API (Tingee: only XCyber and MISA; EasyInvoice: CusEmails).</param>
+/// <param name="ViaPartner">Reached through T.A's e-invoice partner (account id at the partner); false: called directly (SoftDreams).</param>
+/// <param name="HasTemplates">The template list can be read through the API; otherwise mẫu số and ký hiệu are typed in.</param>
+public sealed record CustomerInvoiceProvider(string Code, string Name, string Short, string Signer, bool SendsEmail, bool ViaPartner = true, bool HasTemplates = true);
 
 /// <summary>
 /// Providers offered to companies (operator 2026-11-23: MISA meInvoice and Viettel SInvoice; VNPT is not offered by the
-/// e-invoice partner and needs its own integration). Codes are the partner's provider codes.
+/// e-invoice partner and needs its own integration; operator 2026-11-26: SoftDreams EasyInvoice, integrated directly).
+/// Codes are the partner's provider codes; "softdreams" is T.A's own code.
 /// </summary>
 public static class CustomerInvoiceProviders
 {
+    public const string SoftDreamsCode = "softdreams";
     public static readonly CustomerInvoiceProvider Misa = new(TingeeInvoiceProviders.Misa, "MISA meInvoice", "MISA", "chữ ký số HSM của MISA (MISA eSign)", true);
     public static readonly CustomerInvoiceProvider Viettel = new(TingeeInvoiceProviders.SInvoice, "Viettel SInvoice", "Viettel", "chữ ký số từ xa của Viettel-CA", false);
-    public static readonly IReadOnlyList<CustomerInvoiceProvider> All = [Misa, Viettel];
+    public static readonly CustomerInvoiceProvider SoftDreams = new(SoftDreamsCode, "SoftDreams EasyInvoice", "EasyInvoice", "chữ ký số ký trên máy chủ EasyInvoice (ký server/HSM)", true,
+        ViaPartner: false, HasTemplates: false);
+    public static readonly IReadOnlyList<CustomerInvoiceProvider> All = [Misa, Viettel, SoftDreams];
 
     public static bool IsSupported(string? code) => All.Any(p => p.Code == code);
     public static CustomerInvoiceProvider Get(string? code) => All.FirstOrDefault(p => p.Code == code) ?? Misa;
@@ -133,7 +145,9 @@ public static class OrderInvoiceStatus
     public const string None = "NONE", Pending = "PENDING", Issued = "ISSUED", Failed = "FAILED", Draft = "DRAFT";
 }
 
-public sealed record OrderInvoiceLine(int LineNumber, string ItemName, string? UnitName, decimal Quantity, decimal UnitPrice, string TaxRateCode);
+/// <param name="AmountBeforeTax">The line's stored amount before tax and <paramref name="TaxAmount"/> its tax (dbo.CustomerOrderLines): with prices that include VAT they are not quantity × price.</param>
+public sealed record OrderInvoiceLine(int LineNumber, string ItemName, string? UnitName, decimal Quantity, decimal UnitPrice, string TaxRateCode,
+    decimal? AmountBeforeTax = null, decimal? TaxAmount = null);
 
 /// <summary>Everything needed to issue one order's invoice, read when the order is claimed.</summary>
 public sealed record OrderInvoiceJob(
@@ -250,7 +264,8 @@ public static class OrderInvoiceRules
 /// FAILED with the reason, for the company to fix its settings and issue again. When only the signing fails, a draft is
 /// created instead and the order shows DRAFT, not an error (operator 2026-11-07).
 /// </summary>
-public sealed class OrderInvoicer(IOrderInvoiceStore store, ITingeeInvoiceApi invoices, TimeProvider clock, ILogger<OrderInvoicer> logger)
+public sealed class OrderInvoicer(IOrderInvoiceStore store, ITingeeInvoiceApi invoices, TimeProvider clock, ILogger<OrderInvoicer> logger,
+    IEasyInvoiceApi? easyInvoice = null, IInvoiceSecretProtector? secrets = null)
 {
     public const int MaxAutoAttempts = 6;
     public static readonly TimeSpan Lease = TimeSpan.FromMinutes(3);
@@ -274,6 +289,7 @@ public sealed class OrderInvoicer(IOrderInvoiceStore store, ITingeeInvoiceApi in
         var now = clock.GetUtcNow();
         var job = await store.ClaimAsync(customerId, orderId, now.UtcDateTime, now.UtcDateTime + Lease, manual, ct);
         if (job is null) return new(OrderInvoiceStatus.None, "Đơn chưa thanh toán đủ, đã có hóa đơn hoặc đang được xuất.");
+        if (!settings.Info.ViaPartner) return await IssueDirect(customerId, orderId, settings, job, manual, now, ct);
         if (job.MerchantId is null)
         {
             const string notLinked = "Doanh nghiệp chưa được T.A kích hoạt dịch vụ thanh toán.";
@@ -354,6 +370,69 @@ public sealed class OrderInvoicer(IOrderInvoiceStore store, ITingeeInvoiceApi in
         return new(OrderInvoiceStatus.Issued, result.InvoiceNumber is string n ? $"Đã xuất hóa đơn số {n}." : "Đã xuất hóa đơn.", result.InvoiceNumber);
     }
 
+    /// <summary>The company's EasyInvoice login from the encrypted settings; null when it is missing or unreadable on this server.</summary>
+    public static EasyInvoiceCredentials? EasyInvoiceLogin(CustomerInvoiceSettings s, IInvoiceSecretProtector? secrets) =>
+        secrets?.Unprotect(s.ProviderSecret) is { } secret && !string.IsNullOrWhiteSpace(s.ProviderUsername) && !string.IsNullOrWhiteSpace(s.ProviderTaxCode)
+            ? new(s.ProviderUsername!, secret.Password, s.ProviderTaxCode!, secret.Demo)
+            : null;
+
+    /// <summary>
+    /// SoftDreams EasyInvoice, called directly. The order's fixed invoice code is the Ikey: the invoice is looked up first, so
+    /// an attempt whose answer was lost is recognised as issued instead of failing or issuing again; importAndIssueInvoice
+    /// itself updates an unsigned invoice with the same Ikey (e.g. an earlier draft) and signs it. EasyInvoice emails the
+    /// buyer itself when the invoice carries CusEmails.
+    /// </summary>
+    private async Task<OrderInvoiceOutcome> IssueDirect(Guid customerId, Guid orderId, CustomerInvoiceSettings settings, OrderInvoiceJob job, bool manual,
+        DateTimeOffset now, CancellationToken ct)
+    {
+        var p = settings.Info;
+        if (job.Lines.Count == 0)
+        {
+            const string empty = "Đơn hàng không có dòng hàng hóa/dịch vụ.";
+            await store.FailAsync(customerId, orderId, empty, ct);
+            return new(OrderInvoiceStatus.Failed, empty);
+        }
+        if (easyInvoice is null || EasyInvoiceLogin(settings, secrets) is not { } login)
+            return await NotIssued(customerId, orderId, job, manual, new EasyInvoiceNotConnectedException(), now.UtcDateTime, ct, p);
+
+        var pattern = EasyInvoiceXml.Pattern(settings);
+        var email = settings.SendEmail ? job.BuyerEmail : null;
+        var xml = EasyInvoiceXml.Build(job, DateOnly.FromDateTime(now.ToOffset(TingeeSignature.VietnamOffset).DateTime), sendEmail: email is { Length: > 0 });
+        OrderInvoiceIssued result;
+        try
+        {
+            var existing = (await easyInvoice.GetByIkeysAsync(login, [job.InvoiceCode], ct)).FirstOrDefault(i => i.Ikey == job.InvoiceCode);
+            if (existing is { IsCancelled: true })
+            {
+                var cancelled = $"Hóa đơn của đơn này đã bị hủy trên {p.Name}. Kiểm tra trên {p.Short}.";
+                await store.FailAsync(customerId, orderId, cancelled, ct);
+                return new(OrderInvoiceStatus.Failed, cancelled);
+            }
+            if (existing is { IsIssued: true })
+                result = new(existing.No, existing.LookupCode, null, true);   // issued by an earlier attempt whose answer was lost
+            else if (settings.Mode == InvoiceIssueModes.Draft)
+            {
+                await easyInvoice.ImportDraftAsync(login, pattern, xml, job.InvoiceCode, ct);
+                return await Draft(customerId, orderId, job, manual, ct, OrderInvoiceRules.ManualDraftNote(p), $"Đã tạo hóa đơn nháp trên {p.Name}, chờ duyệt và ký số thủ công.");
+            }
+            else
+            {
+                var issued = await easyInvoice.ImportAndIssueAsync(login, pattern, xml, job.InvoiceCode, ct);
+                result = new(issued.No, issued.LookupCode, null, false);
+            }
+        }
+        catch (Exception ex) when (ex is EasyInvoiceApiException or HttpRequestException or TaskCanceledException && !ct.IsCancellationRequested)
+        {
+            return await NotIssued(customerId, orderId, job, manual, ex, now.UtcDateTime, ct, p);
+        }
+
+        await store.CompleteAsync(customerId, orderId, result, result.AlreadyIssued ? "Hóa đơn đã được phát hành ở lần xuất trước." : null, ct);
+        if (email is { Length: > 0 } && !result.AlreadyIssued) await store.MarkEmailedAsync(customerId, orderId, ct);
+        logger.LogInformation("ORDER_INVOICE_ISSUED provider={Provider} order={OrderNo} code={Code} number={Number} again={Again} manual={Manual}",
+            p.Code, job.OrderNo, job.InvoiceCode, result.InvoiceNumber, result.AlreadyIssued, manual);
+        return new(OrderInvoiceStatus.Issued, result.InvoiceNumber is string n ? $"Đã xuất hóa đơn số {n}." : "Đã xuất hóa đơn.", result.InvoiceNumber);
+    }
+
     private Task<OrderInvoiceOutcome> Draft(Guid customerId, Guid orderId, OrderInvoiceJob job, bool manual, CancellationToken ct, CustomerInvoiceProvider p) =>
         Draft(customerId, orderId, job, manual, ct, OrderInvoiceRules.DraftNote(p), $"Đã tạo hóa đơn nháp vì chưa ký số được hóa đơn. Ký và phát hành bản nháp trên {p.Name}.");
 
@@ -368,7 +447,8 @@ public sealed class OrderInvoicer(IOrderInvoiceStore store, ITingeeInvoiceApi in
         CustomerInvoiceProvider p)
     {
         var reason = Reason(ex, p);
-        var permanent = ex is TingeeApiException a && OrderInvoiceRules.IsPermanent(a.Code) || ex is TingeeNotConfiguredException;
+        var permanent = ex is TingeeApiException a && OrderInvoiceRules.IsPermanent(a.Code) || ex is TingeeNotConfiguredException
+            || ex is EasyInvoiceApiException { Permanent: true } || ex is EasyInvoiceNotConnectedException;
         logger.LogWarning(ex, "ORDER_INVOICE_NOT_ISSUED order={OrderNo} code={Code} attempt={Attempt} manual={Manual}", job.OrderNo, job.InvoiceCode, job.Attempts, manual);
         if (!manual && !permanent && job.Attempts < MaxAutoAttempts)
         {
@@ -386,6 +466,8 @@ public sealed class OrderInvoicer(IOrderInvoiceStore store, ITingeeInvoiceApi in
         {
             TingeeApiException api => $"Nhà cung cấp hóa đơn từ chối (mã {api.Code}): {api.TingeeMessage}{Hint(api.Code, (provider ?? CustomerInvoiceProviders.Misa).Short)}",
             TingeeNotConfiguredException => "Dịch vụ hóa đơn chưa sẵn sàng. Vui lòng liên hệ T.A.",
+            EasyInvoiceApiException e => $"Nhà cung cấp hóa đơn từ chối (mã {e.Code}): {e.ProviderMessage}{(e.Detail is null ? "" : " — " + e.Detail)}",
+            EasyInvoiceNotConnectedException => $"Chưa đọc được thông tin đăng nhập {(provider ?? CustomerInvoiceProviders.SoftDreams).Name}: kết nối lại tài khoản.",
             _ => "Không kết nối được dịch vụ hóa đơn, sẽ thử lại."
         };
         return text.Length <= 480 ? text : text[..480];

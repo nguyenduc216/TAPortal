@@ -810,8 +810,10 @@ public sealed class SafeCustomerPaymentsTests
         f.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false, BaseAddress = new Uri("https://localhost"), HandleCookies = true });
 
     internal static WebApplicationFactory<Program> Factory(string role, out MemoryPaymentStore store, out FakeTingee tingee, MemoryServicePackageStore? packages = null,
-        IOrderInvoiceStore? invoiceStore = null, ITingeeInvoiceApi? invoiceApi = null)
+        IOrderInvoiceStore? invoiceStore = null, ITingeeInvoiceApi? invoiceApi = null, TAPortal.Integrations.SoftDreams.IEasyInvoiceApi? easyInvoice = null)
     {
+        // Never SoftDreams' real EasyInvoice from a test, and a test-only protector instead of DPAPI.
+        var easy = easyInvoice ?? new SafeEasyInvoiceTests.FakeEasyInvoice();
         var invoiceSettings = invoiceStore ?? new SafeCustomerEInvoiceTests.MemoryInvoiceStore();
         var invoicePartner = invoiceApi ?? new SafeCustomerEInvoiceTests.FakeInvoiceApi();
         var s = store = new MemoryPaymentStore();
@@ -846,6 +848,10 @@ public sealed class SafeCustomerPaymentsTests
                 services.AddSingleton(invoiceSettings);
                 services.RemoveAll<ITingeeInvoiceApi>();
                 services.AddSingleton(invoicePartner);
+                services.RemoveAll<TAPortal.Integrations.SoftDreams.IEasyInvoiceApi>();
+                services.AddSingleton(easy);
+                services.RemoveAll<TAPortal.Integrations.SoftDreams.IInvoiceSecretProtector>();
+                services.AddSingleton<TAPortal.Integrations.SoftDreams.IInvoiceSecretProtector>(new SafeEasyInvoiceTests.PlainInvoiceProtector());
                 services.RemoveAll<IPaymentTransactionStore>();
                 services.AddSingleton<IPaymentTransactionStore>(Transactions);
                 services.RemoveAll<TAPortal.Integrations.Notifications.INotificationStore>();
