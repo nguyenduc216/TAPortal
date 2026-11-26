@@ -19,6 +19,26 @@ public sealed class SafeStaffUsersTests
         Assert.Contains("WHERE u.IsDeleted=0 AND", sql);
     }
 
+    // Operator 2026-11-26: "Đặt lại mật khẩu" on a customer's account failed with "tài khoản nhân viên TA" because the
+    // Customer Portal candidates were read from the staff-only list. Candidates read every account; the role filter decides.
+    [Fact]
+    public void CustomerPortalCandidatesReadEveryAccountNotTheStaffList()
+    {
+        var sql = S.StaffAccountSql.AllUsers;
+        Assert.Contains("FROM dbo.Users u WHERE u.IsDeleted=0", sql);
+        Assert.DoesNotContain("CustomerPortalMemberships", sql);
+        Assert.DoesNotContain("UserRoles", sql);
+        var source = File.ReadAllText(Path.Combine(RepoRoot(), "src", "TAPortal.Web", "Services", "CustomerPortalAccounts.cs"));
+        Assert.Contains("PortalCandidates.Filter(await db.GetAllUsersAsync()", source);
+    }
+
+    private static string RepoRoot()
+    {
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "TAPortal.sln"))) dir = dir.Parent;
+        return dir?.FullName ?? throw new InvalidOperationException("TAPortal.sln not found");
+    }
+
     [Fact]
     public void TheDashboardCountsTheSameStaffAccounts()
     {

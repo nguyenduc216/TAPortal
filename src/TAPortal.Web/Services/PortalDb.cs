@@ -35,6 +35,11 @@ public static class StaffAccountSql
 """;
 
     public static readonly string StaffUsers = "SELECT u.Id,u.Username,u.DisplayName,u.Email,u.Phone,u.Status,u.IsActive FROM dbo.Users u WHERE u.IsDeleted=0 AND " + IsStaff("u") + " ORDER BY u.DisplayName";
+
+    // Every account, staff and customer alike. Customer Portal candidates come from here (then accounts holding a TAPortal
+    // role are removed): StaffUsers hides customer accounts, which made every customer account look like TA staff when
+    // resetting its password from the customer's "Tài khoản Portal" tab.
+    public const string AllUsers = "SELECT u.Id,u.Username,u.DisplayName,u.Email,u.Phone,u.Status,u.IsActive FROM dbo.Users u WHERE u.IsDeleted=0 ORDER BY u.DisplayName";
 }
 
 public sealed class PortalDb : IAdminAuthStore
@@ -267,11 +272,15 @@ VALUES(@id,@username,@nu,@email,@ne,@phone,@name,@hash,@must,'ACTIVE',1,@created
         return map;
     }
 
-    public async Task<List<PortalUser>> GetUsersAsync()
+    public Task<List<PortalUser>> GetUsersAsync() => ReadUsersAsync(StaffAccountSql.StaffUsers);
+
+    public Task<List<PortalUser>> GetAllUsersAsync() => ReadUsersAsync(StaffAccountSql.AllUsers);
+
+    private async Task<List<PortalUser>> ReadUsersAsync(string sql)
     {
         var list = new List<PortalUser>();
         await using var cn = Open(); await cn.OpenAsync();
-        await using var cmd = new SqlCommand(StaffAccountSql.StaffUsers, cn);
+        await using var cmd = new SqlCommand(sql, cn);
         await using var rd = await cmd.ExecuteReaderAsync();
         while (await rd.ReadAsync()) list.Add(new(rd.GetGuid(0),rd.GetString(1),rd.GetString(2),rd.IsDBNull(3)?null:rd.GetString(3),rd.IsDBNull(4)?null:rd.GetString(4),rd.GetString(5),rd.GetBoolean(6)));
         return list;

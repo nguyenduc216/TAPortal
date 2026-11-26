@@ -30,7 +30,7 @@ public sealed class SqlCustomerPortalAccounts(MembershipAdminStore store, Portal
     public Task<bool> ResetPasswordAsync(Guid userId, Guid customerId, string passwordHash, Guid actor) => store.ResetPassword(userId, customerId, passwordHash, actor);
     public Task<List<CustomerRow>> CustomersAsync() => db.GetCustomersAsync();
 
-    public async Task<List<PortalUser>> CandidateUsersAsync() => PortalCandidates.Filter(await db.GetUsersAsync(), await db.GetUserRoleMapAsync());
+    public async Task<List<PortalUser>> CandidateUsersAsync() => PortalCandidates.Filter(await db.GetAllUsersAsync(), await db.GetUserRoleMapAsync());
 }
 
 public static class PortalCandidates

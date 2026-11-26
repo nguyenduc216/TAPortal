@@ -19,3 +19,4 @@
 | `ADMIN-ROLE-PERMISSIONS-CHG-20261113T062558Z-482FBB` | 2026-11-13 | Cau hinh he thong gom Mau email, Dieu khoan, Bao mat mat khau | 6e50bf9 | NOT_APPLICABLE | DEPLOYED | MERGED |
 | `ADMIN-ROLE-PERMISSIONS-CHG-20261114T013654Z-1EEB49` | 2026-11-14 | Quan ly nguoi dung chi hien tai khoan nhan vien T.A, an tai khoan khach hang | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |
 | `ADMIN-ROLE-PERMISSIONS-CHG-20261114T165108Z-184086` | 2026-11-14 | Anh dai dien (avatar) nhan vien: tai anh, hien thi tren moi danh sach | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |
+| `ADMIN-ROLE-PERMISSIONS-CHG-20261126T123328Z-3F2256` | 2026-11-26 | Reset Customer Portal password no longer rejects customer accounts as TA staff | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |
