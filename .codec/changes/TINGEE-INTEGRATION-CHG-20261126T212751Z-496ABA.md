@@ -30,7 +30,7 @@ Sửa:
 
 ## Publish
 - Project: TAPortal.Web, TACustomerPortal.Web, TAPortal.Webhooks (Integrations thay đổi)
-- Trạng thái: xem report.
+- Trạng thái: DEPLOYED (commit fe82072, health 200)
 
 ## Git
 - Branch: feature/einvoice-softdreams; merge main sau deploy.
