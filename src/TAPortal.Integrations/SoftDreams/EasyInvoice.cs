@@ -103,8 +103,13 @@ public sealed class EasyInvoiceApi(HttpClient http, IOptions<EasyInvoiceOptions>
     public async Task ImportDraftAsync(EasyInvoiceCredentials login, string pattern, string xmlData, string ikey, CancellationToken ct = default) =>
         await PostAsync(login, "api/publish/importInvoice", new { XmlData = xmlData, Pattern = pattern, Serial = "" }, ikey, ct);
 
-    public async Task<IReadOnlyList<EasyInvoiceInfo>> GetByIkeysAsync(EasyInvoiceCredentials login, IReadOnlyList<string> ikeys, CancellationToken ct = default) =>
-        Invoices(await PostAsync(login, "api/publish/getInvoicesByIkeys", new { Ikeys = ikeys }, null, ct));
+    public async Task<IReadOnlyList<EasyInvoiceInfo>> GetByIkeysAsync(EasyInvoiceCredentials login, IReadOnlyList<string> ikeys, CancellationToken ct = default)
+    {
+        try { return Invoices(await PostAsync(login, "api/publish/getInvoicesByIkeys", new { Ikeys = ikeys }, null, ct)); }
+        // The live service answers an unknown key with an error, not an empty list (seen 2026-11-27). It comes after the
+        // login was accepted, so it means "no invoice yet" for the pre-issue lookup and a valid login for the connect check.
+        catch (EasyInvoiceApiException ex) when (EasyInvoiceResponse.IsIkeyNotFound(ex)) { return []; }
+    }
 
     public async Task<byte[]> GetPdfAsync(EasyInvoiceCredentials login, string pattern, string ikey, CancellationToken ct = default)
     {
@@ -148,6 +153,11 @@ public sealed class EasyInvoiceApi(HttpClient http, IOptions<EasyInvoiceOptions>
 /// <summary>Reads the EasyInvoice envelope {Status, Message, ErrorCode, Data}. Status is sent as a number or a string; 2 = success.</summary>
 public static class EasyInvoiceResponse
 {
+    /// <summary>ErrorCode 128 "Ikeys không tồn tại trong hệ thống": none of the looked-up keys has an invoice.</summary>
+    public const string IkeyNotFoundCode = "128";
+
+    public static bool IsIkeyNotFound(EasyInvoiceApiException ex) => ex.Code == IkeyNotFoundCode;
+
     public static JsonElement? Parse(string body, string? ikey, int httpStatus)
     {
         JsonDocument doc;

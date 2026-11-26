@@ -66,6 +66,34 @@ public sealed class SafeEasyInvoiceTests
         Assert.True(Assert.Throws<EasyInvoiceApiException>(() => EasyInvoiceResponse.Parse("Unauthorized", null, 401)).Permanent);
     }
 
+    // Operator 2026-11-27: connecting a real account failed with "(mã 128): Ikeys không tồn tại trong hệ thống". The live
+    // service answers an unknown key with ErrorCode 128 after accepting the login: that is "no invoice", not a failure.
+    [Theory]
+    [InlineData("""{"Status":4,"Message":"Ikeys không tồn tại trong hệ thống","ErrorCode":128,"Data":null}""", 200)]
+    [InlineData("""{"Status":"3","Message":"Ikeys không tồn tại trong hệ thống","ErrorCode":"128"}""", 400)]
+    public async Task AnUnknownIkeyIsNoInvoiceNotAnError(string body, int http)
+    {
+        var api = Api(new StubHandler(http, body));
+        Assert.Empty(await api.GetByIkeysAsync(new("u", "p", "0109999999", true), ["KIEMTRA-1"]));
+    }
+
+    [Fact]
+    public async Task OtherLookupErrorsStillFail()
+    {
+        var api = Api(new StubHandler(200, """{"Status":4,"Message":"Sai tên đăng nhập hoặc mật khẩu","ErrorCode":401}"""));
+        var ex = await Assert.ThrowsAsync<EasyInvoiceApiException>(() => api.GetByIkeysAsync(new("u", "p", "0109999999", true), ["KIEMTRA-1"]));
+        Assert.Equal("401", ex.Code);
+    }
+
+    private static EasyInvoiceApi Api(HttpMessageHandler handler) => new(new HttpClient(handler),
+        Microsoft.Extensions.Options.Options.Create(new EasyInvoiceOptions()), TimeProvider.System, NullLogger<EasyInvoiceApi>.Instance);
+
+    private sealed class StubHandler(int status, string body) : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct) =>
+            Task.FromResult(new HttpResponseMessage((HttpStatusCode)status) { Content = new StringContent(body, Encoding.UTF8, "application/json") });
+    }
+
     [Fact]
     public void InvoicesAreReadWithTheirStatusAndLookupCode()
     {

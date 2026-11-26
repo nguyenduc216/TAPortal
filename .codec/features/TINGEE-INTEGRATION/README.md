@@ -76,3 +76,4 @@ Database sẵn sàng cho phần thanh toán (verify PASS). Tiếp theo: operator
 | `TINGEE-INTEGRATION-CHG-20261118T091627Z-2B4048` | 2026-11-18 | Reconciliation opens on Tất cả; Tất cả filter kept; selected card highlighted; shown/total line | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |
 | `TINGEE-INTEGRATION-CHG-20261123T090237Z-0F6D3B` | 2026-11-23 | E-invoice: Viettel SInvoice beside MISA, readiness check for automatic signed invoices (migration 067) | d779fd0 | EXECUTED | portal+invoice DEPLOYED; webhooks ROLLED_BACK | MERGED |
 | `TINGEE-INTEGRATION-CHG-20261125T234234Z-EAFC57` | 2026-11-25 | SoftDreams EasyInvoice provider, integrated directly (migration 068) | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |
+| `TINGEE-INTEGRATION-CHG-20261126T212751Z-496ABA` | 2026-11-26 | EasyInvoice: unknown Ikey (ErrorCode 128) means no invoice; neutral login hint | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |
