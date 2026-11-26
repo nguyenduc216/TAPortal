@@ -845,3 +845,11 @@ textarea.cp-input { height: auto; min-height: 72px; padding-top: 8px; padding-bo
 .cp-pay__maker .cp-maker:hover { color: var(--cp-blue-600); }
 /* Public state pages (Không có quyền truy cập, Lỗi hệ thống) without sign-in: card and maker line stacked (operator 2026-11-17). */
 .cp-center:has(> .cp-auth__maker) { align-content: center; gap: 0; }
+/* Zalo OA connection guide (Notifications/ZaloGuide) */
+.cp-guide { max-width: 920px; }
+.cp-guide__steps { list-style: none; margin: 14px 0 0; padding: 0; display: grid; gap: 14px; }
+.cp-guide__num { display: grid; place-items: center; width: 28px; height: 28px; flex: none; border-radius: 50%; background: var(--cp-gold-500); color: #fff; font-weight: 700; font-size: 13px; }
+.cp-guide__list { margin: 0; padding-left: 18px; display: grid; gap: 6px; color: var(--cp-ink-2); }
+.cp-guide__sample { padding: 12px 14px; border: 1px dashed var(--cp-line-2); border-radius: var(--cp-radius-sm); background: var(--cp-surface-2); font-size: 13px; }
+.cp-guide__sample p { margin: 6px 0 0; }
+.cp-guide__code { margin: 8px 0 10px; padding: 10px 12px; overflow-x: auto; white-space: pre-wrap; word-break: break-all; font-family: var(--cp-mono); font-size: 12px; border: 1px solid var(--cp-line); border-radius: var(--cp-radius-sm); background: #F1F4F9; }
