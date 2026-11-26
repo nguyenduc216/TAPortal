@@ -37,6 +37,10 @@
             <div class="cp-card__body">
                 <input type="hidden" name="channel" value="@c.Channel" />
                 <p class="cp-muted">@c.Audience</p>
+                @if (c.Channel == NotificationChannelKind.ZaloOa)
+                {
+                    <div class="cp-note" style="margin-bottom:12px" data-cp-zalo-guide-link>@UiIcon.Render("info-circle")<div>Chưa có Zalo OA hoặc chưa biết lấy App ID, refresh token, mã mẫu ZNS? <a class="cp-link" asp-action="ZaloGuide">Xem hướng dẫn kết nối Zalo OA từng bước</a>.</div></div>
+                }
                 @if (Model.ErrorChannel == c.Channel && Model.Errors.Count > 0) {<div class="cp-error" style="margin-bottom:10px">@string.Join(" ", Model.Errors)</div>}
                 @foreach (var f in c.Fields)
                 {

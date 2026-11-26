@@ -362,7 +362,7 @@ public sealed class SafeCustomerPaymentsTests
         tingee.IsConfigured = false;
         pages.Add(await c.GetStringAsync("/banks"));
         tingee.IsConfigured = true;
-        foreach (var path in new[] { "/banks", "/banks/add", "/banks/add?bin=970422&type=business-account", "/banks/add?bin=970436&type=business-account", "/orders", "/orders/create", "/contacts", "/paymentsettings", "/servicepackages", "/transactions", "/notifications" })
+        foreach (var path in new[] { "/banks", "/banks/add", "/banks/add?bin=970422&type=business-account", "/banks/add?bin=970436&type=business-account", "/orders", "/orders/create", "/contacts", "/paymentsettings", "/servicepackages", "/transactions", "/notifications", "/notifications/zaloguide" })
             pages.Add(await c.GetStringAsync(path));
         tingee.CreateVaError = new TingeeApiException("1133", "Tingee: merchant không có quyền, liên hệ support@tingee.vn");
         var failed = await Post(c, "/banks/add", await Token(c, "/banks/add?bin=970422&type=personal-account"), new()
@@ -976,6 +976,29 @@ public sealed class SafeCustomerPaymentsTests
         Assert.Contains("-100222", after);
         Assert.DoesNotContain(secret, after);
         Assert.Contains("Đã lưu — để trống để giữ nguyên", after);
+    }
+
+    [Fact]
+    public async Task TheZaloGuideIsLinkedFromTheZaloCardAndUsesOnlyRealPlaceholders()
+    {
+        using (var f = Factory("MEMBER", out _, out _))
+            Assert.NotEqual(HttpStatusCode.OK, (await Client(f).GetAsync("/notifications/zaloguide")).StatusCode);
+        using var owner = Factory("OWNER", out _, out _);
+        var c = Client(owner);
+        var settings = await c.GetStringAsync("/notifications");
+        Assert.Contains("data-cp-zalo-guide-link", settings);
+        Assert.Contains("href=\"/Notifications/ZaloGuide\"", settings);
+
+        var guide = WebUtility.HtmlDecode(await c.GetStringAsync("/notifications/zaloguide"));
+        Assert.Contains("data-cp-zalo-guide", guide);
+        Assert.Contains("Hướng dẫn kết nối Zalo OA", guide);
+        // The sample JSON must be valid for the channel and every {code} in the guide must be one the planner fills.
+        var json = Regex.Match(guide, "<pre class=\"cp-guide__code\" data-cp-zalo-json>(.*?)</pre>", RegexOptions.Singleline).Groups[1].Value;
+        Assert.NotNull(TAPortal.Integrations.Notifications.NotificationCatalog.TemplateData(json));
+        var known = TAPortal.Integrations.Notifications.NotificationPlanner.Values(new(0, PaymentTxStatus.Matched, null, null, 1, "X", "0", DateTime.UtcNow, A, "C",
+            Guid.Empty, "X", 1, 1, TingeeOrderStatus.Paid, "B", null, null)).Keys.ToHashSet();
+        foreach (Match m in Regex.Matches(guide, @"\{([a-z_]+)\}"))
+            Assert.Contains(m.Groups[1].Value, known);
     }
 
     [Fact]

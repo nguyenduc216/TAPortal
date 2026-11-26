@@ -1,0 +1,158 @@
+@{
+    ViewData["Title"] = "Hướng dẫn kết nối Zalo OA";
+    ViewData["Eyebrow"] = "Cài đặt thông báo";
+    ViewData["Subtitle"] = "Gửi tin Zalo (ZNS) cho khách hàng của doanh nghiệp mỗi khi đơn hàng nhận tiền, từ Zalo OA của chính doanh nghiệp.";
+}
+<div class="cp-guide" data-cp-zalo-guide>
+    <p style="margin-bottom:14px"><a class="cp-btn cp-btn--ghost cp-btn--sm" asp-action="Index">@UiIcon.Render("arrow-left")<span>Quay lại Cài đặt thông báo</span></a></p>
+
+    <section class="cp-card">
+        <div class="cp-card__head"><span class="cp-blob">@UiIcon.Render("info-circle")</span><h2>Kênh Zalo OA hoạt động thế nào</h2></div>
+        <div class="cp-card__body">
+            <ul class="cp-guide__list">
+                <li>Khi một đơn hàng nhận tiền (đủ hoặc một phần), Hóa đơn tự động gửi <strong>một tin ZNS</strong> tới số điện thoại của khách hàng trên đơn hàng.</li>
+                <li>Tin được gửi <strong>từ Zalo OA của doanh nghiệp bạn</strong>, theo <strong>mẫu tin bạn đã đăng ký và được Zalo duyệt</strong>. Khách thấy tên OA của bạn là người gửi.</li>
+                <li>Phí tin ZNS do Zalo thu trực tiếp từ ví Zalo của doanh nghiệp, tính trên mỗi tin gửi thành công.</li>
+                <li>Kênh Zalo OA chỉ gửi tin <strong>đơn hàng nhận tiền</strong>. Thông báo "giao dịch cần xử lý" dành cho nhân viên, hãy nhận qua Telegram nhóm hoặc Email.</li>
+                <li>Đơn hàng không có số điện thoại khách thì không gửi được tin Zalo. Hãy nhập tên và số điện thoại khách khi tạo đơn.</li>
+            </ul>
+            <div class="cp-note cp-note--warn" style="margin:12px 0 0">@UiIcon.Render("alert-triangle")<div>Cần chuẩn bị trước khoảng <strong>1–2 tuần</strong>: xác thực OA và duyệt mẫu tin do Zalo thực hiện, thường mất vài ngày làm việc mỗi bước. Giao diện các trang của Zalo có thể thay đổi theo thời gian; nếu tên nút khác với hướng dẫn, hãy tìm mục có ý nghĩa tương đương.</div></div>
+        </div>
+    </section>
+
+    <ol class="cp-guide__steps">
+        <li class="cp-card">
+            <div class="cp-card__head"><span class="cp-guide__num">1</span><h2>Tạo và xác thực Zalo OA doanh nghiệp</h2></div>
+            <div class="cp-card__body">
+                <ul class="cp-guide__list">
+                    <li>Vào <a class="cp-link" href="https://oa.zalo.me" target="_blank" rel="noopener">oa.zalo.me</a>, đăng nhập bằng tài khoản Zalo của người quản lý, tạo Official Account loại <strong>Doanh nghiệp</strong>.</li>
+                    <li>Gửi hồ sơ xác thực: giấy chứng nhận đăng ký doanh nghiệp, giấy tờ tùy thân của người đại diện và các giấy tờ Zalo yêu cầu.</li>
+                    <li>Đặt tên OA <strong>khớp với tên trên giấy phép</strong> hoặc thương hiệu của doanh nghiệp. Tên này hiển thị là người gửi trên mọi tin.</li>
+                    <li>Chuẩn bị logo rõ nét, có bản dùng cho nền sáng và bản dùng cho nền tối.</li>
+                </ul>
+            </div>
+        </li>
+
+        <li class="cp-card">
+            <div class="cp-card__head"><span class="cp-guide__num">2</span><h2>Tạo ứng dụng Zalo và liên kết với OA</h2></div>
+            <div class="cp-card__body">
+                <ul class="cp-guide__list">
+                    <li>Vào <a class="cp-link" href="https://developers.zalo.me" target="_blank" rel="noopener">developers.zalo.me</a>, tạo một ứng dụng mới cho doanh nghiệp.</li>
+                    <li>Trong ứng dụng, mở mục Official Account và <strong>liên kết OA</strong> đã xác thực ở bước 1.</li>
+                    <li>Trong phần thông tin ứng dụng, ghi lại <strong>ID ứng dụng (App ID)</strong> và <strong>Khóa bí mật (Secret key)</strong>.</li>
+                </ul>
+            </div>
+        </li>
+
+        <li class="cp-card">
+            <div class="cp-card__head"><span class="cp-guide__num">3</span><h2>Lấy refresh token của OA</h2></div>
+            <div class="cp-card__body">
+                <ul class="cp-guide__list">
+                    <li>Cấp quyền cho ứng dụng (bước 2) được gửi tin thay mặt OA. Cách nhanh nhất là dùng công cụ <strong>API Explorer</strong> trên developers.zalo.me: chọn loại token của <strong>Official Account</strong>, chọn ứng dụng và OA, bấm lấy token và đồng ý cấp quyền.</li>
+                    <li>Kết quả gồm <strong>Access token</strong> và <strong>Refresh token</strong>. Hóa đơn tự động chỉ bắt buộc refresh token.</li>
+                    <li>Hệ thống <strong>tự làm mới</strong> access token khi hết hạn và tự lưu refresh token mới (mỗi refresh token Zalo chỉ dùng được một lần). Bạn không cần nhập lại sau mỗi lần gửi.</li>
+                    <li>Nếu kênh không gửi tin nào trong thời gian dài (khoảng 3 tháng), refresh token có thể hết hạn. Khi đó hãy lấy refresh token mới và nhập lại.</li>
+                </ul>
+            </div>
+        </li>
+
+        <li class="cp-card">
+            <div class="cp-card__head"><span class="cp-guide__num">4</span><h2>Kích hoạt tin mẫu ZNS và nạp tiền</h2></div>
+            <div class="cp-card__body">
+                <ul class="cp-guide__list">
+                    <li>Trên trang quản lý <strong>Zalo Business Solutions</strong> (trước đây là Zalo Cloud Account), kích hoạt dịch vụ tin mẫu ZNS (nay gọi là ZBS Template Message) cho OA và ứng dụng của bạn.</li>
+                    <li>Nạp tiền vào ví của tài khoản này. Tin chỉ gửi được khi ví còn số dư; bảng giá do Zalo công bố.</li>
+                </ul>
+            </div>
+        </li>
+
+        <li class="cp-card">
+            <div class="cp-card__head"><span class="cp-guide__num">5</span><h2>Đăng ký mẫu tin xác nhận thanh toán</h2></div>
+            <div class="cp-card__body">
+                <p>Tạo mẫu mới, chọn loại <strong>Giao dịch</strong> (xác nhận / trạng thái giao dịch), rồi gửi duyệt. Mẫu gợi ý:</p>
+                <div class="cp-guide__sample">
+                    <strong>Xác nhận thanh toán</strong>
+                    <p>Xin chào &lt;customer_name&gt;, [Tên doanh nghiệp của bạn] đã nhận được thanh toán của bạn.</p>
+                    <p>Mã đơn hàng: &lt;order_code&gt;<br />Số tiền nhận: &lt;amount&gt;<br />Đã thanh toán: &lt;paid_total&gt;<br />Trạng thái: &lt;status&gt;<br />Thời gian: &lt;time&gt;</p>
+                    <p class="cp-muted">Nút bấm (không bắt buộc): "Liên hệ" hoặc "Xem chi tiết", trỏ tới website chính thức của doanh nghiệp.</p>
+                </div>
+                <p style="margin-top:12px">Lưu ý để mẫu được duyệt nhanh:</p>
+                <ul class="cp-guide__list">
+                    <li>Tên tham số viết không dấu, không khoảng trắng, nối các từ bằng dấu gạch dưới, ví dụ <span class="cp-code">order_code</span>.</li>
+                    <li>Khai các tham số số tiền (<span class="cp-code">amount</span>, <span class="cp-code">paid_total</span>) ở <strong>kiểu chuỗi / văn bản</strong>: Hóa đơn tự động gửi số tiền đã định dạng, ví dụ "12.500.000 ₫".</li>
+                    <li>Không xưng "anh/chị"; dùng "bạn" hoặc "quý khách". Viết đúng chính tả, có dấu, không viết tắt, không dùng biểu tượng cảm xúc.</li>
+                    <li>Không đặt đường link hay số điện thoại trong nội dung; chỉ đặt ở nút bấm. Đường link phải là website của chính doanh nghiệp, không dùng link rút gọn.</li>
+                    <li>Không nhắc tên hay thương hiệu doanh nghiệp khác trong mẫu.</li>
+                </ul>
+                <p style="margin-top:12px">Khi mẫu được duyệt, ghi lại <strong>mã mẫu (template ID)</strong> do Zalo cấp.</p>
+            </div>
+        </li>
+
+        <li class="cp-card">
+            <div class="cp-card__head"><span class="cp-guide__num">6</span><h2>Nhập thông tin vào Hóa đơn tự động</h2></div>
+            <div class="cp-card__body">
+                <p>Trong <a class="cp-link" asp-action="Index">Cài đặt thông báo</a>, thẻ <strong>Zalo OA (tin ZNS)</strong>, điền:</p>
+                <div class="cp-table-wrap">
+                    <table class="cp-table">
+                        <thead><tr><th>Ô nhập</th><th>Lấy ở đâu</th></tr></thead>
+                        <tbody>
+                            <tr><td>App ID</td><td>Bước 2 (ID ứng dụng, chỉ gồm chữ số)</td></tr>
+                            <tr><td>Secret key của ứng dụng</td><td>Bước 2 (Khóa bí mật)</td></tr>
+                            <tr><td>Refresh token OA</td><td>Bước 3</td></tr>
+                            <tr><td>Access token OA</td><td>Không bắt buộc, để trống cũng được</td></tr>
+                            <tr><td>Mã mẫu ZNS</td><td>Bước 5 (template ID)</td></tr>
+                            <tr><td>Tham số mẫu ZNS (JSON)</td><td>Ghép tên tham số trong mẫu với dữ liệu đơn hàng, xem bên dưới</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <p style="margin-top:12px">Với mẫu gợi ý ở bước 5, dán nguyên đoạn sau vào ô <strong>Tham số mẫu ZNS (JSON)</strong>:</p>
+                <pre class="cp-guide__code" data-cp-zalo-json>{"customer_name":"{buyer}","order_code":"{order_no}","amount":"{amount}","paid_total":"{paid}/{total}","status":"{status}","time":"{time}"}</pre>
+                <p>Bên trái dấu hai chấm là <strong>tên tham số trong mẫu Zalo</strong> (phải giống hệt). Bên phải là dữ liệu đơn hàng, dùng các mã sau (có thể ghép nhiều mã và chữ trong một giá trị):</p>
+                <div class="cp-table-wrap">
+                    <table class="cp-table">
+                        <thead><tr><th>Mã</th><th>Dữ liệu</th><th>Ví dụ</th></tr></thead>
+                        <tbody>
+                            <tr><td><span class="cp-code">{buyer}</span></td><td>Tên khách hàng trên đơn</td><td>Nguyễn Văn A</td></tr>
+                            <tr><td><span class="cp-code">{company}</span></td><td>Tên doanh nghiệp bạn</td><td>Công ty An Phát</td></tr>
+                            <tr><td><span class="cp-code">{order_no}</span></td><td>Mã đơn hàng</td><td>DH-1042</td></tr>
+                            <tr><td><span class="cp-code">{amount}</span></td><td>Số tiền của lần thanh toán này</td><td>12.500.000 ₫</td></tr>
+                            <tr><td><span class="cp-code">{paid}</span></td><td>Tổng đã thanh toán cho đơn</td><td>12.500.000 ₫</td></tr>
+                            <tr><td><span class="cp-code">{total}</span></td><td>Tổng tiền đơn hàng</td><td>12.500.000 ₫</td></tr>
+                            <tr><td><span class="cp-code">{status}</span></td><td>Trạng thái đơn</td><td>Đã thanh toán / Thanh toán một phần</td></tr>
+                            <tr><td><span class="cp-code">{time}</span></td><td>Thời điểm nhận tiền</td><td>25/11/2026 09:30</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </li>
+
+        <li class="cp-card">
+            <div class="cp-card__head"><span class="cp-guide__num">7</span><h2>Gửi thử và bật kênh</h2></div>
+            <div class="cp-card__body">
+                <ul class="cp-guide__list">
+                    <li>Bấm <strong>Lưu kênh</strong>, rồi nhập số điện thoại của bạn ở ô <strong>SĐT nhận thử</strong> và bấm <strong>Gửi thử</strong>. Tin thử dùng dữ liệu mẫu (khách "Khách hàng mẫu", đơn "DH000000-0000", 10.000 ₫) và là một tin ZNS thật, Zalo vẫn tính phí.</li>
+                    <li>Nhận được tin thì tích <strong>Gửi khi: Đơn hàng nhận tiền</strong> và <strong>Bật kênh này</strong>, rồi lưu lại.</li>
+                    <li>Kết quả từng tin gửi cho khách xem ở mục <strong>Thông báo gửi cho khách hàng gần đây</strong>.</li>
+                </ul>
+            </div>
+        </li>
+    </ol>
+
+    <section class="cp-card" style="margin-top:14px">
+        <div class="cp-card__head"><span class="cp-blob cp-blob--gold">@UiIcon.Render("alert-circle")</span><h2>Lỗi thường gặp</h2></div>
+        <div class="cp-table-wrap">
+            <table class="cp-table">
+                <thead><tr><th>Thông báo lỗi</th><th>Cách xử lý</th></tr></thead>
+                <tbody>
+                    <tr><td>Thiếu App ID / secret key / refresh token Zalo</td><td>Nhập đủ ba thông tin ở bước 2 và bước 3 rồi lưu lại.</td></tr>
+                    <tr><td>Không làm mới được access token Zalo</td><td>Refresh token đã hết hạn hoặc đã bị thay. Lấy refresh token mới (bước 3), nhập vào ô Refresh token OA rồi lưu kênh.</td></tr>
+                    <tr><td>Thiếu mã mẫu ZNS</td><td>Nhập mã mẫu đã được Zalo duyệt (bước 5).</td></tr>
+                    <tr><td>Số điện thoại người nhận không hợp lệ</td><td>Dùng số di động Việt Nam, ví dụ 0912345678. Kiểm tra số điện thoại khách trên đơn hàng.</td></tr>
+                    <tr><td>Zalo kèm mã lỗi khác (ví dụ tham số sai)</td><td>Kiểm tra tên tham số trong JSON khớp từng chữ với mẫu đã duyệt, mẫu còn hoạt động, ví Zalo còn số dư và số điện thoại nhận có dùng Zalo.</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <p class="cp-muted" style="margin-top:14px">Cần hỗ trợ cài đặt? Liên hệ bộ phận hỗ trợ Hóa đơn tự động.</p>
+</div>

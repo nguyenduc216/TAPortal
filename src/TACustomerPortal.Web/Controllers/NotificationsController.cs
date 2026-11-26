@@ -21,6 +21,15 @@ public sealed class NotificationsController(ICurrentCustomerContext customer, No
         return View(await Model(m, [], null));
     }
 
+    // Step-by-step guide to connect the company's own Zalo OA (operator 2026-11-25): each company sends ZNS to its buyers
+    // from its own OA; the guide sits next to the Zalo OA card. Same access as the settings page.
+    public async Task<IActionResult> ZaloGuide()
+    {
+        if (await Current() is not { } m) return SelectCustomer();
+        if (!CanManage(m)) return Forbid();
+        return View();
+    }
+
     [HttpPost]
     public async Task<IActionResult> Recipients(string? email, string? zaloPhone, string? telegramChatId, string[]? events)
     {

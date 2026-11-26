@@ -71,3 +71,4 @@ CHECKPOINT_4A: PASS (existing artifact integrity, isolated localhost startup and
 | `CUSTOMER-PORTAL-FOUNDATION-CHG-20261113T082428Z-870E4D` | 2026-11-13 | Card groups always one sliding row on every screen (portal + invoice) | de35119 | NOT_APPLICABLE | DEPLOYED | MERGED |
 | `CUSTOMER-PORTAL-FOUNDATION-CHG-20261113T103709Z-09BFF1` | 2026-11-13 | Payment page bridge: moving dot and bank pulse, also under reduced motion | 7b4d3fa | NOT_APPLICABLE | DEPLOYED | MERGED |
 | `CUSTOMER-PORTAL-FOUNDATION-CHG-20261117T025701Z-8C4E0F` | 2026-11-17 | Payment page: maker line 'Sản phẩm của Tư vấn giải pháp T.A' at the bottom | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |
+| `CUSTOMER-PORTAL-FOUNDATION-CHG-20261125T011923Z-62D427` | 2026-11-25 | Hướng dẫn kết nối Zalo OA cạnh màn hình Cài đặt thông báo | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |
