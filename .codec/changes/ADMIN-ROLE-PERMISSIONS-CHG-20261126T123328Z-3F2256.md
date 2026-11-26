@@ -36,7 +36,7 @@ Sửa:
 
 ## Publish
 - Project: TAPortal.Web (target `portal`)
-- Trạng thái: xem report.
+- Trạng thái: DEPLOYED (commit 340fcd9, health 200)
 
 ## Git
 - Branch: feature/einvoice-softdreams (đang là nhánh làm việc, đã gộp main)
