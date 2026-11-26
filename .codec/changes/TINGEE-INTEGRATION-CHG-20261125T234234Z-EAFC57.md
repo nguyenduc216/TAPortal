@@ -4,7 +4,7 @@
 - Change ID: `TINGEE-INTEGRATION-CHG-20261125T234234Z-EAFC57`
 - Created UTC: 2026-11-25T23:42:34.399507+00:00
 - Tiêu đề: SoftDreams EasyInvoice provider, integrated directly (migration 068)
-- Trạng thái: IMPLEMENTED
+- Trạng thái: DEPLOYED
 
 ## Yêu cầu và phạm vi
 Operator (2026-11-26): "tách luôn một cái nhánh ... đưa thêm một cái nhà phân phối invoice là SoftDreams, và tích hợp cái API của SoftDreams"; "Làm luôn trong phiên này". Tài liệu nguồn: "EasyInvoice_TaiLieuTichHop_v8.0" (Google Doc của SoftDreams). Câu hỏi về mật khẩu (API EasyInvoice gửi username:password:taxCode trong header mỗi lần gọi, không có đối tác giữ hộ như MISA/Viettel), operator chọn: "Mã hoá lưu trong DB".
@@ -43,7 +43,7 @@ Operator (2026-11-26): "tách luôn một cái nhánh ... đưa thêm một cái
 - Script: `database/migrations/068-einvoice-softdreams-provider.sql` (sau 067)
 - Verify: `database/scripts/123-verify-einvoice-softdreams-provider.sql`; Rollback: `database/scripts/124-rollback-einvoice-softdreams-provider.sql`
 - Lệnh: `Invoke-TAMigrations.ps1 -Plan "068:123:124"`
-- Execution: NOT_EXECUTED (chờ operator quyết định chạy/deploy)
+- Execution: EXECUTED 2026-11-26 11:46Z (operator: "OK, đồng ý migration"). Pre-check NOT_APPLIED, dry-run PASS/NOT_APPLIED đã rollback, backup COPY_ONLY `TAPortalSys-predeploy-20261126T113732Z.bak` (đã verify), gates 857/857, real run VERIFY_STATUS=PASS. Log: `.codec/reports/TINGEE-INTEGRATION-CHG-20261125T234234Z-EAFC57-migrations-20261126T113732Z.log`.
 
 ## Test và kết quả
 - `dotnet restore TAPortal.sln`; `dotnet build TAPortal.sln -c Release --no-restore`: 0 lỗi.
@@ -53,12 +53,13 @@ Operator (2026-11-26): "tách luôn một cái nhánh ... đưa thêm một cái
 
 ## Publish
 - Project: TAPortal.Web, TACustomerPortal.Web, TAPortal.Webhooks (Integrations thay đổi)
-- Trạng thái: NOT_PUBLISHED
+- Trạng thái: DEPLOYED 2026-11-26 (commit 321c782 = 130193f + merge origin/main ad9ac47). portal, invoice, webhooks: health HTTP 200, Event Log không có lỗi 15 phút sau deploy. Backup server: `C:\TADeploy\backups\{portal-20261126-185653,invoice-20261126-185702,webhooks-20261126-185711}`. Manifest: `.codec/reports/TINGEE-INTEGRATION-CHG-20261125T234234Z-EAFC57-<PROJECT>.sha256`.
+- Webhooks chạy lại được (lần deploy 0F6D3B bị rollback vì login `TA_User` hết hạn; đã tắt CHECK_EXPIRATION trong phiên này).
 
 ## Git
 - Branch: feature/einvoice-softdreams (từ origin/main 3ff2977)
 - Commit SHA: (ghi ở report)
-- Merge: PENDING_APPROVAL (operator yêu cầu nhánh riêng)
+- Merge: vào main sau deploy (standing authorization)
 
 ## Rủi ro, quyết định và việc còn lại
 - Quyết định của operator: lưu mật khẩu EasyInvoice đã mã hóa (DPAPI LocalMachine). Ngoại lệ có chủ đích với nguyên tắc "không lưu mật khẩu nhà cung cấp", chỉ áp dụng cho SoftDreams. Mật khẩu không hiển thị lại, không ghi log. Gỡ kết nối thì xóa mật khẩu.
