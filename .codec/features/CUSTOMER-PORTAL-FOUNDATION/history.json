@@ -648,10 +648,10 @@
     "change_id": "CUSTOMER-PORTAL-FOUNDATION-CHG-20261125T011923Z-62D427",
     "created_at": "2026-11-25T01:19:23.384800+00:00",
     "title": "Hướng dẫn kết nối Zalo OA cạnh màn hình Cài đặt thông báo",
-    "status": "PLANNED",
-    "commit_sha": null,
-    "migration_status": "NOT_EXECUTED",
-    "publish_status": "NOT_PUBLISHED",
-    "merge_status": "PENDING_APPROVAL"
+    "status": "DEPLOYED",
+    "commit_sha": "c126e55",
+    "migration_status": "NOT_APPLICABLE",
+    "publish_status": "DEPLOYED",
+    "merge_status": "MERGED"
   }
 ]

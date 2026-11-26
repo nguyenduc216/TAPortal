@@ -4,7 +4,7 @@
 - Change ID: `CUSTOMER-PORTAL-FOUNDATION-CHG-20261125T011923Z-62D427`
 - Created UTC: 2026-11-25T01:19:23.384800+00:00
 - Tiêu đề: Hướng dẫn kết nối Zalo OA cạnh màn hình Cài đặt thông báo
-- Trạng thái: IMPLEMENTED
+- Trạng thái: DEPLOYED
 
 ## Yêu cầu và phạm vi
 Operator (2026-11-25): mỗi doanh nghiệp tự dùng Zalo OA của mình để gửi ZNS cho khách (T.A cũng cấu hình OA của T.A trong tài khoản doanh nghiệp của T.A); cần trang hướng dẫn trong app, đặt cạnh màn hình Cài đặt thông báo. Web công khai làm sau.
@@ -29,17 +29,21 @@ Operator (2026-11-25): mỗi doanh nghiệp tự dùng Zalo OA của mình để
 - Xem HTML render từ test host (tĩnh): 1440 px và 375 px không tràn ngang, 7 bước, khối JSON xuống dòng.
 
 ## Publish
-- Project:
-- Destination (chỉ từ config):
-- Trạng thái: NOT_PUBLISHED
-- Artifact SHA256:
-- Smoke test:
+- Project: TACustomerPortal.Web (target `invoice`), qua `deploy/windows/Deploy-TARemote.ps1`
+- Destination (chỉ từ config): `src\publish\deployed-TACustomerPortal.Web` → server `TA.Invoice`
+- Trạng thái: DEPLOYED 2026-11-26T05:31:30Z (server backup `C:\TADeployackups\invoice-20261126-123127`, giữ 1 bản)
+- Source commit: c126e55; 74 files
+- Artifact SHA256: 67f4a3865cf6193e50f2dd67453b58f2cc217d26d0cd5c50b93f483ec2dee891
+- Package SHA256: 9EAA808C7929F0CE823301235342C4DFEF32A9BD9FA4F371879671E56697888F
+- Audit: PASSED (Release build 0 lỗi, Safe 830/830 trên nền main)
+- Smoke test: health HTTP 200; `/Notifications/ZaloGuide` → 302 về đăng nhập (đúng, cần đăng nhập); DLL trên server chứa view hướng dẫn và link, CSS có `.cp-guide*`.
+- Lần chạy đầu từ feature/customer-portal-mvp01 bị audit chặn (khoảng 57bdaea..HEAD có 24 migration của main) — không push/deploy gì; đã chuyển sang nhánh từ main.
 
 ## Git
 - Branch: feature/zalo-oa-guide (tạo từ origin/main 3ff2977, vì production invoice chạy main 57bdaea; feature/customer-portal-mvp01 đang chậm hơn main nên không deploy từ đó)
-- Commit SHA:
+- Commit SHA: c126e55
 - PR:
-- Merge: PENDING_APPROVAL
+- Merge: main (fast-forward, theo OPERATOR STANDING AUTHORIZATION)
 - Merge SHA:
 
 ## Rủi ro, quyết định và việc còn lại
