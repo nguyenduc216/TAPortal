@@ -4,7 +4,7 @@
 - Change ID: `TINGEE-INTEGRATION-CHG-20261127T130319Z-E75A07`
 - Created UTC: 2026-11-27T13:03:19.988270+00:00
 - Tiêu đề: Payment collections: one QR for several unpaid orders, allocated oldest first
-- Trạng thái: MIGRATED
+- Trạng thái: DEPLOYED
 
 ## Yêu cầu và phạm vi
 Operator (2026-11-27): khách có hai đơn đang nợ cần gộp vào một QR công nợ chuẩn, linh hoạt: khách có thể chỉ chuyển trước một khoản. Đã duyệt hướng "Thu gộp công nợ" (phiếu thu gộp đứng trên các đơn cũ, không tạo đơn mới), sau đó "Tôi đồng ý, hãy thực hiện theo cái định hướng này nhé."
@@ -60,7 +60,16 @@ Quyết định:
 
 ## Publish
 - Project: TAPortal.Web, TACustomerPortal.Web, TAPortal.Webhooks (Integrations đổi)
-- Trạng thái: NOT_PUBLISHED
+- Trạng thái: DEPLOYED 2026-11-27 13:27-13:28Z, source commit 0f21276, bằng `Deploy-TARemote.ps1 -Target portal,invoice,webhooks -MigrationsApplied`.
+
+| Target | Artifact SHA256 | Package SHA256 | Health |
+|---|---|---|---|
+| portal | 5c07aa1a5d3ce915bf0f232a576da83d82dcf49e6a69f8b04e1ab7551c22b096 | 919254BD93CA5255895DEDF71246BCDDDAEA19CBF17FFBE2C86D1A2004D80E97 | HTTP 200 |
+| invoice | 18626f2b6fcc176d83b358aa9af66a536f18b5e647dba8a1aaf0c3ad6fc8a06a | 922F5F87B7ED5B7BE0F7B902C201316BFC8EAE47FD7DA11EBFAF8A0034EB803E | HTTP 200 |
+| webhooks | 6eca21a0fece997ab5049450262174e24ddb00f300deffbe77b73fd1c1cc4c0e | 6342C1EA24AC1DDF0E14E1BD15F97F4D1FD21569204E6C683389780096594EDD | HTTP 200 |
+
+- Backup trên server: `C:\TADeployackups\{portal-20261127-202732, invoice-20261127-202741, webhooks-20261127-202749}`.
+- Smoke test: `/pay/c/<token không tồn tại>` trả 404 (đọc được bảng mới, không phải 503); `/collections` trả 302 về đăng nhập.
 
 ## Git
 - Branch: feature/payment-collections (cắt từ main b08c91f)
