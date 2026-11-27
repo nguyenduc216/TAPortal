@@ -172,7 +172,8 @@ public sealed class OrderLineInput
 /// public payment page; InvoiceBuyer: the tax code and invoice name the payer corrected there.
 /// </summary>
 public sealed record OrderDetailsVm(CustomerMembership Customer, bool CanManage, Order Order, string Status, BankAccount? Bank, Contact? Contact, string? QrSvg, DateTime UtcNow,
-    IReadOnlyList<BankAccount> Banks, bool InvoiceReady = false, string? PayUrl = null, InvoiceBuyer? InvoiceBuyer = null, (Guid Id, string CollectionNo)? InCollection = null);
+    IReadOnlyList<BankAccount> Banks, bool InvoiceReady = false, string? PayUrl = null, InvoiceBuyer? InvoiceBuyer = null, (Guid Id, string CollectionNo)? InCollection = null,
+    string? InvoiceProvider = null);
 
 public sealed class PaymentSettingsInput
 {

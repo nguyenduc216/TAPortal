@@ -79,9 +79,11 @@ public sealed class OrdersController(ICurrentCustomerContext customer, IPaymentS
         // The public payment page (/pay/{token}) the customer's own customer scans; the token is created the first time.
         var token = await pages.TokenAsync(m.CustomerId, order.Id);
         var payUrl = token is null ? null : Url.Action("Index", "Pay", new { token }, Request.Scheme);
-        return View(new OrderDetailsVm(m, CanManage(m), order, status, bank, contact, qr, now, banks, (await invoices.SettingsAsync(m.CustomerId)).IsReady,
+        var invoiceSettings = await invoices.SettingsAsync(m.CustomerId);
+        return View(new OrderDetailsVm(m, CanManage(m), order, status, bank, contact, qr, now, banks, invoiceSettings.IsReady,
             payUrl, await pages.InvoiceBuyerAsync(m.CustomerId, order.Id),
-            (await collections.OpenCollectionsByOrderAsync(m.CustomerId)).TryGetValue(order.Id, out var inside) ? inside : null));
+            (await collections.OpenCollectionsByOrderAsync(m.CustomerId)).TryGetValue(order.Id, out var inside) ? inside : null,
+            invoiceSettings.Info.Name));
     }
 
     /// <summary>Prices agreed with one customer, by product id: the order form offers them instead of the catalogue price.</summary>

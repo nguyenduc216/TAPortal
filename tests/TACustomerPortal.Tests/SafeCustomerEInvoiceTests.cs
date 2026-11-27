@@ -255,6 +255,34 @@ public sealed class SafeCustomerEInvoiceTests
     }
 
     [Fact]
+    public async Task OrderDetailsOpensTheCustomerAndTheInvoiceEmailSent()
+    {
+        using var f = Factory("OWNER", out var payments, out _);
+        var contact = new Contact(Guid.NewGuid(), "KH001", "Anh Nam", "Công ty TNHH Nam Phát", "0101234567", "0901234567", "ketoan@namphat.vn", "12 Lê Lợi", null, true, BuyerTypes.Business);
+        payments.Contacts.Add((A, contact));
+        var order = PaidOrder() with { ContactId = contact.Id, ContactName = contact.Name, InvoiceStatus = OrderInvoiceStatus.Issued, InvoiceNumber = "0000123",
+            InvoiceIssuedAt = Now.UtcDateTime, InvoiceEmailedAt = Now.UtcDateTime };
+        payments.Orders.Add((A, order));
+        var page = WebUtility.HtmlDecode(await Client(f).GetStringAsync($"/orders/details/{order.Id}"));
+        Assert.Contains("data-cp-show-dialog=\"contactDialog\"", page);
+        Assert.Contains("id=\"contactDialog\"", page);
+        Assert.Contains("Công ty TNHH Nam Phát", page);
+        Assert.Contains("mailto:ketoan@namphat.vn", page);
+        Assert.Contains($"/contacts/edit/{contact.Id}", page, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Xem email đã gửi", page);
+        Assert.Contains("id=\"invoiceEmailDialog\"", page);
+        Assert.Contains("Thông báo phát hành hóa đơn điện tử số 0000123", page);
+
+        // A walk-in order has no customer to open, and no email note without an email sent.
+        var walkIn = PaidOrder();
+        payments.Orders.Add((A, walkIn));
+        page = WebUtility.HtmlDecode(await Client(f).GetStringAsync($"/orders/details/{walkIn.Id}"));
+        Assert.Contains("Khách lẻ", page);
+        Assert.DoesNotContain("id=\"contactDialog\"", page);
+        Assert.DoesNotContain("id=\"invoiceEmailDialog\"", page);
+    }
+
+    [Fact]
     public async Task ADraftOrderShowsItsStatusWithoutAnError()
     {
         var api = new FakeInvoiceApi();

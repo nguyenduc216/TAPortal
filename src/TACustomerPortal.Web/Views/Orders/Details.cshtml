@@ -28,11 +28,11 @@
                     @if (o.Overpaid > 0) {<div><dt>@UiIcon.Render("alert-triangle")Trả dư</dt><dd>@PaymentText.Money(o.Overpaid) <span class="cp-badge cp-badge--red">Trả dư</span></dd></div>}
                     @if (o.PartnerPaidAmount is decimal partner) {<div><dt>@UiIcon.Render("refresh")Đối chiếu dịch vụ thanh toán</dt><dd>@PaymentText.Money(partner) <span class="cp-muted">(@PaymentText.VietnamTime(o.PartnerCheckedAt))</span> @if (o.PartnerDiffers) {<span class="cp-badge cp-badge--red">Lệch đối soát</span>} else {<span class="cp-badge cp-badge--green">Khớp</span>}</dd></div>}
                     <div><dt>@UiIcon.Render("clock")QR hết hạn</dt><dd>@PaymentText.VietnamTime(o.ExpiresAt)</dd></div>
-                    <div><dt>@UiIcon.Render("user")Khách hàng</dt><dd>@(Model.Contact?.Name ?? "Khách lẻ")</dd></div>
+                    <div><dt>@UiIcon.Render("user")Khách hàng</dt><dd>@if (Model.Contact is { } who) {<button type="button" class="cp-linkbtn" data-cp-show-dialog="contactDialog" title="Xem thông tin khách hàng">@who.Name</button>} else {<span>Khách lẻ</span>}</dd></div>
                     <div><dt>@UiIcon.Render("building-bank")Nhận tiền vào</dt><dd>@(Model.Bank is { } b ? $"{b.BankName} — {b.ReceiveAccount}" : "—")</dd></div>
                     <div data-cp-invoice="@o.InvoiceStatus"><dt>@UiIcon.Render("file-text")Hóa đơn điện tử</dt><dd>@(o.AutoIssueInvoice ? "Tự động xuất khi thanh toán đủ" : "Không tự động") <span class="cp-badge @invoiceCss">@invoiceLabel</span>
                         @if (o.InvoiceNumber is string number) {<div>Số hóa đơn <span class="cp-code">@number</span> · @PaymentText.VietnamTime(o.InvoiceIssuedAt)</div>}
-                        @if (o.InvoiceEmailedAt is not null) {<div class="cp-muted">Đã gửi email cho người mua.</div>}</dd></div>
+                        @if (o.InvoiceEmailedAt is not null) {<div class="cp-muted">Đã gửi email cho người mua. <button type="button" class="cp-linkbtn" data-cp-show-dialog="invoiceEmailDialog">Xem email đã gửi</button></div>}</dd></div>
                     @if (Model.InvoiceBuyer is { IsSet: true } payer)
                     {
                         <div data-cp-invoice-buyer><dt>@UiIcon.Render("receipt-tax")Thông tin xuất hóa đơn</dt><dd>@(payer.Name ?? "—")@if (payer.TaxCode is string tax) {<span> · MST <span class="cp-code">@tax</span></span>}
@@ -119,3 +119,43 @@
         }
     </section>
 </div>
+@if (Model.Contact is { } person)
+{
+    <dialog class="cp-dialog" id="contactDialog" aria-labelledby="contactDialogTitle" data-cp-contact-dialog>
+        <div class="cp-dialog__head"><strong id="contactDialogTitle">@person.Name</strong><button type="button" class="cp-dialog__close" data-cp-dialog-close aria-label="Đóng">×</button></div>
+        <dl class="cp-dl cp-dl--stack">
+            <div><dt>Mã khách hàng</dt><dd><span class="cp-code">@person.Code</span>@if (!person.IsActive) {<span class="cp-badge cp-badge--soft" style="margin-left:6px">Ngừng dùng</span>}</dd></div>
+            @if (person.LegalName is { Length: > 0 } legal && legal != person.Name) {<div><dt>Tên đơn vị</dt><dd>@legal</dd></div>}
+            @if (person.TaxCode is { Length: > 0 } tax) {<div><dt>Mã số thuế</dt><dd><span class="cp-code">@tax</span></dd></div>}
+            @if (person.IdentityNumber is { Length: > 0 } idn) {<div><dt>CCCD/Định danh</dt><dd>@idn</dd></div>}
+            <div><dt>Điện thoại</dt><dd>@if (person.Phone is { Length: > 0 } phone) {<a class="cp-link" href="tel:@phone">@phone</a>} else {<span>—</span>}</dd></div>
+            @if (person.Zalo is { Length: > 0 } zalo && zalo != person.Phone) {<div><dt>Zalo</dt><dd>@zalo</dd></div>}
+            <div><dt>Email</dt><dd>@if (person.Email is { Length: > 0 } mail) {<a class="cp-link" href="mailto:@mail">@mail</a>} else {<span>—</span>}</dd></div>
+            <div><dt>Địa chỉ</dt><dd>@(person.Address is { Length: > 0 } addr ? addr : "—")</dd></div>
+            @if (person.BankAccountNumber is { Length: > 0 } acc) {<div><dt>Tài khoản ngân hàng</dt><dd>@acc@(person.BankName is { Length: > 0 } bn ? " — " + bn : "")@(person.BankAccountName is { Length: > 0 } an ? " (" + an + ")" : "")</dd></div>}
+            @if (person.Note is { Length: > 0 } note) {<div><dt>Ghi chú</dt><dd>@note</dd></div>}
+        </dl>
+        <div class="cp-dialog__foot">
+            @if (Model.CanManage) {<a class="cp-btn cp-btn--ghost" asp-controller="Contacts" asp-action="Edit" asp-route-id="@person.Id">@UiIcon.Render("pencil")<span>Sửa thông tin</span></a>}
+            <button type="button" class="cp-btn cp-btn--primary" data-cp-dialog-close>Đóng</button>
+        </div>
+    </dialog>
+}
+@if (o.InvoiceEmailedAt is not null)
+{
+    var provider = Model.InvoiceProvider ?? "nhà cung cấp hóa đơn điện tử";
+    <dialog class="cp-dialog" id="invoiceEmailDialog" aria-labelledby="invoiceEmailTitle" data-cp-invoice-email-dialog>
+        <div class="cp-dialog__head"><strong id="invoiceEmailTitle">Email hóa đơn đã gửi người mua</strong><button type="button" class="cp-dialog__close" data-cp-dialog-close aria-label="Đóng">×</button></div>
+        <dl class="cp-dl cp-dl--stack">
+            <div><dt>Thời điểm gửi</dt><dd>@PaymentText.VietnamTime(o.InvoiceEmailedAt)</dd></div>
+            <div><dt>Gửi tới</dt><dd>@if (Model.Contact?.Email is { Length: > 0 } to) {<span>@to</span><div class="cp-muted">Email của khách hàng tại thời điểm xuất hóa đơn. Nếu đã sửa email khách sau đó, thư đã đi tới địa chỉ cũ.</div>} else {<span>Email của khách hàng lúc xuất hóa đơn</span><div class="cp-muted">Khách hàng hiện không còn lưu email.</div>}</dd></div>
+            <div><dt>Người gửi</dt><dd>@provider<div class="cp-muted">Hệ thống hóa đơn điện tử gửi thay doanh nghiệp, theo mẫu thư của họ.</div></dd></div>
+            <div><dt>Nội dung</dt><dd>Thông báo phát hành hóa đơn điện tử@(o.InvoiceNumber is string n ? " số " + n : ""), kèm thông tin để người mua tra cứu và tải hóa đơn.</dd></div>
+        </dl>
+        <p class="cp-muted" style="margin:12px 0 0">Hệ thống không lưu bản sao thư. Hóa đơn người mua nhận được chính là bản PDF dưới đây. Muốn xem nguyên văn thư hoặc gửi lại, vào trang quản lý của @provider.</p>
+        <div class="cp-dialog__foot">
+            <a class="cp-btn cp-btn--ghost" asp-action="InvoicePdf" asp-route-id="@o.Id" target="_blank" rel="noopener">@UiIcon.Render("file-text")<span>Xem hóa đơn PDF</span></a>
+            <button type="button" class="cp-btn cp-btn--primary" data-cp-dialog-close>Đóng</button>
+        </div>
+    </dialog>
+}

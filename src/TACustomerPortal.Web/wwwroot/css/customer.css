@@ -236,6 +236,13 @@ a.cp-card:hover { background: var(--cp-hover-bg); border-color: var(--cp-hover-l
 .cp-dl dt .ta-icon { width: 14px; height: 14px; color: var(--cp-blue-500); }
 .cp-dl dd { margin: 3px 0 0; font-weight: 600; font-size: 13px; overflow-wrap: anywhere; }
 .cp-dl .cp-span { grid-column: 1 / -1; }
+.cp-dl--stack { grid-template-columns: 1fr; }
+.cp-dl--stack > div { display: grid; grid-template-columns: 140px 1fr; gap: 10px; align-items: baseline; padding: 8px 0; }
+.cp-dl--stack dd { margin: 0; }
+.cp-dl--stack dd .cp-muted { font-weight: 400; font-size: 12px; margin-top: 2px; }
+@media (max-width: 480px) { .cp-dl--stack > div { grid-template-columns: 1fr; gap: 2px; } }
+.cp-linkbtn { padding: 0; border: 0; background: none; color: var(--cp-blue-600); font: inherit; font-weight: 600; cursor: pointer; text-align: left; }
+.cp-linkbtn:hover { text-decoration: underline; }
 .cp-profile { display: flex; align-items: center; gap: 14px; padding: 18px; border-bottom: 1px solid var(--cp-line); }
 .cp-profile h2 { font-size: 16px; font-weight: 700; }
 .cp-profile p { color: var(--cp-ink-3); font-size: 12.5px; }

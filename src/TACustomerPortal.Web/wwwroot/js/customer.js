@@ -534,3 +534,12 @@ document.addEventListener("click", event => {
         dialog.close();
     }
 });
+
+// Read-only dialogs opened by a button (order details: customer info, invoice email). Order-form dialogs have their own handler.
+document.addEventListener("click", event => {
+    const opener = event.target.closest?.("[data-cp-show-dialog]");
+    if (opener) { document.getElementById(opener.dataset.cpShowDialog)?.showModal(); return; }
+    if (event.target.closest?.("form[data-cp-order-form]")) return;
+    if (event.target.closest?.("[data-cp-dialog-close]")) { event.target.closest("dialog")?.close(); return; }
+    if (event.target instanceof HTMLDialogElement && event.target.matches("[data-cp-contact-dialog],[data-cp-invoice-email-dialog]")) event.target.close();
+});
