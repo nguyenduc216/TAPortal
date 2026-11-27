@@ -4,7 +4,7 @@
 - Change ID: `TINGEE-INTEGRATION-CHG-20261127T130319Z-E75A07`
 - Created UTC: 2026-11-27T13:03:19.988270+00:00
 - Tiêu đề: Payment collections: one QR for several unpaid orders, allocated oldest first
-- Trạng thái: IMPLEMENTED
+- Trạng thái: MIGRATED
 
 ## Yêu cầu và phạm vi
 Operator (2026-11-27): khách có hai đơn đang nợ cần gộp vào một QR công nợ chuẩn, linh hoạt: khách có thể chỉ chuyển trước một khoản. Đã duyệt hướng "Thu gộp công nợ" (phiếu thu gộp đứng trên các đơn cũ, không tạo đơn mới), sau đó "Tôi đồng ý, hãy thực hiện theo cái định hướng này nhé."
@@ -45,7 +45,13 @@ Quyết định:
 - Script: `database/migrations/069-payment-collections.sql`, sau 068
 - Preflight / Verify / Rollback: `125-verify-payment-collections.sql` / `126-rollback-payment-collections.sql` (từ chối khi đã có phiếu thu)
 - Chỉ thêm 3 bảng và 1 cột nullable, không đổi dòng nào.
-- Execution: NOT_EXECUTED
+- Execution: EXECUTED 2026-11-27 13:24:40Z qua `Invoke-TAMigrations.ps1 -Plan "069:125:126"` tại HEAD 3ad557a.
+  - Pre-check: NOT_APPLIED.
+  - Dry-run: afterMigration=PASS, afterRollback=NOT_APPLIED, trancount 0. Pre-check lại: NOT_APPLIED.
+  - Backup COPY_ONLY đã kiểm tra: `TAPortalSys-predeploy-20261127T132303Z.bak`.
+  - Gates: 867/867 PASS.
+  - Real run: VERIFY_STATUS=PASS.
+  - Log: `.codec/reports/TINGEE-INTEGRATION-CHG-20261127T130319Z-E75A07-migrations-20261127T132303Z.log`.
 
 ## Test và kết quả
 - `dotnet build TAPortal.sln -c Release`: 0 lỗi.
