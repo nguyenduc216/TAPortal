@@ -4,7 +4,7 @@
 - Change ID: `CUSTOMER-PORTAL-FOUNDATION-CHG-20261127T165527Z-02BE59`
 - Created UTC: 2026-11-27T16:55:27.038166+00:00
 - Tiêu đề: Order details: customer info and invoice email dialogs
-- Trạng thái: PLANNED
+- Trạng thái: DEPLOYED
 
 ## Yêu cầu và phạm vi
 Operator (2026-11-27), trang chi tiết đơn: bấm tên khách hàng để xem thông tin khách (popup); bấm "Đã gửi email cho người mua" để biết đã gửi gì, gửi cho ai.
@@ -33,16 +33,17 @@ Quyết định:
 
 ## Publish
 - Project: TACustomerPortal.Web
-- Destination (chỉ từ config):
-- Trạng thái: NOT_PUBLISHED
-- Artifact SHA256:
-- Smoke test:
+- Destination (chỉ từ config): invoice (TA.Invoice)
+- Trạng thái: DEPLOYED 2026-11-27 17:02Z, source commit 30da2f8, `Deploy-TARemote.ps1 -Target invoice`, health HTTP 200
+- Artifact SHA256: 87a453cf335dd22cfd94dc5fe1adfa9e9ec1ac6e3e80c9d051130243bfa3118d (package 7AE953697D1EA41C544C7407B48E6A897CEA67D1B86B2829C7051DF53D0CFEA6)
+- Backup trên server: `C:\TADeployackups\invoice-20261128-000249`
+- Smoke test: health 200; audit gates PASS (868 safe tests).
 
 ## Git
 - Branch: feature/order-details-popups (cắt từ main 639bf12)
-- Commit SHA:
+- Commit SHA: 30da2f8
 - PR:
-- Merge: PENDING_APPROVAL
+- Merge: MERGED fast-forward vào main (sau deploy)
 - Merge SHA:
 
 ## Rủi ro, quyết định và việc còn lại
