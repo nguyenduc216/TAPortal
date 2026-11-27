@@ -1,0 +1,41 @@
+@model CollectionsVm
+@{
+    ViewData["Title"] = "Thu gộp công nợ";
+    ViewData["Eyebrow"] = "Thanh toán";
+    ViewData["Subtitle"] = "Gộp nhiều đơn còn nợ của một khách hàng vào một mã QR; khách có thể trả hết hoặc trả trước một phần.";
+}
+@if (!Model.Linked) { <partial name="_PaymentsNotLinked" /> }
+<section class="cp-card">
+    <div class="cp-toolbar">
+        <div class="cp-search">@UiIcon.Render("search")<input class="cp-input" type="search" aria-label="Tìm phiếu thu" placeholder="Tìm theo mã phiếu thu, khách hàng..." oninput="taFilterRows(this.value,'collectionsTable')" /></div>
+        @if (Model.CanManage) {<div class="cp-toolbar__end"><a class="cp-btn cp-btn--primary" asp-action="Create">@UiIcon.Render("plus")<span>Tạo phiếu thu gộp</span></a></div>}
+    </div>
+    @if (Model.Collections.Count == 0)
+    {
+        <div class="cp-empty" data-cp-empty>@UiIcon.Render("cash")<p>Chưa có phiếu thu gộp nào. Chọn một khách hàng đang nợ nhiều đơn để gộp vào một mã QR.</p></div>
+    }
+    else
+    {
+        <div class="cp-table-wrap">
+            <table class="cp-table" id="collectionsTable" data-ta-pager="10">
+                <thead><tr><th>Mã phiếu thu</th><th>Khách hàng</th><th class="cp-num">Số đơn</th><th class="cp-num">Số tiền thu</th><th class="cp-num">Đã thu</th><th>Trạng thái</th><th>Hết hạn QR</th><th>Tạo lúc</th></tr></thead>
+                <tbody>
+                @foreach (var c in Model.Collections)
+                {
+                    var (label, css) = CollectionText.Status(CollectionMath.EffectiveStatus(c, Model.UtcNow));
+                    <tr data-ta-row>
+                        <td><a class="cp-link" asp-action="Details" asp-route-id="@c.Id">@c.CollectionNo</a>@if (!string.IsNullOrWhiteSpace(c.Description)) {<button class="cp-clamp" type="button" aria-expanded="false" title="@c.Description" data-cp-clamp>@c.Description</button>}</td>
+                        <td>@(c.ContactName ?? "—")</td>
+                        <td class="cp-num">@c.OrderCount</td>
+                        <td class="cp-num">@PaymentText.Money(c.Amount)</td>
+                        <td class="cp-num">@PaymentText.Money(c.PaidAmount)</td>
+                        <td><span class="cp-badge @css">@label</span></td>
+                        <td>@PaymentText.VietnamTime(c.ExpiresAt)</td>
+                        <td>@PaymentText.VietnamTime(c.CreatedAt)</td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    }
+</section>

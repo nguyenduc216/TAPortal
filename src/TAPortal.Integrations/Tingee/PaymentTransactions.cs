@@ -8,8 +8,10 @@ public sealed record PaymentTransaction(
     long Id, string Direction, string? TransactionCode, decimal Amount, string? Content, string? Bank, string? AccountNumber, string? VaAccountNumber,
     DateTime? TransactionAtUtc, DateTime ReceivedAtUtc, Guid? CustomerId, string? CustomerName, Guid? OrderId, string? OrderNo, decimal? OrderAmount,
     string Status, string? Flags, string? Reason, string? MatchedBy, decimal? SystemPaidBefore, decimal? SystemPaidAfter, decimal? PartnerPaidTotal,
-    string? OrderStatusAfter, DateTime? ResolvedAtUtc, string? ResolvedVia, string? ResolutionNote, bool Synced = false)
+    string? OrderStatusAfter, DateTime? ResolvedAtUtc, string? ResolvedVia, string? ResolutionNote, bool Synced = false, Guid? CollectionId = null)
 {
+    /// <summary>Paid to a payment collection (migration 069): OrderNo/OrderAmount are then the collection's, OrderId is null.</summary>
+    public bool IsCollection => CollectionId is not null;
     /// <summary>Synced = fetched from the partner's history by "Đồng bộ" because its webhook (IPN) never arrived.</summary>
     public IReadOnlyList<string> FlagList => string.IsNullOrEmpty(Flags) ? [] : Flags.Split(',', StringSplitOptions.RemoveEmptyEntries);
     /// <summary>The partner reported a different total than the system counted.</summary>
@@ -74,12 +76,13 @@ public sealed class SqlPaymentTransactionStore(IConfiguration configuration) : I
 
     private const string Select = """
 SELECT t.Id,t.Direction,t.TransactionCode,t.Amount,t.Content,t.Bank,t.AccountNumber,t.VaAccountNumber,t.TransactionAt,t.ReceivedAt,t.CustomerId,c.Name,
- t.OrderId,o.OrderNo,o.Amount,t.Status,t.Flags,t.Reason,t.MatchedBy,t.SystemPaidBefore,t.SystemPaidAfter,t.PartnerPaidTotal,t.OrderStatusAfter,
- t.ResolvedAt,t.ResolvedVia,t.ResolutionNote,CAST(CASE WHEN i.RequestId LIKE 'sync:%' THEN 1 ELSE 0 END AS bit)
+ t.OrderId,ISNULL(o.OrderNo,pc.CollectionNo),ISNULL(o.Amount,pc.Amount),t.Status,t.Flags,t.Reason,t.MatchedBy,t.SystemPaidBefore,t.SystemPaidAfter,t.PartnerPaidTotal,t.OrderStatusAfter,
+ t.ResolvedAt,t.ResolvedVia,t.ResolutionNote,CAST(CASE WHEN i.RequestId LIKE 'sync:%' THEN 1 ELSE 0 END AS bit),t.CollectionId
 FROM dbo.PaymentTransactions t
 LEFT JOIN dbo.TingeeWebhookInbox i ON i.Id=t.InboxId
 LEFT JOIN dbo.Customers c ON c.Id=t.CustomerId
 LEFT JOIN dbo.CustomerOrders o ON o.Id=t.OrderId AND o.CustomerId=t.CustomerId
+LEFT JOIN dbo.PaymentCollections pc ON pc.Id=t.CollectionId AND pc.CustomerId=t.CustomerId
 """;
 
     private static PaymentTransaction Read(SqlDataReader r)
@@ -88,7 +91,8 @@ LEFT JOIN dbo.CustomerOrders o ON o.Id=t.OrderId AND o.CustomerId=t.CustomerId
         decimal? D(int i) => r.IsDBNull(i) ? null : r.GetDecimal(i);
         DateTime? T(int i) => r.IsDBNull(i) ? null : DateTime.SpecifyKind(r.GetDateTime(i), DateTimeKind.Utc);
         return new(r.GetInt64(0), r.GetString(1), S(2), r.GetDecimal(3), S(4), S(5), S(6), S(7), T(8), T(9)!.Value, r.IsDBNull(10) ? null : r.GetGuid(10), S(11),
-            r.IsDBNull(12) ? null : r.GetGuid(12), S(13), D(14), r.GetString(15), S(16), S(17), S(18), D(19), D(20), D(21), S(22), T(23), S(24), S(25), !r.IsDBNull(26) && r.GetBoolean(26));
+            r.IsDBNull(12) ? null : r.GetGuid(12), S(13), D(14), r.GetString(15), S(16), S(17), S(18), D(19), D(20), D(21), S(22), T(23), S(24), S(25), !r.IsDBNull(26) && r.GetBoolean(26),
+            r.IsDBNull(27) ? null : r.GetGuid(27));
     }
 
     private static (string Where, List<(string, object?)> Args) Where(PaymentTxFilter f, bool withStatus)
@@ -106,7 +110,7 @@ LEFT JOIN dbo.CustomerOrders o ON o.Id=t.OrderId AND o.CustomerId=t.CustomerId
         }
         if (!string.IsNullOrWhiteSpace(f.Search))
         {
-            where.Add("(t.Content LIKE @q OR t.TransactionCode LIKE @q OR t.AccountNumber LIKE @q OR t.VaAccountNumber LIKE @q OR o.OrderNo LIKE @q)");
+            where.Add("(t.Content LIKE @q OR t.TransactionCode LIKE @q OR t.AccountNumber LIKE @q OR t.VaAccountNumber LIKE @q OR o.OrderNo LIKE @q OR pc.CollectionNo LIKE @q)");
             args.Add(("@q", "%" + f.Search.Trim().Replace("[", "[[]").Replace("%", "[%]").Replace("_", "[_]") + "%"));
         }
         return (string.Join(" AND ", where), args);
@@ -131,6 +135,7 @@ LEFT JOIN dbo.CustomerOrders o ON o.Id=t.OrderId AND o.CustomerId=t.CustomerId
         await using var cmd = Command(cn, $"""
 SELECT t.Status,t.Direction,COUNT(*),ISNULL(SUM(t.Amount),0)
 FROM dbo.PaymentTransactions t LEFT JOIN dbo.CustomerOrders o ON o.Id=t.OrderId AND o.CustomerId=t.CustomerId
+LEFT JOIN dbo.PaymentCollections pc ON pc.Id=t.CollectionId AND pc.CustomerId=t.CustomerId
 WHERE {where} GROUP BY t.Status,t.Direction
 """, [.. args]);
         var by = new Dictionary<string, (int N, decimal Sum)>();
@@ -223,10 +228,16 @@ SELECT 'OK';
         await using var cmd = Command(cn, """
 SET XACT_ABORT ON;
 BEGIN TRAN;
-DECLARE @status varchar(20), @order uniqueidentifier, @customer uniqueidentifier;
-SELECT @status=Status,@order=OrderId,@customer=CustomerId FROM dbo.PaymentTransactions WITH (UPDLOCK,HOLDLOCK) WHERE Id=@id AND (@scope IS NULL OR CustomerId=@scope);
+DECLARE @status varchar(20), @order uniqueidentifier, @customer uniqueidentifier, @collection uniqueidentifier;
+SELECT @status=Status,@order=OrderId,@customer=CustomerId,@collection=CollectionId FROM dbo.PaymentTransactions WITH (UPDLOCK,HOLDLOCK) WHERE Id=@id AND (@scope IS NULL OR CustomerId=@scope);
 IF @status IS NULL BEGIN ROLLBACK; SELECT 'NOT_FOUND'; RETURN; END
-IF @status<>'REVIEW' OR @order IS NULL BEGIN ROLLBACK; SELECT 'WRONG_STATE'; RETURN; END
+IF @status<>'REVIEW' OR (@order IS NULL AND @collection IS NULL) BEGIN ROLLBACK; SELECT 'WRONG_STATE'; RETURN; END
+-- A payment to a collection was already split over its orders: accepting it only closes the review.
+IF @order IS NULL
+BEGIN
+ UPDATE dbo.PaymentTransactions SET Status='RESOLVED',ResolvedAt=SYSUTCDATETIME(),ResolvedBy=@actor,ResolvedVia=@via,ResolutionNote=@note,UpdatedAt=SYSUTCDATETIME() WHERE Id=@id;
+ COMMIT; SELECT 'OK'; RETURN;
+END
 UPDATE dbo.CustomerOrders SET
  Status=CASE WHEN PaidAmount>=Amount THEN 'PAID' WHEN PaidAmount>0 THEN 'PARTIALLY_PAID' ELSE 'AWAITING_PAYMENT' END,
  InvoiceStatus=CASE WHEN PaidAmount>=Amount AND AutoIssueInvoice=1 AND InvoiceStatus='NONE' THEN 'PENDING' ELSE InvoiceStatus END,
@@ -274,6 +285,7 @@ public static class PaymentTxText
         PaymentTxFlag.OrderCancelled => "Đơn hủy có giao dịch",
         PaymentTxFlag.QrExpired => "QR hết hạn có giao dịch",
         PaymentTxFlag.PartnerMismatch => "Lệch đối soát",
+        PaymentTxFlag.CollectionCancelled => "Phiếu thu đã hủy có giao dịch",
         _ => flag
     };
 

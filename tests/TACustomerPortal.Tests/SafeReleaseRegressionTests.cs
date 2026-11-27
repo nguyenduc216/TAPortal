@@ -111,6 +111,9 @@ public sealed class SafeReleaseRegressionTests
             // Public payment page of one order (operator 2026-11-06; reviewed: opened only by a random 32-character token,
             // rate-limited, antiforgery on the invoice details form, which only writes that order's tax code and invoice name).
             "Pay.Index:GET", "Pay.Status:GET", "Pay.Logo:GET", "Pay.Invoice:POST",
+            // Public payment page of a payment collection (operator 2026-11-27; reviewed: read only, opened only by a random
+            // 32-character token, rate-limited; shows the collection's orders and QR, nothing else of the company).
+            "CollectionPay.Index:GET", "CollectionPay.Status:GET", "CollectionPay.Logo:GET",
             // Zalo Mini App JSON API (ZALO-MINI-APP, operator 2026-11-13; reviewed: no cookie, so no antiforgery; rate-limited;
             // CORS limited to the Mini App origins; the Zalo user and phone are read from Zalo with the client's tokens, never
             // taken from the body; QR one-time 5 min; password path shares the web login limiter; calls need a signed session).

@@ -1,0 +1,116 @@
+@model CollectionCreateVm
+@{
+    ViewData["Title"] = "Tạo phiếu thu gộp";
+    ViewData["Eyebrow"] = "Thu gộp công nợ";
+    ViewData["Subtitle"] = "Chọn khách hàng và các đơn còn nợ: hệ thống tạo một mã QR. Tiền khách chuyển được trừ vào các đơn theo thứ tự từ trên xuống.";
+    var i = Model.Input;
+    var inv = System.Globalization.CultureInfo.InvariantCulture;
+    var selectable = Model.Orders.Where(o => o.InCollection is null).ToList();
+    var chosenTotal = selectable.Where(o => i.OrderIds.Contains(o.Order.Id)).Sum(o => o.Order.Remaining);
+    var ready = Model.Linked && Model.Banks.Count > 0;
+}
+@if (!Model.Linked) { <partial name="_PaymentsNotLinked" /> }
+else if (Model.Banks.Count == 0)
+{
+    <aside class="cp-note" style="margin-bottom:14px">@UiIcon.Render("info-circle")<div>Chưa có tài khoản ngân hàng nào đang hoạt động. <a class="cp-link" asp-controller="Banks" asp-action="Index">Liên kết tài khoản ngân hàng</a> trước khi tạo phiếu thu.</div></aside>
+}
+<section class="cp-card" style="margin-bottom:14px">
+    <div class="cp-card__head"><span class="cp-blob">@UiIcon.Render("users")</span><h2>1. Khách hàng</h2></div>
+    <div class="cp-card__body">
+        @if (Model.Debtors.Count == 0)
+        {
+            <div class="cp-empty" data-cp-empty>@UiIcon.Render("circle-check")<p>Không có khách hàng nào đang nợ tiền. Phiếu thu gộp chỉ dùng cho đơn có lưu khách hàng (không áp dụng khách lẻ).</p></div>
+        }
+        else
+        {
+            <form method="get" asp-action="Create">
+                <div class="cp-field" style="margin-bottom:0">
+                    <label class="cp-label" for="contactPick">Khách hàng đang nợ</label>
+                    <select class="cp-input cp-input--plain" id="contactPick" name="contactId" onchange="this.form.submit()">
+                        <option value="">— Chọn khách hàng —</option>
+                        @foreach (var d in Model.Debtors) {<option value="@d.Contact.Id" selected="@(d.Contact.Id == Model.Contact?.Id)">@d.Contact.Code — @d.Contact.Name · @d.Orders đơn · nợ @PaymentText.Money(d.Due)</option>}
+                    </select>
+                </div>
+                <noscript><button class="cp-btn cp-btn--ghost" type="submit">Chọn</button></noscript>
+            </form>
+        }
+    </div>
+</section>
+
+@if (Model.Contact is { } contact)
+{
+    <form method="post" asp-action="Create" data-cp-collection-form>
+        <div asp-validation-summary="ModelOnly" class="cp-alert" role="alert"></div>
+        <input type="hidden" name="ContactId" value="@contact.Id" />
+        <section class="cp-card" style="margin-bottom:14px">
+            <div class="cp-card__head"><span class="cp-blob cp-blob--gold">@UiIcon.Render("list-tree")</span><h2>2. Đơn còn nợ của @contact.Name</h2></div>
+            <div class="cp-card__body">
+                <p class="cp-hint" style="margin-top:0">Tích các đơn muốn thu. Tiền khách chuyển trả cho đơn trên cùng trước; dùng nút ↑ ↓ để đổi thứ tự. Đơn đã nằm trong phiếu thu khác đang mở thì không chọn được.</p>
+                <div class="cp-error">@Html.ValidationMessage("OrderIds")</div>
+                @if (Model.Orders.Count == 0)
+                {
+                    <div class="cp-empty" data-cp-empty>@UiIcon.Render("circle-check")<p>Khách hàng này không còn đơn nào nợ tiền.</p></div>
+                }
+                else
+                {
+                    <ol class="cp-debts" data-cp-debts>
+                        @foreach (var d in Model.Orders)
+                        {
+                            var o = d.Order;
+                            var (label, css) = PaymentText.OrderStatus(d.Status);
+                            var busy = d.InCollection is not null;
+                            <li class="cp-debt@(busy ? " is-busy" : "")" data-cp-debt data-cp-due="@o.Remaining.ToString("0", inv)">
+                                <label class="cp-debt__pick">
+                                    <input type="checkbox" name="OrderIds" value="@o.Id" checked="@(!busy && i.OrderIds.Contains(o.Id))" disabled="@busy" />
+                                    <span class="cp-debt__no" data-cp-debt-position aria-hidden="true"></span>
+                                    <span class="cp-debt__main">
+                                        <strong>@o.OrderNo</strong> <span class="cp-badge @css">@label</span>
+                                        <span class="cp-muted cp-debt__meta">@(o.Description ?? "—") · tạo @PaymentText.VietnamTime(o.CreatedAt)@if (o.PaidAmount > 0) {<text> · đã thu @PaymentText.Money(o.PaidAmount)/@PaymentText.Money(o.Amount)</text>}</span>
+                                        @if (d.InCollection is { } inside) {<span class="cp-muted cp-debt__meta">Đang trong phiếu thu <a class="cp-link" asp-action="Details" asp-route-id="@inside.Id">@inside.CollectionNo</a></span>}
+                                    </span>
+                                    <span class="cp-debt__due"><small>Còn nợ</small><strong>@PaymentText.Money(o.Remaining)</strong></span>
+                                </label>
+                                @if (!busy)
+                                {
+                                    <span class="cp-debt__move">
+                                        <button class="cp-btn cp-btn--ghost cp-btn--icon" type="button" data-cp-move="up" title="Ưu tiên trả trước" aria-label="Chuyển @o.OrderNo lên trên">↑</button>
+                                        <button class="cp-btn cp-btn--ghost cp-btn--icon" type="button" data-cp-move="down" title="Trả sau" aria-label="Chuyển @o.OrderNo xuống dưới">↓</button>
+                                    </span>
+                                }
+                            </li>
+                        }
+                    </ol>
+                    <div class="cp-debts__total">Đã chọn <strong data-cp-debt-count>@selectable.Count(o => i.OrderIds.Contains(o.Order.Id))</strong> đơn · tổng còn nợ <strong data-cp-debt-total>@PaymentText.Money(chosenTotal)</strong></div>
+                }
+            </div>
+        </section>
+        <section class="cp-card">
+            <div class="cp-card__head"><span class="cp-blob">@UiIcon.Render("qrcode")</span><h2>3. Mã QR thu tiền</h2></div>
+            <div class="cp-card__body cp-form-grid">
+                <div class="cp-field">
+                    <label class="cp-label" for="Amount">Số tiền thu lần này</label>
+                    <div class="cp-input-wrap">@UiIcon.Render("report-money")<input class="cp-input" id="Amount" name="Amount" type="number" min="1" step="1" inputmode="numeric" value="@(i.Amount?.ToString("0", inv))" placeholder="@chosenTotal.ToString("0", inv)" data-cp-debt-amount /></div>
+                    <div class="cp-hint">Để trống để thu hết số còn nợ của các đơn đã chọn. Nhập số nhỏ hơn nếu khách trả trước một phần.</div>
+                    <div class="cp-error">@Html.ValidationMessage("Amount")</div>
+                </div>
+                <div class="cp-field">
+                    <label class="cp-label" for="BankAccountId">Tài khoản nhận tiền</label>
+                    <select class="cp-input cp-input--plain" id="BankAccountId" name="BankAccountId" required>
+                        @foreach (var b in Model.Banks) {<option value="@b.Id" selected="@(b.Id == i.BankAccountId)">@PaymentText.BankOption(b)</option>}
+                    </select>
+                    <div class="cp-error">@Html.ValidationMessage("BankAccountId")</div>
+                </div>
+                @await Html.PartialAsync("_QrLifetime", new QrLifetimeField("QrExpire", "Thời hạn QR", i.QrExpireMinutes))
+                <div class="cp-field cp-span">
+                    <label class="cp-label" for="Description">Mô tả (hiện trên trang thanh toán)</label>
+                    <div class="cp-input-wrap">@UiIcon.Render("file-text")<input class="cp-input" id="Description" name="Description" value="@i.Description" maxlength="500" placeholder="Ví dụ: Thanh toán công nợ tháng 11" /></div>
+                </div>
+                <p class="cp-hint cp-span" style="margin:0">Mỗi đơn được thanh toán đủ sẽ tự xuất hóa đơn điện tử riêng như bình thường (nếu đơn bật tự động xuất). Tiền khách chuyển dư so với tổng nợ được đưa vào Đối soát giao dịch để xử lý.</p>
+            </div>
+            <div class="cp-card__foot">
+                <a class="cp-btn cp-btn--ghost" asp-action="Index">@UiIcon.Render("arrow-left")<span>Danh sách phiếu thu</span></a>
+                <button class="cp-btn cp-btn--primary" type="submit" disabled="@(!ready || selectable.Count == 0)" style="margin-left:auto">@UiIcon.Render("qrcode")<span>Tạo phiếu thu và mã QR</span></button>
+            </div>
+        </section>
+    </form>
+}

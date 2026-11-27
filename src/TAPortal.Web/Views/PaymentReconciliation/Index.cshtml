@@ -77,14 +77,14 @@
                         <td data-label="Số tiền" class="text-end">@(t.Direction == "DEBIT" ? "−" : "")@Money(t.Amount)</td>
                         <td data-label="Nội dung">@(t.Content ?? "—")</td>
                         <td data-label="Tài khoản">@t.Bank @(t.VaAccountNumber ?? t.AccountNumber)</td>
-                        <td data-label="Đơn">@(t.OrderNo ?? "—")</td>
+                        <td data-label="Đơn">@(t.OrderNo ?? "—")@if (t.IsCollection) {<div class="text-secondary small">Phiếu thu gộp</div>}</td>
                         <td data-label="Hệ thống tính" class="text-end">@(t.SystemPaidAfter is decimal sp ? Money(sp) : "—")</td>
                         <td data-label="Tingee báo" class="text-end">@(t.PartnerPaidTotal is decimal pp ? Money(pp) : "—")</td>
                         <td data-label="Trạng thái">
                             <span class="ta-badge @Tone(tone)">@label</span>
                             @foreach (var f in t.FlagList) {<span class="ta-badge ta-badge--danger">@PaymentTxText.Flag(f)</span>}
                             @if (t.Synced) {<span class="ta-badge ta-badge--warning" title="Không có webhook (IPN) từ Tingee; lấy lại bằng Đồng bộ từ Tingee">Không có IPN · đã đồng bộ</span>}
-                            @if (t.Reason is string reason && t.OrderId is null) {<div class="text-secondary small">@reason</div>}
+                            @if (t.Reason is string reason && t.OrderId is null && !t.IsCollection) {<div class="text-secondary small">@reason</div>}
                             @if (t.ResolutionNote is string rn) {<div class="text-secondary small">Ghi chú (@t.ResolvedVia): @rn</div>}
                             @if (PaymentTxStatus.NeedsStaff(t.Status))
                             {
@@ -100,7 +100,7 @@
                                             <div class="ta-input-icon">@UiIcon.Render("pencil")<input class="form-control form-control-sm w-auto" name="note" placeholder="Ghi chú" aria-label="Ghi chú" /></div>
                                             <button class="btn btn-sm btn-primary" type="submit">Gán vào đơn</button></form>
                                     }
-                                    @if (t.Status == PaymentTxStatus.Review && t.OrderId is not null)
+                                    @if (t.Status == PaymentTxStatus.Review && (t.OrderId is not null || t.IsCollection))
                                     {
                                         <form method="post" asp-action="Accept" asp-route-id="@t.Id" class="d-flex flex-wrap gap-1 mt-1"><input type="hidden" name="back" value="@back" />
                                             <div class="ta-input-icon">@UiIcon.Render("pencil")<input class="form-control form-control-sm w-auto" name="note" placeholder="Ghi chú" aria-label="Ghi chú" /></div>

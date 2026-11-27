@@ -126,11 +126,13 @@ IF @@ROWCOUNT=0 INSERT dbo.CustomerNotificationRecipients(CustomerId,Email,ZaloP
         await using var cn = await Open(ct);
         await using var cmd = Command(cn, null, """
 SELECT TOP (@max) t.Id,t.Status,t.Flags,t.Reason,t.Amount,t.Content,ISNULL(t.VaAccountNumber,t.AccountNumber),ISNULL(t.TransactionAt,t.ReceivedAt),
- t.CustomerId,c.Name,t.OrderId,o.OrderNo,o.Amount,t.SystemPaidAfter,t.OrderStatusAfter,b.Name,b.Email,b.Phone
+ t.CustomerId,c.Name,ISNULL(t.OrderId,t.CollectionId),ISNULL(o.OrderNo,pc.CollectionNo),ISNULL(o.Amount,pc.Amount),t.SystemPaidAfter,t.OrderStatusAfter,b.Name,b.Email,b.Phone
 FROM dbo.PaymentTransactions t
 LEFT JOIN dbo.Customers c ON c.Id=t.CustomerId
 LEFT JOIN dbo.CustomerOrders o ON o.Id=t.OrderId AND o.CustomerId=t.CustomerId
-LEFT JOIN dbo.CustomerBuyers b ON b.Id=o.ContactId AND b.CustomerId=o.CustomerId
+-- A payment to a payment collection (migration 069) is announced as the collection: "Phiếu thu TT…".
+LEFT JOIN dbo.PaymentCollections pc ON pc.Id=t.CollectionId AND pc.CustomerId=t.CustomerId
+LEFT JOIN dbo.CustomerBuyers b ON b.Id=ISNULL(o.ContactId,pc.ContactId) AND b.CustomerId=t.CustomerId
 WHERE t.NotifiedAt IS NULL AND t.Status IN ('MATCHED','REVIEW','UNMATCHED') AND t.CreatedAt>=@since
 ORDER BY t.Id
 """, ("@max", max), ("@since", sinceUtc));

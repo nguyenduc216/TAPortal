@@ -853,3 +853,25 @@ textarea.cp-input { height: auto; min-height: 72px; padding-top: 8px; padding-bo
 .cp-guide__sample { padding: 12px 14px; border: 1px dashed var(--cp-line-2); border-radius: var(--cp-radius-sm); background: var(--cp-surface-2); font-size: 13px; }
 .cp-guide__sample p { margin: 6px 0 0; }
 .cp-guide__code { margin: 8px 0 10px; padding: 10px 12px; overflow-x: auto; white-space: pre-wrap; word-break: break-all; font-family: var(--cp-mono); font-size: 12px; border: 1px solid var(--cp-line); border-radius: var(--cp-radius-sm); background: #F1F4F9; }
+
+/* "Thu gộp công nợ": unpaid orders of one buyer, ticked and ordered (top pays first). */
+.cp-debts { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; }
+.cp-debt { display: flex; align-items: center; gap: 8px; border: 1px solid var(--cp-line); border-radius: var(--cp-radius-sm); background: #fff; }
+.cp-debt:hover { background: var(--cp-hover-bg); border-color: var(--cp-hover-line); }
+.cp-debt:has(input:checked) { border-color: var(--cp-blue-600); }
+.cp-debt.is-busy { opacity: .6; }
+.cp-debt__pick { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; padding: 10px 12px; cursor: pointer; }
+.cp-debt.is-busy .cp-debt__pick { cursor: not-allowed; }
+.cp-debt__no { display: grid; place-items: center; width: 24px; height: 24px; flex: none; border-radius: 50%; background: var(--cp-surface-2); color: var(--cp-ink-2); font-size: 12px; font-weight: 700; }
+.cp-debt__no:empty { visibility: hidden; }
+.cp-debt__main { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.cp-debt__meta { display: block; font-size: 12px; overflow-wrap: anywhere; }
+.cp-debt__due { display: grid; text-align: right; white-space: nowrap; }
+.cp-debt__due small { color: var(--cp-ink-3); font-size: 11px; }
+.cp-debt__move { display: flex; flex-direction: column; gap: 2px; padding-right: 8px; }
+.cp-debt__move .cp-btn { min-height: 28px; padding: 0 8px; }
+.cp-debts__total { margin-top: 12px; font-size: 13px; color: var(--cp-ink-2); }
+@media (max-width: 560px) {
+    .cp-debt__pick { flex-wrap: wrap; }
+    .cp-debt__due { text-align: left; }
+}

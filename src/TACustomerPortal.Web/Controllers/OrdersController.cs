@@ -64,7 +64,7 @@ public sealed class OrdersController(ICurrentCustomerContext customer, IPaymentS
         return RedirectToAction(nameof(Details), new { id = created.Id });
     }
 
-    public async Task<IActionResult> Details(Guid id, [FromServices] IOrderInvoiceStore invoices, [FromServices] IOrderPageStore pages)
+    public async Task<IActionResult> Details(Guid id, [FromServices] IOrderInvoiceStore invoices, [FromServices] IOrderPageStore pages, [FromServices] IPaymentCollectionStore collections)
     {
         if (await Current() is not { } m) return SelectCustomer();
         var order = await store.OrderAsync(m.CustomerId, id);
@@ -80,7 +80,8 @@ public sealed class OrdersController(ICurrentCustomerContext customer, IPaymentS
         var token = await pages.TokenAsync(m.CustomerId, order.Id);
         var payUrl = token is null ? null : Url.Action("Index", "Pay", new { token }, Request.Scheme);
         return View(new OrderDetailsVm(m, CanManage(m), order, status, bank, contact, qr, now, banks, (await invoices.SettingsAsync(m.CustomerId)).IsReady,
-            payUrl, await pages.InvoiceBuyerAsync(m.CustomerId, order.Id)));
+            payUrl, await pages.InvoiceBuyerAsync(m.CustomerId, order.Id),
+            (await collections.OpenCollectionsByOrderAsync(m.CustomerId)).TryGetValue(order.Id, out var inside) ? inside : null));
     }
 
     /// <summary>Prices agreed with one customer, by product id: the order form offers them instead of the catalogue price.</summary>

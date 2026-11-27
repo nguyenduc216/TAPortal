@@ -119,6 +119,117 @@ SELECT 1;
         return Convert.ToInt32(await cmd.ExecuteScalarAsync(ct)) == 1;
     }
 
+    public async Task<IReadOnlyList<TingeeCollectionCandidate>> CollectionCandidatesAsync(TingeePaymentNotice notice, DateTime receivedAtUtc, CancellationToken ct)
+    {
+        var bills = notice.AdditionalValues.Where(v => v.Length <= 64).Distinct(StringComparer.OrdinalIgnoreCase).Take(20).ToList();
+        var billFilter = bills.Count == 0 ? "" : " OR pc.BillId IN (" + string.Join(",", bills.Select((_, i) => "@b" + i)) + ")";
+        await using var cn = await Open(ct);
+        await using var cmd = new SqlCommand($"""
+SELECT pc.CustomerId,pc.Id,pc.CollectionNo,pc.BillId,pc.Amount,pc.PaidAmount,pc.QrType,pc.QrAccount,m.MerchantId,pc.Status,pc.ExpiresAt
+FROM dbo.PaymentCollections pc
+LEFT JOIN dbo.CustomerBankAccounts b ON b.Id=pc.BankAccountId AND b.CustomerId=pc.CustomerId
+OUTER APPLY (SELECT TOP 1 tm.MerchantId FROM dbo.TingeeMerchants tm WHERE tm.CustomerId=pc.CustomerId ORDER BY tm.CreatedAt DESC) m
+WHERE pc.CreatedAt<=@received
+  AND ((@va IS NOT NULL AND b.VaAccountNumber=@va)
+    OR (@acc IS NOT NULL AND (b.VaAccountNumber=@acc OR b.AccountNumber=@acc)){billFilter})
+""", cn);
+        cmd.Parameters.AddWithValue("@va", (object?)notice.VaAccountNumber ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@acc", (object?)notice.AccountNumber ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@received", receivedAtUtc);
+        for (var i = 0; i < bills.Count; i++) cmd.Parameters.AddWithValue("@b" + i, bills[i]);
+        var list = new List<TingeeCollectionCandidate>();
+        await using var r = await cmd.ExecuteReaderAsync(ct);
+        while (await r.ReadAsync(ct))
+        {
+            var recurring = !r.IsDBNull(6) && r.GetString(6) == TingeeQrTypes.Recurring;
+            list.Add(new(r.GetGuid(0), r.GetGuid(1), r.GetString(2), r.IsDBNull(3) ? null : r.GetString(3), r.GetDecimal(4), r.GetDecimal(5),
+                recurring && !r.IsDBNull(7) ? r.GetString(7) : null, recurring && !r.IsDBNull(8) ? r.GetInt64(8) : null, r.GetString(9),
+                r.IsDBNull(10) ? null : DateTime.SpecifyKind(r.GetDateTime(10), DateTimeKind.Utc)));
+        }
+        return list;
+    }
+
+    public async Task<IReadOnlyList<TingeeCollectionOrder>> CollectionOrdersAsync(Guid customerId, Guid collectionId, CancellationToken ct)
+    {
+        await using var cn = await Open(ct);
+        await using var cmd = new SqlCommand("""
+SELECT o.Id,o.OrderNo,co.Position,o.Amount,o.PaidAmount,o.Status
+FROM dbo.PaymentCollectionOrders co JOIN dbo.CustomerOrders o ON o.Id=co.OrderId AND o.CustomerId=@c
+WHERE co.CollectionId=@coll ORDER BY co.Position
+""", cn);
+        cmd.Parameters.AddWithValue("@c", customerId);
+        cmd.Parameters.AddWithValue("@coll", collectionId);
+        var list = new List<TingeeCollectionOrder>();
+        await using var r = await cmd.ExecuteReaderAsync(ct);
+        while (await r.ReadAsync(ct)) list.Add(new(r.GetGuid(0), r.GetString(1), r.GetInt32(2), r.GetDecimal(3), r.GetDecimal(4), r.GetString(5)));
+        return list;
+    }
+
+    public async Task<bool> ApplyCollectionAsync(TingeeCollectionApplication p, CancellationToken ct)
+    {
+        var sql = new System.Text.StringBuilder("""
+SET XACT_ABORT ON;
+BEGIN TRAN;
+UPDATE dbo.TingeeWebhookInbox SET Status='PROCESSED',ProcessedAt=SYSUTCDATETIME(),Attempts=Attempts+1,LastError=@note WHERE Id=@id AND Status='RECEIVED';
+IF @@ROWCOUNT=0 BEGIN ROLLBACK; SELECT 0; RETURN; END
+UPDATE dbo.PaymentCollections SET PaidAmount=@paid,Status=@status,
+ PartnerPaidAmount=CASE WHEN @partner IS NULL THEN PartnerPaidAmount ELSE @partner END,
+ PartnerCheckedAt=CASE WHEN @partner IS NULL THEN PartnerCheckedAt ELSE SYSUTCDATETIME() END,
+ PaidAt=CASE WHEN @status='PAID' AND PaidAt IS NULL THEN SYSUTCDATETIME() ELSE PaidAt END,
+ LastError=NULL,UpdatedAt=SYSUTCDATETIME()
+WHERE Id=@coll AND CustomerId=@c AND PaidAmount=@expected AND Status=@expectedStatus;
+IF @@ROWCOUNT=0 BEGIN ROLLBACK; SELECT 0; RETURN; END
+
+""");
+        for (var i = 0; i < p.Allocations.Count; i++)
+            sql.Append($"""
+UPDATE dbo.CustomerOrders SET PaidAmount=@after{i},Status=@st{i},
+ InvoiceStatus=CASE WHEN @st{i}='PAID' AND AutoIssueInvoice=1 AND InvoiceStatus='NONE' THEN 'PENDING' ELSE InvoiceStatus END,
+ PaidAt=CASE WHEN @after{i}>=Amount AND PaidAt IS NULL THEN SYSUTCDATETIME() ELSE PaidAt END,
+ LastError=NULL,UpdatedAt=SYSUTCDATETIME()
+WHERE Id=@o{i} AND CustomerId=@c AND PaidAmount=@before{i} AND Status=@was{i};
+IF @@ROWCOUNT=0 BEGIN ROLLBACK; SELECT 0; RETURN; END
+
+""");
+        sql.Append("""
+INSERT dbo.PaymentTransactions(InboxId,Direction,TransactionCode,Amount,Content,Bank,AccountNumber,VaAccountNumber,TransactionAt,ReceivedAt,
+ CustomerId,CollectionId,Status,Flags,Reason,MatchedBy,SystemPaidBefore,SystemPaidAfter,PartnerPaidTotal,OrderStatusAfter)
+VALUES(@id,@direction,@tx,@amount,@content,@bank,@acc,@va,@txAt,@received,@c,@coll,@txStatus,@flags,@note,@by,@expected,@paid,@partner,@status);
+DECLARE @tid bigint = SCOPE_IDENTITY();
+
+""");
+        for (var i = 0; i < p.Allocations.Count; i++)
+            sql.Append($"INSERT dbo.PaymentAllocations(TransactionId,CollectionId,OrderId,Amount,PaidBefore,PaidAfter,OrderStatusAfter) VALUES(@tid,@coll,@o{i},@take{i},@before{i},@after{i},@st{i});\n");
+        sql.Append("COMMIT;\nSELECT 1;\n");
+
+        await using var cn = await Open(ct);
+        await using var cmd = new SqlCommand(sql.ToString(), cn);
+        AddNotice(cmd, p.Notice, p.ReceivedAtUtc);
+        cmd.Parameters.AddWithValue("@id", p.InboxId);
+        cmd.Parameters.AddWithValue("@note", Cut(p.Collection.CollectionNo + (p.Allocations.Count == 0 ? "" : ": " + string.Join(", ", p.Allocations.Select(a => a.OrderNo))), 500)!);
+        cmd.Parameters.AddWithValue("@coll", p.Collection.CollectionId);
+        cmd.Parameters.AddWithValue("@c", p.Collection.CustomerId);
+        cmd.Parameters.AddWithValue("@paid", p.PaidAfter);
+        cmd.Parameters.AddWithValue("@expected", p.PaidBefore);
+        cmd.Parameters.AddWithValue("@expectedStatus", p.Collection.Status);
+        cmd.Parameters.AddWithValue("@status", p.CollectionStatus);
+        cmd.Parameters.AddWithValue("@partner", (object?)p.PartnerPaid ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@txStatus", p.TxStatus);
+        cmd.Parameters.AddWithValue("@flags", p.Flags.Count == 0 ? DBNull.Value : string.Join(",", p.Flags));
+        cmd.Parameters.AddWithValue("@by", p.MatchedBy);
+        for (var i = 0; i < p.Allocations.Count; i++)
+        {
+            var a = p.Allocations[i];
+            cmd.Parameters.AddWithValue("@o" + i, a.OrderId);
+            cmd.Parameters.AddWithValue("@take" + i, a.Amount);
+            cmd.Parameters.AddWithValue("@before" + i, a.PaidBefore);
+            cmd.Parameters.AddWithValue("@after" + i, a.PaidAfter);
+            cmd.Parameters.AddWithValue("@was" + i, a.ExpectedStatus);
+            cmd.Parameters.AddWithValue("@st" + i, a.OrderStatus);
+        }
+        return Convert.ToInt32(await cmd.ExecuteScalarAsync(ct)) == 1;
+    }
+
     public async Task RecordAsync(long inboxId, TingeePaymentNotice? notice, DateTime receivedAtUtc, string inboxStatus, string txStatus, string reason, CancellationToken ct)
     {
         await using var cn = await Open(ct);

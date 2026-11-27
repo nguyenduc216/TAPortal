@@ -299,12 +299,15 @@ public static class NotificationPlanner
         : string.Join(", ", (t.Flags ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries).Select(PaymentTxText.Flag));
 
     private static string PaymentText(NotifiableTransaction t) =>
-        $"Đơn {t.OrderNo}: đã nhận {Money(t.Amount)}, tổng đã thu {Money(t.PaidAfter)}/{Money(t.OrderAmount)} — {OrderStatusLabel(t.OrderStatus)}.";
+        $"{Kind(t.OrderNo)} {t.OrderNo}: đã nhận {Money(t.Amount)}, tổng đã thu {Money(t.PaidAfter)}/{Money(t.OrderAmount)} — {OrderStatusLabel(t.OrderStatus)}.";
+
+    /// <summary>"Phiếu thu" for a payment collection (TT…), otherwise "Đơn".</summary>
+    public static string Kind(string? number) => PaymentCollectionNo.IsCollection(number) ? "Phiếu thu" : "Đơn";
 
     private static string AttentionText(NotifiableTransaction t, bool forStaffOfTA) =>
         $"Giao dịch {Money(t.Amount)} vào tài khoản {t.AccountNumber} lúc {Time(t.AtUtc)} cần xử lý: "
         + (forStaffOfTA ? t.Reason ?? Problem(t) : Problem(t))
-        + (t.OrderNo is null ? "" : $" (đơn {t.OrderNo})") + $". Nội dung: {t.Content ?? "(không có)"}. Xử lý tại mục Đối soát giao dịch.";
+        + (t.OrderNo is null ? "" : $" ({Kind(t.OrderNo).ToLowerInvariant()} {t.OrderNo})") + $". Nội dung: {t.Content ?? "(không có)"}. Xử lý tại mục Đối soát giao dịch.";
 
     public static Dictionary<string, string> Values(NotifiableTransaction t) => new()
     {
@@ -341,7 +344,7 @@ public static class NotificationPlanner
             foreach (var e in events.Where(e => On(c, e) && recipients.Events.Contains(e)))
             {
                 var body = e == NotificationEvent.Payment ? PaymentText(t) : AttentionText(t, forStaffOfTA: false);
-                var subject = e == NotificationEvent.Payment ? $"Đơn {t.OrderNo} đã nhận {Money(t.Amount)}" : "Có giao dịch cần xử lý";
+                var subject = e == NotificationEvent.Payment ? $"{Kind(t.OrderNo)} {t.OrderNo} đã nhận {Money(t.Amount)}" : "Có giao dịch cần xử lý";
                 switch (c.Channel)
                 {
                     case NotificationChannelKind.Smtp when recipients.Email is string mail: Add(c, mail, subject, body); break;
@@ -363,8 +366,8 @@ public static class NotificationPlanner
                     break;
                 // Buyers only hear about money on their own order.
                 case NotificationChannelKind.Smtp when On(c, NotificationEvent.Payment) && NotificationCatalog.Mail(t.BuyerEmail):
-                    Add(c, t.BuyerEmail!, $"{t.CompanyName}: đã nhận thanh toán đơn {t.OrderNo}",
-                        $"Kính gửi {t.BuyerName ?? "Quý khách"},\n{t.CompanyName} đã nhận {Money(t.Amount)} cho đơn {t.OrderNo}. Tổng đã thanh toán {Money(t.PaidAfter)}/{Money(t.OrderAmount)}.\nTrân trọng.");
+                    Add(c, t.BuyerEmail!, $"{t.CompanyName}: đã nhận thanh toán {Kind(t.OrderNo).ToLowerInvariant()} {t.OrderNo}",
+                        $"Kính gửi {t.BuyerName ?? "Quý khách"},\n{t.CompanyName} đã nhận {Money(t.Amount)} cho {Kind(t.OrderNo).ToLowerInvariant()} {t.OrderNo}. Tổng đã thanh toán {Money(t.PaidAfter)}/{Money(t.OrderAmount)}.\nTrân trọng.");
                     break;
                 case NotificationChannelKind.ZaloOa when On(c, NotificationEvent.Payment) && NotificationCatalog.ZaloPhone(t.BuyerPhone) is string phone
                     && c.Settings.TryGetValue("templateData", out var tpl) && NotificationCatalog.TemplateData(tpl) is { } map:

@@ -138,6 +138,8 @@ public static class PaymentTxStatus
 public static class PaymentTxFlag
 {
     public const string Overpaid = "OVERPAID", OrderCancelled = "ORDER_CANCELLED", QrExpired = "QR_EXPIRED", PartnerMismatch = "PARTNER_MISMATCH";
+    /// <summary>Money paid to a payment collection that had been cancelled (still split over its orders).</summary>
+    public const string CollectionCancelled = "COLLECTION_CANCELLED";
 }
 
 /// <summary>What one payment does to its order: computed by <see cref="TingeePaymentRules.Decide"/>, written atomically by the ledger.</summary>
@@ -185,6 +187,18 @@ public interface ITingeePaymentLedger
     /// (the webhook stays pending and is retried).
     /// </summary>
     Task<bool> ApplyAsync(TingeePaymentApplication payment, CancellationToken ct);
+    /// <summary>Payment collections (migration 069) on the receiving account, or whose dynamic QR billId is in the webhook; only those created before it arrived.</summary>
+    Task<IReadOnlyList<TingeeCollectionCandidate>> CollectionCandidatesAsync(TingeePaymentNotice notice, DateTime receivedAtUtc, CancellationToken ct) =>
+        Task.FromResult<IReadOnlyList<TingeeCollectionCandidate>>([]);
+    /// <summary>The orders of a collection as they stand now, in position order.</summary>
+    Task<IReadOnlyList<TingeeCollectionOrder>> CollectionOrdersAsync(Guid customerId, Guid collectionId, CancellationToken ct) =>
+        Task.FromResult<IReadOnlyList<TingeeCollectionOrder>>([]);
+    /// <summary>
+    /// In one transaction: marks the webhook PROCESSED, moves the collection's amount paid and every allocated order's amount
+    /// paid (each only if unchanged meanwhile), records the transaction on the collection and its split. False, with nothing
+    /// changed, otherwise (the webhook stays pending and is retried).
+    /// </summary>
+    Task<bool> ApplyCollectionAsync(TingeeCollectionApplication payment, CancellationToken ct) => Task.FromResult(false);
     /// <summary>
     /// In one transaction: sets the webhook's final status and records a transaction that changed no order (UNMATCHED with
     /// the reason, or IGNORED for a debit), attributed to the customer that owns the receiving account when there is one.
@@ -263,6 +277,10 @@ public sealed class TingeePaymentProcessor(ITingeePaymentLedger ledger, ITingeeA
             return false;
         }
 
+        // A payment collection (one QR for several orders) is looked for first: its number or QR is in the payment.
+        var (collection, collectionHow) = TingeeCollectionMatcher.Match(notice, await ledger.CollectionCandidatesAsync(notice, pending.ReceivedAtUtc, ct));
+        if (collection is not null) return await HandleCollectionAsync(pending, notice, collection, collectionHow, ct);
+
         var (order, how) = TingeePaymentMatcher.Match(notice, await ledger.CandidatesAsync(notice, pending.ReceivedAtUtc, ct));
         if (order is null)
         {
@@ -307,6 +325,50 @@ public sealed class TingeePaymentProcessor(ITingeePaymentLedger ledger, ITingeeA
             // Best effort, as on the portal: Tingee only deletes some banks' dynamic QRs.
             try { await tingee.DeleteDynamicQrAsync(order.MerchantId!.Value, order.QrAccount!, order.BillId!, ct); }
             catch (Exception ex) when (ex is TingeeApiException or HttpRequestException or TingeeNotConfiguredException) { logger.LogInformation(ex, "Dynamic QR of {OrderNo} not closed.", order.OrderNo); }
+        }
+        return true;
+    }
+
+    private async Task<bool> HandleCollectionAsync(TingeePendingPayment pending, TingeePaymentNotice notice, TingeeCollectionCandidate collection, string how, CancellationToken ct)
+    {
+        var id = pending.Id;
+        decimal? partner = null;
+        if (collection.IsDynamicQr)
+        {
+            var expected = collection.PaidAmount + notice.Amount;
+            try
+            {
+                var bill = (await tingee.GetDynamicQrStatusAsync(collection.MerchantId!.Value, collection.QrAccount!, collection.BillId!, ct)).BillInfo;
+                // A QR re-issued for the remainder covers Amount(collection) - Amount(QR) already paid before it.
+                var paidBefore = bill is { Amount: > 0 } && bill.Amount < collection.Amount ? collection.Amount - bill.Amount : 0;
+                partner = paidBefore + (bill?.TotalAmountPaid ?? 0);
+                if (partner < expected && pending.Attempts + 1 < LagRetries)
+                {
+                    await ledger.RetryLaterAsync(id, $"{collection.CollectionNo}: partner total {partner} < {expected}, waiting", ct);
+                    return false;
+                }
+            }
+            catch (Exception ex) when (ex is TingeeApiException or HttpRequestException or TingeeNotConfiguredException)
+            {
+                if (pending.Attempts + 1 < LagRetries)
+                {
+                    await ledger.RetryLaterAsync(id, Cut($"{collection.CollectionNo}: QR status unavailable: {ex.Message}"), ct);
+                    return false;
+                }
+                logger.LogWarning(ex, "TINGEE_PAYMENT_PARTNER_UNCHECKED inbox={Id} collection={No}", id, collection.CollectionNo);
+            }
+        }
+
+        var orders = await ledger.CollectionOrdersAsync(collection.CustomerId, collection.CollectionId, ct);
+        var payment = TingeeCollectionRules.Decide(id, notice, pending.ReceivedAtUtc, collection, orders, how, partner);
+        if (!await ledger.ApplyCollectionAsync(payment, ct)) return false;
+        logger.LogInformation("TINGEE_COLLECTION_APPLIED inbox={Id} tx={Tx} collection={No} amount={Amount} paid={Paid} partner={Partner} status={Status} orders={Orders} left={Left} flags={Flags}",
+            id, notice.TransactionCode, collection.CollectionNo, notice.Amount, payment.PaidAfter, partner, payment.CollectionStatus,
+            string.Join(",", payment.Allocations.Select(a => $"{a.OrderNo}+{a.Amount}")), payment.Unallocated, string.Join(",", payment.Flags));
+        if (collection.IsDynamicQr && payment.CollectionStatus == PaymentCollectionStatus.Paid)
+        {
+            try { await tingee.DeleteDynamicQrAsync(collection.MerchantId!.Value, collection.QrAccount!, collection.BillId!, ct); }
+            catch (Exception ex) when (ex is TingeeApiException or HttpRequestException or TingeeNotConfiguredException) { logger.LogInformation(ex, "Dynamic QR of {No} not closed.", collection.CollectionNo); }
         }
         return true;
     }

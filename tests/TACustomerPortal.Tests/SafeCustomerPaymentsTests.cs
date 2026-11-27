@@ -836,6 +836,10 @@ public sealed class SafeCustomerPaymentsTests
                 services.AddSingleton<TAPortal.Integrations.Branding.ILogoStore>(pages);
                 services.RemoveAll<IOrderPageStore>();
                 services.AddSingleton<IOrderPageStore>(pages);
+                var collections = new SafePaymentCollectionTests.MemoryCollectionStore(s);
+                services.AddSingleton(collections);
+                services.RemoveAll<IPaymentCollectionStore>();
+                services.AddSingleton<IPaymentCollectionStore>(collections);
                 services.RemoveAll<ITaxCodeLookup>();   // never the public register from a test
                 services.AddSingleton<ITaxCodeLookup>(new SafeCustomerSignupTests.FakeLookup());
                 services.RemoveAll<IBankAppCatalog>();  // never VietQR from a test: the built-in list

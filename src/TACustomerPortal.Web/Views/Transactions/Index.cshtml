@@ -70,14 +70,14 @@
                         <td class="cp-num">@(t.Direction == "DEBIT" ? "−" : "")@PaymentText.Money(t.Amount)</td>
                         <td>@(t.Content ?? "—")</td>
                         <td>@t.Bank @(t.VaAccountNumber ?? t.AccountNumber)</td>
-                        <td>@if (t.OrderId is Guid oid) {<a class="cp-link" asp-controller="Orders" asp-action="Details" asp-route-id="@oid">@t.OrderNo</a>} else {<span>—</span>}</td>
+                        <td>@if (t.OrderId is Guid oid) {<a class="cp-link" asp-controller="Orders" asp-action="Details" asp-route-id="@oid">@t.OrderNo</a>} else if (t.CollectionId is Guid cid) {<a class="cp-link" asp-controller="Collections" asp-action="Details" asp-route-id="@cid" title="Phiếu thu gộp công nợ">@t.OrderNo</a>} else {<span>—</span>}</td>
                         <td class="cp-num">@(t.SystemPaidAfter is decimal sp ? PaymentText.Money(sp) : "—")</td>
                         <td class="cp-num">@(t.PartnerPaidTotal is decimal pp ? PaymentText.Money(pp) : "—")</td>
                         <td>
                             <span class="cp-badge cp-badge--@tone">@label</span>
                             @foreach (var f in t.FlagList) {<span class="cp-badge cp-badge--red">@PaymentTxText.Flag(f)</span>}
                             @if (t.Synced) {<span class="cp-badge cp-badge--gold" title="Ngân hàng không báo về hệ thống; giao dịch được lấy lại bằng Đồng bộ từ ngân hàng">Lấy lại qua đồng bộ</span>}
-                            @if (t.Reason is string reason && t.Status != PaymentTxStatus.Matched && t.OrderId is null) {<div class="cp-muted">@PartnerText.Scrub(reason)</div>}
+                            @if (t.Reason is string reason && t.Status != PaymentTxStatus.Matched && t.OrderId is null && !t.IsCollection) {<div class="cp-muted">@PartnerText.Scrub(reason)</div>}
                             @if (t.ResolutionNote is string rn) {<div class="cp-muted">Ghi chú: @rn</div>}
                             @if (Model.CanManage && PaymentTxStatus.NeedsStaff(t.Status))
                             {
@@ -89,11 +89,11 @@
                                             <div class="cp-input-wrap">@UiIcon.Render("pencil")<input class="cp-input" name="note" placeholder="Ghi chú" aria-label="Ghi chú" /></div>
                                             <button class="cp-btn cp-btn--primary" type="submit">Gán vào đơn</button></form>
                                     }
-                                    @if (t.Status == PaymentTxStatus.Review && t.OrderId is not null)
+                                    @if (t.Status == PaymentTxStatus.Review && (t.OrderId is not null || t.IsCollection))
                                     {
                                         <form method="post" asp-action="Accept" asp-route-id="@t.Id" class="cp-inline-form"><input type="hidden" name="back" value="@back" />
                                             <div class="cp-input-wrap">@UiIcon.Render("pencil")<input class="cp-input" name="note" placeholder="Ghi chú" aria-label="Ghi chú" /></div>
-                                            <button class="cp-btn cp-btn--primary" type="submit">Chấp nhận cho đơn</button></form>
+                                            <button class="cp-btn cp-btn--primary" type="submit">@(t.IsCollection ? "Chấp nhận cho phiếu thu" : "Chấp nhận cho đơn")</button></form>
                                     }
                                     <form method="post" asp-action="Close" asp-route-id="@t.Id" class="cp-inline-form"><input type="hidden" name="back" value="@back" />
                                         <div class="cp-input-wrap">@UiIcon.Render("pencil")<input class="cp-input" name="note" required placeholder="Lý do (không liên quan đơn, đã hoàn tiền...)" aria-label="Lý do" /></div>

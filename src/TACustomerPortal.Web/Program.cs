@@ -30,6 +30,8 @@ builder.Services.AddScoped<IPaymentStore, SqlPaymentStore>();
 builder.Services.AddScoped<IProductStore, SqlProductStore>();
 builder.Services.AddScoped<OrderPayments>();
 builder.Services.AddScoped<IOrderPageStore, SqlOrderPageStore>();
+builder.Services.AddScoped<IPaymentCollectionStore, SqlPaymentCollectionStore>();
+builder.Services.AddScoped<CollectionPayments>();
 TAPortal.Integrations.Branding.LogoServiceCollectionExtensions.AddLogos(builder.Services);
 builder.Services.AddScoped<TAPortal.Integrations.Tingee.IOrderInvoiceStore, TAPortal.Integrations.Tingee.SqlOrderInvoiceStore>();
 builder.Services.AddScoped<TAPortal.Integrations.Tingee.OrderInvoicer>();

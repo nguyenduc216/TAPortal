@@ -263,7 +263,35 @@ const startPolling = () => {
         } catch { /* network hiccup: try again on the next tick */ }
     }, 10000);
 };
+// "Thu gộp công nợ": number the ticked orders top to bottom (the order the money pays them) and show their total; ↑ ↓ move a row.
+const debtTotals = list => {
+    const money = new Intl.NumberFormat("vi-VN");
+    let n = 0, sum = 0;
+    list.querySelectorAll("[data-cp-debt]").forEach(row => {
+        const box = row.querySelector("input[type=checkbox]");
+        const on = box && box.checked && !box.disabled;
+        row.querySelector("[data-cp-debt-position]").textContent = on ? String(++n) : "";
+        if (on) sum += Number(row.dataset.cpDue) || 0;
+    });
+    const form = list.closest("form");
+    form?.querySelector("[data-cp-debt-count]")?.replaceChildren(String(n));
+    form?.querySelector("[data-cp-debt-total]")?.replaceChildren(money.format(sum) + " ₫");
+    const amount = form?.querySelector("[data-cp-debt-amount]");
+    if (amount) { amount.placeholder = String(sum); amount.max = String(sum); }
+};
+document.addEventListener("click", e => {
+    const move = e.target.closest("[data-cp-move]");
+    if (!move) return;
+    const row = move.closest("[data-cp-debt]");
+    const other = move.dataset.cpMove === "up" ? row.previousElementSibling : row.nextElementSibling;
+    if (!other) return;
+    if (move.dataset.cpMove === "up") other.before(row); else other.after(row);
+    move.focus();
+    debtTotals(row.closest("[data-cp-debts]"));
+});
+document.addEventListener("change", e => { const list = e.target.closest("[data-cp-debts]"); if (list) debtTotals(list); });
 const initPage = () => {
+    document.querySelectorAll("[data-cp-debts]").forEach(debtTotals);
     document.querySelectorAll("form[data-cp-order-form]").forEach(updateTotals);
     startPolling();
 };

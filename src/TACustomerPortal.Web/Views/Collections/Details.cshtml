@@ -1,0 +1,128 @@
+@model CollectionDetailsVm
+@using TAPortal.Integrations.Tingee
+@{
+    var c = Model.Collection;
+    var (label, css) = CollectionText.Status(Model.Status);
+    ViewData["Title"] = c.CollectionNo;
+    ViewData["Eyebrow"] = "Thu gộp công nợ";
+    ViewData["Heading"] = "Phiếu thu " + c.CollectionNo;
+    ViewData["Subtitle"] = c.Description;
+    var percent = c.Amount == 0 ? 0 : (int)Math.Min(100, Math.Round(c.PaidAmount * 100 / c.Amount));
+    var open = PaymentCollectionStatus.IsOpen(c.Status);
+    var canIssue = Model.CanManage && open && c.Due > 0;
+    var expired = Model.Status == PaymentCollectionStatus.Expired;
+    var transfer = CollectionMath.TransferContent(c.CollectionNo);
+}
+<div class="cp-grid cp-grid--2">
+    <div>
+        <section class="cp-card" style="margin-bottom:14px">
+            <div class="cp-card__head"><span class="cp-blob">@UiIcon.Render("cash")</span><h2>Phiếu thu</h2><span class="cp-badge @css" style="margin-left:auto" data-cp-collection-status="@Model.Status">@label</span></div>
+            <div class="cp-card__body">
+                <dl class="cp-dl">
+                    <div><dt>@UiIcon.Render("user")Khách hàng</dt><dd>@(Model.Contact?.Name ?? c.ContactName ?? "—")</dd></div>
+                    <div><dt>@UiIcon.Render("report-money")Số tiền thu</dt><dd>@PaymentText.Money(c.Amount)</dd></div>
+                    <div><dt>@UiIcon.Render("circle-check")Đã thu</dt><dd>@PaymentText.Money(c.PaidAmount)</dd></div>
+                    <div><dt>@UiIcon.Render("clock")Còn phải thu</dt><dd>@PaymentText.Money(c.Due)@if (c.Due < c.Remaining) {<div class="cp-muted">Một số đơn đã được thanh toán riêng nên còn ít hơn số tiền phiếu thu.</div>}</dd></div>
+                    <div><dt>@UiIcon.Render("clock")QR hết hạn</dt><dd>@PaymentText.VietnamTime(c.ExpiresAt)</dd></div>
+                    <div><dt>@UiIcon.Render("building-bank")Nhận tiền vào</dt><dd>@(Model.Bank is { } b ? $"{b.BankName} — {b.ReceiveAccount}" : "—")</dd></div>
+                    <div><dt>@UiIcon.Render("qrcode")Nội dung chuyển khoản</dt><dd><span class="cp-code">@transfer</span></dd></div>
+                    <div><dt>@UiIcon.Render("calendar")Tạo lúc</dt><dd>@PaymentText.VietnamTime(c.CreatedAt)</dd></div>
+                </dl>
+                <div class="cp-progress" style="margin-top:14px" role="progressbar" aria-valuenow="@percent" aria-valuemin="0" aria-valuemax="100" aria-label="Tỷ lệ đã thu"><span style="width:@(percent)%"></span></div>
+                @if (c.LastError is string err) {<div class="cp-error" style="margin-top:10px">@PartnerText.Scrub(err)</div>}
+            </div>
+            <div class="cp-card__foot">
+                <a class="cp-btn cp-btn--ghost" asp-action="Index">@UiIcon.Render("arrow-left")<span>Danh sách phiếu thu</span></a>
+                @if (Model.CanManage && open) {<form method="post" asp-action="Cancel" asp-route-id="@c.Id" style="margin-left:auto" onsubmit="return confirm('Hủy phiếu thu @c.CollectionNo? Mã QR sẽ không còn dùng được; tiền đã thu vẫn giữ trên các đơn.')"><button class="cp-btn cp-btn--danger" type="submit">@UiIcon.Render("ban")<span>Hủy phiếu thu</span></button></form>}
+            </div>
+        </section>
+
+        <section class="cp-card" style="margin-bottom:14px">
+            <div class="cp-card__head"><span class="cp-blob cp-blob--gold">@UiIcon.Render("list-tree")</span><h2>Các đơn trong phiếu thu (@c.Orders.Count)</h2></div>
+            <div class="cp-table-wrap">
+                <table class="cp-table cp-table--stack" data-cp-collection-orders>
+                    <thead><tr><th>Thứ tự</th><th>Mã đơn</th><th class="cp-num">Nợ khi gộp</th><th class="cp-num">Thu qua phiếu</th><th class="cp-num">Còn nợ</th><th>Trạng thái đơn</th></tr></thead>
+                    <tbody>
+                    @foreach (var o in c.Orders)
+                    {
+                        var (ol, ocss) = PaymentText.OrderStatus(o.Status);
+                        <tr><td data-label="Thứ tự">@o.Position</td><td data-label="Mã đơn" class="cp-stack-title"><a class="cp-link" asp-controller="Orders" asp-action="Details" asp-route-id="@o.OrderId">@o.OrderNo</a>@if (o.Description is string d) {<div class="cp-muted">@d</div>}</td>
+                            <td class="cp-num" data-label="Nợ khi gộp">@PaymentText.Money(o.DueAtCreate)</td><td class="cp-num" data-label="Thu qua phiếu">@PaymentText.Money(o.Allocated)</td>
+                            <td class="cp-num cp-stack-total" data-label="Còn nợ">@PaymentText.Money(o.Remaining)</td><td data-label="Trạng thái đơn"><span class="cp-badge @ocss">@ol</span></td></tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="cp-card">
+            <div class="cp-card__head"><span class="cp-blob">@UiIcon.Render("receipt-tax")</span><h2>Tiền đã nhận</h2></div>
+            @if (Model.Payments.Count == 0)
+            {
+                <div class="cp-card__body"><p class="cp-muted" style="margin:0">Chưa nhận giao dịch nào cho phiếu thu này.</p></div>
+            }
+            else
+            {
+                <div class="cp-table-wrap">
+                    <table class="cp-table cp-table--stack" data-cp-collection-payments>
+                        <thead><tr><th>Thời gian</th><th class="cp-num">Số tiền</th><th>Chia vào đơn</th><th>Trạng thái</th></tr></thead>
+                        <tbody>
+                        @foreach (var p in Model.Payments)
+                        {
+                            var (tl, tone) = PaymentTxText.Status(p.Status);
+                            <tr><td data-label="Thời gian">@PaymentText.VietnamTime(p.AtUtc)</td><td class="cp-num" data-label="Số tiền">@PaymentText.Money(p.Amount)</td>
+                                <td data-label="Chia vào đơn">@foreach (var s in p.Split) {<div><span class="cp-code">@s.OrderNo</span> + @PaymentText.Money(s.Amount)</div>}@if (p.Unallocated > 0) {<div class="cp-error">Dư @PaymentText.Money(p.Unallocated) chưa vào đơn nào</div>}</td>
+                                <td data-label="Trạng thái"><span class="cp-badge cp-badge--@tone">@tl</span>@foreach (var f in (p.Flags ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries)) {<span class="cp-badge cp-badge--red">@PaymentTxText.Flag(f)</span>}
+                                    @if (PaymentTxStatus.NeedsStaff(p.Status)) {<div><a class="cp-link" asp-controller="Transactions" asp-action="Index" asp-route-q="@transfer">Xử lý tại Đối soát giao dịch</a></div>}</td></tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </section>
+    </div>
+    <section class="cp-card" style="align-self:start" aria-label="Mã QR thanh toán">
+        @if (Model.QrSvg is string svg)
+        {
+            <div class="cp-qr" data-cp-qr data-cp-poll="@Url.Action("Status", new { id = c.Id })" data-cp-poll-status="@Model.Status" data-cp-poll-paid="@c.PaidAmount.ToString(System.Globalization.CultureInfo.InvariantCulture)">
+                @Html.Raw(svg)
+                <div class="cp-qr__amount">@PaymentText.Money(c.Due)</div>
+                <div class="cp-muted">Quét bằng ứng dụng ngân hàng · Nội dung: <span class="cp-code">@transfer</span></div>
+                <div class="cp-muted">Hiệu lực đến @PaymentText.VietnamTime(c.ExpiresAt)</div>
+            </div>
+        }
+        else
+        {
+            <div class="cp-qr cp-muted">@UiIcon.Render("qrcode")<p>@(Model.Status switch { PaymentCollectionStatus.Paid => "Phiếu thu đã thu đủ.", PaymentCollectionStatus.Cancelled => "Phiếu thu đã hủy.", PaymentCollectionStatus.Expired => "Mã QR đã hết hạn.", _ => c.Due <= 0 ? "Các đơn đã được thanh toán đủ." : "Phiếu thu chưa có mã QR." })</p></div>
+        }
+        @if (canIssue)
+        {
+            <details class="cp-card__foot cp-reissue" data-cp-reissue open="@(expired || c.QrPayload is null)">
+                <summary>@UiIcon.Render("refresh")<span>@(c.QrPayload is null || expired ? "Tạo QR thanh toán" : "Đổi thời hạn / tạo lại QR")</span></summary>
+                <form method="post" asp-action="IssueQr" asp-route-id="@c.Id" class="cp-reissue__form">
+                    <p class="cp-muted">QR mới cho số tiền còn phải thu (@PaymentText.Money(c.Due)), hiệu lực tính từ lúc tạo. Link thanh toán cho khách hàng giữ nguyên.</p>
+                    @await Html.PartialAsync("_QrLifetime", new QrLifetimeField("QrExpire", "Thời hạn QR", c.QrExpireMinutes, Last: true))
+                    @if (Model.Banks.Count > 1)
+                    {
+                        <div class="cp-field" style="margin-bottom:0">
+                            <label class="cp-label" for="reissue-bank">Tài khoản nhận tiền</label>
+                            <select class="cp-input cp-input--plain" id="reissue-bank" name="bankAccountId">@foreach (var b in Model.Banks) {<option value="@b.Id" selected="@(b.Id == (Model.Bank is { IsActive: true } cur ? cur.Id : Model.Banks[0].Id))">@PaymentText.BankOption(b)</option>}</select>
+                        </div>
+                    }
+                    <button class="cp-btn cp-btn--primary" type="submit">@UiIcon.Render("qrcode")<span>Tạo QR mới</span></button>
+                </form>
+            </details>
+        }
+        @if (Model.PayUrl is string payUrl)
+        {
+            <div class="cp-card__foot cp-paylink" data-cp-paylink>
+                <div class="cp-paylink__text"><strong>Link thanh toán cho khách hàng</strong><span class="cp-muted">Gửi link (Zalo, email…) để khách xem các đơn đang nợ và quét một mã QR.</span></div>
+                <div class="cp-paylink__row">
+                    <div class="cp-input-wrap">@UiIcon.Render("link")<input class="cp-input" value="@payUrl" readonly aria-label="Link trang thanh toán" data-cp-copy-source /></div>
+                    <button class="cp-btn cp-btn--ghost" type="button" data-cp-copy title="Sao chép link">@UiIcon.Render("copy")<span>Sao chép</span></button>
+                    <a class="cp-btn cp-btn--primary" href="@payUrl" target="_blank" rel="noopener" data-ta-hard>@UiIcon.Render("external-link")<span>Xem link</span></a>
+                </div>
+            </div>
+        }
+    </section>
+</div>

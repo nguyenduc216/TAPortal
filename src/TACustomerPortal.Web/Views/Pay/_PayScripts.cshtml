@@ -1,0 +1,89 @@
+@* Shared by the public payment pages (order: Index, collection: Collection): bank app dialog, copy buttons, "Tải ảnh mã QR". *@
+<script>
+    // "Chuyển khoản": the bank app list (a dialog; closes on ×, Escape or a tap outside).
+    document.addEventListener("click", e => {
+        const open = e.target.closest("[data-cp-open-dialog]");
+        if (open) { document.getElementById(open.dataset.cpOpenDialog)?.showModal(); return; }
+        if (e.target.closest("[data-cp-close-dialog]") || e.target.matches("dialog.cp-pay__apps")) e.target.closest("dialog")?.close();
+        if (e.target.closest("[data-cp-save-qr]")) saveQr();
+        const copy = e.target.closest("[data-cp-copy-text]");
+        if (copy) {
+            const done = () => { copy.classList.add("is-copied"); copy.title = "Đã sao chép"; setTimeout(() => copy.classList.remove("is-copied"), 1600); };
+            const fallback = () => {
+                const area = Object.assign(document.createElement("textarea"), { value: copy.dataset.cpCopyText });
+                area.setAttribute("readonly", ""); area.style.cssText = "position:fixed;opacity:0";
+                document.body.append(area); area.select(); document.execCommand?.("copy"); area.remove(); done();
+            };
+            if (navigator.clipboard) navigator.clipboard.writeText(copy.dataset.cpCopyText).then(done, fallback); else fallback();
+        }
+    });
+
+    // "Tải ảnh mã QR": the QR and the transfer details under it, drawn on a canvas as one PNG. Browsers inside chat apps
+    // (Zalo, Messenger…) ignore downloads, so the image is also shown to long-press and save.
+    async function qrPng() {
+        const info = JSON.parse(document.querySelector("[data-cp-qr-info]").textContent);
+        const svg = document.querySelector(".cp-pay__qr-box svg").cloneNode(true);
+        svg.setAttribute("width", 1000); svg.setAttribute("height", 1000);
+        const qr = new Image();
+        qr.src = URL.createObjectURL(new Blob([new XMLSerializer().serializeToString(svg)], { type: "image/svg+xml" }));
+        await qr.decode();
+        const W = 720, P = 48, font = (w, s) => `${w} ${s}px -apple-system, "Segoe UI", Roboto, Arial, sans-serif`;
+        const c = document.createElement("canvas"), g = c.getContext("2d");
+        const wrap = (text, width) => {
+            const lines = []; let line = "";
+            for (const word of String(text).split(/\s+/)) {
+                const next = line ? line + " " + word : word;
+                if (line && g.measureText(next).width > width) { lines.push(line); line = word; } else line = next;
+            }
+            return line ? [...lines, line] : lines;
+        };
+        // Lay out once to measure the height, then draw.
+        const draw = paint => {
+            let y = P;
+            const text = (t, w, s, color, x = W / 2, align = "center", width = W - 2 * P) => {
+                g.font = font(w, s);
+                for (const l of wrap(t, width)) { if (paint) { g.fillStyle = color; g.textAlign = align; g.fillText(l, x, y + s); } y += s * 1.3; }
+            };
+            text(info.seller, "700", 30, "#0f172a");
+            text(info.title, "400", 24, "#475569");
+            y += 20;
+            const q = 440;
+            if (paint) { g.drawImage(qr, (W - q) / 2, y, q, q); }
+            y += q + 24;
+            text("Số tiền cần thanh toán", "400", 22, "#64748b");
+            text(info.amount, "800", 46, "#0f172a");
+            y += 16;
+            for (const [label, value] of info.rows) {
+                if (paint) { g.strokeStyle = "#e2e8f0"; g.beginPath(); g.moveTo(P, y); g.lineTo(W - P, y); g.stroke(); }
+                y += 14;
+                const top = y;
+                text(label, "400", 22, "#64748b", P, "left", 240);
+                const after = y; y = top;
+                text(value, "700", 22, "#0f172a", W - P, "right", W - 2 * P - 260);
+                y = Math.max(y, after) + 6;
+            }
+            y += 18;
+            text("Quét mã bằng ứng dụng ngân hàng · Hóa đơn tự động", "400", 18, "#94a3b8");
+            return y + P - 20;
+        };
+        const H = draw(false), k = 2;   // drawn at twice the size: sharp on phones and in print
+        c.width = W * k; c.height = H * k;
+        g.scale(k, k);
+        g.fillStyle = "#fff"; g.fillRect(0, 0, W, H);
+        draw(true);
+        URL.revokeObjectURL(qr.src);
+        return { info, url: c.toDataURL("image/png") };
+    }
+    async function saveQr() {
+        let png;
+        try { png = await qrPng(); } catch { alert("Không tạo được ảnh mã QR. Hãy chụp màn hình mã QR."); return; }
+        const dialog = document.getElementById("qrImage");
+        dialog.querySelector("[data-cp-qr-image]").src = png.url;
+        const link = dialog.querySelector("[data-cp-qr-download]");
+        link.href = png.url; link.download = png.info.file;
+        document.getElementById("bankApps")?.close();
+        if (/Zalo|FBAN|FBAV|FB_IAB|Instagram|Line\//i.test(navigator.userAgent)) { dialog.showModal(); return; }
+        link.click();
+        dialog.showModal();
+    }
+</script>

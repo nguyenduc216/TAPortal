@@ -41,6 +41,7 @@
                     <div><dt>@UiIcon.Render("qrcode")Loại QR</dt><dd>@(o.QrType == TingeeQrTypes.Recurring ? "QR động (trả nhiều lần đến khi đủ)" : o.QrType == TingeeQrTypes.Static ? $"QR tĩnh (nội dung: {OrderMath.TransferContent(o.OrderNo)})" : "—")</dd></div>
                 </dl>
                 <div class="cp-progress" style="margin-top:14px" role="progressbar" aria-valuenow="@percent" aria-valuemin="0" aria-valuemax="100" aria-label="Tỷ lệ đã thanh toán"><span style="width:@(percent)%"></span></div>
+                @if (Model.InCollection is { } inside) {<aside class="cp-note" style="margin-top:12px" data-cp-in-collection>@UiIcon.Render("cash")<div>Đơn này đang nằm trong phiếu thu gộp <a class="cp-link" asp-controller="Collections" asp-action="Details" asp-route-id="@inside.Id">@inside.CollectionNo</a>: tiền khách trả qua mã QR của phiếu thu cũng được trừ vào đơn này.</div></aside>}
                 @if (o.LastError is string err) {<div class="cp-error" style="margin-top:10px">@err</div>}
                 @if (o.InvoiceError is string invoiceError) {<div class="@(issued || draft ? "cp-muted" : "cp-error")" style="margin-top:10px" data-cp-invoice-error>Hóa đơn: @PartnerText.Scrub(invoiceError)</div>}
                 @if (o.Status == OrderStatus.Paid && !Model.InvoiceReady && !issued) {<div class="cp-muted" style="margin-top:10px">Chưa cài đặt hóa đơn điện tử. <a class="cp-link" asp-controller="EInvoice" asp-action="Index">Kết nối phần mềm hóa đơn</a></div>}

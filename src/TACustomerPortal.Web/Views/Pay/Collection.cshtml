@@ -1,0 +1,191 @@
+@model CollectionPayVm
+@using TAPortal.Integrations.Tingee
+@inject IBankAppCatalog BankApps
+@{
+    // Public page of a payment collection: same shell as the order payment page (Index.cshtml), without invoice details
+    // (each order is invoiced on its own when it is paid in full).
+    Layout = null;
+    var c = Model.Collection;
+    var (label, css) = CollectionText.Status(Model.Status);
+    var transfer = CollectionMath.TransferContent(c.CollectionNo);
+    var pay = "/pay/c/" + Model.Token;
+    var paid = Model.Status == PaymentCollectionStatus.Paid || (PaymentCollectionStatus.IsOpen(c.Status) && c.Due <= 0);
+    var downloadIcon = new Microsoft.AspNetCore.Html.HtmlString("<svg class=\"ta-icon\" xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" focusable=\"false\" aria-hidden=\"true\"><path d=\"M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2 -2v-2\"/><path d=\"M7 11l5 5l5 -5\"/><path d=\"M12 4l0 12\"/></svg>");
+    var origin = $"{Context.Request.Scheme}://{Context.Request.Host}";
+    var shareText = "Thanh toán " + Model.Title;
+    var message = paid ? "Công nợ đã được thanh toán đủ."
+        : Model.Status switch
+        {
+            PaymentCollectionStatus.Cancelled => "Yêu cầu thanh toán này đã hủy. Vui lòng liên hệ người bán nếu cần hỗ trợ.",
+            PaymentCollectionStatus.Expired => "Mã QR đã hết hạn. Vui lòng liên hệ người bán để nhận mã mới.",
+            _ => "Chưa có mã QR thanh toán. Vui lòng liên hệ người bán."
+        };
+}
+<!doctype html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="referrer" content="no-referrer" />
+    <link rel="icon" type="image/png" href="~/images/favicon-32x32.png" />
+    <link rel="apple-touch-icon" href="~/images/apple-touch-icon.png" />
+    <meta name="theme-color" content="#A16207" />
+    <title>@Model.Title · @Model.SellerName</title>
+    <meta name="description" content="@shareText" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Hóa đơn tự động" />
+    <meta property="og:title" content="@Model.Title · @Model.SellerName" />
+    <meta property="og:description" content="@shareText" />
+    <meta property="og:url" content="@(origin + pay)" />
+    <meta property="og:image" content="@(origin + "/images/og-share.png")" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Hóa đơn tự động" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="stylesheet" href="~/css/customer.css" asp-append-version="true" />
+</head>
+<body class="cp cp-pay-body">
+<main class="cp-pay">
+    <article class="cp-pay__card" aria-labelledby="payTitle">
+        <header class="cp-pay__brands @(Model.BuyerName is null ? "is-single" : "")" aria-label="Các bên">
+            @if (Model.BuyerName is string buyer)
+            {
+                <figure class="cp-pay__party cp-pay__party--buyer">
+                    <span class="cp-pay__logo">
+                        @if (Model.BuyerLogo is string bv) {<img src="@pay/logo/buyer?v=@bv" alt="Logo @buyer" />}
+                        else {<span class="cp-pay__initials cp-pay__initials--buyer" aria-hidden="true">@PayPageVm.Initials(buyer)</span>}
+                    </span>
+                    <figcaption><small>Khách hàng</small><strong>@buyer</strong></figcaption>
+                </figure>
+                <div class="cp-pay__bridge@(paid ? " is-paid" : "")" aria-hidden="true"><span class="cp-pay__wire"></span><span class="cp-pay__knot">@UiIcon.Render(paid ? "circle-check" : "building-bank")</span><span class="cp-pay__wire"></span></div>
+            }
+            <figure class="cp-pay__party cp-pay__party--seller">
+                <span class="cp-pay__logo">
+                    @if (Model.SellerLogo is string sv) {<img src="@pay/logo/seller?v=@sv" alt="Logo @Model.SellerName" />}
+                    else {<span class="cp-pay__initials" aria-hidden="true">@PayPageVm.Initials(Model.SellerName)</span>}
+                </span>
+                <figcaption><small>Người bán</small><strong>@Model.SellerName</strong></figcaption>
+            </figure>
+        </header>
+
+        <section class="cp-pay__head">
+            <div class="cp-eyebrow">Phiếu thu <span class="cp-code">@c.CollectionNo</span></div>
+            <h1 id="payTitle">@Model.Title</h1>
+            <span class="cp-badge @css" data-cp-collection-status="@Model.Status">@label</span>
+        </section>
+
+        <details class="cp-pay__lines" open>
+            <summary>@UiIcon.Render("list-tree")Các đơn hàng được thanh toán (@c.Orders.Count)</summary>
+            <ul>
+                @foreach (var o in c.Orders)
+                {
+                    <li><span class="cp-pay__line-name">@o.OrderNo@(o.Description is string d ? " · " + d : "")</span><span class="cp-pay__line-row"><small class="cp-muted">@(o.Remaining <= 0 ? "Đã thanh toán đủ" : o.PaidAmount > 0 ? $"Đã trả {PaymentText.Money(o.PaidAmount)} / {PaymentText.Money(o.Amount)}" : $"Tổng đơn {PaymentText.Money(o.Amount)}")</small><strong>@(o.Remaining <= 0 ? "✓" : PaymentText.Money(o.Remaining))</strong></span></li>
+                }
+            </ul>
+        </details>
+
+        @if (Model.Transfer is not null) {<button class="cp-btn cp-btn--primary cp-btn--block cp-pay__transfer" type="button" data-cp-open-dialog="bankApps">@UiIcon.Render("building-bank")<span>Chuyển khoản</span></button>}
+
+        <section class="cp-pay__qr" aria-label="Mã QR thanh toán">
+            @if (Model.QrSvg is string svg)
+            {
+                <div class="cp-pay__qr-box" data-cp-poll="@pay/status" data-cp-poll-status="@Model.Status" data-cp-poll-paid="@c.PaidAmount.ToString(System.Globalization.CultureInfo.InvariantCulture)">
+                    @Html.Raw(svg)
+                </div>
+                <div class="cp-pay__amount"><small>Số tiền cần thanh toán</small><strong>@PaymentText.Money(c.Due)</strong>@if (c.PaidAmount > 0) {<span class="cp-muted">Đã thanh toán @PaymentText.Money(c.PaidAmount) / @PaymentText.Money(c.Amount)</span>}</div>
+                <p class="cp-hint" style="text-align:center">Có thể chuyển trước một phần: số tiền nhận được trả cho các đơn theo thứ tự trên.</p>
+                @if (c.ExpiresAt is DateTime expires)
+                {
+                    <div class="cp-pay__timer" data-cp-countdown="@expires.ToString("o", System.Globalization.CultureInfo.InvariantCulture)" data-cp-countdown-now="@Model.UtcNow.ToString("o", System.Globalization.CultureInfo.InvariantCulture)" role="timer" aria-live="off">
+                        @UiIcon.Render("clock")<span>Mã QR còn hiệu lực</span><strong data-cp-countdown-value>@QrLifetime.Text(Math.Max(0, (int)(expires - Model.UtcNow).TotalMinutes))</strong>
+                    </div>
+                    <div class="cp-muted cp-pay__until">Hết hạn lúc @PaymentText.VietnamTime(expires)</div>
+                }
+                <button class="cp-btn cp-btn--ghost cp-pay__qr-save" type="button" data-cp-save-qr>@downloadIcon<span>Tải ảnh mã QR</span></button>
+                <script type="application/json" data-cp-qr-info>@Html.Raw(System.Text.Json.JsonSerializer.Serialize(new
+                {
+                    file = "QR-" + c.CollectionNo + ".png",
+                    seller = Model.SellerName,
+                    title = Model.Title,
+                    amount = PaymentText.Money(c.Due),
+                    rows = new[]
+                    {
+                        new[] { "Ngân hàng nhận", Model.BankName ?? "" },
+                        new[] { "Tài khoản thụ hưởng", Model.AccountName ?? "" },
+                        new[] { "Số tài khoản", Model.Account ?? Model.Transfer?.Account ?? "" },
+                        new[] { "Nội dung chuyển khoản", Model.Transfer?.Content ?? transfer },
+                        new[] { "Mã phiếu thu", c.CollectionNo },
+                        new[] { "Hết hạn lúc", c.ExpiresAt is null ? "" : PaymentText.VietnamTime(c.ExpiresAt) },
+                    }.Where(r => r[1].Length > 0)
+                }))</script>
+                <dialog class="cp-pay__apps cp-pay__qr-image" id="qrImage" aria-labelledby="qrImageTitle">
+                    <div class="cp-pay__apps-head">
+                        <strong id="qrImageTitle">Ảnh mã QR</strong>
+                        <button class="cp-pay__apps-close" type="button" aria-label="Đóng" data-cp-close-dialog>×</button>
+                    </div>
+                    <p class="cp-hint">Nhấn giữ ảnh để lưu vào máy, hoặc bấm Tải xuống.</p>
+                    <img alt="Mã QR thanh toán kèm thông tin chuyển khoản" data-cp-qr-image />
+                    <a class="cp-btn cp-btn--primary cp-btn--block" data-cp-qr-download>@downloadIcon<span>Tải xuống</span></a>
+                </dialog>
+            }
+            else
+            {
+                <div class="cp-pay__done @(paid ? "is-paid" : "")">@UiIcon.Render(paid ? "circle-check" : "qrcode")<p>@message@if (paid) {<br /><text>Cảm ơn quý khách!</text>}</p></div>
+                <div class="cp-pay__amount"><small>Đã thanh toán</small><strong>@PaymentText.Money(c.PaidAmount)</strong></div>
+            }
+        </section>
+
+        <dl class="cp-pay__facts">
+            <div><dt>Mã phiếu thu</dt><dd><span class="cp-code">@c.CollectionNo</span></dd></div>
+            @if (Model.Open && Model.BankName is string bankName) {<div><dt>Ngân hàng nhận</dt><dd>@bankName</dd></div>}
+            @if (Model.Open && Model.AccountName is string holder) {<div><dt>Tài khoản thụ hưởng</dt><dd>@holder</dd></div>}
+            @if (Model.Open && (Model.Account ?? Model.Transfer?.Account) is string acc) {<div><dt>Số tài khoản</dt><dd class="cp-pay__copy"><span>@acc</span><button type="button" data-cp-copy-text="@acc" title="Sao chép số tài khoản" aria-label="Sao chép số tài khoản">@UiIcon.Render("copy")</button></dd></div>}
+            @if (Model.Open) {<div><dt>Số tiền</dt><dd class="cp-pay__copy"><span>@PaymentText.Money(c.Due)</span><button type="button" data-cp-copy-text="@c.Due.ToString("0", System.Globalization.CultureInfo.InvariantCulture)" title="Sao chép số tiền" aria-label="Sao chép số tiền">@UiIcon.Render("copy")</button></dd></div>}
+            @if (Model.Open) {<div><dt>Nội dung chuyển khoản</dt><dd class="cp-pay__copy"><span class="cp-code">@(Model.Transfer?.Content ?? transfer)</span><button type="button" data-cp-copy-text="@(Model.Transfer?.Content ?? transfer)" title="Sao chép nội dung" aria-label="Sao chép nội dung chuyển khoản">@UiIcon.Render("copy")</button></dd></div>}
+            <div><dt>Ngày tạo</dt><dd>@PaymentText.VietnamTime(c.CreatedAt)</dd></div>
+        </dl>
+
+        @if (Model.Open && Model.QrOnly)
+        {
+            <p class="cp-note">@UiIcon.Render("info-circle")<span>Quét mã QR (hoặc tải ảnh mã QR rồi quét từ ảnh) để thanh toán được xác nhận tự động. Chuyển khoản tay vào số tài khoản trên vẫn nhận được tiền, nhưng người bán sẽ xác nhận sau.</span></p>
+        }
+        @if (Model.Transfer is { } t)
+        {
+            <dialog class="cp-pay__apps" id="bankApps" aria-labelledby="bankAppsTitle">
+                <div class="cp-pay__apps-head">
+                    <strong id="bankAppsTitle">Chọn ứng dụng ngân hàng</strong>
+                    <button class="cp-pay__apps-close" type="button" aria-label="Đóng" data-cp-close-dialog>×</button>
+                </div>
+                @if (!Model.QrOnly)
+                {
+                <div class="cp-pay__apps-group">Điền sẵn thông tin chuyển khoản</div>
+                <p class="cp-hint">Ứng dụng mở màn hình chuyển khoản với số tài khoản, số tiền và nội dung <span class="cp-code">@(t.Content ?? transfer)</span>. Kiểm tra lại rồi xác nhận.</p>
+                <ul class="cp-pay__app-grid">
+                    @foreach (var app in BankApps.Apps.Where(a => a.Autofill))
+                    {
+                        <li><a href="@BankAppLinks.Link(app, t, origin + pay)" rel="noopener noreferrer"><img src="@BankAppLinks.Icon(app)" alt="" width="44" height="44" loading="lazy" referrerpolicy="no-referrer" /><span>@app.Name</span></a></li>
+                    }
+                </ul>
+                }
+                <div class="cp-pay__apps-group">@(Model.QrOnly ? "Mở ứng dụng ngân hàng rồi quét ảnh mã QR" : "Ngân hàng khác: chỉ mở ứng dụng")</div>
+                <p class="cp-hint">Ngân hàng chưa hỗ trợ điền sẵn. Tải ảnh mã QR, mở ứng dụng rồi chọn quét mã QR từ ảnh trong máy, hoặc sao chép số tài khoản, số tiền, nội dung ở trang thanh toán.</p>
+                <button class="cp-btn cp-btn--ghost cp-btn--block" type="button" data-cp-save-qr>@downloadIcon<span>Tải ảnh mã QR</span></button>
+                <ul class="cp-pay__app-grid">
+                    @foreach (var app in BankApps.Apps.Where(a => !a.Autofill))
+                    {
+                        <li><a href="@BankAppLinks.Link(app, t, origin + pay)" rel="noopener noreferrer"><img src="@BankAppLinks.Icon(app)" alt="" width="44" height="44" loading="lazy" referrerpolicy="no-referrer" /><span>@app.Name</span></a></li>
+                    }
+                </ul>
+                <p class="cp-hint">Trên máy tính: quét mã QR bằng điện thoại.</p>
+            </dialog>
+        }
+
+        <footer class="cp-pay__foot">@UiIcon.Render("shield-check")<span>Quét mã bằng ứng dụng ngân hàng. Dịch vụ thanh toán do Hóa đơn tự động cung cấp.</span></footer>
+    </article>
+    <p class="cp-pay__maker"><a class="cp-maker" href="https://tuvangiaiphapta.vn" target="_blank" rel="noopener" data-ta-hard>Sản phẩm của Tư vấn giải pháp T.A</a></p>
+</main>
+<script src="~/js/customer.js" asp-append-version="true"></script>
+<partial name="~/Views/Pay/_PayScripts.cshtml" />
+</body>
+</html>
