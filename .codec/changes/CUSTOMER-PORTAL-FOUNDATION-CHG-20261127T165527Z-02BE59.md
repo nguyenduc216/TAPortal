@@ -36,7 +36,7 @@ Quyết định:
 - Destination (chỉ từ config): invoice (TA.Invoice)
 - Trạng thái: DEPLOYED 2026-11-27 17:02Z, source commit 30da2f8, `Deploy-TARemote.ps1 -Target invoice`, health HTTP 200
 - Artifact SHA256: 87a453cf335dd22cfd94dc5fe1adfa9e9ec1ac6e3e80c9d051130243bfa3118d (package 7AE953697D1EA41C544C7407B48E6A897CEA67D1B86B2829C7051DF53D0CFEA6)
-- Backup trên server: `C:\TADeployackups\invoice-20261128-000249`
+- Backup trên server: `C:\TADeploy\backups\invoice-20261128-000249`
 - Smoke test: health 200; audit gates PASS (868 safe tests).
 
 ## Git
