@@ -68,12 +68,12 @@ Quyết định:
 | invoice | 18626f2b6fcc176d83b358aa9af66a536f18b5e647dba8a1aaf0c3ad6fc8a06a | 922F5F87B7ED5B7BE0F7B902C201316BFC8EAE47FD7DA11EBFAF8A0034EB803E | HTTP 200 |
 | webhooks | 6eca21a0fece997ab5049450262174e24ddb00f300deffbe77b73fd1c1cc4c0e | 6342C1EA24AC1DDF0E14E1BD15F97F4D1FD21569204E6C683389780096594EDD | HTTP 200 |
 
-- Backup trên server: `C:\TADeployackups\{portal-20261127-202732, invoice-20261127-202741, webhooks-20261127-202749}`.
+- Backup trên server: `C:TADeployackupsportal-20261127-202732`, `C:TADeployackupsinvoice-20261127-202741`, `C:TADeployackupswebhooks-20261127-202749`.
 - Smoke test: `/pay/c/<token không tồn tại>` trả 404 (đọc được bảng mới, không phải 503); `/collections` trả 302 về đăng nhập.
 
 ## Git
 - Branch: feature/payment-collections (cắt từ main b08c91f)
-- Merge: vào main sau deploy (standing authorization)
+- Merge: MERGED fast-forward vào main tại 393053d (sau deploy)
 
 ## Rủi ro, quyết định và việc còn lại
 - Chưa có kênh tự gửi link qua Zalo khi tạo phiếu thu: người bán sao chép link gửi khách, giống link đơn.
