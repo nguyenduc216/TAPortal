@@ -350,7 +350,9 @@ public sealed class SafeEasyInvoiceTests
 
         var page = WebUtility.HtmlDecode(await c.GetStringAsync("/einvoice"));
         Assert.Contains("data-cp-einvoice-provider>SoftDreams EasyInvoice", page);
-        Assert.Contains("data-cp-einvoice-env><span class=\"cp-badge cp-badge--gold\">Môi trường thử (demo)", page);
+        Assert.Contains("cp-env__item--demo is-active\" data-cp-env=\"DEMO\"", page);   // the tiles show the account, no summary
+        Assert.DoesNotContain("data-cp-einvoice-env>", page);
+        Assert.Contains("/einvoice?env=DEMO\"", page, StringComparison.OrdinalIgnoreCase);   // the environment in use can change its account or password
         Assert.Contains("data-cp-template-manual", page);
         Assert.DoesNotContain("Lấy mẫu hóa đơn từ EasyInvoice", page);
         Assert.DoesNotContain("Secret#123", page);

@@ -945,3 +945,5 @@ textarea.cp-input { height: auto; min-height: 72px; padding-top: 8px; padding-bo
 .cp-env__item small { color: var(--cp-ink-3); font-size: 12px; overflow-wrap: anywhere; }
 .cp-env__actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
 .cp-env__actions form { margin: 0; }
+.cp-env__label { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.cp-env__label .cp-provider-head { font-weight: 600; color: var(--cp-ink); }

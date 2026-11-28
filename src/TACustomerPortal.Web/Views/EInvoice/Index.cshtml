@@ -19,7 +19,8 @@ else if (!Model.ServiceReady) { <aside class="cp-note" style="margin-bottom:14px
         <section class="cp-card" style="margin-bottom:14px" data-cp-einvoice-account>
             <div class="cp-card__head"><span class="cp-blob">@UiIcon.Render("key")</span><h2>1. Tài khoản phần mềm hóa đơn</h2>
                 @if (s.IsConnected) {<span class="cp-badge cp-badge--green" style="margin-left:auto">Đã kết nối</span>} else {<span class="cp-badge cp-badge--soft" style="margin-left:auto">Chưa kết nối</span>}</div>
-            @if (s.IsConnected && !Model.ShowConnect)
+            @* SoftDreams: the environment tiles below show the account, so the summary is left out (operator 2026-11-28). *@
+            @if (s.IsConnected && !Model.ShowConnect && Model.Environments is null)
             {
                 <div class="cp-card__body">
                     <dl class="cp-dl">
@@ -30,17 +31,11 @@ else if (!Model.ServiceReady) { <aside class="cp-note" style="margin-bottom:14px
                         <div><dt>@UiIcon.Render("clock")Kết nối lúc</dt><dd>@PaymentText.VietnamTime(s.ConnectedAt)</dd></div>
                     </dl>
                 </div>
-                @if (canEdit)
-                {
-                    <div class="cp-card__foot">
-                        <form method="post" asp-action="Disconnect" style="margin-left:auto" onsubmit="return confirm('Gỡ kết nối @p.Name? Xuất hóa đơn tự động sẽ tắt.')"><button class="cp-btn cp-btn--danger" type="submit">@UiIcon.Render("trash")<span>Gỡ kết nối</span></button></form>
-                    </div>
-                }
             }
             @if (Model.Environments is { } envs && p.Code == CustomerInvoiceProviders.SoftDreamsCode)
             {
                 <div class="cp-card__body cp-env" data-cp-einvoice-environments>
-                    <div class="cp-label">Môi trường @p.Short</div>
+                    <div class="cp-label cp-env__label">Môi trường <span class="cp-provider-head"><img class="cp-provider-logo cp-provider-logo--sm" src="@Url.Content(InvoiceText.Logo(p.Code))" alt="" width="20" height="20" asp-append-version="true" /><span data-cp-einvoice-provider>@p.Name</span></span></div>
                     <div class="cp-env__grid">
                         @foreach (var env in envs)
                         {
@@ -49,21 +44,27 @@ else if (!Model.ServiceReady) { <aside class="cp-note" style="margin-bottom:14px
                                     @if (env.Active) {<span class="cp-badge cp-badge--green">Đang dùng</span>} else if (env.Connected) {<span class="cp-badge cp-badge--soft">Đã lưu</span>} else {<span class="cp-badge cp-badge--soft">Chưa kết nối</span>}</div>
                                 <small>@(env.IsDemo ? "Hóa đơn thử, không có giá trị pháp lý." : "Hóa đơn thật, gửi cơ quan thuế.")</small>
                                 @if (env.Connected) {<small>Tài khoản @env.Username · @PaymentText.VietnamTime(env.ConnectedAt)</small>}
-                                @if (canEdit && !env.Active)
+                                @if (canEdit)
                                 {
                                     <div class="cp-env__actions">
-                                        @if (env.Connected)
+                                        @if (env.Connected && !env.Active)
                                         {
                                             <form method="post" asp-action="SwitchEnvironment" onsubmit="return confirm('@(env.IsDemo ? "Chuyển sang môi trường thử (demo)? Hóa đơn xuất sau đó là hóa đơn thử, không có giá trị." : "Chuyển sang môi trường chính thức? Hóa đơn xuất sau đó là hóa đơn thật, ký số và gửi cơ quan thuế.")')">
                                                 <input type="hidden" name="environment" value="@env.Code" /><button class="cp-btn cp-btn--primary cp-btn--sm" type="submit">@UiIcon.Render("refresh")<span>Chuyển sang</span></button></form>
                                         }
-                                        <a class="cp-btn cp-btn--ghost cp-btn--sm" asp-action="Index" asp-route-env="@env.Code">@UiIcon.Render("key")<span>@(env.Connected ? "Đổi tài khoản" : "Kết nối")</span></a>
+                                        <a class="cp-btn cp-btn--ghost cp-btn--sm" asp-action="Index" asp-route-env="@env.Code">@UiIcon.Render("key")<span>@(env.Connected ? "Đổi tài khoản / mật khẩu" : "Kết nối")</span></a>
                                     </div>
                                 }
                             </div>
                         }
                     </div>
                     <p class="cp-hint" style="margin:8px 0 0">Mỗi môi trường giữ tài khoản và danh sách mẫu hóa đơn riêng. Hóa đơn đã xuất ở môi trường nào chỉ xem được khi đang dùng môi trường đó.</p>
+                </div>
+            }
+            @if (s.IsConnected && !Model.ShowConnect && canEdit)
+            {
+                <div class="cp-card__foot">
+                    <form method="post" asp-action="Disconnect" style="margin-left:auto" onsubmit="return confirm('Gỡ kết nối @p.Name? Xuất hóa đơn tự động sẽ tắt.')"><button class="cp-btn cp-btn--danger" type="submit">@UiIcon.Render("trash")<span>Gỡ kết nối</span></button></form>
                 </div>
             }
             <details class="cp-einvoice-connect" open="@(!s.IsConnected || Model.ShowConnect)" data-cp-einvoice-connect>
