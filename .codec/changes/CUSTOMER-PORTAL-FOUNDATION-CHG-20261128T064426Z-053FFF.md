@@ -4,7 +4,7 @@
 - Change ID: `CUSTOMER-PORTAL-FOUNDATION-CHG-20261128T064426Z-053FFF`
 - Created UTC: 2026-11-28T06:44:26.105759+00:00
 - Tiêu đề: E-invoice environment tiles: production green, demo amber
-- Trạng thái: PLANNED
+- Trạng thái: DEPLOYED
 
 ## Yêu cầu và phạm vi
 Operator (2026-11-28): thẻ môi trường Chính thức và Demo trên trang Hóa đơn điện tử phải khác màu hẳn để nhìn là phân biệt, ngoài nhãn trạng thái.
@@ -27,17 +27,18 @@ Operator (2026-11-28): thẻ môi trường Chính thức và Demo trên trang H
 - Safe tests 873 PASS.
 
 ## Publish
-- Project:
-- Destination (chỉ từ config):
-- Trạng thái: NOT_PUBLISHED
-- Artifact SHA256:
-- Smoke test:
+- Project: TACustomerPortal.Web
+- Destination (chỉ từ config): invoice (TA.Invoice)
+- Trạng thái: DEPLOYED 2026-11-28 06:48Z, source commit eb750a2, `Deploy-TARemote.ps1 -Target invoice`, backup `C:\TADeployackups\invoice-20261128-134805`
+- Artifact SHA256: 202a470be31a23caacfd1493c49f5ed4452818c0ee4377d4888e11a7d501c7a8
+- Smoke test: health HTTP 200
 
 ## Git
-- Branch:
-- Commit SHA:
+- Branch: feature/order-details-popups
+- Commit SHA: eb750a2
 - PR:
-- Merge: PENDING_APPROVAL
+- Merge: fast-forward vào main
 - Merge SHA:
 
 ## Rủi ro, quyết định và việc còn lại
+- Chỉ đổi giao diện (CSS và nhãn). Chưa xem trên giao diện thật vì cần đăng nhập.
