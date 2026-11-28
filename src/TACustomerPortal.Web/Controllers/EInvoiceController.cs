@@ -100,6 +100,12 @@ public sealed class EInvoiceController(ICurrentCustomerContext customer, IPaymen
             return await Page(m, settings, account: keep, connect: true, error: "Dịch vụ hóa đơn chưa sẵn sàng. Vui lòng liên hệ bộ phận hỗ trợ Hóa đơn tự động.");
         var login = new EasyInvoiceCredentials(input.Username!, input.Password!, input.TaxCode!, input.Demo);
         try { await easyInvoice.GetByIkeysAsync(login, ["KIEMTRA-" + Guid.NewGuid().ToString("N")[..12].ToUpperInvariant()]); }
+        // Production answers the check with "Mẫu không khả dụng" (111) once the login is accepted: the account is fine, the
+        // templates come next (each environment keeps its own list).
+        catch (EasyInvoiceApiException ex) when (EasyInvoiceResponse.IsPatternUnavailable(ex))
+        {
+            logger.LogInformation("EINVOICE_CONNECT_PATTERN_UNAVAILABLE customer={Customer} provider={Provider} demo={Demo}", m.CustomerId, provider.Code, input.Demo);
+        }
         catch (Exception ex) when (ex is EasyInvoiceApiException or HttpRequestException or TaskCanceledException)
         {
             logger.LogWarning(ex, "EINVOICE_CONNECT_FAILED customer={Customer} provider={Provider}", m.CustomerId, provider.Code);

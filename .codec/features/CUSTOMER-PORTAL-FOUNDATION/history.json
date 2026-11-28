@@ -713,5 +713,15 @@
     "migration_status": "NOT_EXECUTED",
     "publish_status": "NOT_PUBLISHED",
     "merge_status": "PENDING_APPROVAL"
+  },
+  {
+    "change_id": "CUSTOMER-PORTAL-FOUNDATION-CHG-20261128T093704Z-69B7C1",
+    "created_at": "2026-11-28T09:37:04.495285+00:00",
+    "title": "SoftDreams production connect: code 111 (Mau khong kha dung) is a valid login; lookup sends the pattern",
+    "status": "PLANNED",
+    "commit_sha": null,
+    "migration_status": "NOT_EXECUTED",
+    "publish_status": "NOT_PUBLISHED",
+    "merge_status": "PENDING_APPROVAL"
   }
 ]

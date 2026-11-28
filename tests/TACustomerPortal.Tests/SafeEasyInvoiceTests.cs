@@ -77,6 +77,33 @@ public sealed class SafeEasyInvoiceTests
         Assert.Empty(await api.GetByIkeysAsync(new("u", "p", "0109999999", true), ["KIEMTRA-1"]));
     }
 
+    // Operator 2026-11-28: connecting the production account failed with "(mã 111): Mẫu không khả dụng". The lookup sent no
+    // pattern; production answers that only after the login is accepted, so the connect check takes it as a valid login.
+    [Fact]
+    public async Task ThePatternUnavailableAnswerIsAValidLoginAndTheLookupSendsThePattern()
+    {
+        var handler = new RecordingHandler(200, """{"Status":4,"Message":"Mẫu không khả dụng","ErrorCode":111,"Data":null}""");
+        var api = Api(handler);
+        var ex = await Assert.ThrowsAsync<EasyInvoiceApiException>(() => api.GetByIkeysAsync(new("u", "p", "0109999999", false), ["KIEMTRA-1"]));
+        Assert.True(EasyInvoiceResponse.IsPatternUnavailable(ex));
+        Assert.DoesNotContain("Pattern", handler.Body);
+        await Assert.ThrowsAsync<EasyInvoiceApiException>(() => api.GetByIkeysAsync(new("u", "p", "0109999999", false), ["DH1"], "1C26TAA"));
+        Assert.Contains("\"Pattern\":\"1C26TAA\"", handler.Body);
+        Assert.StartsWith("https://api.easyinvoice.vn/", handler.Url);
+    }
+
+    private sealed class RecordingHandler(int status, string body) : HttpMessageHandler
+    {
+        public string Body { get; private set; } = "";
+        public string Url { get; private set; } = "";
+        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
+        {
+            Url = request.RequestUri!.ToString();
+            Body = await request.Content!.ReadAsStringAsync(ct);
+            return new HttpResponseMessage((HttpStatusCode)status) { Content = new StringContent(body, Encoding.UTF8, "application/json") };
+        }
+    }
+
     [Fact]
     public async Task OtherLookupErrorsStillFail()
     {
@@ -269,7 +296,9 @@ public sealed class SafeEasyInvoiceTests
         await Post(c, "/einvoice/addtemplate", await Token(c, "/einvoice"), new() { ["pattern"] = "1", ["series"] = "C26TDM" });
         Assert.Equal("C26TDM", invoices.Settings[A].InvoiceSeries);
 
-        // Production next: the demo login and template are kept, production starts without a template.
+        // Production next (its check answers "Mẫu không khả dụng", 111, a valid login): the demo login and template are kept,
+        // production starts without a template.
+        easy.LoginErrors.Enqueue(new EasyInvoiceApiException("4", "111", "Mẫu không khả dụng"));
         await Connect(false, "live-user");
         Assert.Equal(("live-user", (string?)null), (invoices.Settings[A].ProviderUsername, invoices.Settings[A].InvoiceSeries));
         Assert.Equal(2, invoices.Connections.Count);
@@ -452,7 +481,8 @@ public sealed class SafeEasyInvoiceTests
             return Task.CompletedTask;
         }
 
-        public Task<IReadOnlyList<EasyInvoiceInfo>> GetByIkeysAsync(EasyInvoiceCredentials login, IReadOnlyList<string> ikeys, CancellationToken ct = default)
+        public List<string?> LookedPatterns { get; } = [];
+        public Task<IReadOnlyList<EasyInvoiceInfo>> GetByIkeysAsync(EasyInvoiceCredentials login, IReadOnlyList<string> ikeys, string? pattern = null, CancellationToken ct = default)
         {
             if (ikeys.Single().StartsWith("KIEMTRA-", StringComparison.Ordinal))
             {
@@ -461,6 +491,7 @@ public sealed class SafeEasyInvoiceTests
                 return Task.FromResult<IReadOnlyList<EasyInvoiceInfo>>([]);
             }
             Looked.AddRange(ikeys);
+            LookedPatterns.Add(pattern);
             return Task.FromResult<IReadOnlyList<EasyInvoiceInfo>>(ikeys.Select(k => Existing(k)).OfType<EasyInvoiceInfo>().ToList());
         }
 

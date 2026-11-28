@@ -423,7 +423,7 @@ public sealed class OrderInvoicer(IOrderInvoiceStore store, ITingeeInvoiceApi in
         OrderInvoiceIssued result;
         try
         {
-            var existing = (await easyInvoice.GetByIkeysAsync(login, [job.InvoiceCode], ct)).FirstOrDefault(i => i.Ikey == job.InvoiceCode);
+            var existing = (await easyInvoice.GetByIkeysAsync(login, [job.InvoiceCode], pattern, ct)).FirstOrDefault(i => i.Ikey == job.InvoiceCode);
             if (existing is { IsCancelled: true })
             {
                 var cancelled = $"Hóa đơn của đơn này đã bị hủy trên {p.Name}. Kiểm tra trên {p.Short}.";

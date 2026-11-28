@@ -82,7 +82,8 @@ public interface IEasyInvoiceApi
     /// <summary>importInvoice: an unsigned draft without number (updated when the Ikey exists unsigned).</summary>
     Task ImportDraftAsync(EasyInvoiceCredentials login, string pattern, string xmlData, string ikey, CancellationToken ct = default);
     /// <summary>getInvoicesByIkeys: the invoices that exist for these keys (none: empty).</summary>
-    Task<IReadOnlyList<EasyInvoiceInfo>> GetByIkeysAsync(EasyInvoiceCredentials login, IReadOnlyList<string> ikeys, CancellationToken ct = default);
+    /// <param name="pattern">Mẫu số + ký hiệu of the invoices; the production system needs it (without it: code 111).</param>
+    Task<IReadOnlyList<EasyInvoiceInfo>> GetByIkeysAsync(EasyInvoiceCredentials login, IReadOnlyList<string> ikeys, string? pattern = null, CancellationToken ct = default);
     /// <summary>getInvoicePdf Option 0: the invoice PDF.</summary>
     Task<byte[]> GetPdfAsync(EasyInvoiceCredentials login, string pattern, string ikey, CancellationToken ct = default);
 }
@@ -103,9 +104,10 @@ public sealed class EasyInvoiceApi(HttpClient http, IOptions<EasyInvoiceOptions>
     public async Task ImportDraftAsync(EasyInvoiceCredentials login, string pattern, string xmlData, string ikey, CancellationToken ct = default) =>
         await PostAsync(login, "api/publish/importInvoice", new { XmlData = xmlData, Pattern = pattern, Serial = "" }, ikey, ct);
 
-    public async Task<IReadOnlyList<EasyInvoiceInfo>> GetByIkeysAsync(EasyInvoiceCredentials login, IReadOnlyList<string> ikeys, CancellationToken ct = default)
+    public async Task<IReadOnlyList<EasyInvoiceInfo>> GetByIkeysAsync(EasyInvoiceCredentials login, IReadOnlyList<string> ikeys, string? pattern = null, CancellationToken ct = default)
     {
-        try { return Invoices(await PostAsync(login, "api/publish/getInvoicesByIkeys", new { Ikeys = ikeys }, null, ct)); }
+        object body = string.IsNullOrWhiteSpace(pattern) ? new { Ikeys = ikeys } : new { Ikeys = ikeys, Pattern = pattern };
+        try { return Invoices(await PostAsync(login, "api/publish/getInvoicesByIkeys", body, null, ct)); }
         // The live service answers an unknown key with an error, not an empty list (seen 2026-11-27). It comes after the
         // login was accepted, so it means "no invoice yet" for the pre-issue lookup and a valid login for the connect check.
         catch (EasyInvoiceApiException ex) when (EasyInvoiceResponse.IsIkeyNotFound(ex)) { return []; }
@@ -157,6 +159,14 @@ public static class EasyInvoiceResponse
     public const string IkeyNotFoundCode = "128";
 
     public static bool IsIkeyNotFound(EasyInvoiceApiException ex) => ex.Code == IkeyNotFoundCode;
+
+    /// <summary>
+    /// ErrorCode 111 "Mẫu không khả dụng": the account was found but the lookup names no usable template. The production
+    /// system answers the connect check this way when no pattern is sent (operator 2026-11-28), so the login itself is valid.
+    /// </summary>
+    public const string PatternUnavailableCode = "111";
+
+    public static bool IsPatternUnavailable(EasyInvoiceApiException ex) => ex.Code == PatternUnavailableCode;
 
     public static JsonElement? Parse(string body, string? ikey, int httpStatus)
     {
