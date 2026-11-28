@@ -29,7 +29,7 @@ Operator (2026-11-28): thẻ môi trường Chính thức và Demo trên trang H
 ## Publish
 - Project: TACustomerPortal.Web
 - Destination (chỉ từ config): invoice (TA.Invoice)
-- Trạng thái: DEPLOYED 2026-11-28 06:48Z, source commit eb750a2, `Deploy-TARemote.ps1 -Target invoice`, backup `C:\TADeployackups\invoice-20261128-134805`
+- Trạng thái: DEPLOYED 2026-11-28 06:48Z, source commit eb750a2, `Deploy-TARemote.ps1 -Target invoice`, backup `C:\TADeploy\backups\invoice-20261128-134805`
 - Artifact SHA256: 202a470be31a23caacfd1493c49f5ed4452818c0ee4377d4888e11a7d501c7a8
 - Smoke test: health HTTP 200
 
