@@ -56,6 +56,15 @@ public sealed record EInvoiceVm(CustomerMembership Customer, bool CanManage, boo
 
 public static class InvoiceText
 {
+    /// <summary>The provider's logo mark under wwwroot/images/einvoice (taken from the provider's own site, operator 2026-11-28).</summary>
+    public static string Logo(string providerCode) => providerCode switch
+    {
+        TingeeInvoiceProviders.Misa => "~/images/einvoice/misa.svg",
+        TingeeInvoiceProviders.SInvoice => "~/images/einvoice/s-invoice.png",
+        CustomerInvoiceProviders.SoftDreamsCode => "~/images/einvoice/softdreams.png",
+        _ => "~/images/einvoice/softdreams.png",
+    };
+
     /// <summary>Badge for an order's invoice state.</summary>
     public static (string Label, string Css) Status(string status) => status switch
     {

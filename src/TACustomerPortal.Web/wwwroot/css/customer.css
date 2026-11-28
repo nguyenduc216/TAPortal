@@ -915,3 +915,7 @@ textarea.cp-input { height: auto; min-height: 72px; padding-top: 8px; padding-bo
 .cp-tpl strong { font-size: 13.5px; }
 .cp-tpl small { color: var(--cp-ink-3); font-size: 12px; }
 .cp-tpl input { margin-top: 3px; }
+.cp-provider-head { display: inline-flex; align-items: center; gap: 8px; min-width: 0; }
+.cp-provider-logo { width: 28px; height: 28px; flex: none; border-radius: 8px; object-fit: contain; }
+.cp-provider-logo--sm { width: 20px; height: 20px; border-radius: 6px; }
+.cp-seg .cp-provider-head + small { margin-top: 4px; }

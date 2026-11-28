@@ -75,3 +75,4 @@ CHECKPOINT_4A: PASS (existing artifact integrity, isolated localhost startup and
 | `CUSTOMER-PORTAL-FOUNDATION-CHG-20261127T165527Z-02BE59` | 2026-11-27 | Order details: customer info and invoice email dialogs | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |
 | `CUSTOMER-PORTAL-FOUNDATION-CHG-20261128T042908Z-EF84B0` | 2026-11-28 | Order details: progress timeline and paid state | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |
 | `CUSTOMER-PORTAL-FOUNDATION-CHG-20261128T043400Z-BA4498` | 2026-11-28 | E-invoice: saved template list per provider, pick the default | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |
+| `CUSTOMER-PORTAL-FOUNDATION-CHG-20261128T045242Z-F11047` | 2026-11-28 | E-invoice: provider logos on the provider cards | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |

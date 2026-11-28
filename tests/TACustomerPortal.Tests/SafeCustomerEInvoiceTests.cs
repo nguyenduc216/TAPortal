@@ -357,6 +357,22 @@ public sealed class SafeCustomerEInvoiceTests
     }
 
     [Fact]
+    public async Task ProviderCardsShowEachProvidersLogo()
+    {
+        var invoices = new MemoryInvoiceStore();
+        using var f = Factory("OWNER", out var payments, out _, invoiceStore: invoices);
+        invoices.Payments = payments;
+        payments.Merchants[A] = 9001;
+        var c = Client(f);
+        var page = await c.GetStringAsync("/einvoice");
+        foreach (var file in new[] { "misa.svg", "s-invoice.png", "softdreams.png" })
+        {
+            Assert.Contains($"/images/einvoice/{file}", page);
+            Assert.Equal(HttpStatusCode.OK, (await c.GetAsync($"/images/einvoice/{file}")).StatusCode);
+        }
+    }
+
+    [Fact]
     public async Task ADraftOrderShowsItsStatusWithoutAnError()
     {
         var api = new FakeInvoiceApi();

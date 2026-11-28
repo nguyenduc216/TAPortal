@@ -22,7 +22,7 @@ else if (!Model.ServiceReady) { <aside class="cp-note" style="margin-bottom:14px
             {
                 <div class="cp-card__body">
                     <dl class="cp-dl">
-                        <div><dt>@UiIcon.Render("file-invoice")Phần mềm</dt><dd data-cp-einvoice-provider>@p.Name</dd></div>
+                        <div><dt>@UiIcon.Render("file-invoice")Phần mềm</dt><dd><span class="cp-provider-head"><img class="cp-provider-logo cp-provider-logo--sm" src="@Url.Content(InvoiceText.Logo(p.Code))" alt="" width="20" height="20" asp-append-version="true" /><span data-cp-einvoice-provider>@p.Name</span></span></dd></div>
                         <div><dt>@UiIcon.Render("receipt-tax")Mã số thuế</dt><dd><span class="cp-code">@s.ProviderTaxCode</span></dd></div>
                         <div><dt>@UiIcon.Render("user")Tên đăng nhập</dt><dd>@s.ProviderUsername</dd></div>
                         @if (!p.ViaPartner) {<div><dt>@UiIcon.Render("server")Hệ thống</dt><dd data-cp-einvoice-env>@(Model.Account.Demo ? "Môi trường thử (demo)" : "Chính thức")</dd></div>}
@@ -44,7 +44,7 @@ else if (!Model.ServiceReady) { <aside class="cp-note" style="margin-bottom:14px
                     <div class="cp-seg" role="radiogroup" aria-label="Phần mềm hóa đơn điện tử" data-cp-providers>
                         @foreach (var option in CustomerInvoiceProviders.All)
                         {
-                            <label><input type="radio" name="Account.Provider" value="@option.Code" checked="@(option.Code == picked.Code)" disabled="@(!canEdit)" /><strong>@option.Name</strong><small>Ký tự động: @option.Signer</small></label>
+                            <label><input type="radio" name="Account.Provider" value="@option.Code" checked="@(option.Code == picked.Code)" disabled="@(!canEdit)" /><span class="cp-provider-head"><img class="cp-provider-logo" src="@Url.Content(InvoiceText.Logo(option.Code))" alt="" width="28" height="28" asp-append-version="true" /><strong>@option.Name</strong></span><small>Ký tự động: @option.Signer</small></label>
                         }
                     </div>
                     <span asp-validation-for="Account.Provider" class="cp-error"></span>
