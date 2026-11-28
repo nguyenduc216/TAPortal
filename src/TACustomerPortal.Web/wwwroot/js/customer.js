@@ -543,3 +543,10 @@ document.addEventListener("click", event => {
     if (event.target.closest?.("[data-cp-dialog-close]")) { event.target.closest("dialog")?.close(); return; }
     if (event.target instanceof HTMLDialogElement && event.target.matches("[data-cp-contact-dialog],[data-cp-invoice-email-dialog],[data-cp-notice-dialog]")) event.target.close();
 });
+
+// E-invoice page: typing a new mẫu số / ký hiệu picks "Thêm mẫu mới" in the saved template list.
+document.addEventListener("input", event => {
+    if (!event.target.closest?.("[data-cp-template-fields]")) return;
+    const pick = event.target.closest("form")?.querySelector("[data-cp-template-new]");
+    if (pick) pick.checked = true;
+});

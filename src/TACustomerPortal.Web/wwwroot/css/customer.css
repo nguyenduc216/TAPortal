@@ -907,3 +907,11 @@ textarea.cp-input { height: auto; min-height: 72px; padding-top: 8px; padding-bo
     .cp-debt__pick { flex-wrap: wrap; }
     .cp-debt__due { text-align: left; }
 }
+.cp-tpl-list { display: grid; gap: 8px; margin: 6px 0 0; padding: 0; list-style: none; }
+.cp-tpl { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--cp-line); border-radius: 12px; background: var(--cp-surface); }
+.cp-tpl.is-default { border-color: var(--cp-blue-500); background: var(--cp-blue-50); }
+.cp-tpl label { display: flex; align-items: flex-start; gap: 10px; flex: 1; min-width: 0; cursor: pointer; }
+.cp-tpl label > span { display: flex; flex-direction: column; min-width: 0; }
+.cp-tpl strong { font-size: 13.5px; }
+.cp-tpl small { color: var(--cp-ink-3); font-size: 12px; }
+.cp-tpl input { margin-top: 3px; }

@@ -78,7 +78,28 @@ else if (!Model.ServiceReady) { <aside class="cp-note" style="margin-bottom:14px
                         }
                     </div>
                 }
-                <div class="cp-form-grid">
+                else if (Model.Saved is { Count: > 0 } saved)
+                {
+                    <div class="cp-label">Mẫu hóa đơn đã lưu trên @p.Name @if (Model.Environment == SavedInvoiceTemplate.Demo) {<span class="cp-badge cp-badge--gold">Môi trường thử (demo)</span>} else {<span class="cp-badge cp-badge--green">Chính thức</span>}</div>
+                    <ul class="cp-tpl-list" role="radiogroup" aria-label="Mẫu hóa đơn đã lưu" data-cp-saved-templates>
+                        @foreach (var tpl in saved)
+                        {
+                            var isDefault = tpl.Pattern == s.InvoicePattern && tpl.Series == s.InvoiceSeries;
+                            <li class="cp-tpl@(isDefault ? " is-default" : "")">
+                                <label><input type="radio" name="Template.Choice" value="@($"{tpl.Pattern}|{tpl.Series}")" checked="@isDefault" disabled="@(!canEdit)" />
+                                    <span><strong>@tpl.Pattern@tpl.Series</strong><small>Mẫu số @tpl.Pattern · ký hiệu @tpl.Series</small></span></label>
+                                @if (isDefault) {<span class="cp-badge cp-badge--blue">Mặc định</span>}
+                                else if (canEdit && tpl.Id != Guid.Empty) {<button type="submit" class="cp-btn cp-btn--ghost cp-btn--sm" formaction="@Url.Action("DeleteTemplate")" formnovalidate name="templateId" value="@tpl.Id" onclick="return confirm('Xóa mẫu @tpl.Pattern@tpl.Series khỏi danh sách?')" aria-label="Xóa mẫu @tpl.Pattern@tpl.Series">@UiIcon.Render("trash")</button>}
+                            </li>
+                        }
+                        @if (canEdit)
+                        {
+                            <li class="cp-tpl"><label><input type="radio" name="Template.Choice" value="" data-cp-template-new /><span><strong>Thêm mẫu mới</strong><small>Nhập mẫu số và ký hiệu bên dưới, lưu xong mẫu được thêm vào danh sách và dùng làm mặc định.</small></span></label></li>
+                        }
+                    </ul>
+                    <p class="cp-hint" style="margin:6px 0 12px">Mẫu được chọn là mẫu mặc định: mọi hóa đơn xuất tự động dùng mẫu này. Danh sách riêng cho từng nhà cung cấp@(p.ViaPartner ? "" : " và cho môi trường thử / chính thức").</p>
+                }
+                <div class="cp-form-grid" data-cp-template-fields>
                     <div class="cp-field"><label asp-for="Template.Pattern" class="cp-label">Mẫu số</label><div class="cp-input-wrap">@UiIcon.Render("hash")<input asp-for="Template.Pattern" class="cp-input" maxlength="50" placeholder="Bấm Lấy mẫu hóa đơn" disabled="@(!canEdit || !s.IsConnected)" /></div><span asp-validation-for="Template.Pattern" class="cp-error"></span>
                         @if (p == CustomerInvoiceProviders.Misa) {<div class="cp-hint">MISA dùng mã mẫu riêng (chuỗi dài), không phải số "1": bấm "Lấy mẫu hóa đơn từ MISA", chọn mẫu rồi lưu.</div>}
                         else if (!p.HasTemplates) {<div class="cp-hint" data-cp-template-manual>Nhập mẫu số và ký hiệu đã đăng ký trên @p.Short, VD mẫu số 1 và ký hiệu C26TAA (ghép lại là 1C26TAA).</div>}

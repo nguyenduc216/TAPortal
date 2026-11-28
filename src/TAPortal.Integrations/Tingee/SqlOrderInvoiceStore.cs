@@ -157,6 +157,28 @@ WHERE Id=@id AND CustomerId=@c AND InvoiceStatus='PENDING'
     public Task MarkEmailedAsync(Guid customerId, Guid orderId, CancellationToken ct = default) =>
         Execute(ct, "UPDATE dbo.CustomerOrders SET InvoiceEmailedAt=SYSUTCDATETIME() WHERE Id=@id AND CustomerId=@c", ("@id", orderId), ("@c", customerId));
 
+    public async Task<IReadOnlyList<SavedInvoiceTemplate>> SavedTemplatesAsync(Guid customerId, string provider, string environment, CancellationToken ct = default)
+    {
+        await using var cn = await Open(ct);
+        await using var cmd = Command(cn, null, """
+SELECT Id,Provider,Environment,InvoicePattern,InvoiceSeries,CreatedAt FROM dbo.CustomerInvoiceTemplates
+WHERE CustomerId=@c AND Provider=@p AND Environment=@e ORDER BY CreatedAt,InvoiceSeries
+""", ("@c", customerId), ("@p", provider), ("@e", environment));
+        var list = new List<SavedInvoiceTemplate>();
+        await using var r = await cmd.ExecuteReaderAsync(ct);
+        while (await r.ReadAsync(ct))
+            list.Add(new(r.GetGuid(0), r.GetString(1), r.GetString(2), r.GetString(3), r.GetString(4), DateTime.SpecifyKind(r.GetDateTime(5), DateTimeKind.Utc)));
+        return list;
+    }
+
+    public Task SaveTemplateAsync(Guid customerId, string provider, string environment, string pattern, string series, Guid actor, CancellationToken ct = default) => Execute(ct, """
+IF NOT EXISTS (SELECT 1 FROM dbo.CustomerInvoiceTemplates WITH (UPDLOCK, HOLDLOCK) WHERE CustomerId=@c AND Provider=@p AND Environment=@e AND InvoicePattern=@pattern AND InvoiceSeries=@series)
+ INSERT dbo.CustomerInvoiceTemplates(CustomerId,Provider,Environment,InvoicePattern,InvoiceSeries,CreatedBy) VALUES(@c,@p,@e,@pattern,@series,@actor)
+""", ("@c", customerId), ("@p", provider), ("@e", environment), ("@pattern", pattern), ("@series", series), ("@actor", actor));
+
+    public Task DeleteTemplateAsync(Guid customerId, Guid templateId, CancellationToken ct = default) =>
+        Execute(ct, "DELETE dbo.CustomerInvoiceTemplates WHERE Id=@id AND CustomerId=@c", ("@id", templateId), ("@c", customerId));
+
     public async Task<InvoiceSigningHealth> SigningHealthAsync(Guid customerId, CancellationToken ct = default)
     {
         await using var cn = await Open(ct);

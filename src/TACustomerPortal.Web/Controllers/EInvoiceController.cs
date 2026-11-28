@@ -203,6 +203,8 @@ public sealed class EInvoiceController(ICurrentCustomerContext customer, IPaymen
             HsmConfirmedAt = input.IssueMode == InvoiceIssueModes.Signed ? settings.HsmConfirmedAt ?? now : settings.HsmConfirmedAt,
             HsmConfirmedBy = input.IssueMode == InvoiceIssueModes.Signed ? settings.HsmConfirmedBy ?? Actor : settings.HsmConfirmedBy
         }, Actor);
+        if (input.Pattern is string savedPattern && input.Series is string savedSeries)
+            await store.SaveTemplateAsync(m.CustomerId, settings.Provider, Environment(settings), savedPattern, savedSeries, Actor);
         logger.LogInformation("EINVOICE_SETTINGS_SAVED customer={Customer} mode={Mode} email={Email} hsmConfirmed={Hsm}", m.CustomerId, input.IssueMode, input.SendEmail,
             input.IssueMode == InvoiceIssueModes.Signed && settings.HsmConfirmedAt is null);
         Flash(input.IssueMode switch
@@ -249,6 +251,29 @@ public sealed class EInvoiceController(ICurrentCustomerContext customer, IPaymen
         return RedirectToAction(nameof(Index));
     }
 
+    /// <summary>Removes a saved template from the list; the template in use (the default) cannot be removed.</summary>
+    [HttpPost]
+    public async Task<IActionResult> DeleteTemplate(Guid templateId)
+    {
+        if (await Current() is not { } m) return SelectCustomer();
+        if (!CanManage(m)) return Forbid();
+        var settings = await store.SettingsAsync(m.CustomerId);
+        var saved = await store.SavedTemplatesAsync(m.CustomerId, settings.Provider, Environment(settings));
+        if (saved.FirstOrDefault(t => t.Id == templateId) is not { } template) return NotFound();
+        if (template.Pattern == settings.InvoicePattern && template.Series == settings.InvoiceSeries)
+            Flash("Không xóa được mẫu đang dùng mặc định. Chọn mẫu khác làm mặc định và lưu trước.", error: true);
+        else
+        {
+            await store.DeleteTemplateAsync(m.CustomerId, templateId);
+            Flash($"Đã xóa mẫu {template.Pattern}{template.Series} khỏi danh sách.");
+        }
+        return RedirectToAction(nameof(Index));
+    }
+
+    /// <summary>LIVE, or DEMO when the company is connected to SoftDreams' test system: templates of one never apply to the other.</summary>
+    private string Environment(CustomerInvoiceSettings settings) =>
+        !settings.Info.ViaPartner && secrets?.Unprotect(settings.ProviderSecret)?.Demo == true ? SavedInvoiceTemplate.Demo : SavedInvoiceTemplate.Live;
+
     private async Task<IActionResult> Page(CustomerMembership m, CustomerInvoiceSettings settings, EInvoiceAccountInput? account = null, EInvoiceTemplateInput? template = null,
         IReadOnlyList<TingeeInvoiceTemplate>? templates = null, bool connect = false, string? error = null, int? status = null)
     {
@@ -261,6 +286,12 @@ public sealed class EInvoiceController(ICurrentCustomerContext customer, IPaymen
         var linked = await payments.MerchantIdAsync(m.CustomerId) is not null;
         var today = DateOnly.FromDateTime(clock.GetUtcNow().ToOffset(TingeeSignature.VietnamOffset).DateTime);
         var readiness = InvoiceReadiness.Check(settings, today, settings.IsConnected ? await store.SigningHealthAsync(m.CustomerId) : InvoiceSigningHealth.None);
-        return View("Index", new EInvoiceVm(m, CanManage(m), linked, invoices.IsConfigured, settings, account, template, templates, connect || !settings.IsConnected, readiness));
+        // The saved list for this provider and environment, with the template in use first when it was set before the list existed.
+        var environment = Environment(settings);
+        var saved = settings.IsConnected ? (await store.SavedTemplatesAsync(m.CustomerId, settings.Provider, environment)).ToList() : [];
+        if (settings.HasTemplate && !saved.Any(t => t.Pattern == settings.InvoicePattern && t.Series == settings.InvoiceSeries))
+            saved.Insert(0, new(Guid.Empty, settings.Provider, environment, settings.InvoicePattern!, settings.InvoiceSeries!, settings.ConnectedAt ?? DateTime.UtcNow));
+        return View("Index", new EInvoiceVm(m, CanManage(m), linked, invoices.IsConfigured, settings, account, template, templates, connect || !settings.IsConnected, readiness,
+            saved, environment));
     }
 }

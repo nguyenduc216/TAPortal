@@ -49,7 +49,7 @@ public sealed class EInvoiceTemplateInput
 
 public sealed record EInvoiceVm(CustomerMembership Customer, bool CanManage, bool Linked, bool ServiceReady, CustomerInvoiceSettings Settings,
     EInvoiceAccountInput Account, EInvoiceTemplateInput Template, IReadOnlyList<TingeeInvoiceTemplate>? Templates = null, bool ShowConnect = false,
-    IReadOnlyList<InvoiceReadinessItem>? Readiness = null)
+    IReadOnlyList<InvoiceReadinessItem>? Readiness = null, IReadOnlyList<SavedInvoiceTemplate>? Saved = null, string Environment = SavedInvoiceTemplate.Live)
 {
     public CustomerInvoiceProvider Provider => Settings.Info;
 }

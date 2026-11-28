@@ -319,6 +319,44 @@ public sealed class SafeCustomerEInvoiceTests
     }
 
     [Fact]
+    public async Task SavedTemplatesListThePerProviderTemplatesAndPickTheDefault()
+    {
+        var invoices = new MemoryInvoiceStore();
+        using var f = Factory("OWNER", out var payments, out _, invoiceStore: invoices);
+        invoices.Payments = payments;
+        payments.Merchants[A] = 9001;
+        invoices.Settings[A] = Ready(A) with { InvoicePattern = "1", InvoiceSeries = "C26TAA" };
+        var c = Client(f);
+        // The template set before the list existed shows as the default.
+        var page = WebUtility.HtmlDecode(await c.GetStringAsync("/einvoice"));
+        Assert.Contains("data-cp-saved-templates", page);
+        Assert.Contains("1C26TAA", page);
+        Assert.Contains("Mặc định", page);
+
+        // A new template typed in joins the list and becomes the default.
+        var token = await Token(c, "/einvoice");
+        var r = await Post(c, "/einvoice/save", token, new() { ["Template.Choice"] = "", ["Template.Pattern"] = "1", ["Template.Series"] = "c26tab", ["Template.IssueMode"] = "NONE" });
+        Assert.Equal(HttpStatusCode.Redirect, r.StatusCode);
+        Assert.Equal(("1", "C26TAB"), (invoices.Settings[A].InvoicePattern, invoices.Settings[A].InvoiceSeries));
+        Assert.Equal(["C26TAB"], invoices.Saved.Select(x => x.Template.Series));
+        invoices.Saved.Insert(0, (A, new(Guid.NewGuid(), invoices.Settings[A].Provider, SavedInvoiceTemplate.Live, "1", "C26TAA", DateTime.UtcNow.AddDays(-1))));
+
+        // Picking a saved one makes it the default again.
+        r = await Post(c, "/einvoice/save", token, new() { ["Template.Choice"] = "1|C26TAA", ["Template.Pattern"] = "1", ["Template.Series"] = "C26TAB", ["Template.IssueMode"] = "NONE" });
+        Assert.Equal(HttpStatusCode.Redirect, r.StatusCode);
+        Assert.Equal("C26TAA", invoices.Settings[A].InvoiceSeries);
+
+        // The default cannot be removed; another one can.
+        var inUse = invoices.Saved.Single(x => x.Template.Series == "C26TAA").Template.Id;
+        await Post(c, "/einvoice/deletetemplate", token, new() { ["templateId"] = inUse.ToString() });
+        Assert.Equal(2, invoices.Saved.Count);
+        var other = invoices.Saved.Single(x => x.Template.Series == "C26TAB").Template.Id;
+        r = await Post(c, "/einvoice/deletetemplate", token, new() { ["templateId"] = other.ToString() });
+        Assert.Equal(HttpStatusCode.Redirect, r.StatusCode);
+        Assert.Equal(["C26TAA"], invoices.Saved.Select(x => x.Template.Series));
+    }
+
+    [Fact]
     public async Task ADraftOrderShowsItsStatusWithoutAnError()
     {
         var api = new FakeInvoiceApi();
@@ -641,6 +679,20 @@ public sealed class SafeCustomerEInvoiceTests
     {
         public MemoryPaymentStore Payments { get; set; } = new();
         public Dictionary<Guid, CustomerInvoiceSettings> Settings { get; } = [];
+        public List<(Guid Customer, SavedInvoiceTemplate Template)> Saved { get; } = [];
+        public Task<IReadOnlyList<SavedInvoiceTemplate>> SavedTemplatesAsync(Guid customerId, string provider, string environment, CancellationToken ct = default) =>
+            Task.FromResult<IReadOnlyList<SavedInvoiceTemplate>>(Saved.Where(x => x.Customer == customerId && x.Template.Provider == provider && x.Template.Environment == environment).Select(x => x.Template).ToList());
+        public Task SaveTemplateAsync(Guid customerId, string provider, string environment, string pattern, string series, Guid actor, CancellationToken ct = default)
+        {
+            if (!Saved.Any(x => x.Customer == customerId && x.Template is var t && t.Provider == provider && t.Environment == environment && t.Pattern == pattern && t.Series == series))
+                Saved.Add((customerId, new(Guid.NewGuid(), provider, environment, pattern, series, DateTime.UtcNow)));
+            return Task.CompletedTask;
+        }
+        public Task DeleteTemplateAsync(Guid customerId, Guid templateId, CancellationToken ct = default)
+        {
+            Saved.RemoveAll(x => x.Customer == customerId && x.Template.Id == templateId);
+            return Task.CompletedTask;
+        }
         public Dictionary<Guid, DateTime> PaidAt { get; } = [];
         public Dictionary<Guid, DateTime> NextAttempt { get; } = [];
         private readonly Dictionary<Guid, int> attempts = [];

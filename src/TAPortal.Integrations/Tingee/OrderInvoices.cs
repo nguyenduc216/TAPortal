@@ -178,6 +178,19 @@ public interface IOrderInvoiceStore
     Task MarkEmailedAsync(Guid customerId, Guid orderId, CancellationToken ct = default);
     /// <summary>Last signed invoice and last draft left because signing failed (<see cref="OrderInvoiceRules.SigningFailedPrefix"/>).</summary>
     Task<InvoiceSigningHealth> SigningHealthAsync(Guid customerId, CancellationToken ct = default);
+
+    /// <summary>Templates the company has saved for one provider and environment (LIVE / DEMO), oldest first (migration 070).</summary>
+    Task<IReadOnlyList<SavedInvoiceTemplate>> SavedTemplatesAsync(Guid customerId, string provider, string environment, CancellationToken ct = default) =>
+        Task.FromResult<IReadOnlyList<SavedInvoiceTemplate>>([]);
+    /// <summary>Adds a template to the saved list; one already saved is left as it is.</summary>
+    Task SaveTemplateAsync(Guid customerId, string provider, string environment, string pattern, string series, Guid actor, CancellationToken ct = default) => Task.CompletedTask;
+    Task DeleteTemplateAsync(Guid customerId, Guid templateId, CancellationToken ct = default) => Task.CompletedTask;
+}
+
+/// <summary>A saved e-invoice template (mẫu số + ký hiệu). Environment: LIVE, or DEMO for a provider's test system.</summary>
+public sealed record SavedInvoiceTemplate(Guid Id, string Provider, string Environment, string Pattern, string Series, DateTime CreatedAt)
+{
+    public const string Live = "LIVE", Demo = "DEMO";
 }
 
 public sealed record OrderInvoiceOutcome(string Status, string Message, string? InvoiceNumber = null)
