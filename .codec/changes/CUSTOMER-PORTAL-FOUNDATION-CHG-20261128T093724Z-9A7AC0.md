@@ -4,7 +4,7 @@
 - Change ID: `CUSTOMER-PORTAL-FOUNDATION-CHG-20261128T093724Z-9A7AC0`
 - Created UTC: 2026-11-28T09:37:24.531111+00:00
 - Tiêu đề: SoftDreams production connect: code 111 is a valid login; lookup sends the pattern
-- Trạng thái: PLANNED
+- Trạng thái: DEPLOYED
 
 ## Yêu cầu và phạm vi
 Operator (2026-11-28): kết nối môi trường chính thức SoftDreams (api.easyinvoice.vn) báo "Nhà cung cấp hóa đơn từ chối (mã 111): Mẫu không khả dụng".
@@ -29,17 +29,17 @@ Operator (2026-11-28): kết nối môi trường chính thức SoftDreams (api.
 - Safe tests 874 PASS (test mới ThePatternUnavailableAnswerIsAValidLoginAndTheLookupSendsThePattern; test chuyển môi trường có thêm tình huống 111). Build solution Release 0 lỗi.
 
 ## Publish
-- Project:
-- Destination (chỉ từ config):
-- Trạng thái: NOT_PUBLISHED
-- Artifact SHA256:
-- Smoke test:
+- Project: TACustomerPortal.Web
+- Destination (chỉ từ config): invoice (TA.Invoice)
+- Trạng thái: DEPLOYED 2026-11-28 09:43Z, source commit aba511e, `Deploy-TARemote.ps1 -Target invoice`, backup `C:\TADeploy\backups\invoice-20261128-164308`
+- Artifact SHA256: 760fc5c95a8b23a26945f24018182413415a9cca04d7a051ace5c4b3f62a3db7
+- Smoke test: health HTTP 200. Chưa thử kết nối thật: operator tự nhập tài khoản chính thức trên trang.
 
 ## Git
-- Branch:
-- Commit SHA:
+- Branch: feature/order-details-popups
+- Commit SHA: c3b2d78 (code), aba511e (record)
 - PR:
-- Merge: PENDING_APPROVAL
+- Merge: fast-forward vào main
 - Merge SHA:
 
 ## Rủi ro, quyết định và việc còn lại
