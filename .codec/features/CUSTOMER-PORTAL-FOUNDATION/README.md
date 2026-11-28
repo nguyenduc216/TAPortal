@@ -79,3 +79,4 @@ CHECKPOINT_4A: PASS (existing artifact integrity, isolated localhost startup and
 | `CUSTOMER-PORTAL-FOUNDATION-CHG-20261128T050250Z-AC5601` | 2026-11-28 | E-invoice: demo and production connections side by side, template list picks the default, Add template button | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |
 | `CUSTOMER-PORTAL-FOUNDATION-CHG-20261128T064426Z-053FFF` | 2026-11-28 | E-invoice environment tiles: production green, demo amber | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |
 | `CUSTOMER-PORTAL-FOUNDATION-CHG-20261128T093704Z-69B7C1` | 2026-11-28 | SoftDreams production connect: code 111 (Mau khong kha dung) is a valid login; lookup sends the pattern | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |
+| `CUSTOMER-PORTAL-FOUNDATION-CHG-20261128T093724Z-9A7AC0` | 2026-11-28 | SoftDreams production connect: code 111 is a valid login; lookup sends the pattern | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |
