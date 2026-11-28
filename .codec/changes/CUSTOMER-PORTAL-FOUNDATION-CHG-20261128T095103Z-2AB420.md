@@ -4,7 +4,7 @@
 - Change ID: `CUSTOMER-PORTAL-FOUNDATION-CHG-20261128T095103Z-2AB420`
 - Created UTC: 2026-11-28T09:51:03.303705+00:00
 - Tiêu đề: SoftDreams account card: environment tiles replace the summary, active tile can change its account
-- Trạng thái: PLANNED
+- Trạng thái: DEPLOYED
 
 ## Yêu cầu và phạm vi
 Operator (2026-11-28), sau khi kết nối được môi trường chính thức SoftDreams:
@@ -27,17 +27,17 @@ Operator (2026-11-28), sau khi kết nối được môi trường chính thức
 - Safe tests 874 PASS.
 
 ## Publish
-- Project:
-- Destination (chỉ từ config):
-- Trạng thái: NOT_PUBLISHED
-- Artifact SHA256:
-- Smoke test:
+- Project: TACustomerPortal.Web
+- Destination (chỉ từ config): invoice (TA.Invoice)
+- Trạng thái: DEPLOYED 2026-11-28 09:53Z, source commit 43c5ea5, `Deploy-TARemote.ps1 -Target invoice`, backup `C:\TADeploy\backups\invoice-20261128-165349`
+- Artifact SHA256: 0e5751423ced75ab584f782ef4949c8e30d90761eb73947db86f390e263fe63c
+- Smoke test: health HTTP 200
 
 ## Git
-- Branch:
-- Commit SHA:
+- Branch: feature/order-details-popups
+- Commit SHA: 43c5ea5
 - PR:
-- Merge: PENDING_APPROVAL
+- Merge: fast-forward vào main
 - Merge SHA:
 
 ## Rủi ro, quyết định và việc còn lại
