@@ -703,5 +703,15 @@
     "migration_status": "NOT_EXECUTED",
     "publish_status": "NOT_PUBLISHED",
     "merge_status": "PENDING_APPROVAL"
+  },
+  {
+    "change_id": "CUSTOMER-PORTAL-FOUNDATION-CHG-20261128T064426Z-053FFF",
+    "created_at": "2026-11-28T06:44:26.105759+00:00",
+    "title": "E-invoice environment tiles: production green, demo amber",
+    "status": "PLANNED",
+    "commit_sha": null,
+    "migration_status": "NOT_EXECUTED",
+    "publish_status": "NOT_PUBLISHED",
+    "merge_status": "PENDING_APPROVAL"
   }
 ]

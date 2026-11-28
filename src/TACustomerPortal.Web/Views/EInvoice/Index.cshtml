@@ -26,7 +26,7 @@ else if (!Model.ServiceReady) { <aside class="cp-note" style="margin-bottom:14px
                         <div><dt>@UiIcon.Render("file-invoice")Phần mềm</dt><dd><span class="cp-provider-head"><img class="cp-provider-logo cp-provider-logo--sm" src="@Url.Content(InvoiceText.Logo(p.Code))" alt="" width="20" height="20" asp-append-version="true" /><span data-cp-einvoice-provider>@p.Name</span></span></dd></div>
                         <div><dt>@UiIcon.Render("receipt-tax")Mã số thuế</dt><dd><span class="cp-code">@s.ProviderTaxCode</span></dd></div>
                         <div><dt>@UiIcon.Render("user")Tên đăng nhập</dt><dd>@s.ProviderUsername</dd></div>
-                        @if (!p.ViaPartner) {<div><dt>@UiIcon.Render("server")Hệ thống</dt><dd data-cp-einvoice-env>@(Model.Account.Demo ? "Môi trường thử (demo)" : "Chính thức")</dd></div>}
+                        @if (!p.ViaPartner) {<div><dt>@UiIcon.Render("server")Hệ thống</dt><dd data-cp-einvoice-env><span class="cp-badge @(Model.Account.Demo ? "cp-badge--gold" : "cp-badge--green")">@(Model.Account.Demo ? "Môi trường thử (demo)" : "Chính thức")</span></dd></div>}
                         <div><dt>@UiIcon.Render("clock")Kết nối lúc</dt><dd>@PaymentText.VietnamTime(s.ConnectedAt)</dd></div>
                     </dl>
                 </div>
@@ -44,8 +44,8 @@ else if (!Model.ServiceReady) { <aside class="cp-note" style="margin-bottom:14px
                     <div class="cp-env__grid">
                         @foreach (var env in envs)
                         {
-                            <div class="cp-env__item@(env.Active ? " is-active" : "")" data-cp-env="@env.Code">
-                                <div class="cp-env__head"><strong>@(env.IsDemo ? "Môi trường thử (demo)" : "Chính thức (production)")</strong>
+                            <div class="cp-env__item cp-env__item--@(env.IsDemo ? "demo" : "live")@(env.Active ? " is-active" : "")" data-cp-env="@env.Code">
+                                <div class="cp-env__head"><span class="cp-env__title"><span class="cp-env__icon">@UiIcon.Render(env.IsDemo ? "alert-circle" : "shield-check")</span><strong>@(env.IsDemo ? "Môi trường thử (demo)" : "Chính thức (production)")</strong></span>
                                     @if (env.Active) {<span class="cp-badge cp-badge--green">Đang dùng</span>} else if (env.Connected) {<span class="cp-badge cp-badge--soft">Đã lưu</span>} else {<span class="cp-badge cp-badge--soft">Chưa kết nối</span>}</div>
                                 <small>@(env.IsDemo ? "Hóa đơn thử, không có giá trị pháp lý." : "Hóa đơn thật, gửi cơ quan thuế.")</small>
                                 @if (env.Connected) {<small>Tài khoản @env.Username · @PaymentText.VietnamTime(env.ConnectedAt)</small>}

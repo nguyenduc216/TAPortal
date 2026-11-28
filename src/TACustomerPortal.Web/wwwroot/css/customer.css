@@ -924,7 +924,23 @@ textarea.cp-input { height: auto; min-height: 72px; padding-top: 8px; padding-bo
 .cp-tpl-tools .cp-btn { flex: none; }
 .cp-env__grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; margin-top: 6px; }
 .cp-env__item { display: flex; flex-direction: column; gap: 4px; padding: 12px; border: 1px solid var(--cp-line); border-radius: 12px; background: var(--cp-surface); }
-.cp-env__item.is-active { border-color: var(--cp-green-600); box-shadow: 0 0 0 1px var(--cp-green-600) inset; }
+/* Production green, demo amber: the two environments must never look alike (operator 2026-11-28). */
+.cp-env__item { position: relative; overflow: hidden; padding-left: 16px; }
+.cp-env__item::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 5px; }
+.cp-env__item--live { background: #F3FBF5; border-color: #BBE5C8; }
+.cp-env__item--live::before { background: var(--cp-green-500); }
+.cp-env__item--live .cp-env__icon { color: var(--cp-green-700); background: var(--cp-green-100); }
+.cp-env__item--demo { background: #FFFAEB; border-color: var(--cp-gold-200); border-style: dashed; }
+.cp-env__item--demo::before { background: repeating-linear-gradient(180deg, var(--cp-gold-500) 0 8px, var(--cp-gold-200) 8px 14px); }
+.cp-env__item--demo .cp-env__icon { color: var(--cp-gold-text); background: var(--cp-gold-100); }
+.cp-env__item--live.is-active { border: 2px solid var(--cp-green-700); box-shadow: 0 6px 18px -10px rgba(22, 101, 52, .55); }
+.cp-env__item--demo.is-active { border: 2px solid var(--cp-gold-700); box-shadow: 0 6px 18px -10px rgba(161, 98, 7, .55); }
+.cp-env__item:not(.is-active) { opacity: .88; }
+.cp-env__title { display: inline-flex; align-items: center; gap: 8px; }
+.cp-env__icon { display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 8px; flex: none; }
+.cp-env__icon svg { width: 16px; height: 16px; }
+.cp-env__item--live strong { color: var(--cp-green-700); }
+.cp-env__item--demo strong { color: var(--cp-gold-text); }
 .cp-env__head { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 13.5px; }
 .cp-env__item small { color: var(--cp-ink-3); font-size: 12px; overflow-wrap: anywhere; }
 .cp-env__actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
