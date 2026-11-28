@@ -4,7 +4,7 @@
 - Change ID: `CUSTOMER-PORTAL-FOUNDATION-CHG-20261128T043400Z-BA4498`
 - Created UTC: 2026-11-28T04:34:00.390336+00:00
 - Tiêu đề: E-invoice: saved template list per provider, pick the default
-- Trạng thái: PLANNED
+- Trạng thái: DEPLOYED
 
 ## Yêu cầu và phạm vi
 Operator (2026-11-28), trang Hóa đơn điện tử: thay vì chỉ một mẫu, có danh sách mẫu hóa đơn (trên demo hoặc chính thức), chọn mẫu nào làm mặc định thì hóa đơn dùng mẫu đó; danh sách đi theo nhà cung cấp.
@@ -26,23 +26,25 @@ Quyết định:
 - Script: `database/migrations/070-customer-invoice-templates.sql`
 - Thứ tự chạy: sau 069
 - Preflight / Verify / Rollback: `127-verify-customer-invoice-templates.sql` / `128-rollback-customer-invoice-templates.sql`. Chỉ thêm 1 bảng, không đổi dòng nào.
-- Execution: NOT_EXECUTED
+- Execution: EXECUTED 2026-11-28 04:38:51Z qua `Invoke-TAMigrations.ps1 -Plan "070:127:128"` tại HEAD 2452d5a. Pre-check NOT_APPLIED; dry-run afterMigration=PASS, afterRollback=NOT_APPLIED, trancount 0; backup: dùng bản full gần nhất (913 phút); gates 870/870 PASS; real run VERIFY_STATUS=PASS. Log: `.codec/reports/CUSTOMER-PORTAL-FOUNDATION-CHG-20261128T043400Z-BA4498-migrations-20261128T043631Z.log`.
 
 ## Test và kết quả
 - Build 0 lỗi. Test mới SavedTemplatesListThePerProviderTemplatesAndPickTheDefault.
 
 ## Publish
 - Project: TACustomerPortal.Web (Integrations đổi; webhooks không dùng phần mới)
-- Destination (chỉ từ config):
-- Trạng thái: NOT_PUBLISHED
-- Artifact SHA256:
-- Smoke test:
+- Destination (chỉ từ config): invoice (TA.Invoice)
+- Trạng thái: DEPLOYED 2026-11-28 04:42Z, source commit 2452d5a, `Deploy-TARemote.ps1 -Target invoice -MigrationsApplied`, health HTTP 200
+- Artifact SHA256: 7da0cb62907c819c902b7510949dd4e9e2943039770a43f10ee9d4acdccb9d4d (package 3693A82EB502555142D899143228CD0202DDC88FFF4AA538971561000F60102C)
+- Backup trên server: `C:\TADeploy\backups\invoice-20261128-114217`
+- Smoke test: health 200; audit gates PASS (870). Portal/webhooks không deploy: chỉ thêm phương thức mặc định ở Integrations, không đổi hành vi.
 
 ## Git
 - Branch: feature/order-details-popups
-- Commit SHA:
+- Commit SHA: 2452d5a
 - PR:
-- Merge: PENDING_APPROVAL
+- Merge: MERGED fast-forward vào main (sau deploy)
 - Merge SHA:
 
 ## Rủi ro, quyết định và việc còn lại
+- Nếu SoftDreams cung cấp API danh sách mẫu, có thể lấy tự động thay vì nhập tay.
