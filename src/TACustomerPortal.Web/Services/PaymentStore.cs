@@ -126,6 +126,20 @@ public interface IPaymentStore
 
     Task<PaymentSettings> SettingsAsync(Guid customerId);
     Task SaveSettingsAsync(Guid customerId, PaymentSettings settings, Guid actor);
+
+    /// <summary>What happened to an order after it was created: its payments (direct or through a payment collection) and the messages sent to the buyer about them.</summary>
+    Task<OrderActivity> OrderActivityAsync(Guid customerId, Guid orderId) => Task.FromResult(OrderActivity.Empty);
+}
+
+/// <summary>A payment counted on an order. <paramref name="CollectionNo"/>: paid through that payment collection (only this order's share).</summary>
+public sealed record OrderPayment(long TransactionId, decimal Amount, DateTime At, string Status, string? CollectionNo);
+
+/// <summary>A message to the buyer (email or Zalo) about a payment of the order, as queued in the notification outbox.</summary>
+public sealed record OrderNotice(long TransactionId, string Channel, string Recipient, string Status, DateTime CreatedAt, DateTime? SentAt, string? Subject, string Body, string? Error);
+
+public sealed record OrderActivity(IReadOnlyList<OrderPayment> Payments, IReadOnlyList<OrderNotice> BuyerNotices)
+{
+    public static readonly OrderActivity Empty = new([], []);
 }
 
 public sealed class SqlPaymentStore(IConfiguration configuration) : IPaymentStore
@@ -305,6 +319,42 @@ FROM dbo.CustomerOrderLines l JOIN dbo.CustomerOrders o ON o.Id=l.OrderId WHERE 
         await using var cmd = Command(cn, OrderSelect + " WHERE o.CustomerId=@c AND o.Id=@id", ("@c", customerId), ("@id", id));
         await using var r = await cmd.ExecuteReaderAsync();
         return await r.ReadAsync() ? ReadOrder(r, lines) : null;
+    }
+
+    public async Task<OrderActivity> OrderActivityAsync(Guid customerId, Guid orderId)
+    {
+        await using var cn = await Open();
+        var payments = new List<OrderPayment>();
+        await using (var cmd = Command(cn, """
+SELECT t.Id,t.Amount,ISNULL(t.TransactionAt,t.ReceivedAt),t.Status,CAST(NULL AS nvarchar(30))
+FROM dbo.PaymentTransactions t WHERE t.CustomerId=@c AND t.OrderId=@o AND t.Status IN ('MATCHED','REVIEW','RESOLVED')
+UNION ALL
+SELECT t.Id,a.Amount,ISNULL(t.TransactionAt,t.ReceivedAt),t.Status,pc.CollectionNo
+FROM dbo.PaymentAllocations a
+JOIN dbo.PaymentTransactions t ON t.Id=a.TransactionId AND t.CustomerId=@c
+JOIN dbo.PaymentCollections pc ON pc.Id=a.CollectionId AND pc.CustomerId=@c
+WHERE a.OrderId=@o
+ORDER BY 3,1
+""", ("@c", customerId), ("@o", orderId)))
+        await using (var r = await cmd.ExecuteReaderAsync())
+            while (await r.ReadAsync())
+                payments.Add(new(r.GetInt64(0), r.GetDecimal(1), DateTime.SpecifyKind(r.GetDateTime(2), DateTimeKind.Utc), r.GetString(3), S(r, 4)));
+        var notices = new List<OrderNotice>();
+        if (payments.Count > 0)
+        {
+            // Buyer messages are the company's own channels (scope CUSTOMER) that reach the buyer: email and Zalo ZNS.
+            var ids = string.Join(",", payments.Select(p => p.TransactionId).Distinct());
+            await using var cmd = Command(cn, $"""
+SELECT n.TransactionId,n.Channel,n.Recipient,n.Status,n.CreatedAt,n.SentAt,n.Subject,n.Body,n.LastError
+FROM dbo.NotificationOutbox n WHERE n.CustomerId=@c AND n.Scope='CUSTOMER' AND n.Channel IN ('SMTP','ZALO_OA') AND n.TransactionId IN ({ids})
+ORDER BY n.Id
+""", ("@c", customerId));
+            await using var r = await cmd.ExecuteReaderAsync();
+            while (await r.ReadAsync())
+                notices.Add(new(r.GetInt64(0), r.GetString(1), r.GetString(2), r.GetString(3), DateTime.SpecifyKind(r.GetDateTime(4), DateTimeKind.Utc),
+                    r.IsDBNull(5) ? null : DateTime.SpecifyKind(r.GetDateTime(5), DateTimeKind.Utc), S(r, 6), r.GetString(7), S(r, 8)));
+        }
+        return new(payments, notices);
     }
 
     public async Task<(Guid Id, string OrderNo)> CreateOrderAsync(Guid customerId, NewOrder order, Guid actor)

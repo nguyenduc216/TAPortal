@@ -1051,6 +1051,8 @@ public sealed class SafeCustomerPaymentsTests
         public List<(Guid Customer, Contact Contact)> Contacts { get; } = [];
         public List<(Guid Customer, Order Order)> Orders { get; } = [];
         private PaymentSettings settings = PaymentSettings.Default;
+        public Dictionary<Guid, OrderActivity> Activity { get; } = [];
+        public Task<OrderActivity> OrderActivityAsync(Guid customerId, Guid orderId) => Task.FromResult(Activity.GetValueOrDefault(orderId) ?? OrderActivity.Empty);
 
         private void Check() { if (Fail) throw new InvalidOperationException("Configure Database__ConnectionString"); }
 

@@ -663,5 +663,15 @@
     "migration_status": "NOT_EXECUTED",
     "publish_status": "NOT_PUBLISHED",
     "merge_status": "PENDING_APPROVAL"
+  },
+  {
+    "change_id": "CUSTOMER-PORTAL-FOUNDATION-CHG-20261128T042908Z-EF84B0",
+    "created_at": "2026-11-28T04:29:08.170489+00:00",
+    "title": "Order details: progress timeline and paid state",
+    "status": "PLANNED",
+    "commit_sha": null,
+    "migration_status": "NOT_EXECUTED",
+    "publish_status": "NOT_PUBLISHED",
+    "merge_status": "PENDING_APPROVAL"
   }
 ]

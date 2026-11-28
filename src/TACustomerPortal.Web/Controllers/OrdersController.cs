@@ -83,7 +83,7 @@ public sealed class OrdersController(ICurrentCustomerContext customer, IPaymentS
         return View(new OrderDetailsVm(m, CanManage(m), order, status, bank, contact, qr, now, banks, invoiceSettings.IsReady,
             payUrl, await pages.InvoiceBuyerAsync(m.CustomerId, order.Id),
             (await collections.OpenCollectionsByOrderAsync(m.CustomerId)).TryGetValue(order.Id, out var inside) ? inside : null,
-            invoiceSettings.Info.Name));
+            invoiceSettings.Info.Name, await store.OrderActivityAsync(m.CustomerId, order.Id), invoiceSettings.SendEmail));
     }
 
     /// <summary>Prices agreed with one customer, by product id: the order form offers them instead of the catalogue price.</summary>

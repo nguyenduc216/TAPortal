@@ -283,6 +283,42 @@ public sealed class SafeCustomerEInvoiceTests
     }
 
     [Fact]
+    public async Task APaidOrderShowsItsTimelineAndNoQr()
+    {
+        using var f = Factory("OWNER", out var payments, out _);
+        var contact = new Contact(Guid.NewGuid(), "KH001", "Anh Nam", null, null, "0901234567", "ketoan@namphat.vn", null, null, true);
+        payments.Contacts.Add((A, contact));
+        var order = PaidOrder() with { ContactId = contact.Id, InvoiceStatus = OrderInvoiceStatus.Issued, InvoiceNumber = "0000123", InvoiceIssuedAt = Now.UtcDateTime,
+            InvoiceEmailedAt = Now.UtcDateTime, PartnerPaidAmount = 75_600, PartnerCheckedAt = Now.UtcDateTime };
+        payments.Orders.Add((A, order));
+        payments.Activity[order.Id] = new(
+            [new(1, 50_000, Now.UtcDateTime.AddMinutes(-30), "MATCHED", null), new(2, 25_600, Now.UtcDateTime.AddMinutes(-5), "MATCHED", "TT-261128-0001")],
+            [new(2, "SMTP", "ketoan@namphat.vn", "SENT", Now.UtcDateTime, Now.UtcDateTime, "Đã nhận thanh toán", "Kính gửi Anh Nam, đã nhận 25.600 đ.", null),
+             new(2, "ZALO_OA", "84901234567", "FAILED", Now.UtcDateTime, null, null, "Đơn DH261106-0001 đã nhận 25.600 đ", "quota")]);
+        var page = WebUtility.HtmlDecode(await Client(f).GetStringAsync($"/orders/details/{order.Id}"));
+        Assert.Contains("data-cp-qr-paid", page);
+        Assert.Contains("Đã chuyển khoản thành công", page);
+        Assert.Contains("2 lần thanh toán", page);
+        Assert.Contains("(qua phiếu thu TT-261128-0001)", page);
+        Assert.Contains("data-cp-step=\"paid\" data-cp-step-state=\"Done\"", page);
+        Assert.Contains("data-cp-step=\"matched\" data-cp-step-state=\"Done\"", page);
+        Assert.Contains("data-cp-step=\"notified\" data-cp-step-state=\"Warn\"", page);   // the Zalo message failed
+        Assert.Contains("data-cp-step=\"invoice\" data-cp-step-state=\"Done\"", page);
+        Assert.Contains("data-cp-step=\"invoice-email\" data-cp-step-state=\"Done\"", page);
+        Assert.Contains("id=\"noticeDialog\"", page);
+        Assert.Contains("Kính gửi Anh Nam, đã nhận 25.600 đ.", page);
+
+        // An unpaid order without automatic invoicing: payment waits, the invoice step does not apply.
+        var unpaid = PaidOrder() with { PaidAmount = 0, Status = OrderStatus.Awaiting, AutoIssueInvoice = false };
+        payments.Orders.Add((A, unpaid));
+        page = WebUtility.HtmlDecode(await Client(f).GetStringAsync($"/orders/details/{unpaid.Id}"));
+        Assert.DoesNotContain("data-cp-qr-paid", page);
+        Assert.Contains("data-cp-step=\"paid\" data-cp-step-state=\"Todo\"", page);
+        Assert.Contains("data-cp-step=\"invoice\" data-cp-step-state=\"Off\"", page);
+        Assert.DoesNotContain("data-cp-step=\"invoice-email\"", page);
+    }
+
+    [Fact]
     public async Task ADraftOrderShowsItsStatusWithoutAnError()
     {
         var api = new FakeInvoiceApi();

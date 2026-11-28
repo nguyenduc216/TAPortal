@@ -173,7 +173,10 @@ public sealed class OrderLineInput
 /// </summary>
 public sealed record OrderDetailsVm(CustomerMembership Customer, bool CanManage, Order Order, string Status, BankAccount? Bank, Contact? Contact, string? QrSvg, DateTime UtcNow,
     IReadOnlyList<BankAccount> Banks, bool InvoiceReady = false, string? PayUrl = null, InvoiceBuyer? InvoiceBuyer = null, (Guid Id, string CollectionNo)? InCollection = null,
-    string? InvoiceProvider = null);
+    string? InvoiceProvider = null, OrderActivity? Activity = null, bool InvoiceSendsEmail = true)
+{
+    public IReadOnlyList<TimelineStep> Timeline => OrderTimeline.Build(Order, Status, Activity ?? OrderActivity.Empty, InvoiceProvider, InvoiceSendsEmail, Contact?.Email is { Length: > 0 });
+}
 
 public sealed class PaymentSettingsInput
 {

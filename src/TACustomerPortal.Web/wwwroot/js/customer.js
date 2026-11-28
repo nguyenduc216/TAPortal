@@ -541,5 +541,5 @@ document.addEventListener("click", event => {
     if (opener) { document.getElementById(opener.dataset.cpShowDialog)?.showModal(); return; }
     if (event.target.closest?.("form[data-cp-order-form]")) return;
     if (event.target.closest?.("[data-cp-dialog-close]")) { event.target.closest("dialog")?.close(); return; }
-    if (event.target instanceof HTMLDialogElement && event.target.matches("[data-cp-contact-dialog],[data-cp-invoice-email-dialog]")) event.target.close();
+    if (event.target instanceof HTMLDialogElement && event.target.matches("[data-cp-contact-dialog],[data-cp-invoice-email-dialog],[data-cp-notice-dialog]")) event.target.close();
 });

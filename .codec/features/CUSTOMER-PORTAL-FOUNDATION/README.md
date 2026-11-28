@@ -73,3 +73,4 @@ CHECKPOINT_4A: PASS (existing artifact integrity, isolated localhost startup and
 | `CUSTOMER-PORTAL-FOUNDATION-CHG-20261117T025701Z-8C4E0F` | 2026-11-17 | Payment page: maker line 'Sản phẩm của Tư vấn giải pháp T.A' at the bottom | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |
 | `CUSTOMER-PORTAL-FOUNDATION-CHG-20261125T011923Z-62D427` | 2026-11-25 | Hướng dẫn kết nối Zalo OA cạnh màn hình Cài đặt thông báo | c126e55 | NOT_APPLICABLE | DEPLOYED | MERGED |
 | `CUSTOMER-PORTAL-FOUNDATION-CHG-20261127T165527Z-02BE59` | 2026-11-27 | Order details: customer info and invoice email dialogs | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |
+| `CUSTOMER-PORTAL-FOUNDATION-CHG-20261128T042908Z-EF84B0` | 2026-11-28 | Order details: progress timeline and paid state | — | NOT_EXECUTED | NOT_PUBLISHED | PENDING_APPROVAL |

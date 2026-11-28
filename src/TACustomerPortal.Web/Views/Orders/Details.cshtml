@@ -32,7 +32,7 @@
                     <div><dt>@UiIcon.Render("building-bank")Nhận tiền vào</dt><dd>@(Model.Bank is { } b ? $"{b.BankName} — {b.ReceiveAccount}" : "—")</dd></div>
                     <div data-cp-invoice="@o.InvoiceStatus"><dt>@UiIcon.Render("file-text")Hóa đơn điện tử</dt><dd>@(o.AutoIssueInvoice ? "Tự động xuất khi thanh toán đủ" : "Không tự động") <span class="cp-badge @invoiceCss">@invoiceLabel</span>
                         @if (o.InvoiceNumber is string number) {<div>Số hóa đơn <span class="cp-code">@number</span> · @PaymentText.VietnamTime(o.InvoiceIssuedAt)</div>}
-                        @if (o.InvoiceEmailedAt is not null) {<div class="cp-muted">Đã gửi email cho người mua. <button type="button" class="cp-linkbtn" data-cp-show-dialog="invoiceEmailDialog">Xem email đã gửi</button></div>}</dd></div>
+                        @if (o.InvoiceEmailedAt is not null) {<div class="cp-muted">Đã yêu cầu @(Model.InvoiceProvider ?? "phần mềm hóa đơn") gửi email cho người mua. <button type="button" class="cp-linkbtn" data-cp-show-dialog="invoiceEmailDialog">Xem email đã gửi</button></div>}</dd></div>
                     @if (Model.InvoiceBuyer is { IsSet: true } payer)
                     {
                         <div data-cp-invoice-buyer><dt>@UiIcon.Render("receipt-tax")Thông tin xuất hóa đơn</dt><dd>@(payer.Name ?? "—")@if (payer.TaxCode is string tax) {<span> · MST <span class="cp-code">@tax</span></span>}
@@ -74,7 +74,8 @@
             </div>
         </section>
     </div>
-    <section class="cp-card" style="align-self:start" aria-label="Mã QR thanh toán">
+    <div style="align-self:start">
+    <section class="cp-card" aria-label="Mã QR thanh toán">
         @if (Model.QrSvg is string svg)
         {
             <div class="cp-qr" data-cp-qr data-cp-poll="@Url.Action("Status", new { id = o.Id })" data-cp-poll-status="@Model.Status" data-cp-poll-paid="@o.PaidAmount.ToString(System.Globalization.CultureInfo.InvariantCulture)">
@@ -86,7 +87,19 @@
         }
         else
         {
+            if (Model.Status == OrderStatus.Paid)
+            {
+                var lastPaid = Model.Activity?.Payments.LastOrDefault();
+                <div class="cp-qr cp-qr--paid" data-cp-qr-paid>
+                    <span class="cp-qr__done">@UiIcon.Render("circle-check")</span>
+                    <strong>Đã chuyển khoản thành công</strong>
+                    <div class="cp-qr__amount">@PaymentText.Money(o.PaidAmount)</div>
+                    <div class="cp-muted">@(lastPaid is { } lp ? "Lần cuối " + PaymentText.VietnamTime(lp.At) : "Đơn đã được thanh toán đủ.")</div>
+                </div>
+            }
+            else {
             <div class="cp-qr cp-muted">@UiIcon.Render("qrcode")<p>@(Model.Status switch { OrderStatus.Paid => "Đơn đã được thanh toán đủ.", OrderStatus.Cancelled => "Đơn đã hủy.", OrderStatus.Expired => "Mã QR đã hết hạn.", OrderStatus.ExpiredPaid => "Mã QR đã hết hạn và có giao dịch cần đối soát.", OrderStatus.CancelledPaid => "Đơn đã hủy và có giao dịch cần đối soát.", _ => "Đơn chưa có mã QR." })</p></div>
+            }
         }
         @if (canIssue)
         {
@@ -118,7 +131,43 @@
             </div>
         }
     </section>
+        <section class="cp-card" style="margin-top:14px" aria-label="Tiến độ đơn hàng" data-cp-timeline>
+            <div class="cp-card__head"><span class="cp-blob">@UiIcon.Render("list-tree")</span><h2>Tiến độ đơn hàng</h2></div>
+            <ol class="cp-timeline">
+                @foreach (var step in Model.Timeline)
+                {
+                    var stateCss = step.State switch { TimelineState.Done => "is-done", TimelineState.Warn => "is-warn", TimelineState.Off => "is-off", _ => "is-todo" };
+                    <li class="cp-timeline__step @stateCss" data-cp-step="@step.Key" data-cp-step-state="@step.State">
+                        <span class="cp-timeline__dot">@UiIcon.Render(step.State == TimelineState.Done ? "check" : step.State == TimelineState.Warn ? "alert-triangle" : step.Icon)</span>
+                        <div class="cp-timeline__body">
+                            <strong>@step.Title</strong>
+                            <span class="cp-timeline__summary">@step.Summary</span>
+                            @foreach (var line in step.Lines) {<span class="cp-timeline__line">@line</span>}
+                            @if (step.Dialog is string dlg) {<button type="button" class="cp-linkbtn" data-cp-show-dialog="@dlg">@step.DialogLabel</button>}
+                        </div>
+                    </li>
+                }
+            </ol>
+        </section>
+    </div>
 </div>
+@if (Model.Activity is { BuyerNotices.Count: > 0 } act)
+{
+    <dialog class="cp-dialog cp-dialog--wide" id="noticeDialog" aria-labelledby="noticeDialogTitle" data-cp-notice-dialog>
+        <div class="cp-dialog__head"><strong id="noticeDialogTitle">Tin đã báo khách khi nhận tiền</strong><button type="button" class="cp-dialog__close" data-cp-dialog-close aria-label="Đóng">×</button></div>
+        @foreach (var n in act.BuyerNotices)
+        {
+            <article class="cp-notice">
+                <div class="cp-notice__meta"><span class="cp-badge @(n.Status == "SENT" ? "cp-badge--green" : n.Status == "FAILED" ? "cp-badge--red" : "cp-badge--soft")">@OrderTimeline.Channel(n.Channel)</span> tới <strong>@n.Recipient</strong> · @OrderTimeline.NoticeStatus(n)</div>
+                @if (n.Subject is string subject) {<div class="cp-notice__subject">@subject</div>}
+                <pre class="cp-notice__body">@n.Body</pre>
+                @if (n.Status == "FAILED" && n.Error is string error) {<div class="cp-error">@PartnerText.Scrub(error)</div>}
+            </article>
+        }
+        <p class="cp-muted" style="margin:10px 0 0">Nội dung đúng như hệ thống đã gửi. Tin Zalo hiển thị theo mẫu ZNS đã đăng ký; phần trên là bản tóm tắt.</p>
+        <div class="cp-dialog__foot"><button type="button" class="cp-btn cp-btn--primary" data-cp-dialog-close>Đóng</button></div>
+    </dialog>
+}
 @if (Model.Contact is { } person)
 {
     <dialog class="cp-dialog" id="contactDialog" aria-labelledby="contactDialogTitle" data-cp-contact-dialog>
