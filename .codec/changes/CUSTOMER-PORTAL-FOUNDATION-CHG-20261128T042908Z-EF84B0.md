@@ -4,7 +4,7 @@
 - Change ID: `CUSTOMER-PORTAL-FOUNDATION-CHG-20261128T042908Z-EF84B0`
 - Created UTC: 2026-11-28T04:29:08.170489+00:00
 - Tiêu đề: Order details: progress timeline and paid state
-- Trạng thái: PLANNED
+- Trạng thái: DEPLOYED
 
 ## Yêu cầu và phạm vi
 Operator (2026-11-28), trang chi tiết đơn:
@@ -34,16 +34,17 @@ Quyết định:
 
 ## Publish
 - Project: TACustomerPortal.Web
-- Destination (chỉ từ config):
-- Trạng thái: NOT_PUBLISHED
-- Artifact SHA256:
-- Smoke test:
+- Destination (chỉ từ config): invoice (TA.Invoice)
+- Trạng thái: DEPLOYED 2026-11-28 04:32Z, source commit fbbc603, `Deploy-TARemote.ps1 -Target invoice`, health HTTP 200
+- Artifact SHA256: 92401457754a10cc31b48870ec0a7d5e693b4f5dc4c85b70f3fe431fb8a451cb (package 122DA24E27A108E4655F02761A99D66A0A5FFD8D08400C1BDAE5D03DCC46D274)
+- Backup trên server: `C:\TADeploy\backups\invoice-20261128-113236`
+- Smoke test: health 200; audit gates PASS.
 
 ## Git
 - Branch: feature/order-details-popups
-- Commit SHA:
+- Commit SHA: fbbc603
 - PR:
-- Merge: PENDING_APPROVAL
+- Merge: MERGED fast-forward vào main (sau deploy)
 - Merge SHA:
 
 ## Rủi ro, quyết định và việc còn lại
