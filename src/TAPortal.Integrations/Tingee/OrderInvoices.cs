@@ -182,16 +182,25 @@ public interface IOrderInvoiceStore
     /// <summary>Templates the company has saved for one provider and environment (LIVE / DEMO), oldest first (migration 070).</summary>
     Task<IReadOnlyList<SavedInvoiceTemplate>> SavedTemplatesAsync(Guid customerId, string provider, string environment, CancellationToken ct = default) =>
         Task.FromResult<IReadOnlyList<SavedInvoiceTemplate>>([]);
-    /// <summary>Adds a template to the saved list; one already saved is left as it is.</summary>
-    Task SaveTemplateAsync(Guid customerId, string provider, string environment, string pattern, string series, Guid actor, CancellationToken ct = default) => Task.CompletedTask;
+    /// <summary>Adds a template to the saved list (one already saved is kept); <paramref name="makeDefault"/>: it becomes the environment's default (migration 071).</summary>
+    Task SaveTemplateAsync(Guid customerId, string provider, string environment, string pattern, string series, Guid actor, bool makeDefault = false, CancellationToken ct = default) => Task.CompletedTask;
     Task DeleteTemplateAsync(Guid customerId, Guid templateId, CancellationToken ct = default) => Task.CompletedTask;
+
+    /// <summary>Logins kept per environment for a provider called directly (SoftDreams), migration 071.</summary>
+    Task<IReadOnlyList<InvoiceConnection>> ConnectionsAsync(Guid customerId, string provider, CancellationToken ct = default) =>
+        Task.FromResult<IReadOnlyList<InvoiceConnection>>([]);
+    Task SaveConnectionAsync(Guid customerId, InvoiceConnection connection, Guid actor, CancellationToken ct = default) => Task.CompletedTask;
+    Task DeleteConnectionAsync(Guid customerId, string provider, string environment, CancellationToken ct = default) => Task.CompletedTask;
 }
 
 /// <summary>A saved e-invoice template (mẫu số + ký hiệu). Environment: LIVE, or DEMO for a provider's test system.</summary>
-public sealed record SavedInvoiceTemplate(Guid Id, string Provider, string Environment, string Pattern, string Series, DateTime CreatedAt)
+public sealed record SavedInvoiceTemplate(Guid Id, string Provider, string Environment, string Pattern, string Series, DateTime CreatedAt, bool IsDefault = false)
 {
     public const string Live = "LIVE", Demo = "DEMO";
 }
+
+/// <summary>A provider login kept for one environment; <paramref name="ProviderSecret"/> is encrypted by the application.</summary>
+public sealed record InvoiceConnection(string Provider, string Environment, string? ProviderTaxCode, string? ProviderUsername, byte[]? ProviderSecret, DateTime? ConnectedAt);
 
 public sealed record OrderInvoiceOutcome(string Status, string Message, string? InvoiceNumber = null)
 {

@@ -331,14 +331,22 @@ public sealed class SafeCustomerEInvoiceTests
         var page = WebUtility.HtmlDecode(await c.GetStringAsync("/einvoice"));
         Assert.Contains("data-cp-saved-templates", page);
         Assert.Contains("1C26TAA", page);
-        Assert.Contains("Mặc định", page);
+        Assert.Contains("Đang mặc định", page);
 
-        // A new template typed in joins the list and becomes the default.
+        Assert.Contains("data-cp-show-dialog=\"addTemplateDialog\"", page);
+        Assert.DoesNotContain("data-cp-template-fields", page);   // with a list, new templates come from the "Thêm mẫu" dialog
+
+        // "Thêm mẫu" adds to the list without changing the default, unless asked to.
         var token = await Token(c, "/einvoice");
-        var r = await Post(c, "/einvoice/save", token, new() { ["Template.Choice"] = "", ["Template.Pattern"] = "1", ["Template.Series"] = "c26tab", ["Template.IssueMode"] = "NONE" });
+        var r = await Post(c, "/einvoice/addtemplate", token, new() { ["pattern"] = "1", ["series"] = "c26tab", ["makeDefault"] = "false" });
         Assert.Equal(HttpStatusCode.Redirect, r.StatusCode);
-        Assert.Equal(("1", "C26TAB"), (invoices.Settings[A].InvoicePattern, invoices.Settings[A].InvoiceSeries));
+        Assert.Equal("C26TAA", invoices.Settings[A].InvoiceSeries);
         Assert.Equal(["C26TAB"], invoices.Saved.Select(x => x.Template.Series));
+        r = await Post(c, "/einvoice/addtemplate", token, new() { ["pattern"] = "1", ["series"] = "C26TAB", ["makeDefault"] = "true" });
+        Assert.Equal(("1", "C26TAB"), (invoices.Settings[A].InvoicePattern, invoices.Settings[A].InvoiceSeries));
+        Assert.True(invoices.Saved.Single().Template.IsDefault);
+        await Post(c, "/einvoice/addtemplate", token, new() { ["pattern"] = "1", ["series"] = "C26 TA!" });   // invalid: nothing added
+        Assert.Single(invoices.Saved);
         invoices.Saved.Insert(0, (A, new(Guid.NewGuid(), invoices.Settings[A].Provider, SavedInvoiceTemplate.Live, "1", "C26TAA", DateTime.UtcNow.AddDays(-1))));
 
         // Picking a saved one makes it the default again.
@@ -698,10 +706,29 @@ public sealed class SafeCustomerEInvoiceTests
         public List<(Guid Customer, SavedInvoiceTemplate Template)> Saved { get; } = [];
         public Task<IReadOnlyList<SavedInvoiceTemplate>> SavedTemplatesAsync(Guid customerId, string provider, string environment, CancellationToken ct = default) =>
             Task.FromResult<IReadOnlyList<SavedInvoiceTemplate>>(Saved.Where(x => x.Customer == customerId && x.Template.Provider == provider && x.Template.Environment == environment).Select(x => x.Template).ToList());
-        public Task SaveTemplateAsync(Guid customerId, string provider, string environment, string pattern, string series, Guid actor, CancellationToken ct = default)
+        public Task SaveTemplateAsync(Guid customerId, string provider, string environment, string pattern, string series, Guid actor, bool makeDefault = false, CancellationToken ct = default)
         {
-            if (!Saved.Any(x => x.Customer == customerId && x.Template is var t && t.Provider == provider && t.Environment == environment && t.Pattern == pattern && t.Series == series))
+            bool Same(SavedInvoiceTemplate t) => t.Provider == provider && t.Environment == environment;
+            if (!Saved.Any(x => x.Customer == customerId && Same(x.Template) && x.Template.Pattern == pattern && x.Template.Series == series))
                 Saved.Add((customerId, new(Guid.NewGuid(), provider, environment, pattern, series, DateTime.UtcNow)));
+            if (makeDefault)
+                for (var i = 0; i < Saved.Count; i++)
+                    if (Saved[i].Customer == customerId && Same(Saved[i].Template))
+                        Saved[i] = (customerId, Saved[i].Template with { IsDefault = Saved[i].Template.Pattern == pattern && Saved[i].Template.Series == series });
+            return Task.CompletedTask;
+        }
+        public List<(Guid Customer, InvoiceConnection Connection)> Connections { get; } = [];
+        public Task<IReadOnlyList<InvoiceConnection>> ConnectionsAsync(Guid customerId, string provider, CancellationToken ct = default) =>
+            Task.FromResult<IReadOnlyList<InvoiceConnection>>(Connections.Where(x => x.Customer == customerId && x.Connection.Provider == provider).Select(x => x.Connection).ToList());
+        public Task SaveConnectionAsync(Guid customerId, InvoiceConnection connection, Guid actor, CancellationToken ct = default)
+        {
+            Connections.RemoveAll(x => x.Customer == customerId && x.Connection.Provider == connection.Provider && x.Connection.Environment == connection.Environment);
+            Connections.Add((customerId, connection));
+            return Task.CompletedTask;
+        }
+        public Task DeleteConnectionAsync(Guid customerId, string provider, string environment, CancellationToken ct = default)
+        {
+            Connections.RemoveAll(x => x.Customer == customerId && x.Connection.Provider == provider && x.Connection.Environment == environment);
             return Task.CompletedTask;
         }
         public Task DeleteTemplateAsync(Guid customerId, Guid templateId, CancellationToken ct = default)

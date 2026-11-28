@@ -161,20 +161,58 @@ WHERE Id=@id AND CustomerId=@c AND InvoiceStatus='PENDING'
     {
         await using var cn = await Open(ct);
         await using var cmd = Command(cn, null, """
-SELECT Id,Provider,Environment,InvoicePattern,InvoiceSeries,CreatedAt FROM dbo.CustomerInvoiceTemplates
+SELECT Id,Provider,Environment,InvoicePattern,InvoiceSeries,CreatedAt,IsDefault FROM dbo.CustomerInvoiceTemplates
 WHERE CustomerId=@c AND Provider=@p AND Environment=@e ORDER BY CreatedAt,InvoiceSeries
 """, ("@c", customerId), ("@p", provider), ("@e", environment));
         var list = new List<SavedInvoiceTemplate>();
         await using var r = await cmd.ExecuteReaderAsync(ct);
         while (await r.ReadAsync(ct))
-            list.Add(new(r.GetGuid(0), r.GetString(1), r.GetString(2), r.GetString(3), r.GetString(4), DateTime.SpecifyKind(r.GetDateTime(5), DateTimeKind.Utc)));
+            list.Add(new(r.GetGuid(0), r.GetString(1), r.GetString(2), r.GetString(3), r.GetString(4), DateTime.SpecifyKind(r.GetDateTime(5), DateTimeKind.Utc), r.GetBoolean(6)));
         return list;
     }
 
-    public Task SaveTemplateAsync(Guid customerId, string provider, string environment, string pattern, string series, Guid actor, CancellationToken ct = default) => Execute(ct, """
+    public Task SaveTemplateAsync(Guid customerId, string provider, string environment, string pattern, string series, Guid actor, bool makeDefault = false, CancellationToken ct = default) => Execute(ct, """
+SET XACT_ABORT ON;
+BEGIN TRANSACTION;
 IF NOT EXISTS (SELECT 1 FROM dbo.CustomerInvoiceTemplates WITH (UPDLOCK, HOLDLOCK) WHERE CustomerId=@c AND Provider=@p AND Environment=@e AND InvoicePattern=@pattern AND InvoiceSeries=@series)
- INSERT dbo.CustomerInvoiceTemplates(CustomerId,Provider,Environment,InvoicePattern,InvoiceSeries,CreatedBy) VALUES(@c,@p,@e,@pattern,@series,@actor)
-""", ("@c", customerId), ("@p", provider), ("@e", environment), ("@pattern", pattern), ("@series", series), ("@actor", actor));
+ INSERT dbo.CustomerInvoiceTemplates(CustomerId,Provider,Environment,InvoicePattern,InvoiceSeries,CreatedBy) VALUES(@c,@p,@e,@pattern,@series,@actor);
+IF @default=1
+ UPDATE dbo.CustomerInvoiceTemplates SET IsDefault=CASE WHEN InvoicePattern=@pattern AND InvoiceSeries=@series THEN 1 ELSE 0 END WHERE CustomerId=@c AND Provider=@p AND Environment=@e;
+COMMIT;
+""", ("@c", customerId), ("@p", provider), ("@e", environment), ("@pattern", pattern), ("@series", series), ("@actor", actor), ("@default", makeDefault));
+
+    public async Task<IReadOnlyList<InvoiceConnection>> ConnectionsAsync(Guid customerId, string provider, CancellationToken ct = default)
+    {
+        await using var cn = await Open(ct);
+        await using var cmd = Command(cn, null, """
+SELECT Provider,Environment,ProviderTaxCode,ProviderUsername,ProviderSecret,ConnectedAt FROM dbo.CustomerInvoiceConnections WHERE CustomerId=@c AND Provider=@p
+""", ("@c", customerId), ("@p", provider));
+        var list = new List<InvoiceConnection>();
+        await using var r = await cmd.ExecuteReaderAsync(ct);
+        while (await r.ReadAsync(ct))
+            list.Add(new(r.GetString(0), r.GetString(1), r.IsDBNull(2) ? null : r.GetString(2), r.IsDBNull(3) ? null : r.GetString(3),
+                r.IsDBNull(4) ? null : (byte[])r[4], r.IsDBNull(5) ? null : DateTime.SpecifyKind(r.GetDateTime(5), DateTimeKind.Utc)));
+        return list;
+    }
+
+    public async Task SaveConnectionAsync(Guid customerId, InvoiceConnection x, Guid actor, CancellationToken ct = default)
+    {
+        await using var cn = await Open(ct);
+        await using var cmd = Command(cn, null, """
+SET XACT_ABORT ON;
+BEGIN TRANSACTION;
+UPDATE dbo.CustomerInvoiceConnections WITH (UPDLOCK, HOLDLOCK) SET ProviderTaxCode=@tax,ProviderUsername=@user,ProviderSecret=@secret,ConnectedAt=@at,UpdatedAt=SYSUTCDATETIME(),UpdatedBy=@actor
+WHERE CustomerId=@c AND Provider=@p AND Environment=@e;
+IF @@ROWCOUNT=0
+ INSERT dbo.CustomerInvoiceConnections(CustomerId,Provider,Environment,ProviderTaxCode,ProviderUsername,ProviderSecret,ConnectedAt,UpdatedBy) VALUES(@c,@p,@e,@tax,@user,@secret,@at,@actor);
+COMMIT;
+""", ("@c", customerId), ("@p", x.Provider), ("@e", x.Environment), ("@tax", x.ProviderTaxCode), ("@user", x.ProviderUsername), ("@at", x.ConnectedAt), ("@actor", actor));
+        cmd.Parameters.Add(new SqlParameter("@secret", System.Data.SqlDbType.VarBinary, -1) { Value = (object?)x.ProviderSecret ?? DBNull.Value });
+        await cmd.ExecuteNonQueryAsync(ct);
+    }
+
+    public Task DeleteConnectionAsync(Guid customerId, string provider, string environment, CancellationToken ct = default) =>
+        Execute(ct, "DELETE dbo.CustomerInvoiceConnections WHERE CustomerId=@c AND Provider=@p AND Environment=@e", ("@c", customerId), ("@p", provider), ("@e", environment));
 
     public Task DeleteTemplateAsync(Guid customerId, Guid templateId, CancellationToken ct = default) =>
         Execute(ct, "DELETE dbo.CustomerInvoiceTemplates WHERE Id=@id AND CustomerId=@c", ("@id", templateId), ("@c", customerId));

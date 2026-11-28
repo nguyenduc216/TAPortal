@@ -16,10 +16,15 @@ namespace TACustomerPortal.Web.Controllers;
 public sealed class EInvoiceController(ICurrentCustomerContext customer, IPaymentStore payments, IOrderInvoiceStore store, ITingeeInvoiceApi invoices,
     TimeProvider clock, ILogger<EInvoiceController> logger, IEasyInvoiceApi? easyInvoice = null, IInvoiceSecretProtector? secrets = null) : CustomerAreaController(customer)
 {
-    public async Task<IActionResult> Index()
+    /// <param name="env">LIVE / DEMO: open the connect form for that SoftDreams environment.</param>
+    public async Task<IActionResult> Index(string? env = null)
     {
         if (await Current() is not { } m) return SelectCustomer();
-        return await Page(m, await store.SettingsAsync(m.CustomerId));
+        var settings = await store.SettingsAsync(m.CustomerId);
+        if (env is SavedInvoiceTemplate.Live or SavedInvoiceTemplate.Demo)
+            return await Page(m, settings, account: new EInvoiceAccountInput { Provider = CustomerInvoiceProviders.SoftDreamsCode, TaxCode = settings.ProviderTaxCode ?? m.TaxCode,
+                Username = env == Environment(settings) ? settings.ProviderUsername : null, Demo = env == SavedInvoiceTemplate.Demo }, connect: true);
+        return await Page(m, settings);
     }
 
     [HttpPost]
@@ -109,14 +114,23 @@ public sealed class EInvoiceController(ICurrentCustomerContext customer, IPaymen
             }
         }
         var sameSeller = settings.Provider == provider.Code && string.Equals(settings.ProviderTaxCode, input.TaxCode, StringComparison.Ordinal);
+        // Demo and production are kept side by side: the login in use is saved for its environment before it is replaced.
+        await KeepActiveConnection(m, settings);
+        var environment = input.Demo ? SavedInvoiceTemplate.Demo : SavedInvoiceTemplate.Live;
+        var sameEnvironment = sameSeller && settings.IsConnected && Environment(settings) == environment;
+        var envDefault = (await store.SavedTemplatesAsync(m.CustomerId, provider.Code, environment)).FirstOrDefault(t => t.IsDefault);
+        var secret = secrets.Protect(new EasyInvoiceSecret(input.Password!, input.Demo));
+        var connectedAt = clock.GetUtcNow().UtcDateTime;
+        var pattern = sameEnvironment ? settings.InvoicePattern : envDefault?.Pattern;
+        var series = sameEnvironment ? settings.InvoiceSeries : envDefault?.Series;
         await store.SaveSettingsAsync(settings with
         {
             Provider = provider.Code, ProviderAccountId = null, ProviderTaxCode = input.TaxCode, ProviderUsername = input.Username,
-            ProviderSecret = secrets.Protect(new EasyInvoiceSecret(input.Password!, input.Demo)),
-            ConnectedAt = clock.GetUtcNow().UtcDateTime,
-            InvoicePattern = sameSeller ? settings.InvoicePattern : null, InvoiceSeries = sameSeller ? settings.InvoiceSeries : null,
+            ProviderSecret = secret, ConnectedAt = connectedAt, InvoicePattern = pattern, InvoiceSeries = series,
             AutoIssueEnabled = sameSeller && settings.AutoIssueEnabled
         }, Actor);
+        await store.SaveConnectionAsync(m.CustomerId, new(provider.Code, environment, input.TaxCode, input.Username, secret, connectedAt), Actor);
+        settings = settings with { InvoicePattern = pattern, InvoiceSeries = series };
         logger.LogInformation("EINVOICE_CONNECTED customer={Customer} provider={Provider} demo={Demo}", m.CustomerId, provider.Code, input.Demo);
         Flash(sameSeller && settings.HasTemplate ? $"Đã kết nối tài khoản {provider.Name}." : $"Đã kết nối tài khoản {provider.Name}. Bước tiếp theo: nhập mẫu số và ký hiệu hóa đơn.");
         return RedirectToAction(nameof(Index));
@@ -139,6 +153,7 @@ public sealed class EInvoiceController(ICurrentCustomerContext customer, IPaymen
                 return RedirectToAction(nameof(Index));
             }
         }
+        if (!settings.Info.ViaPartner) await store.DeleteConnectionAsync(m.CustomerId, settings.Provider, Environment(settings));
         await store.SaveSettingsAsync(settings with { ProviderAccountId = null, ProviderSecret = null, InvoicePattern = null, InvoiceSeries = null, AutoIssueEnabled = false, ConnectedAt = null }, Actor);
         logger.LogInformation("EINVOICE_DISCONNECTED customer={Customer}", m.CustomerId);
         Flash($"Đã gỡ kết nối {settings.Info.Name} và tắt xuất hóa đơn tự động.");
@@ -204,7 +219,7 @@ public sealed class EInvoiceController(ICurrentCustomerContext customer, IPaymen
             HsmConfirmedBy = input.IssueMode == InvoiceIssueModes.Signed ? settings.HsmConfirmedBy ?? Actor : settings.HsmConfirmedBy
         }, Actor);
         if (input.Pattern is string savedPattern && input.Series is string savedSeries)
-            await store.SaveTemplateAsync(m.CustomerId, settings.Provider, Environment(settings), savedPattern, savedSeries, Actor);
+            await store.SaveTemplateAsync(m.CustomerId, settings.Provider, Environment(settings), savedPattern, savedSeries, Actor, makeDefault: true);
         logger.LogInformation("EINVOICE_SETTINGS_SAVED customer={Customer} mode={Mode} email={Email} hsmConfirmed={Hsm}", m.CustomerId, input.IssueMode, input.SendEmail,
             input.IssueMode == InvoiceIssueModes.Signed && settings.HsmConfirmedAt is null);
         Flash(input.IssueMode switch
@@ -251,6 +266,77 @@ public sealed class EInvoiceController(ICurrentCustomerContext customer, IPaymen
         return RedirectToAction(nameof(Index));
     }
 
+    /// <summary>Adds a template (mẫu số + ký hiệu) to the list of the provider and environment in use; optionally makes it the default.</summary>
+    [HttpPost]
+    public async Task<IActionResult> AddTemplate(string? pattern, string? series, bool makeDefault = false)
+    {
+        if (await Current() is not { } m) return SelectCustomer();
+        if (!CanManage(m)) return Forbid();
+        var settings = await store.SettingsAsync(m.CustomerId);
+        pattern = string.IsNullOrWhiteSpace(pattern) ? null : pattern.Trim();
+        series = string.IsNullOrWhiteSpace(series) ? null : series.Trim().ToUpperInvariant();
+        if (!settings.IsConnected) Flash($"Kết nối tài khoản {settings.Info.Name} trước khi thêm mẫu hóa đơn.", error: true);
+        else if (pattern is null || series is null || !System.Text.RegularExpressions.Regex.IsMatch(pattern, "^[A-Za-z0-9/._-]{1,50}$")
+            || !System.Text.RegularExpressions.Regex.IsMatch(series, "^[A-Za-z0-9/._-]{1,20}$"))
+            Flash("Nhập mẫu số và ký hiệu hợp lệ (chữ, số và / . _ -), VD mẫu số 1, ký hiệu C26TAA.", error: true);
+        else
+        {
+            makeDefault |= !settings.HasTemplate;
+            await store.SaveTemplateAsync(m.CustomerId, settings.Provider, Environment(settings), pattern, series, Actor, makeDefault);
+            if (makeDefault) await store.SaveSettingsAsync(settings with { InvoicePattern = pattern, InvoiceSeries = series }, Actor);
+            Flash(makeDefault ? $"Đã thêm mẫu {pattern}{series} và dùng làm mặc định." : $"Đã thêm mẫu {pattern}{series} vào danh sách.");
+        }
+        return RedirectToAction(nameof(Index));
+    }
+
+    /// <summary>
+    /// SoftDreams: switches between the demo and the production system. The login in use is kept for its environment; the
+    /// other environment's saved login and default template take its place.
+    /// </summary>
+    [HttpPost]
+    public async Task<IActionResult> SwitchEnvironment(string environment)
+    {
+        if (await Current() is not { } m) return SelectCustomer();
+        if (!CanManage(m)) return Forbid();
+        var settings = await store.SettingsAsync(m.CustomerId);
+        if (settings.Info.ViaPartner || environment is not (SavedInvoiceTemplate.Live or SavedInvoiceTemplate.Demo)) return BadRequest();
+        var label = EnvironmentLabel(environment);
+        if (settings.IsConnected && Environment(settings) == environment)
+        {
+            Flash($"Đang dùng {label}.");
+            return RedirectToAction(nameof(Index));
+        }
+        var target = (await store.ConnectionsAsync(m.CustomerId, settings.Provider)).FirstOrDefault(c => c.Environment == environment && c.ProviderSecret is { Length: > 0 });
+        if (target is null)
+        {
+            Flash($"Chưa kết nối {label}. Bấm Kết nối ở {label} để nhập tài khoản.", error: true);
+            return RedirectToAction(nameof(Index));
+        }
+        await KeepActiveConnection(m, settings);
+        var envDefault = (await store.SavedTemplatesAsync(m.CustomerId, settings.Provider, environment)).FirstOrDefault(t => t.IsDefault);
+        await store.SaveSettingsAsync(settings with
+        {
+            ProviderAccountId = null, ProviderTaxCode = target.ProviderTaxCode, ProviderUsername = target.ProviderUsername, ProviderSecret = target.ProviderSecret,
+            ConnectedAt = target.ConnectedAt, InvoicePattern = envDefault?.Pattern, InvoiceSeries = envDefault?.Series
+        }, Actor);
+        logger.LogInformation("EINVOICE_ENVIRONMENT_SWITCHED customer={Customer} provider={Provider} environment={Environment}", m.CustomerId, settings.Provider, environment);
+        Flash(envDefault is null ? $"Đã chuyển sang {label}. Thêm mẫu hóa đơn cho môi trường này trước khi xuất hóa đơn." : $"Đã chuyển sang {label}, mẫu mặc định {envDefault.Pattern}{envDefault.Series}.");
+        return RedirectToAction(nameof(Index));
+    }
+
+    /// <summary>Saves the SoftDreams login in use for its environment, so switching away and back does not ask for it again.</summary>
+    private async Task KeepActiveConnection(CustomerMembership m, CustomerInvoiceSettings settings)
+    {
+        if (settings.Info.ViaPartner || !settings.IsConnected) return;
+        var environment = Environment(settings);
+        await store.SaveConnectionAsync(m.CustomerId, new(settings.Provider, environment, settings.ProviderTaxCode, settings.ProviderUsername, settings.ProviderSecret,
+            settings.ConnectedAt), Actor);
+        if (settings.HasTemplate)
+            await store.SaveTemplateAsync(m.CustomerId, settings.Provider, environment, settings.InvoicePattern!, settings.InvoiceSeries!, Actor, makeDefault: true);
+    }
+
+    public static string EnvironmentLabel(string environment) => environment == SavedInvoiceTemplate.Demo ? "môi trường thử (demo)" : "môi trường chính thức";
+
     /// <summary>Removes a saved template from the list; the template in use (the default) cannot be removed.</summary>
     [HttpPost]
     public async Task<IActionResult> DeleteTemplate(Guid templateId)
@@ -291,7 +377,18 @@ public sealed class EInvoiceController(ICurrentCustomerContext customer, IPaymen
         var saved = settings.IsConnected ? (await store.SavedTemplatesAsync(m.CustomerId, settings.Provider, environment)).ToList() : [];
         if (settings.HasTemplate && !saved.Any(t => t.Pattern == settings.InvoicePattern && t.Series == settings.InvoiceSeries))
             saved.Insert(0, new(Guid.Empty, settings.Provider, environment, settings.InvoicePattern!, settings.InvoiceSeries!, settings.ConnectedAt ?? DateTime.UtcNow));
+        IReadOnlyList<InvoiceEnvironmentVm>? environments = null;
+        if (!settings.Info.ViaPartner)
+        {
+            var kept = await store.ConnectionsAsync(m.CustomerId, settings.Provider);
+            environments = new[] { SavedInvoiceTemplate.Live, SavedInvoiceTemplate.Demo }.Select(code =>
+            {
+                if (settings.IsConnected && environment == code) return new InvoiceEnvironmentVm(code, true, true, settings.ProviderUsername, settings.ConnectedAt);
+                var other = kept.FirstOrDefault(c => c.Environment == code && c.ProviderSecret is { Length: > 0 });
+                return new InvoiceEnvironmentVm(code, other is not null, false, other?.ProviderUsername, other?.ConnectedAt);
+            }).ToList();
+        }
         return View("Index", new EInvoiceVm(m, CanManage(m), linked, invoices.IsConfigured, settings, account, template, templates, connect || !settings.IsConnected, readiness,
-            saved, environment));
+            saved, environment, environments));
     }
 }

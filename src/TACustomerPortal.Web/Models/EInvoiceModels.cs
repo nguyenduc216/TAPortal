@@ -49,9 +49,15 @@ public sealed class EInvoiceTemplateInput
 
 public sealed record EInvoiceVm(CustomerMembership Customer, bool CanManage, bool Linked, bool ServiceReady, CustomerInvoiceSettings Settings,
     EInvoiceAccountInput Account, EInvoiceTemplateInput Template, IReadOnlyList<TingeeInvoiceTemplate>? Templates = null, bool ShowConnect = false,
-    IReadOnlyList<InvoiceReadinessItem>? Readiness = null, IReadOnlyList<SavedInvoiceTemplate>? Saved = null, string Environment = SavedInvoiceTemplate.Live)
+    IReadOnlyList<InvoiceReadinessItem>? Readiness = null, IReadOnlyList<SavedInvoiceTemplate>? Saved = null, string Environment = SavedInvoiceTemplate.Live, IReadOnlyList<InvoiceEnvironmentVm>? Environments = null)
 {
     public CustomerInvoiceProvider Provider => Settings.Info;
+}
+
+/// <summary>A SoftDreams environment on the e-invoice page: LIVE (production) or DEMO, its saved login, and whether it is in use.</summary>
+public sealed record InvoiceEnvironmentVm(string Code, bool Connected, bool Active, string? Username, DateTime? ConnectedAt)
+{
+    public bool IsDemo => Code == SavedInvoiceTemplate.Demo;
 }
 
 public static class InvoiceText

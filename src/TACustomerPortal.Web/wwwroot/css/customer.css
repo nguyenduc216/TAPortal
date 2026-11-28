@@ -909,7 +909,8 @@ textarea.cp-input { height: auto; min-height: 72px; padding-top: 8px; padding-bo
 }
 .cp-tpl-list { display: grid; gap: 8px; margin: 6px 0 0; padding: 0; list-style: none; }
 .cp-tpl { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--cp-line); border-radius: 12px; background: var(--cp-surface); }
-.cp-tpl.is-default { border-color: var(--cp-blue-500); background: var(--cp-blue-50); }
+.cp-tpl:has(input:checked) { border-color: var(--cp-blue-600); background: var(--cp-blue-50); box-shadow: 0 0 0 1px var(--cp-blue-600) inset; }
+.cp-tpl:hover { border-color: var(--cp-hover-line); }
 .cp-tpl label { display: flex; align-items: flex-start; gap: 10px; flex: 1; min-width: 0; cursor: pointer; }
 .cp-tpl label > span { display: flex; flex-direction: column; min-width: 0; }
 .cp-tpl strong { font-size: 13.5px; }
@@ -919,3 +920,12 @@ textarea.cp-input { height: auto; min-height: 72px; padding-top: 8px; padding-bo
 .cp-provider-logo { width: 28px; height: 28px; flex: none; border-radius: 8px; object-fit: contain; }
 .cp-provider-logo--sm { width: 20px; height: 20px; border-radius: 6px; }
 .cp-seg .cp-provider-head + small { margin-top: 4px; }
+.cp-tpl-tools { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin: 8px 0 14px; }
+.cp-tpl-tools .cp-btn { flex: none; }
+.cp-env__grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; margin-top: 6px; }
+.cp-env__item { display: flex; flex-direction: column; gap: 4px; padding: 12px; border: 1px solid var(--cp-line); border-radius: 12px; background: var(--cp-surface); }
+.cp-env__item.is-active { border-color: var(--cp-green-600); box-shadow: 0 0 0 1px var(--cp-green-600) inset; }
+.cp-env__head { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 13.5px; }
+.cp-env__item small { color: var(--cp-ink-3); font-size: 12px; overflow-wrap: anywhere; }
+.cp-env__actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.cp-env__actions form { margin: 0; }

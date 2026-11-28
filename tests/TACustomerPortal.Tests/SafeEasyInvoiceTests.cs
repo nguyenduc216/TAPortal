@@ -251,6 +251,49 @@ public sealed class SafeEasyInvoiceTests
 
     // ---- Customer Portal -----------------------------------------------------------------------------
     [Fact]
+    public async Task DemoAndProductionAreKeptSideBySideAndSwitched()
+    {
+        var invoices = new MemoryInvoiceStore();
+        var easy = new FakeEasyInvoice();
+        using var f = Factory("OWNER", out var payments, out _, invoiceStore: invoices, easyInvoice: easy);
+        payments.Merchants[A] = 9001;
+        var c = Client(f);
+        async Task Connect(bool demo, string user) => Assert.Equal(HttpStatusCode.Redirect, (await Post(c, "/einvoice/connect", await Token(c, "/einvoice"), new()
+        {
+            ["Account.Provider"] = CustomerInvoiceProviders.SoftDreamsCode, ["Account.TaxCode"] = "0108888888", ["Account.Username"] = user,
+            ["Account.Password"] = "Secret#123", ["Account.Demo"] = demo ? "true" : "false"
+        })).StatusCode);
+
+        // Demo first, with its own template.
+        await Connect(true, "demo-user");
+        await Post(c, "/einvoice/addtemplate", await Token(c, "/einvoice"), new() { ["pattern"] = "1", ["series"] = "C26TDM" });
+        Assert.Equal("C26TDM", invoices.Settings[A].InvoiceSeries);
+
+        // Production next: the demo login and template are kept, production starts without a template.
+        await Connect(false, "live-user");
+        Assert.Equal(("live-user", (string?)null), (invoices.Settings[A].ProviderUsername, invoices.Settings[A].InvoiceSeries));
+        Assert.Equal(2, invoices.Connections.Count);
+        await Post(c, "/einvoice/addtemplate", await Token(c, "/einvoice"), new() { ["pattern"] = "1", ["series"] = "C26TAA" });
+        var page = WebUtility.HtmlDecode(await c.GetStringAsync("/einvoice"));
+        Assert.Contains("data-cp-einvoice-environments", page);
+        Assert.Contains("data-cp-env=\"LIVE\"", page);
+        Assert.Contains("Đang dùng", page);
+        Assert.Contains("1C26TAA", page);
+        Assert.DoesNotContain("1C26TDM", page);   // the demo list stays with demo
+
+        // Switching back to demo restores its login and default template, without typing the password again.
+        var r = await Post(c, "/einvoice/switchenvironment", await Token(c, "/einvoice"), new() { ["environment"] = SavedInvoiceTemplate.Demo });
+        Assert.Equal(HttpStatusCode.Redirect, r.StatusCode);
+        var s = invoices.Settings[A];
+        Assert.Equal(("demo-user", "C26TDM"), (s.ProviderUsername, s.InvoiceSeries));
+        Assert.Equal(new EasyInvoiceSecret("Secret#123", true), new PlainInvoiceProtector().Unprotect(s.ProviderSecret));
+        r = await Post(c, "/einvoice/switchenvironment", await Token(c, "/einvoice"), new() { ["environment"] = SavedInvoiceTemplate.Live });
+        s = invoices.Settings[A];
+        Assert.Equal(("live-user", "C26TAA"), (s.ProviderUsername, s.InvoiceSeries));
+        Assert.False(new PlainInvoiceProtector().Unprotect(s.ProviderSecret)!.Demo);
+    }
+
+    [Fact]
     public async Task TheCompanyConnectsEasyInvoiceAndThePasswordIsKeptEncrypted()
     {
         var invoices = new MemoryInvoiceStore();

@@ -1,4 +1,5 @@
 @using TAPortal.Integrations.Tingee
+@using TACustomerPortal.Web.Controllers
 @model EInvoiceVm
 @{
     ViewData["Title"] = "Hóa đơn điện tử";
@@ -35,6 +36,35 @@ else if (!Model.ServiceReady) { <aside class="cp-note" style="margin-bottom:14px
                         <form method="post" asp-action="Disconnect" style="margin-left:auto" onsubmit="return confirm('Gỡ kết nối @p.Name? Xuất hóa đơn tự động sẽ tắt.')"><button class="cp-btn cp-btn--danger" type="submit">@UiIcon.Render("trash")<span>Gỡ kết nối</span></button></form>
                     </div>
                 }
+            }
+            @if (Model.Environments is { } envs && p.Code == CustomerInvoiceProviders.SoftDreamsCode)
+            {
+                <div class="cp-card__body cp-env" data-cp-einvoice-environments>
+                    <div class="cp-label">Môi trường @p.Short</div>
+                    <div class="cp-env__grid">
+                        @foreach (var env in envs)
+                        {
+                            <div class="cp-env__item@(env.Active ? " is-active" : "")" data-cp-env="@env.Code">
+                                <div class="cp-env__head"><strong>@(env.IsDemo ? "Môi trường thử (demo)" : "Chính thức (production)")</strong>
+                                    @if (env.Active) {<span class="cp-badge cp-badge--green">Đang dùng</span>} else if (env.Connected) {<span class="cp-badge cp-badge--soft">Đã lưu</span>} else {<span class="cp-badge cp-badge--soft">Chưa kết nối</span>}</div>
+                                <small>@(env.IsDemo ? "Hóa đơn thử, không có giá trị pháp lý." : "Hóa đơn thật, gửi cơ quan thuế.")</small>
+                                @if (env.Connected) {<small>Tài khoản @env.Username · @PaymentText.VietnamTime(env.ConnectedAt)</small>}
+                                @if (canEdit && !env.Active)
+                                {
+                                    <div class="cp-env__actions">
+                                        @if (env.Connected)
+                                        {
+                                            <form method="post" asp-action="SwitchEnvironment" onsubmit="return confirm('@(env.IsDemo ? "Chuyển sang môi trường thử (demo)? Hóa đơn xuất sau đó là hóa đơn thử, không có giá trị." : "Chuyển sang môi trường chính thức? Hóa đơn xuất sau đó là hóa đơn thật, ký số và gửi cơ quan thuế.")')">
+                                                <input type="hidden" name="environment" value="@env.Code" /><button class="cp-btn cp-btn--primary cp-btn--sm" type="submit">@UiIcon.Render("refresh")<span>Chuyển sang</span></button></form>
+                                        }
+                                        <a class="cp-btn cp-btn--ghost cp-btn--sm" asp-action="Index" asp-route-env="@env.Code">@UiIcon.Render("key")<span>@(env.Connected ? "Đổi tài khoản" : "Kết nối")</span></a>
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+                    <p class="cp-hint" style="margin:8px 0 0">Mỗi môi trường giữ tài khoản và danh sách mẫu hóa đơn riêng. Hóa đơn đã xuất ở môi trường nào chỉ xem được khi đang dùng môi trường đó.</p>
+                </div>
             }
             <details class="cp-einvoice-connect" open="@(!s.IsConnected || Model.ShowConnect)" data-cp-einvoice-connect>
             @if (s.IsConnected) {<summary>@UiIcon.Render("pencil")<span>Đổi phần mềm, tài khoản hoặc mật khẩu</span></summary>}
@@ -88,17 +118,18 @@ else if (!Model.ServiceReady) { <aside class="cp-note" style="margin-bottom:14px
                             <li class="cp-tpl@(isDefault ? " is-default" : "")">
                                 <label><input type="radio" name="Template.Choice" value="@($"{tpl.Pattern}|{tpl.Series}")" checked="@isDefault" disabled="@(!canEdit)" />
                                     <span><strong>@tpl.Pattern@tpl.Series</strong><small>Mẫu số @tpl.Pattern · ký hiệu @tpl.Series</small></span></label>
-                                @if (isDefault) {<span class="cp-badge cp-badge--blue">Mặc định</span>}
+                                @if (isDefault) {<span class="cp-badge cp-badge--blue">Đang mặc định</span>}
                                 else if (canEdit && tpl.Id != Guid.Empty) {<button type="submit" class="cp-btn cp-btn--ghost cp-btn--sm" formaction="@Url.Action("DeleteTemplate")" formnovalidate name="templateId" value="@tpl.Id" onclick="return confirm('Xóa mẫu @tpl.Pattern@tpl.Series khỏi danh sách?')" aria-label="Xóa mẫu @tpl.Pattern@tpl.Series">@UiIcon.Render("trash")</button>}
                             </li>
                         }
-                        @if (canEdit)
-                        {
-                            <li class="cp-tpl"><label><input type="radio" name="Template.Choice" value="" data-cp-template-new /><span><strong>Thêm mẫu mới</strong><small>Nhập mẫu số và ký hiệu bên dưới, lưu xong mẫu được thêm vào danh sách và dùng làm mặc định.</small></span></label></li>
-                        }
                     </ul>
-                    <p class="cp-hint" style="margin:6px 0 12px">Mẫu được chọn là mẫu mặc định: mọi hóa đơn xuất tự động dùng mẫu này. Danh sách riêng cho từng nhà cung cấp@(p.ViaPartner ? "" : " và cho môi trường thử / chính thức").</p>
+                    <div class="cp-tpl-tools">
+                        <p class="cp-hint" style="margin:0">Chọn một mẫu rồi bấm "Lưu cài đặt" để dùng làm mặc định: mọi hóa đơn xuất tự động dùng mẫu này. Danh sách riêng cho từng nhà cung cấp@(p.ViaPartner ? "" : " và từng môi trường").</p>
+                        @if (canEdit) {<button type="button" class="cp-btn cp-btn--ghost cp-btn--sm" data-cp-show-dialog="addTemplateDialog">@UiIcon.Render("plus")<span>Thêm mẫu</span></button>}
+                    </div>
                 }
+                @if (Model.Templates is { Count: > 0 } || Model.Saved is not { Count: > 0 })
+                {
                 <div class="cp-form-grid" data-cp-template-fields>
                     <div class="cp-field"><label asp-for="Template.Pattern" class="cp-label">Mẫu số</label><div class="cp-input-wrap">@UiIcon.Render("hash")<input asp-for="Template.Pattern" class="cp-input" maxlength="50" placeholder="Bấm Lấy mẫu hóa đơn" disabled="@(!canEdit || !s.IsConnected)" /></div><span asp-validation-for="Template.Pattern" class="cp-error"></span>
                         @if (p == CustomerInvoiceProviders.Misa) {<div class="cp-hint">MISA dùng mã mẫu riêng (chuỗi dài), không phải số "1": bấm "Lấy mẫu hóa đơn từ MISA", chọn mẫu rồi lưu.</div>}
@@ -106,6 +137,7 @@ else if (!Model.ServiceReady) { <aside class="cp-note" style="margin-bottom:14px
                         else {<div class="cp-hint">Bấm "Lấy mẫu hóa đơn từ @p.Short" để chọn đúng mẫu số đã đăng ký.</div>}</div>
                     <div class="cp-field"><label asp-for="Template.Series" class="cp-label">Ký hiệu</label><div class="cp-input-wrap">@UiIcon.Render("hash")<input asp-for="Template.Series" class="cp-input" maxlength="20" placeholder="VD: C26TAA" disabled="@(!canEdit || !s.IsConnected)" /></div><span asp-validation-for="Template.Series" class="cp-error"></span></div>
                 </div>
+                }
                 <div class="cp-note cp-note--warn" data-cp-hsm-warning>@UiIcon.Render("alert-triangle")<div>
                     <strong>Ký số tự động cần @p.Signer</strong>
                     <p>@p.Name chỉ ký và phát hành hóa đơn tự động khi doanh nghiệp có chữ ký số từ xa (HSM) loại cho phép ký tự động, đã liên kết với tài khoản @p.Short và đã đăng ký chứng thư số với cơ quan thuế. Chữ ký số USB token, hoặc gói phải xác nhận trên điện thoại cho từng lần ký, không dùng được cho xuất tự động. Chưa có: chọn xuất hóa đơn nháp và duyệt thủ công trên @p.Short.</p>
@@ -140,6 +172,25 @@ else if (!Model.ServiceReady) { <aside class="cp-note" style="margin-bottom:14px
                 </div>
             }
         </form>
+        @if (canEdit && s.IsConnected)
+        {
+            <dialog class="cp-dialog" id="addTemplateDialog" aria-labelledby="addTemplateTitle" data-cp-add-template-dialog>
+                <form method="post" asp-action="AddTemplate">
+                    <div class="cp-dialog__head"><strong id="addTemplateTitle">Thêm mẫu hóa đơn</strong><button type="button" class="cp-dialog__close" data-cp-dialog-close aria-label="Đóng">×</button></div>
+                    <p class="cp-muted" style="margin:0 0 12px">Mẫu số và ký hiệu đã đăng ký trên @p.Name@(p.ViaPartner ? "" : " (" + EInvoiceController.EnvironmentLabel(Model.Environment) + ")"), VD mẫu số 1, ký hiệu C26TAA.</p>
+                    <div class="cp-form-grid">
+                        <div class="cp-field"><label class="cp-label is-required" for="add-pattern">Mẫu số</label><div class="cp-input-wrap">@UiIcon.Render("hash")<input class="cp-input" id="add-pattern" name="pattern" maxlength="50" pattern="[A-Za-z0-9/._\-]{1,50}" required autocomplete="off" placeholder="VD: 1" /></div></div>
+                        <div class="cp-field"><label class="cp-label is-required" for="add-series">Ký hiệu</label><div class="cp-input-wrap">@UiIcon.Render("hash")<input class="cp-input" id="add-series" name="series" maxlength="20" pattern="[A-Za-z0-9/._\-]{1,20}" required autocomplete="off" placeholder="VD: C26TAA" style="text-transform:uppercase" /></div></div>
+                    </div>
+                    <label class="cp-check"><input type="checkbox" name="makeDefault" value="true" /><span><strong>Dùng làm mẫu mặc định</strong><span class="cp-muted" style="display:block">Hóa đơn xuất tự động sẽ dùng mẫu này.</span></span></label>
+                    <input type="hidden" name="makeDefault" value="false" />
+                    <div class="cp-dialog__foot">
+                        <button type="button" class="cp-btn cp-btn--ghost" data-cp-dialog-close>Hủy</button>
+                        <button type="submit" class="cp-btn cp-btn--primary">@UiIcon.Render("plus")<span>Thêm mẫu</span></button>
+                    </div>
+                </form>
+            </dialog>
+        }
     </div>
     <div style="align-self:start">
         @if (Model.Readiness is { Count: > 0 } checks)
