@@ -543,4 +543,3 @@ document.addEventListener("click", event => {
     if (event.target.closest?.("[data-cp-dialog-close]")) { event.target.closest("dialog")?.close(); return; }
     if (event.target instanceof HTMLDialogElement && event.target.matches("[data-cp-contact-dialog],[data-cp-invoice-email-dialog],[data-cp-notice-dialog],[data-cp-add-template-dialog]")) event.target.close();
 });
-
